@@ -1,0 +1,293 @@
+{
+  "file": "0000701051_2026_08_ZL_11_423_03092026184131.jpg",
+  "path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000701051_2026_08_ZL_11_423_03092026184131.jpg",
+  "format": "Stock Statement",
+  "api_method": "pharma_hub_jun_jul_photo",
+  "status": "FAIL",
+  "expected_rows": 19,
+  "extracted_rows": 24,
+  "matched_rows": 11,
+  "missing_rows": [
+    {
+      "product": "FIDO TAB 60S 39 4872.27",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 0,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "SECON TAB 60 i «(3315.85",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 0,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "OLIN GEL 30CM 30GM 17 (3168.97",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 3,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "JACARE EYE DROPS 10ML 10ML 9 626.13 ORAL RINSE LIQUID 100ML 2 723.2",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 0,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "IRD CAPS 105 10 0 0.00",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 0,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "oye",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 0,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "tage. aed A DN VANILA 2006 0.00 0 A KIDZ 200GM(VANILLA) 0 0.00",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 0,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "X FORTE TAB 105 105 229 —-20300.85",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 28,
+      "closing_qty": null,
+      "kind": "missing_product"
+    }
+  ],
+  "extra_rows": [
+    {
+      "product": "FIDO TAB 60 S 60 S",
+      "opening_qty": 39,
+      "sales_qty": 0,
+      "closing_qty": 39,
+      "kind": "extra_product"
+    },
+    {
+      "product": "BECON TAB 60 S 60 S",
+      "opening_qty": 115,
+      "sales_qty": 0,
+      "closing_qty": 115,
+      "kind": "extra_product"
+    },
+    {
+      "product": "OLIN GEL 30GM 30GM",
+      "opening_qty": 17,
+      "sales_qty": 3,
+      "closing_qty": 14,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HACARE EYE DROPS 10ML 10ML",
+      "opening_qty": 9,
+      "sales_qty": 3,
+      "closing_qty": 6,
+      "kind": "extra_product"
+    },
+    {
+      "product": "TORAL RINSE LIQUID 100ML",
+      "opening_qty": 24,
+      "sales_qty": 0,
+      "closing_qty": 24,
+      "kind": "extra_product"
+    },
+    {
+      "product": "ARD CAPS 10 S 10 S",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "FORTE TAB 30 S 30 S",
+      "opening_qty": 62,
+      "sales_qty": 0,
+      "closing_qty": 62,
+      "kind": "extra_product"
+    },
+    {
+      "product": "TAB 60 S 60 S",
+      "opening_qty": 13,
+      "sales_qty": 27,
+      "closing_qty": -14,
+      "kind": "extra_product"
+    },
+    {
+      "product": "TAB 60 S .",
+      "opening_qty": 9,
+      "sales_qty": 0,
+      "closing_qty": 9,
+      "kind": "extra_product"
+    },
+    {
+      "product": "\"A DN VANILA 200G",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "A KIDZ 200GM (VANILLA) 200GM",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "X FORTE TAB 10 S 10 S",
+      "opening_qty": 229,
+      "sales_qty": 28,
+      "closing_qty": 201,
+      "kind": "extra_product"
+    },
+    {
+      "product": "ALA TAB 60S",
+      "opening_qty": 38,
+      "sales_qty": 0,
+      "closing_qty": 38,
+      "kind": "extra_product"
+    }
+  ],
+  "duplicates": [],
+  "mismatches": [
+    {
+      "product": "11 rows",
+      "field": "sales_value",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 11,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    },
+    {
+      "product": "11 rows",
+      "field": "closing_value",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 11,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    },
+    {
+      "product": "11 rows",
+      "field": "opening_qty",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 11,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    },
+    {
+      "product": "11 rows",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 11,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    },
+    {
+      "product": "11 rows",
+      "field": "closing_qty",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 11,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    }
+  ],
+  "ocr_review": [
+    {
+      "product": "FORTE OINT 306M 306M 47476",
+      "api_product": "-FORTE OINT 30GM 30GM",
+      "similarity": 0.783,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "ECON-DS TAB 60 60 0 0.00",
+      "api_product": "BECON-DS TAB 60 S 60 S",
+      "similarity": 0.783,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "SYRUP 200ML 200ML 145 -20324.65",
+      "api_product": "52 SYRUP 200ML 200ML",
+      "similarity": 0.76,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "SYRUP 100ML 100ML 215 16378.70",
+      "api_product": "52 SYRUP 100ML 100ML",
+      "similarity": 0.76,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "TAB(PLAIN) 100 S 100 S 146 —-:19130.38",
+      "api_product": "52 TAB (PLAIN) 100 S 100 S",
+      "similarity": 0.759,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "RINA CREAM 0 0.00",
+      "api_product": "RINA CREAM 30GM 30GM",
+      "similarity": 0.757,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "SYP 100ML(SF) 1S 0 0.00",
+      "api_product": "52 SYP 100ML (SF) 1S",
+      "similarity": 0.75,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "OLAX CAP 105 19 § 0 0.00",
+      "api_product": "OLAX CAP 10 S 10 S",
+      "similarity": 0.75,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "X-SYP 200 ML. 0 0.00",
+      "api_product": "EX-SYP 200 ML .",
+      "similarity": 0.75,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "TARIL SOAP 8953.89",
+      "api_product": "TARIL SOAP 75G",
+      "similarity": 0.75,
+      "note": "Product names differ but the row quantities correspond."
+    }
+  ],
+  "accounting": [],
+  "confidence": "medium",
+  "notes": [
+    "OCR used tesseract psm 6."
+  ],
+  "result_key": "0000701051_2026_08_ZL_11_423_03092026184131",
+  "unavailable_fields": {
+    "sales_value": 11,
+    "closing_value": 11,
+    "opening_qty": 11,
+    "receipts_qty": 11,
+    "closing_qty": 11
+  },
+  "formula_checked": "none"
+}

@@ -1,0 +1,46 @@
+{
+  "source_file": "0000702934_2026_08_ZL_12_322_04092026135328.jpg",
+  "format": "STOCK & SALES ANALYSIS",
+  "confidence": "low",
+  "source": "ocr",
+  "formula": "none",
+  "present_fields": [
+    "product_name",
+    "opening_qty",
+    "receipts_qty",
+    "sales_qty"
+  ],
+  "absent_fields": [
+    "product_code",
+    "opening_value",
+    "receipts_value",
+    "sales_value",
+    "closing_qty",
+    "closing_value"
+  ],
+  "columns": [
+    "product_name",
+    "opening_qty",
+    "receipts_qty",
+    "sales_qty"
+  ],
+  "line_items": [
+    {
+      "product_code": null,
+      "product_name": "a ee ap",
+      "packing": null,
+      "opening_qty": null,
+      "opening_value": null,
+      "receipts_qty": null,
+      "receipts_value": null,
+      "sales_qty": 3.0,
+      "sales_value": null,
+      "closing_qty": null,
+      "closing_value": null
+    }
+  ],
+  "notes": [
+    "OCR used tesseract psm 6."
+  ],
+  "partial": false
+}

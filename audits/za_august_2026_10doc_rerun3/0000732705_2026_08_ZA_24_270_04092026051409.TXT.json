@@ -1,0 +1,143 @@
+{
+  "file": "0000732705_2026_08_ZA_24_270_04092026051409.TXT",
+  "error": null,
+  "seconds": 0.0129,
+  "rows": 20,
+  "method": "pro_age_opening_pur_sale_closing",
+  "decision": {
+    "status": "VERIFIED",
+    "reason": "schema_evidence_business_ok",
+    "verified": true
+  },
+  "phase2": {
+    "status": "not_needed",
+    "failure_type": null,
+    "strategy": null,
+    "attempts": 0,
+    "applied": false,
+    "accepted": false,
+    "recovery_log": [],
+    "original_values": [],
+    "manual_review": null
+  },
+  "validation_status": "pass",
+  "source_evidence": true,
+  "source_agreement": true,
+  "stock_identity_fail_count": 0,
+  "grounding": {
+    "status": "checked",
+    "reader": "delimited_text",
+    "compared_rows": 20,
+    "discrepancy_count": 0,
+    "blank_read_as_zero": 0,
+    "blocks_verification": false,
+    "discrepancies": []
+  },
+  "ocr_calls": 0,
+  "watched_rows": [
+    {
+      "product_name": "BONNISAN DROPS",
+      "packing": null,
+      "opening_qty": 118.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 80.0,
+      "closing_qty": 38.0,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "qty_cell_state": null,
+      "total_stock": null,
+      "scheme_out_qty": null
+    },
+    {
+      "product_name": "BONNISAN LIQUID",
+      "packing": null,
+      "opening_qty": 54.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 54.0,
+      "closing_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "qty_cell_state": null,
+      "total_stock": null,
+      "scheme_out_qty": null
+    },
+    {
+      "product_name": "CYSTONE FORTE TAB",
+      "packing": null,
+      "opening_qty": 40.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 40.0,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "qty_cell_state": null,
+      "total_stock": null,
+      "scheme_out_qty": null
+    },
+    {
+      "product_name": "CYSTONE SYRUP",
+      "packing": null,
+      "opening_qty": 48.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 38.0,
+      "closing_qty": 10.0,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "qty_cell_state": null,
+      "total_stock": null,
+      "scheme_out_qty": null
+    },
+    {
+      "product_name": "CYSTONE TAB",
+      "packing": null,
+      "opening_qty": 5.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 5.0,
+      "closing_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "qty_cell_state": null,
+      "total_stock": null,
+      "scheme_out_qty": null
+    },
+    {
+      "product_name": "EVECARE SYRUP",
+      "packing": null,
+      "opening_qty": 28.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 27.0,
+      "closing_qty": 2.0,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "qty_cell_state": null,
+      "total_stock": null,
+      "scheme_out_qty": null
+    },
+    {
+      "product_name": "HIORA K T/P 50 GM",
+      "packing": null,
+      "opening_qty": 30.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 11.0,
+      "closing_qty": 19.0,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "qty_cell_state": null,
+      "total_stock": null,
+      "scheme_out_qty": null
+    },
+    {
+      "product_name": "SPEMAN TABLETS",
+      "packing": null,
+      "opening_qty": 20.0,
+      "receipts_qty": 50.0,
+      "sales_qty": 7.0,
+      "closing_qty": 63.0,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "qty_cell_state": null,
+      "total_stock": null,
+      "scheme_out_qty": null
+    }
+  ]
+}

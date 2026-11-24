@@ -1,0 +1,3021 @@
+{
+  "document_id": "0000701027_2026_08_ZA_11_210_07092026110044.png",
+  "source_file": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000701027_2026_08_ZA_11_210_07092026110044.png",
+  "source_file_exists": true,
+  "verification_status": "unverified",
+  "annotation_origin": "AI_PROPOSED",
+  "ai_generated": true,
+  "human_verified": false,
+  "rows": [
+    {
+      "row_id": "r01",
+      "row_index": 1,
+      "product_name": {
+        "raw": "BRESOL NS NASAL 10ML-1ml",
+        "normalized": "BRESOL NS NASAL 10ML-1ml",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "LMS",
+          "semantic": "unknown",
+          "raw": "10",
+          "normalized": 10.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Op. Qty",
+          "semantic": "opening_qty",
+          "raw": "18",
+          "normalized": 18.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Pur Qty",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Pur F.Qty",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Sale Qty",
+          "semantic": "sales_qty",
+          "raw": "5",
+          "normalized": 5.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Sale F.Qty",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Repl Qty",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "BR/E",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "Ret. Qty",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 10,
+          "printed_header": "Adj Qty",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 11,
+          "printed_header": "Sale Value",
+          "semantic": "not_quantity",
+          "raw": "278.99",
+          "normalized": 278.99,
+          "status": "uncertain"
+        },
+        {
+          "position": 12,
+          "printed_header": "Sale F.Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 13,
+          "printed_header": "Bal. Qty",
+          "semantic": "closing_qty",
+          "raw": "13",
+          "normalized": 13.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 14,
+          "printed_header": "Bal.Val",
+          "semantic": "unknown",
+          "raw": "658.45",
+          "normalized": 658.45,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r02",
+      "row_index": 2,
+      "product_name": {
+        "raw": "BRESOL SY 200 ML-1ml",
+        "normalized": "BRESOL SY 200 ML-1ml",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "LMS",
+          "semantic": "unknown",
+          "raw": "5",
+          "normalized": 5.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Op. Qty",
+          "semantic": "opening_qty",
+          "raw": "43",
+          "normalized": 43.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Pur Qty",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Pur F.Qty",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Sale Qty",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Sale F.Qty",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Repl Qty",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "BR/E",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "Ret. Qty",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 10,
+          "printed_header": "Adj Qty",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 11,
+          "printed_header": "Sale Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 12,
+          "printed_header": "Sale F.Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 13,
+          "printed_header": "Bal. Qty",
+          "semantic": "closing_qty",
+          "raw": "43",
+          "normalized": 43.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 14,
+          "printed_header": "Bal.Val",
+          "semantic": "unknown",
+          "raw": "6244.03",
+          "normalized": 6244.03,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r03",
+      "row_index": 3,
+      "product_name": {
+        "raw": "BRESOL TAB 60S-1's",
+        "normalized": "BRESOL TAB 60S-1's",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "LMS",
+          "semantic": "unknown",
+          "raw": "13",
+          "normalized": 13.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Op. Qty",
+          "semantic": "opening_qty",
+          "raw": "27",
+          "normalized": 27.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Pur Qty",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Pur F.Qty",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Sale Qty",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Sale F.Qty",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Repl Qty",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "BR/E",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "Ret. Qty",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 10,
+          "printed_header": "Adj Qty",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 11,
+          "printed_header": "Sale Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 12,
+          "printed_header": "Sale F.Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 13,
+          "printed_header": "Bal. Qty",
+          "semantic": "closing_qty",
+          "raw": "27",
+          "normalized": 27.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 14,
+          "printed_header": "Bal.Val",
+          "semantic": "unknown",
+          "raw": "4522.77",
+          "normalized": 4522.77,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r04",
+      "row_index": 4,
+      "product_name": {
+        "raw": "CYSTONE FORTE TAB 30*2-1's",
+        "normalized": "CYSTONE FORTE TAB 30*2-1's",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "LMS",
+          "semantic": "unknown",
+          "raw": "20",
+          "normalized": 20.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Op. Qty",
+          "semantic": "opening_qty",
+          "raw": "4",
+          "normalized": 4.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Pur Qty",
+          "semantic": "receipt_qty",
+          "raw": "56",
+          "normalized": 56.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Pur F.Qty",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Sale Qty",
+          "semantic": "sales_qty",
+          "raw": "4",
+          "normalized": 4.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Sale F.Qty",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Repl Qty",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "BR/E",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "Ret. Qty",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 10,
+          "printed_header": "Adj Qty",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 11,
+          "printed_header": "Sale Value",
+          "semantic": "not_quantity",
+          "raw": "473.17",
+          "normalized": 473.17,
+          "status": "uncertain"
+        },
+        {
+          "position": 12,
+          "printed_header": "Sale F.Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 13,
+          "printed_header": "Bal. Qty",
+          "semantic": "closing_qty",
+          "raw": "56",
+          "normalized": 56.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 14,
+          "printed_header": "Bal.Val",
+          "semantic": "unknown",
+          "raw": "6013.84",
+          "normalized": 6013.84,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r05",
+      "row_index": 5,
+      "product_name": {
+        "raw": "CYSTONE SY 200ML-1ml",
+        "normalized": "CYSTONE SY 200ML-1ml",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "LMS",
+          "semantic": "unknown",
+          "raw": "3",
+          "normalized": 3.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Op. Qty",
+          "semantic": "opening_qty",
+          "raw": "15",
+          "normalized": 15.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Pur Qty",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Pur F.Qty",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Sale Qty",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Sale F.Qty",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Repl Qty",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "BR/E",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "Ret. Qty",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 10,
+          "printed_header": "Adj Qty",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 11,
+          "printed_header": "Sale Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 12,
+          "printed_header": "Sale F.Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 13,
+          "printed_header": "Bal. Qty",
+          "semantic": "closing_qty",
+          "raw": "15",
+          "normalized": 15.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 14,
+          "printed_header": "Bal.Val",
+          "semantic": "unknown",
+          "raw": "2745.60",
+          "normalized": 2745.6,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r06",
+      "row_index": 6,
+      "product_name": {
+        "raw": "CYSTONE TAB-1's",
+        "normalized": "CYSTONE TAB-1's",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "LMS",
+          "semantic": "unknown",
+          "raw": "44",
+          "normalized": 44.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Op. Qty",
+          "semantic": "opening_qty",
+          "raw": "44",
+          "normalized": 44.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Pur Qty",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Pur F.Qty",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Sale Qty",
+          "semantic": "sales_qty",
+          "raw": "22",
+          "normalized": 22.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Sale F.Qty",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Repl Qty",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "BR/E",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "Ret. Qty",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 10,
+          "printed_header": "Adj Qty",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 11,
+          "printed_header": "Sale Value",
+          "semantic": "not_quantity",
+          "raw": "4033.74",
+          "normalized": 4033.74,
+          "status": "uncertain"
+        },
+        {
+          "position": 12,
+          "printed_header": "Sale F.Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 13,
+          "printed_header": "Bal. Qty",
+          "semantic": "closing_qty",
+          "raw": "22",
+          "normalized": 22.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 14,
+          "printed_header": "Bal.Val",
+          "semantic": "unknown",
+          "raw": "3610.86",
+          "normalized": 3610.86,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r07",
+      "row_index": 7,
+      "product_name": {
+        "raw": "FLORASANTE CAP 10'S-10's",
+        "normalized": "FLORASANTE CAP 10'S-10's",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "LMS",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Op. Qty",
+          "semantic": "opening_qty",
+          "raw": "28",
+          "normalized": 28.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Pur Qty",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Pur F.Qty",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Sale Qty",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Sale F.Qty",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Repl Qty",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "BR/E",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "Ret. Qty",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 10,
+          "printed_header": "Adj Qty",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 11,
+          "printed_header": "Sale Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 12,
+          "printed_header": "Sale F.Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 13,
+          "printed_header": "Bal. Qty",
+          "semantic": "closing_qty",
+          "raw": "28",
+          "normalized": 28.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 14,
+          "printed_header": "Bal.Val",
+          "semantic": "unknown",
+          "raw": "5030.48",
+          "normalized": 5030.48,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r08",
+      "row_index": 8,
+      "product_name": {
+        "raw": "GERIFORTE SY 200ML-1ml",
+        "normalized": "GERIFORTE SY 200ML-1ml",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "LMS",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Op. Qty",
+          "semantic": "opening_qty",
+          "raw": "12",
+          "normalized": 12.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Pur Qty",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Pur F.Qty",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Sale Qty",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Sale F.Qty",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Repl Qty",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "BR/E",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "Ret. Qty",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 10,
+          "printed_header": "Adj Qty",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 11,
+          "printed_header": "Sale Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 12,
+          "printed_header": "Sale F.Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 13,
+          "printed_header": "Bal. Qty",
+          "semantic": "closing_qty",
+          "raw": "12",
+          "normalized": 12.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 14,
+          "printed_header": "Bal.Val",
+          "semantic": "unknown",
+          "raw": "3193.56",
+          "normalized": 3193.56,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r09",
+      "row_index": 9,
+      "product_name": {
+        "raw": "GALACTOSURE GRA 200GM(ELAICHI FLAV)-1gm",
+        "normalized": "GALACTOSURE GRA 200GM(ELAICHI FLAV)-1gm",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "LMS",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Op. Qty",
+          "semantic": "opening_qty",
+          "raw": "8",
+          "normalized": 8.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Pur Qty",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Pur F.Qty",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Sale Qty",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Sale F.Qty",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Repl Qty",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "BR/E",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "Ret. Qty",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 10,
+          "printed_header": "Adj Qty",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 11,
+          "printed_header": "Sale Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 12,
+          "printed_header": "Sale F.Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 13,
+          "printed_header": "Bal. Qty",
+          "semantic": "closing_qty",
+          "raw": "8",
+          "normalized": 8.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 14,
+          "printed_header": "Bal.Val",
+          "semantic": "unknown",
+          "raw": "1161.68",
+          "normalized": 1161.68,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r10",
+      "row_index": 10,
+      "product_name": {
+        "raw": "GERIFORTE TAB 60S-1's",
+        "normalized": "GERIFORTE TAB 60S-1's",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "LMS",
+          "semantic": "unknown",
+          "raw": "30",
+          "normalized": 30.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Op. Qty",
+          "semantic": "opening_qty",
+          "raw": "70",
+          "normalized": 70.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Pur Qty",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Pur F.Qty",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Sale Qty",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Sale F.Qty",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Repl Qty",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "BR/E",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "Ret. Qty",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 10,
+          "printed_header": "Adj Qty",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 11,
+          "printed_header": "Sale Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 12,
+          "printed_header": "Sale F.Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 13,
+          "printed_header": "Bal. Qty",
+          "semantic": "closing_qty",
+          "raw": "70",
+          "normalized": 70.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 14,
+          "printed_header": "Bal.Val",
+          "semantic": "unknown",
+          "raw": "7754.60",
+          "normalized": 7754.6,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r11",
+      "row_index": 11,
+      "product_name": {
+        "raw": "HIMPLASIA TAB30*2-1's",
+        "normalized": "HIMPLASIA TAB30*2-1's",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "LMS",
+          "semantic": "unknown",
+          "raw": "3",
+          "normalized": 3.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Op. Qty",
+          "semantic": "opening_qty",
+          "raw": "28",
+          "normalized": 28.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Pur Qty",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Pur F.Qty",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Sale Qty",
+          "semantic": "sales_qty",
+          "raw": "2",
+          "normalized": 2.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Sale F.Qty",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Repl Qty",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "BR/E",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "Ret. Qty",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 10,
+          "printed_header": "Adj Qty",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 11,
+          "printed_header": "Sale Value",
+          "semantic": "not_quantity",
+          "raw": "764.42",
+          "normalized": 764.42,
+          "status": "uncertain"
+        },
+        {
+          "position": 12,
+          "printed_header": "Sale F.Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 13,
+          "printed_header": "Bal. Qty",
+          "semantic": "closing_qty",
+          "raw": "26",
+          "normalized": 26.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 14,
+          "printed_header": "Bal.Val",
+          "semantic": "unknown",
+          "raw": "8605.22",
+          "normalized": 8605.22,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r12",
+      "row_index": 12,
+      "product_name": {
+        "raw": "LIV 52 DS TAB 60S-1's",
+        "normalized": "LIV 52 DS TAB 60S-1's",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "LMS",
+          "semantic": "unknown",
+          "raw": "3",
+          "normalized": 3.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Op. Qty",
+          "semantic": "opening_qty",
+          "raw": "100",
+          "normalized": 100.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Pur Qty",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Pur F.Qty",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Sale Qty",
+          "semantic": "sales_qty",
+          "raw": "7",
+          "normalized": 7.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Sale F.Qty",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Repl Qty",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "BR/E",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "Ret. Qty",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 10,
+          "printed_header": "Adj Qty",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 11,
+          "printed_header": "Sale Value",
+          "semantic": "not_quantity",
+          "raw": "1573.64",
+          "normalized": 1573.64,
+          "status": "uncertain"
+        },
+        {
+          "position": 12,
+          "printed_header": "Sale F.Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 13,
+          "printed_header": "Bal. Qty",
+          "semantic": "closing_qty",
+          "raw": "93",
+          "normalized": 93.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 14,
+          "printed_header": "Bal.Val",
+          "semantic": "unknown",
+          "raw": "17651.40",
+          "normalized": 17651.4,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r13",
+      "row_index": 13,
+      "product_name": {
+        "raw": "LUKOL TAB 60S-1's",
+        "normalized": "LUKOL TAB 60S-1's",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "LMS",
+          "semantic": "unknown",
+          "raw": "2",
+          "normalized": 2.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Op. Qty",
+          "semantic": "opening_qty",
+          "raw": "35",
+          "normalized": 35.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Pur Qty",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Pur F.Qty",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Sale Qty",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Sale F.Qty",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Repl Qty",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "BR/E",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "Ret. Qty",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 10,
+          "printed_header": "Adj Qty",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 11,
+          "printed_header": "Sale Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 12,
+          "printed_header": "Sale F.Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 13,
+          "printed_header": "Bal. Qty",
+          "semantic": "closing_qty",
+          "raw": "35",
+          "normalized": 35.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 14,
+          "printed_header": "Bal.Val",
+          "semantic": "unknown",
+          "raw": "5980.80",
+          "normalized": 5980.8,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r14",
+      "row_index": 14,
+      "product_name": {
+        "raw": "MENTAT SY 200ML-1ml",
+        "normalized": "MENTAT SY 200ML-1ml",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "LMS",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Op. Qty",
+          "semantic": "opening_qty",
+          "raw": "11",
+          "normalized": 11.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Pur Qty",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Pur F.Qty",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Sale Qty",
+          "semantic": "sales_qty",
+          "raw": "5",
+          "normalized": 5.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Sale F.Qty",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Repl Qty",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "BR/E",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "Ret. Qty",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 10,
+          "printed_header": "Adj Qty",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 11,
+          "printed_header": "Sale Value",
+          "semantic": "not_quantity",
+          "raw": "955.99",
+          "normalized": 955.99,
+          "status": "uncertain"
+        },
+        {
+          "position": 12,
+          "printed_header": "Sale F.Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 13,
+          "printed_header": "Bal. Qty",
+          "semantic": "closing_qty",
+          "raw": "6",
+          "normalized": 6.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 14,
+          "printed_header": "Bal.Val",
+          "semantic": "unknown",
+          "raw": "1041.48",
+          "normalized": 1041.48,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r15",
+      "row_index": 15,
+      "product_name": {
+        "raw": "MENTAT TAB 60S-1's",
+        "normalized": "MENTAT TAB 60S-1's",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "LMS",
+          "semantic": "unknown",
+          "raw": "1",
+          "normalized": 1.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Op. Qty",
+          "semantic": "opening_qty",
+          "raw": "39",
+          "normalized": 39.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Pur Qty",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Pur F.Qty",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Sale Qty",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Sale F.Qty",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Repl Qty",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "BR/E",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "Ret. Qty",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 10,
+          "printed_header": "Adj Qty",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 11,
+          "printed_header": "Sale Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 12,
+          "printed_header": "Sale F.Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 13,
+          "printed_header": "Bal. Qty",
+          "semantic": "closing_qty",
+          "raw": "39",
+          "normalized": 39.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 14,
+          "printed_header": "Bal.Val",
+          "semantic": "unknown",
+          "raw": "5426.46",
+          "normalized": 5426.46,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r16",
+      "row_index": 16,
+      "product_name": {
+        "raw": "REOSTO TAB 30*2-1's",
+        "normalized": "REOSTO TAB 30*2-1's",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "LMS",
+          "semantic": "unknown",
+          "raw": "30",
+          "normalized": 30.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Op. Qty",
+          "semantic": "opening_qty",
+          "raw": "26",
+          "normalized": 26.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Pur Qty",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Pur F.Qty",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Sale Qty",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Sale F.Qty",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Repl Qty",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "BR/E",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "Ret. Qty",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 10,
+          "printed_header": "Adj Qty",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 11,
+          "printed_header": "Sale Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 12,
+          "printed_header": "Sale F.Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 13,
+          "printed_header": "Bal. Qty",
+          "semantic": "closing_qty",
+          "raw": "26",
+          "normalized": 26.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 14,
+          "printed_header": "Bal.Val",
+          "semantic": "unknown",
+          "raw": "4355.26",
+          "normalized": 4355.26,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r17",
+      "row_index": 17,
+      "product_name": {
+        "raw": "SEPTILIN SY 200ML-1ml",
+        "normalized": "SEPTILIN SY 200ML-1ml",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "LMS",
+          "semantic": "unknown",
+          "raw": "6",
+          "normalized": 6.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Op. Qty",
+          "semantic": "opening_qty",
+          "raw": "32",
+          "normalized": 32.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Pur Qty",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Pur F.Qty",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Sale Qty",
+          "semantic": "sales_qty",
+          "raw": "11",
+          "normalized": 11.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Sale F.Qty",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Repl Qty",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "BR/E",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "Ret. Qty",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 10,
+          "printed_header": "Adj Qty",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 11,
+          "printed_header": "Sale Value",
+          "semantic": "not_quantity",
+          "raw": "1844.91",
+          "normalized": 1844.91,
+          "status": "uncertain"
+        },
+        {
+          "position": 12,
+          "printed_header": "Sale F.Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 13,
+          "printed_header": "Bal. Qty",
+          "semantic": "closing_qty",
+          "raw": "21",
+          "normalized": 21.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 14,
+          "printed_header": "Bal.Val",
+          "semantic": "unknown",
+          "raw": "3191.16",
+          "normalized": 3191.16,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r18",
+      "row_index": 18,
+      "product_name": {
+        "raw": "SEPTILIN TAB-1's",
+        "normalized": "SEPTILIN TAB-1's",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "LMS",
+          "semantic": "unknown",
+          "raw": "38",
+          "normalized": 38.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Op. Qty",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Pur Qty",
+          "semantic": "receipt_qty",
+          "raw": "100",
+          "normalized": 100.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Pur F.Qty",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Sale Qty",
+          "semantic": "sales_qty",
+          "raw": "9",
+          "normalized": 9.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Sale F.Qty",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Repl Qty",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "BR/E",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "Ret. Qty",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 10,
+          "printed_header": "Adj Qty",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 11,
+          "printed_header": "Sale Value",
+          "semantic": "not_quantity",
+          "raw": "1809.19",
+          "normalized": 1809.19,
+          "status": "uncertain"
+        },
+        {
+          "position": 12,
+          "printed_header": "Sale F.Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 13,
+          "printed_header": "Bal. Qty",
+          "semantic": "closing_qty",
+          "raw": "91",
+          "normalized": 91.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 14,
+          "printed_header": "Bal.Val",
+          "semantic": "unknown",
+          "raw": "15795.78",
+          "normalized": 15795.78,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r19",
+      "row_index": 19,
+      "product_name": {
+        "raw": "V GEL 30GM-1gm",
+        "normalized": "V GEL 30GM-1gm",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "LMS",
+          "semantic": "unknown",
+          "raw": "3",
+          "normalized": 3.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Op. Qty",
+          "semantic": "opening_qty",
+          "raw": "40",
+          "normalized": 40.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Pur Qty",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Pur F.Qty",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Sale Qty",
+          "semantic": "sales_qty",
+          "raw": "2",
+          "normalized": 2.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Sale F.Qty",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Repl Qty",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "BR/E",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "Ret. Qty",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 10,
+          "printed_header": "Adj Qty",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 11,
+          "printed_header": "Sale Value",
+          "semantic": "not_quantity",
+          "raw": "232.01",
+          "normalized": 232.01,
+          "status": "uncertain"
+        },
+        {
+          "position": 12,
+          "printed_header": "Sale F.Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 13,
+          "printed_header": "Bal. Qty",
+          "semantic": "closing_qty",
+          "raw": "38",
+          "normalized": 38.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 14,
+          "printed_header": "Bal.Val",
+          "semantic": "unknown",
+          "raw": "3721.72",
+          "normalized": 3721.72,
+          "status": "uncertain"
+        }
+      ]
+    }
+  ],
+  "headers": [],
+  "notes": [
+    "AI_PROPOSED from the original image only. Not verified. Named quantities are set only when a printed header was copied. Blank cells were not stored as zero."
+  ],
+  "failure": null,
+  "vision_model": "gemini-2.5-flash",
+  "vision_input": "original",
+  "ocr_used_as_label": false
+}

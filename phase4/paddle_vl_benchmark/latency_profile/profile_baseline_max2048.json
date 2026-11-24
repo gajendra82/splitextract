@@ -1,0 +1,481 @@
+{
+  "created_utc": "2026-10-15T04:45:57.564545+00:00",
+  "tag": "baseline_max2048",
+  "assert": {
+    "settings_primary": "paddleocr-vl",
+    "engine_name": "paddleocr-vl-1.6",
+    "model": "PaddleOCR-VL-1.6",
+    "backend": "subprocess",
+    "device_env": "",
+    "max_side": "2048",
+    "timeout_s": "600"
+  },
+  "gpu_idle": {
+    "util_pct": 0.0,
+    "mem_used_mib": 171.0,
+    "mem_total_mib": 6144.0,
+    "raw": "0, 171, 6144"
+  },
+  "images": [
+    "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000720756_2026_08_ZA_24_291_07092026162249.jpg",
+    "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000721924_2026_08_ZA_12_350_03092026163109.jpg",
+    "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000736984_2026_08_ZA_22_594_05092026033933.jpg",
+    "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000729726_2026_08_ZA_12_4345_03092026142155.jpg",
+    "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000718964_2026_08_ZA_24_255_07092026081933.jpg"
+  ],
+  "vl_runs": [
+    {
+      "label": "cold_first",
+      "document_id": "0000720756_2026_08_ZA_24_291_07092026162249.jpg",
+      "bytes": 61266,
+      "orig_width": 510,
+      "orig_height": 679,
+      "megapixels": 0.346,
+      "gpu_before": {
+        "util_pct": 0.0,
+        "mem_used_mib": 171.0,
+        "mem_total_mib": 6144.0,
+        "raw": "0, 171, 6144"
+      },
+      "errors": [],
+      "worker_restarts": 0,
+      "preprocess_ms": 6.850900000245019,
+      "prep_meta": {
+        "downscaled": false,
+        "max_side": 2048,
+        "orig_width": 510,
+        "orig_height": 679
+      },
+      "worker_ready_ms": 233.6368999995102,
+      "note": "worker_ready is serve process + ready JSON; model weights load on first inference inside worker",
+      "gpu_pre_infer": {
+        "util_pct": 0.0,
+        "mem_used_mib": 171.0,
+        "mem_total_mib": 6144.0,
+        "raw": "0, 171, 6144"
+      },
+      "status": "success",
+      "primary_engine": "paddleocr-vl-1.6",
+      "model": "PaddleOCR-VL-1.6",
+      "model_version": "v1.6",
+      "backend": "subprocess",
+      "resolved_device": "gpu:0",
+      "e2e_ms": 122083.62990000023,
+      "meta_latency_ms": 98345.69850000026,
+      "init_latency_ms": 15704.447499999333,
+      "image_prep": {
+        "downscaled": false,
+        "max_side": 2048,
+        "orig_width": 510,
+        "orig_height": 679
+      },
+      "error": null,
+      "output": {
+        "chars": 5750,
+        "words": 100,
+        "has_table": true,
+        "tr_count": 39,
+        "td_count": 381
+      },
+      "text_preview": "ORDER FORM\n$ 50\\times1000=5000 $\n<table><tr><td>SAP Code</td><td>Product</td><td>Pack</td><td>Oty</td><td>Value</td><td>SAP Code</td><td>Product</td><td>Pack</td><td>Oty</td><td>Value</td></tr><tr><td>20235</td><td>Asana tablets</td><td>80k",
+      "gpu_after": {
+        "util_pct": 18.0,
+        "mem_used_mib": 5978.0,
+        "mem_total_mib": 6144.0,
+        "raw": "18, 5978, 6144"
+      },
+      "engines_used": [
+        "paddleocr-vl-1.6"
+      ],
+      "inference_plus_ipc_ms": 122083.62990000023,
+      "postprocess_note": "parsing bundled inside worker evidence + host _result_from_evidence; not separately exposed \u2014 included in e2e_ms / meta_latency_ms"
+    },
+    {
+      "label": "warm",
+      "document_id": "0000721924_2026_08_ZA_12_350_03092026163109.jpg",
+      "bytes": 474365,
+      "orig_width": 1080,
+      "orig_height": 1476,
+      "megapixels": 1.594,
+      "gpu_before": {
+        "util_pct": 4.0,
+        "mem_used_mib": 5978.0,
+        "mem_total_mib": 6144.0,
+        "raw": "4, 5978, 6144"
+      },
+      "errors": [],
+      "worker_restarts": 0,
+      "preprocess_ms": 11.685899999974936,
+      "prep_meta": {
+        "downscaled": false,
+        "max_side": 2048,
+        "orig_width": 1080,
+        "orig_height": 1476
+      },
+      "gpu_pre_infer": {
+        "util_pct": 4.0,
+        "mem_used_mib": 5978.0,
+        "mem_total_mib": 6144.0,
+        "raw": "4, 5978, 6144"
+      },
+      "status": "success",
+      "primary_engine": "paddleocr-vl-1.6",
+      "model": "PaddleOCR-VL-1.6",
+      "model_version": "v1.6",
+      "backend": "subprocess",
+      "resolved_device": "gpu:0",
+      "e2e_ms": 150145.58409999972,
+      "meta_latency_ms": 150084.4369999995,
+      "init_latency_ms": 15704.447499999333,
+      "image_prep": {
+        "downscaled": false,
+        "max_side": 2048,
+        "orig_width": 1080,
+        "orig_height": 1476
+      },
+      "error": null,
+      "output": {
+        "chars": 6316,
+        "words": 165,
+        "has_table": true,
+        "tr_count": 70,
+        "td_count": 415
+      },
+      "text_preview": "<table><tr><td colspan=\"6\">HIMALAYA ZANDRA DIV.</td></tr><tr><td>ARJUNA TAB.</td><td>60 &#x27;S</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>BONNISAN DROP</td><td>30 ML.</td><td>25</td><td>-</td><td>4</td><td>21</td></tr><tr><td",
+      "gpu_after": {
+        "util_pct": 90.0,
+        "mem_used_mib": 5969.0,
+        "mem_total_mib": 6144.0,
+        "raw": "90, 5969, 6144"
+      },
+      "engines_used": [
+        "paddleocr-vl-1.6"
+      ],
+      "inference_plus_ipc_ms": 150145.58409999972,
+      "postprocess_note": "parsing bundled inside worker evidence + host _result_from_evidence; not separately exposed \u2014 included in e2e_ms / meta_latency_ms"
+    },
+    {
+      "label": "warm",
+      "document_id": "0000736984_2026_08_ZA_22_594_05092026033933.jpg",
+      "bytes": 669156,
+      "orig_width": 1080,
+      "orig_height": 2400,
+      "megapixels": 2.592,
+      "gpu_before": {
+        "util_pct": 9.0,
+        "mem_used_mib": 5969.0,
+        "mem_total_mib": 6144.0,
+        "raw": "9, 5969, 6144"
+      },
+      "errors": [],
+      "worker_restarts": 0,
+      "preprocess_ms": 107.46870000002673,
+      "prep_meta": {
+        "downscaled": true,
+        "max_side": 2048,
+        "orig_width": 1080,
+        "orig_height": 2400,
+        "width": 921,
+        "height": 2048,
+        "bytes_in": 669156,
+        "bytes_out": 276981
+      },
+      "gpu_pre_infer": {
+        "util_pct": 0.0,
+        "mem_used_mib": 5969.0,
+        "mem_total_mib": 6144.0,
+        "raw": "0, 5969, 6144"
+      },
+      "status": "success",
+      "primary_engine": "paddleocr-vl-1.6",
+      "model": "PaddleOCR-VL-1.6",
+      "model_version": "v1.6",
+      "backend": "subprocess",
+      "resolved_device": "gpu:0",
+      "e2e_ms": 150297.52439999994,
+      "meta_latency_ms": 150157.03459999987,
+      "init_latency_ms": 15704.447499999333,
+      "image_prep": {
+        "downscaled": false,
+        "max_side": 2048,
+        "orig_width": 921,
+        "orig_height": 2048
+      },
+      "error": null,
+      "output": {
+        "chars": 7978,
+        "words": 144,
+        "has_table": true,
+        "tr_count": 61,
+        "td_count": 559
+      },
+      "text_preview": "9:06\n<table><tr><td colspan=\"10\">No.42, Thiagarajapuram Street, Agraharam, Vijayapuram, Tiruvarur-610001</td></tr><tr><td colspan=\"10\">Stock and Sales Report For the Month Of 08/2026 : THE HIMALAYA DRUGS-ZANDRA Page No.: 1/2</td></tr><tr><t",
+      "gpu_after": {
+        "util_pct": 44.0,
+        "mem_used_mib": 5969.0,
+        "mem_total_mib": 6144.0,
+        "raw": "44, 5969, 6144"
+      },
+      "engines_used": [
+        "paddleocr-vl-1.6"
+      ],
+      "inference_plus_ipc_ms": 150297.52439999994,
+      "postprocess_note": "parsing bundled inside worker evidence + host _result_from_evidence; not separately exposed \u2014 included in e2e_ms / meta_latency_ms"
+    },
+    {
+      "label": "warm",
+      "document_id": "0000729726_2026_08_ZA_12_4345_03092026142155.jpg",
+      "bytes": 1714257,
+      "orig_width": 3264,
+      "orig_height": 2448,
+      "megapixels": 7.99,
+      "gpu_before": {
+        "util_pct": 44.0,
+        "mem_used_mib": 5969.0,
+        "mem_total_mib": 6144.0,
+        "raw": "44, 5969, 6144"
+      },
+      "errors": [],
+      "worker_restarts": 0,
+      "preprocess_ms": 270.0779999995575,
+      "prep_meta": {
+        "downscaled": true,
+        "max_side": 2048,
+        "orig_width": 3264,
+        "orig_height": 2448,
+        "width": 2048,
+        "height": 1536,
+        "bytes_in": 1714257,
+        "bytes_out": 497304
+      },
+      "gpu_pre_infer": {
+        "util_pct": 0.0,
+        "mem_used_mib": 5969.0,
+        "mem_total_mib": 6144.0,
+        "raw": "0, 5969, 6144"
+      },
+      "status": "success",
+      "primary_engine": "paddleocr-vl-1.6",
+      "model": "PaddleOCR-VL-1.6",
+      "model_version": "v1.6",
+      "backend": "subprocess",
+      "resolved_device": "gpu:0",
+      "e2e_ms": 111789.7313000003,
+      "meta_latency_ms": 111460.6760000006,
+      "init_latency_ms": 15704.447499999333,
+      "image_prep": {
+        "downscaled": false,
+        "max_side": 2048,
+        "orig_width": 2048,
+        "orig_height": 1536
+      },
+      "error": null,
+      "output": {
+        "chars": 4318,
+        "words": 125,
+        "has_table": true,
+        "tr_count": 43,
+        "td_count": 258
+      },
+      "text_preview": "KHANDELWAL MEDICAL STORES\nPRESS COLONY, PACHORE DIST : RAJGARH (MP) PIN 465683\nPhone : 9425316905, 07371-226447, 8889266662,\nE-Mail : khandelwalmedical@gmail.com\nOPK7734M1ZI\nITEM DESCRIPTION\n<table><tr><td>HIMALAYA ZANDRA</td><td></td><td><",
+      "gpu_after": {
+        "util_pct": 85.0,
+        "mem_used_mib": 5969.0,
+        "mem_total_mib": 6144.0,
+        "raw": "85, 5969, 6144"
+      },
+      "engines_used": [
+        "paddleocr-vl-1.6"
+      ],
+      "inference_plus_ipc_ms": 111789.7313000003,
+      "postprocess_note": "parsing bundled inside worker evidence + host _result_from_evidence; not separately exposed \u2014 included in e2e_ms / meta_latency_ms"
+    },
+    {
+      "label": "warm",
+      "document_id": "0000718964_2026_08_ZA_24_255_07092026081933.jpg",
+      "bytes": 1701197,
+      "orig_width": 2853,
+      "orig_height": 3590,
+      "megapixels": 10.242,
+      "gpu_before": {
+        "util_pct": 85.0,
+        "mem_used_mib": 5969.0,
+        "mem_total_mib": 6144.0,
+        "raw": "85, 5969, 6144"
+      },
+      "errors": [],
+      "worker_restarts": 0,
+      "preprocess_ms": 306.9765999998708,
+      "prep_meta": {
+        "downscaled": true,
+        "max_side": 2048,
+        "orig_width": 2853,
+        "orig_height": 3590,
+        "width": 1627,
+        "height": 2048,
+        "bytes_in": 1701197,
+        "bytes_out": 798518
+      },
+      "gpu_pre_infer": {
+        "util_pct": 0.0,
+        "mem_used_mib": 5969.0,
+        "mem_total_mib": 6144.0,
+        "raw": "0, 5969, 6144"
+      },
+      "status": "success",
+      "primary_engine": "paddleocr-vl-1.6",
+      "model": "PaddleOCR-VL-1.6",
+      "model_version": "v1.6",
+      "backend": "subprocess",
+      "resolved_device": "gpu:0",
+      "e2e_ms": 137662.74650000012,
+      "meta_latency_ms": 137288.45580000052,
+      "init_latency_ms": 15704.447499999333,
+      "image_prep": {
+        "downscaled": false,
+        "max_side": 2048,
+        "orig_width": 1627,
+        "orig_height": 2048
+      },
+      "error": null,
+      "output": {
+        "chars": 7071,
+        "words": 177,
+        "has_table": true,
+        "tr_count": 42,
+        "td_count": 465
+      },
+      "text_preview": "Losing Stock\nORDER FORM\nFrom: Shiva Agencies\n<table><tr><td colspan=\"4\">ST/CST/TIN:</td><td colspan=\"4\">Order No.:</td><td colspan=\"4\">Date:</td></tr><tr><td rowspan=\"2\">SAP Code</td><td rowspan=\"2\">Product</td><td rowspan=\"2\">Pack</td><td ",
+      "gpu_after": {
+        "util_pct": 3.0,
+        "mem_used_mib": 5433.0,
+        "mem_total_mib": 6144.0,
+        "raw": "3, 5433, 6144"
+      },
+      "engines_used": [
+        "paddleocr-vl-1.6"
+      ],
+      "inference_plus_ipc_ms": 137662.74650000012,
+      "postprocess_note": "parsing bundled inside worker evidence + host _result_from_evidence; not separately exposed \u2014 included in e2e_ms / meta_latency_ms"
+    }
+  ],
+  "tesseract_runs": [
+    {
+      "document_id": "0000720756_2026_08_ZA_24_291_07092026162249.jpg",
+      "primary_engine": "tesseract",
+      "status": "success",
+      "e2e_ms": 102562.83939999958,
+      "output": {
+        "chars": 5750,
+        "words": 100,
+        "has_table": true,
+        "tr_count": 39,
+        "td_count": 381
+      },
+      "text_preview": "ORDER FORM\n$ 50\\times1000=5000 $\n<table><tr><td>SAP Code</td><td>Product</td><td>Pack</td><td>Oty</td><td>Value</td><td>SAP Code</td><td>Product</td><td>Pack</td><td>Oty</td><td>Value</td></tr><tr><td>20235</td><td>Asana tablets</td><td>80k"
+    },
+    {
+      "document_id": "0000721924_2026_08_ZA_12_350_03092026163109.jpg",
+      "primary_engine": "tesseract",
+      "status": "success",
+      "e2e_ms": 128860.37649999981,
+      "output": {
+        "chars": 6316,
+        "words": 165,
+        "has_table": true,
+        "tr_count": 70,
+        "td_count": 415
+      },
+      "text_preview": "<table><tr><td colspan=\"6\">HIMALAYA ZANDRA DIV.</td></tr><tr><td>ARJUNA TAB.</td><td>60 &#x27;S</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>BONNISAN DROP</td><td>30 ML.</td><td>25</td><td>-</td><td>4</td><td>21</td></tr><tr><td"
+    },
+    {
+      "document_id": "0000736984_2026_08_ZA_22_594_05092026033933.jpg",
+      "primary_engine": "tesseract",
+      "status": "success",
+      "e2e_ms": 150306.89679999978,
+      "output": {
+        "chars": 7978,
+        "words": 144,
+        "has_table": true,
+        "tr_count": 61,
+        "td_count": 559
+      },
+      "text_preview": "9:06\n<table><tr><td colspan=\"10\">No.42, Thiagarajapuram Street, Agraharam, Vijayapuram, Tiruvarur-610001</td></tr><tr><td colspan=\"10\">Stock and Sales Report For the Month Of 08/2026 : THE HIMALAYA DRUGS-ZANDRA Page No.: 1/2</td></tr><tr><t"
+    },
+    {
+      "document_id": "0000729726_2026_08_ZA_12_4345_03092026142155.jpg",
+      "primary_engine": "tesseract",
+      "status": "success",
+      "e2e_ms": 121289.46360000009,
+      "output": {
+        "chars": 4318,
+        "words": 125,
+        "has_table": true,
+        "tr_count": 43,
+        "td_count": 258
+      },
+      "text_preview": "KHANDELWAL MEDICAL STORES\nPRESS COLONY, PACHORE DIST : RAJGARH (MP) PIN 465683\nPhone : 9425316905, 07371-226447, 8889266662,\nE-Mail : khandelwalmedical@gmail.com\nOPK7734M1ZI\nITEM DESCRIPTION\n<table><tr><td>HIMALAYA ZANDRA</td><td></td><td><"
+    },
+    {
+      "document_id": "0000718964_2026_08_ZA_24_255_07092026081933.jpg",
+      "primary_engine": "tesseract",
+      "status": "success",
+      "e2e_ms": 164842.145300001,
+      "output": {
+        "chars": 7071,
+        "words": 177,
+        "has_table": true,
+        "tr_count": 42,
+        "td_count": 465
+      },
+      "text_preview": "Losing Stock\nORDER FORM\nFrom: Shiva Agencies\n<table><tr><td colspan=\"4\">ST/CST/TIN:</td><td colspan=\"4\">Order No.:</td><td colspan=\"4\">Date:</td></tr><tr><td rowspan=\"2\">SAP Code</td><td rowspan=\"2\">Product</td><td rowspan=\"2\">Pack</td><td "
+    }
+  ],
+  "summary": [
+    {
+      "document_id": "0000720756_2026_08_ZA_24_291_07092026162249.jpg",
+      "label": "cold_first",
+      "vl_e2e_ms": 122083.62990000023,
+      "vl_chars": 5750,
+      "tess_e2e_ms": 102562.83939999958,
+      "tess_chars": 5750,
+      "vl_over_tess": 1.19
+    },
+    {
+      "document_id": "0000721924_2026_08_ZA_12_350_03092026163109.jpg",
+      "label": "warm",
+      "vl_e2e_ms": 150145.58409999972,
+      "vl_chars": 6316,
+      "tess_e2e_ms": 128860.37649999981,
+      "tess_chars": 6316,
+      "vl_over_tess": 1.17
+    },
+    {
+      "document_id": "0000736984_2026_08_ZA_22_594_05092026033933.jpg",
+      "label": "warm",
+      "vl_e2e_ms": 150297.52439999994,
+      "vl_chars": 7978,
+      "tess_e2e_ms": 150306.89679999978,
+      "tess_chars": 7978,
+      "vl_over_tess": 1.0
+    },
+    {
+      "document_id": "0000729726_2026_08_ZA_12_4345_03092026142155.jpg",
+      "label": "warm",
+      "vl_e2e_ms": 111789.7313000003,
+      "vl_chars": 4318,
+      "tess_e2e_ms": 121289.46360000009,
+      "tess_chars": 4318,
+      "vl_over_tess": 0.92
+    },
+    {
+      "document_id": "0000718964_2026_08_ZA_24_255_07092026081933.jpg",
+      "label": "warm",
+      "vl_e2e_ms": 137662.74650000012,
+      "vl_chars": 7071,
+      "tess_e2e_ms": 164842.145300001,
+      "tess_chars": 7071,
+      "vl_over_tess": 0.84
+    }
+  ]
+}

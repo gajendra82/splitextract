@@ -1,0 +1,168 @@
+{
+  "file": "0000702148_2026_08_ZL_24_427_03092026121607.jpg",
+  "path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000702148_2026_08_ZL_24_427_03092026121607.jpg",
+  "format": "STOCK & SALES ANALYSIS",
+  "api_method": "gemini_extraction_fallback",
+  "status": "FAIL",
+  "expected_rows": 18,
+  "extracted_rows": 0,
+  "matched_rows": 0,
+  "missing_rows": [
+    {
+      "product": "ARJUNA TAB BOX 5328 .22 1323, 70 151 0.00 81",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 8683.39,
+      "closing_qty": 70,
+      "kind": "missing_product"
+    },
+    {
+      "product": "LIV 52 100ML SUGAR FREE 16731.32 “",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": 22,
+      "kind": "missing_product"
+    },
+    {
+      "product": "LIV 52 200ML SUGAR FREE ih 5",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 595.2,
+      "closing_qty": 51,
+      "kind": "missing_product"
+    },
+    {
+      "product": "100ML 100ML 56 6338\\\\44 0.00 ORO-T ORAL RINSE 7 1941.98 \\\\24 6341.14 23",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 6579.43,
+      "closing_qty": -6,
+      "kind": "missing_product"
+    },
+    {
+      "product": "ACTIVE CF 200GM 12 QUISTA 11 -3051..68 24 6841.14 13",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 3691.47,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "ACTIVE MMF 200GM 12 QUISTA 1 -23\\18 4 0.00",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 0,
+      "closing_qty": -1,
+      "kind": "missing_product"
+    },
+    {
+      "product": "REHYDRATE 1 131)..1:7 0.00",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 0,
+      "closing_qty": 1,
+      "kind": "missing_product"
+    },
+    {
+      "product": "60ML 50 1, Wii RUMALAYA ROLLON 11119.84 =|) 1} 01.00 35",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 7472.28,
+      "closing_qty": 17,
+      "kind": "missing_product"
+    },
+    {
+      "product": "SHIGRU TAB 26 7020.19 0\\00 12",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 3188.64,
+      "closing_qty": 14,
+      "kind": "missing_product"
+    },
+    {
+      "product": "PCS",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": 3598.92,
+      "kind": "missing_product"
+    },
+    {
+      "product": "VEGECORT CREAM 53239.15 108 25920.08 214",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 38539.56,
+      "closing_qty": 263,
+      "kind": "missing_product"
+    },
+    {
+      "product": "AACTARIL SOAP 3 -445.80 20",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": 6085.17,
+      "kind": "missing_product"
+    },
+    {
+      "product": "ABANA TAB 7065.79 - 0.00",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 0,
+      "closing_qty": 41,
+      "kind": "missing_product"
+    },
+    {
+      "product": "100ML 41 ALTHEA LOTION 0,00 =",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 0,
+      "closing_qty": 1,
+      "kind": "missing_product"
+    },
+    {
+      "product": "ANTIHAIRLOSS CREAM 5004.",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": 1458.07,
+      "kind": "missing_product"
+    },
+    {
+      "product": "30ML 13 BLEMINOR CREAM ~ 0.00 19",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 2555.51,
+      "closing_qty": -3,
+      "kind": "missing_product"
+    },
+    {
+      "product": "CLARINA 30GM 16 CREAM % 0.00 15",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 1696.35,
+      "closing_qty": 16,
+      "kind": "missing_product"
+    },
+    {
+      "product": "CLARIMA “ef, Sk 3957960 FACE WASH GEL 6OML",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    }
+  ],
+  "extra_rows": [],
+  "duplicates": [],
+  "mismatches": [],
+  "ocr_review": [],
+  "accounting": [],
+  "confidence": "medium",
+  "notes": [
+    "OCR used tesseract psm 6."
+  ],
+  "result_key": "0000702148_2026_08_ZL_24_427_03092026121607",
+  "unavailable_fields": {},
+  "formula_checked": "none"
+}

@@ -1,0 +1,1158 @@
+{
+  "source_file": "0000701078_2026_08_ZL_03_362_05092026080346.jpeg",
+  "source_format": "jpeg",
+  "stockist_name": "THE HIMALAYA DRUG (ZEAL DIV)",
+  "stockist_address": null,
+  "company_name": "ALEX PHARMA",
+  "period_from": "2026-07-26",
+  "period_to": "2026-08-26",
+  "report_title": "Sales & Stock Statement",
+  "line_items": [
+    {
+      "product_code": null,
+      "product_name": "AACTARIL SOAP",
+      "packing": "75GM",
+      "opening_qty": 82.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 69.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 82.0,
+        "expected_closing": 82.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ABANA TAB",
+      "packing": "60'S",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 100.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 73.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 100.0,
+        "expected_closing": 100.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ALTHEA LOTION",
+      "packing": "100ML",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ANTI HAIR LOSS CREA",
+      "packing": "50ML",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "BLEMINOR CREAM",
+      "packing": "30ML",
+      "opening_qty": 59.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 53.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 59.0,
+        "expected_closing": 59.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "CLARINA CREAM",
+      "packing": "30GM",
+      "opening_qty": 74.0,
+      "opening_value": null,
+      "receipts_qty": 50.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 119.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 124.0,
+        "expected_closing": 124.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "CLARINA KIT",
+      "packing": "1PKT",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "CLARINA-F-WASH",
+      "packing": "60ML",
+      "opening_qty": 28.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 22.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 28.0,
+        "expected_closing": 28.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "COLD BALM",
+      "packing": "10G",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "CONFIDO TAB",
+      "packing": "60'S",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 300.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 252.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 300.0,
+        "expected_closing": 300.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "DIABECON DS TAB",
+      "packing": "60 'S",
+      "opening_qty": 32.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 1.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 32.0,
+        "expected_closing": 32.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "DIABECON TAB.",
+      "packing": "60'S",
+      "opening_qty": 88.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 65.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 88.0,
+        "expected_closing": 88.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "DIAREX SYP",
+      "packing": "100ML",
+      "opening_qty": 1.0,
+      "opening_value": null,
+      "receipts_qty": 56.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 55.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 57.0,
+        "expected_closing": 57.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "DIAREX TAB",
+      "packing": "30'S",
+      "opening_qty": 6.0,
+      "opening_value": null,
+      "receipts_qty": 50.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 48.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 56.0,
+        "expected_closing": 56.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "HADJOD CAP",
+      "packing": "60'S",
+      "opening_qty": 29.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 29.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 29.0,
+        "expected_closing": 29.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "HAIRZONE SOLUTION",
+      "packing": "60ML",
+      "opening_qty": 6.0,
+      "opening_value": null,
+      "receipts_qty": 28.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 27.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 34.0,
+        "expected_closing": 34.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "HERBOLAX CAP",
+      "packing": "10'S",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "HIMCOLIN GEL",
+      "packing": "30GM",
+      "opening_qty": 63.0,
+      "opening_value": null,
+      "receipts_qty": 100.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 106.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 163.0,
+        "expected_closing": 163.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "HIORA MWASH",
+      "packing": "215ML",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "KAPIKACHHU CAP",
+      "packing": "60'S",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV 52 HB CAP",
+      "packing": "10'S",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 84.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 58.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 84.0,
+        "expected_closing": 84.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV 52 SYP/B",
+      "packing": "200 ML",
+      "opening_qty": 2713.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 841.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 2713.0,
+        "expected_closing": 2713.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV 52 SYP/S",
+      "packing": "100 ML",
+      "opening_qty": 3523.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 1707.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 3523.0,
+        "expected_closing": 3523.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV 52 TAB",
+      "packing": "100 'S",
+      "opening_qty": 294.0,
+      "opening_value": null,
+      "receipts_qty": 500.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 591.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 794.0,
+        "expected_closing": 794.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV-52 SYP(SF)",
+      "packing": "100ML",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV-52 SYP(SF).",
+      "packing": "200ML",
+      "opening_qty": 7.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 7.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 7.0,
+        "expected_closing": 7.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "MANJISTHA CAP",
+      "packing": "60'S",
+      "opening_qty": 22.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 22.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 22.0,
+        "expected_closing": 22.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "OPTHACARE E/DROPS",
+      "packing": "10ML",
+      "opening_qty": 142.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 109.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 142.0,
+        "expected_closing": 142.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ORO-T (S)",
+      "packing": "100 ML",
+      "opening_qty": 50.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 48.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 50.0,
+        "expected_closing": 50.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ORO-T LIQ",
+      "packing": "200 ML",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "OXITARD CAPS.",
+      "packing": "10'S",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PAIN BALM STRONG",
+      "packing": "45GM",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PAIN BALM STRONG.",
+      "packing": "10 GM",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PAIN RELIEF OIL",
+      "packing": "100ML",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PILEX FORTE OINT",
+      "packing": "30 GM",
+      "opening_qty": 437.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 272.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 437.0,
+        "expected_closing": 437.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PILEX FORTE TAB",
+      "packing": "2*30'S",
+      "opening_qty": 103.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 67.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 103.0,
+        "expected_closing": 103.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PILEX TAB",
+      "packing": "60'S",
+      "opening_qty": 300.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 191.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 300.0,
+        "expected_closing": 300.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PURE HAND-STW",
+      "packing": "100 ML",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PURE HANDS(LEMON)",
+      "packing": "100 ML",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PURE HANDS-GA",
+      "packing": "50 ML",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PUREHAND-F",
+      "packing": "500 ml",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PUREHAND-O",
+      "packing": "500 ml",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PURIM TAB",
+      "packing": "60'S",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "QUISTA ACTIVE(CF)",
+      "packing": "200 GM",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "QUISTA ACTIVE(MMF)",
+      "packing": "200 GM",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "QUISTA DN POWDER (V400 GM",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "RENALKA SYP",
+      "packing": "100ML",
+      "opening_qty": 83.0,
+      "opening_value": null,
+      "receipts_qty": 56.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 126.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 139.0,
+        "expected_closing": 139.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "RENALKA SYP(B)",
+      "packing": "200ML",
+      "opening_qty": 46.0,
+      "opening_value": null,
+      "receipts_qty": 84.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 39.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 130.0,
+        "expected_closing": 130.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "SHALLAKI CAP.",
+      "packing": "60'S",
+      "opening_qty": 1.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 1.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 1.0,
+        "expected_closing": 1.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "SHIGRU CAP",
+      "packing": "60'S",
+      "opening_qty": 60.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 60.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 60.0,
+        "expected_closing": 60.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "TAGARA CAP.",
+      "packing": "60'S",
+      "opening_qty": 48.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 43.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 48.0,
+        "expected_closing": 48.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "TALEKT CAPS.",
+      "packing": "60'S",
+      "opening_qty": 12.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 12.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 12.0,
+        "expected_closing": 12.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "TALEKT SYP.",
+      "packing": "120ML",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 56.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 43.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 56.0,
+        "expected_closing": 56.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "TENTEX FORTE TAB",
+      "packing": "10'S",
+      "opening_qty": 634.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 546.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 634.0,
+        "expected_closing": 634.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "TRIKATU CAP.",
+      "packing": "60'S",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "TRIKATU SYP",
+      "packing": "200ML",
+      "opening_qty": 12.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 1.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 12.0,
+        "expected_closing": 12.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "TRIPHALA CAP.",
+      "packing": "60'S",
+      "opening_qty": 36.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 28.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 36.0,
+        "expected_closing": 36.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "TRIPHALA SYP",
+      "packing": "200ML",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "VASAKA SYRUP",
+      "packing": "200 ML",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "VEGECORT CREAM",
+      "packing": "30GM",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "VRIKSHAMLA CAP.",
+      "packing": "60'S",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "YASHTI MADHU CAP.",
+      "packing": "60'S",
+      "opening_qty": 15.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 5.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 15.0,
+        "expected_closing": 15.0,
+        "stock_identity_ok": false
+      }
+    }
+  ],
+  "totals": {
+    "sales_value": null,
+    "closing_value": 708245.0,
+    "extra": {
+      "extraction_method": "gemini_extraction_fallback",
+      "line_sales_value_sum": 0.0,
+      "line_closing_value_sum": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 5736.0,
+      "stock_identity_kind": "opening_receipts_sales_closing",
+      "stock_identity_formula": "closing=opening+receipts-sales",
+      "stock_identity_fail_count": 29,
+      "stock_validation": {
+        "opening_plus_purchase": 10470.0,
+        "expected_total": 10470.0,
+        "calculated_closing": 10470.0,
+        "extracted_closing": 5736.0,
+        "is_valid": false
+      },
+      "extraction_quality": {
+        "quality": "poor",
+        "score": 75,
+        "reasons": [
+          "stock_identity_failure"
+        ],
+        "threshold": 75.0
+      },
+      "gemini_fallback": "validation_failed"
+    }
+  }
+}

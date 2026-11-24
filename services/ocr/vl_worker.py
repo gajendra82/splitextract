@@ -119,6 +119,8 @@ def main(argv: list[str] | None = None) -> int:
         help="Keep-alive server: one model load, JSON lines on stdin/stdout",
     )
     args = parser.parse_args(argv)
+    if str(args.device or "").strip().lower() == "cpu":
+        os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
     if args.serve:
         return _serve(device=args.device)

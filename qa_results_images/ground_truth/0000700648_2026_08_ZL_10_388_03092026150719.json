@@ -1,0 +1,32 @@
+{
+  "source_file": "0000700648_2026_08_ZL_10_388_03092026150719.jpg",
+  "format": "Saleable Stock Report",
+  "confidence": "low",
+  "source": "ocr",
+  "formula": "none",
+  "present_fields": [
+    "product_name",
+    "sales_qty"
+  ],
+  "absent_fields": [
+    "product_code",
+    "opening_qty",
+    "opening_value",
+    "receipts_qty",
+    "receipts_value",
+    "sales_value",
+    "closing_qty",
+    "closing_value"
+  ],
+  "columns": [
+    "product_name",
+    "packing",
+    "sales_qty"
+  ],
+  "line_items": [],
+  "notes": [
+    "OCR used tesseract psm 6.",
+    "No stock-grid header with product rows was found in this PDF."
+  ],
+  "partial": false
+}

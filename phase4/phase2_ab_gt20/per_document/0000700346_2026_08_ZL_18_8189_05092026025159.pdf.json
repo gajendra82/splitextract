@@ -1,0 +1,908 @@
+{
+  "document_id": "0000700346_2026_08_ZL_18_8189_05092026025159.pdf",
+  "source_path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700346_2026_08_ZL_18_8189_05092026025159.pdf",
+  "verified_fields": 18,
+  "off": {
+    "error": null,
+    "telemetry": {
+      "gemini_calls": 0,
+      "prompt_tokens": 0,
+      "output_tokens": 0,
+      "latency_ms": 0,
+      "estimated_cost_usd": 0.0,
+      "pricing_note": "estimate using flash-lite ballpark $0.1/1M in + $0.4/1M out",
+      "calls": [],
+      "wall_latency_ms": 50,
+      "phase2_enabled": false,
+      "ocr_mode": "stored_vl_ocr",
+      "phase2_status": null,
+      "phase2_attempts": null,
+      "phase2_failure_type": null,
+      "extraction_method": "di_ocr_html_override"
+    },
+    "score": {
+      "metrics": {
+        "verified_fields": 18,
+        "correct_fields": 3,
+        "field_accuracy": 0.16666666666666666,
+        "numeric_accuracy": 0.0,
+        "quantity_accuracy": 0.0,
+        "price_accuracy": null,
+        "date_accuracy": null,
+        "batch_accuracy": null,
+        "header_accuracy": 1.0,
+        "table_column_accuracy": 0.0,
+        "text_accuracy": 0.75,
+        "precision": 1.0,
+        "recall": 0.16666666666666666,
+        "f1": 0.2857142857142857,
+        "silent_wrong_rate": 0.0,
+        "silent_wrong_count": 0,
+        "silent_wrong_denominator_verified_fields": 18,
+        "accepted_field_silent_wrong_rate": 0.0,
+        "accepted_field_silent_wrong_count": 0,
+        "accepted_field_denominator": 3,
+        "explicit_unresolved_rate": 0.0,
+        "missing_value_rate": 0.05555555555555555,
+        "critical_error_rate": 0.7777777777777778,
+        "by_type_prf": {
+          "numeric": {
+            "precision": null,
+            "recall": 0.0,
+            "f1": null,
+            "n": 14
+          },
+          "text": {
+            "precision": 1.0,
+            "recall": 0.75,
+            "f1": 0.8571428571428571,
+            "n": 4
+          },
+          "table": {
+            "precision": null,
+            "recall": 0.0,
+            "f1": null,
+            "n": 14
+          }
+        },
+        "error_type_counts": {
+          "MISSING": 1,
+          "MISSING_PRODUCT": 14
+        }
+      },
+      "document_status": "PARTIALLY_CORRECT",
+      "quantity_accuracy": 0.0,
+      "product_identity": {
+        "gt_products": 5,
+        "found_products": 0,
+        "recall": 0.0
+      },
+      "missing_values": 15,
+      "verified_fields": 18,
+      "correct_fields": 3
+    },
+    "matches": [
+      {
+        "field_id": "vendor",
+        "field_type": "text",
+        "printed_header": "vendor",
+        "product_key": null,
+        "expected_raw": "RAJARAM AGENCIES",
+        "expected_normalized": null,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING",
+        "silent_wrong": false,
+        "critical": false,
+        "priority": "medium"
+      },
+      {
+        "field_id": "h_ob",
+        "field_type": "header",
+        "printed_header": "OB",
+        "product_key": null,
+        "expected_raw": "OB",
+        "expected_normalized": null,
+        "predicted_raw": "OB",
+        "match_mode": "ocr_header_presence",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": false,
+        "priority": "high"
+      },
+      {
+        "field_id": "h_sal",
+        "field_type": "header",
+        "printed_header": "SAL",
+        "product_key": null,
+        "expected_raw": "SAL",
+        "expected_normalized": null,
+        "predicted_raw": "SAL",
+        "match_mode": "ocr_header_presence",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": false,
+        "priority": "high"
+      },
+      {
+        "field_id": "h_cb",
+        "field_type": "header",
+        "printed_header": "CB",
+        "product_key": null,
+        "expected_raw": "CB",
+        "expected_normalized": null,
+        "predicted_raw": "CB",
+        "match_mode": "ocr_header_presence",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": false,
+        "priority": "high"
+      },
+      {
+        "field_id": "aact_ob",
+        "field_type": "quantity",
+        "printed_header": "OB",
+        "product_key": "AACTARIL SOAP",
+        "expected_raw": "0",
+        "expected_normalized": 0.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "aact_cb",
+        "field_type": "quantity",
+        "printed_header": "CB",
+        "product_key": "AACTARIL SOAP",
+        "expected_raw": "0",
+        "expected_normalized": 0.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "bon_ob",
+        "field_type": "quantity",
+        "printed_header": "OB",
+        "product_key": "BONISAN 200ML",
+        "expected_raw": "241",
+        "expected_normalized": 241.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "bon_sal",
+        "field_type": "quantity",
+        "printed_header": "SAL",
+        "product_key": "BONISAN 200ML",
+        "expected_raw": "83",
+        "expected_normalized": 83.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "bon_cb",
+        "field_type": "quantity",
+        "printed_header": "CB",
+        "product_key": "BONISAN 200ML",
+        "expected_raw": "156",
+        "expected_normalized": 156.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "cyst_ob",
+        "field_type": "quantity",
+        "printed_header": "OB",
+        "product_key": "CYSTONE TAB",
+        "expected_raw": "27",
+        "expected_normalized": 27.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "cyst_sal",
+        "field_type": "quantity",
+        "printed_header": "SAL",
+        "product_key": "CYSTONE TAB",
+        "expected_raw": "14",
+        "expected_normalized": 14.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "cyst_cb",
+        "field_type": "quantity",
+        "printed_header": "CB",
+        "product_key": "CYSTONE TAB",
+        "expected_raw": "13",
+        "expected_normalized": 13.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "liv200_ob",
+        "field_type": "quantity",
+        "printed_header": "OB",
+        "product_key": "LIV-52 SYP 200ML",
+        "expected_raw": "35",
+        "expected_normalized": 35.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "liv200_sal",
+        "field_type": "quantity",
+        "printed_header": "SAL",
+        "product_key": "LIV-52 SYP 200ML",
+        "expected_raw": "33",
+        "expected_normalized": 33.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "liv200_cb",
+        "field_type": "quantity",
+        "printed_header": "CB",
+        "product_key": "LIV-52 SYP 200ML",
+        "expected_raw": "2",
+        "expected_normalized": 2.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "livds_ob",
+        "field_type": "quantity",
+        "printed_header": "OB",
+        "product_key": "LIV 52 DS TAB",
+        "expected_raw": "70",
+        "expected_normalized": 70.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "livds_sal",
+        "field_type": "quantity",
+        "printed_header": "SAL",
+        "product_key": "LIV 52 DS TAB",
+        "expected_raw": "16",
+        "expected_normalized": 16.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "livds_cb",
+        "field_type": "quantity",
+        "printed_header": "CB",
+        "product_key": "LIV 52 DS TAB",
+        "expected_raw": "54",
+        "expected_normalized": 54.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      }
+    ],
+    "stock_equation": {
+      "accepted": false,
+      "fail_count": 0,
+      "is_valid": false,
+      "healthy_rows": 0,
+      "failing_rows": 0,
+      "reasons": [
+        "empty_line_items",
+        "low_ocr_quality_score"
+      ]
+    },
+    "result": {
+      "stockist_name": null,
+      "company_name": null,
+      "line_item_count": 0,
+      "line_items": [],
+      "extraction_method": "di_ocr_html_override",
+      "di_ocr_override": true,
+      "phase1_validation": {
+        "accepted": false,
+        "status": "unresolved",
+        "reasons": [
+          "empty_line_items",
+          "low_ocr_quality_score"
+        ],
+        "checks": {
+          "schema": true,
+          "quality": false,
+          "stock_identity": true,
+          "rows": false,
+          "duplicates": true,
+          "cell_validation": true,
+          "column_mapping": true,
+          "ocr_verified": true
+        },
+        "quality_score": 0,
+        "parser": "di_ocr_html_override",
+        "failure_type": "EMPTY_OUTPUT",
+        "business_validation": {
+          "status": "unknown",
+          "reason": "identity_profile_unknown"
+        },
+        "source_agreement": null,
+        "source_evidence": true,
+        "cell_validation": {
+          "issues": [],
+          "column_report": {
+            "assignments": [],
+            "unresolved_headers": [],
+            "ambiguous_fields": [],
+            "issues": [
+              "unknown_layout_no_mapping"
+            ],
+            "layout_id": "unknown",
+            "mapping_confidence": 0.0,
+            "has_column_confusion": false
+          },
+          "accepted_critical_fields": 0,
+          "unresolved_critical_fields": 0,
+          "has_blocking_issues": false
+        }
+      },
+      "phase2": null
+    }
+  },
+  "on": {
+    "error": null,
+    "telemetry": {
+      "gemini_calls": 2,
+      "prompt_tokens": 11108,
+      "output_tokens": 16360,
+      "latency_ms": 34374,
+      "estimated_cost_usd": 0.007655,
+      "pricing_note": "estimate using flash-lite ballpark $0.1/1M in + $0.4/1M out",
+      "calls": [
+        {
+          "model": "gemini-2.5-flash-lite",
+          "timeout": 60,
+          "latency_ms": 17256,
+          "prompt_tokens": 5554,
+          "output_tokens": 8180,
+          "error": null,
+          "response_mime_type": "application/json",
+          "schema_title": "SalesExtractionOutput",
+          "part_kinds": [
+            "text",
+            "text"
+          ]
+        },
+        {
+          "model": "gemini-2.5-flash-lite",
+          "timeout": 60,
+          "latency_ms": 17118,
+          "prompt_tokens": 5554,
+          "output_tokens": 8180,
+          "error": null,
+          "response_mime_type": "application/json",
+          "schema_title": "SalesExtractionOutput",
+          "part_kinds": [
+            "text",
+            "text"
+          ]
+        }
+      ],
+      "wall_latency_ms": 34433,
+      "phase2_enabled": true,
+      "ocr_mode": "stored_vl_ocr",
+      "phase2_status": "unresolved",
+      "phase2_attempts": 2,
+      "phase2_failure_type": "EMPTY_OUTPUT",
+      "extraction_method": "di_ocr_html_override"
+    },
+    "score": {
+      "metrics": {
+        "verified_fields": 18,
+        "correct_fields": 3,
+        "field_accuracy": 0.16666666666666666,
+        "numeric_accuracy": 0.0,
+        "quantity_accuracy": 0.0,
+        "price_accuracy": null,
+        "date_accuracy": null,
+        "batch_accuracy": null,
+        "header_accuracy": 1.0,
+        "table_column_accuracy": 0.0,
+        "text_accuracy": 0.75,
+        "precision": 1.0,
+        "recall": 0.16666666666666666,
+        "f1": 0.2857142857142857,
+        "silent_wrong_rate": 0.0,
+        "silent_wrong_count": 0,
+        "silent_wrong_denominator_verified_fields": 18,
+        "accepted_field_silent_wrong_rate": 0.0,
+        "accepted_field_silent_wrong_count": 0,
+        "accepted_field_denominator": 3,
+        "explicit_unresolved_rate": 0.0,
+        "missing_value_rate": 0.05555555555555555,
+        "critical_error_rate": 0.7777777777777778,
+        "by_type_prf": {
+          "numeric": {
+            "precision": null,
+            "recall": 0.0,
+            "f1": null,
+            "n": 14
+          },
+          "text": {
+            "precision": 1.0,
+            "recall": 0.75,
+            "f1": 0.8571428571428571,
+            "n": 4
+          },
+          "table": {
+            "precision": null,
+            "recall": 0.0,
+            "f1": null,
+            "n": 14
+          }
+        },
+        "error_type_counts": {
+          "MISSING": 1,
+          "MISSING_PRODUCT": 14
+        }
+      },
+      "document_status": "PARTIALLY_CORRECT",
+      "quantity_accuracy": 0.0,
+      "product_identity": {
+        "gt_products": 5,
+        "found_products": 0,
+        "recall": 0.0
+      },
+      "missing_values": 15,
+      "verified_fields": 18,
+      "correct_fields": 3
+    },
+    "matches": [
+      {
+        "field_id": "vendor",
+        "field_type": "text",
+        "printed_header": "vendor",
+        "product_key": null,
+        "expected_raw": "RAJARAM AGENCIES",
+        "expected_normalized": null,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING",
+        "silent_wrong": false,
+        "critical": false,
+        "priority": "medium"
+      },
+      {
+        "field_id": "h_ob",
+        "field_type": "header",
+        "printed_header": "OB",
+        "product_key": null,
+        "expected_raw": "OB",
+        "expected_normalized": null,
+        "predicted_raw": "OB",
+        "match_mode": "ocr_header_presence",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": false,
+        "priority": "high"
+      },
+      {
+        "field_id": "h_sal",
+        "field_type": "header",
+        "printed_header": "SAL",
+        "product_key": null,
+        "expected_raw": "SAL",
+        "expected_normalized": null,
+        "predicted_raw": "SAL",
+        "match_mode": "ocr_header_presence",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": false,
+        "priority": "high"
+      },
+      {
+        "field_id": "h_cb",
+        "field_type": "header",
+        "printed_header": "CB",
+        "product_key": null,
+        "expected_raw": "CB",
+        "expected_normalized": null,
+        "predicted_raw": "CB",
+        "match_mode": "ocr_header_presence",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": false,
+        "priority": "high"
+      },
+      {
+        "field_id": "aact_ob",
+        "field_type": "quantity",
+        "printed_header": "OB",
+        "product_key": "AACTARIL SOAP",
+        "expected_raw": "0",
+        "expected_normalized": 0.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "aact_cb",
+        "field_type": "quantity",
+        "printed_header": "CB",
+        "product_key": "AACTARIL SOAP",
+        "expected_raw": "0",
+        "expected_normalized": 0.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "bon_ob",
+        "field_type": "quantity",
+        "printed_header": "OB",
+        "product_key": "BONISAN 200ML",
+        "expected_raw": "241",
+        "expected_normalized": 241.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "bon_sal",
+        "field_type": "quantity",
+        "printed_header": "SAL",
+        "product_key": "BONISAN 200ML",
+        "expected_raw": "83",
+        "expected_normalized": 83.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "bon_cb",
+        "field_type": "quantity",
+        "printed_header": "CB",
+        "product_key": "BONISAN 200ML",
+        "expected_raw": "156",
+        "expected_normalized": 156.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "cyst_ob",
+        "field_type": "quantity",
+        "printed_header": "OB",
+        "product_key": "CYSTONE TAB",
+        "expected_raw": "27",
+        "expected_normalized": 27.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "cyst_sal",
+        "field_type": "quantity",
+        "printed_header": "SAL",
+        "product_key": "CYSTONE TAB",
+        "expected_raw": "14",
+        "expected_normalized": 14.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "cyst_cb",
+        "field_type": "quantity",
+        "printed_header": "CB",
+        "product_key": "CYSTONE TAB",
+        "expected_raw": "13",
+        "expected_normalized": 13.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "liv200_ob",
+        "field_type": "quantity",
+        "printed_header": "OB",
+        "product_key": "LIV-52 SYP 200ML",
+        "expected_raw": "35",
+        "expected_normalized": 35.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "liv200_sal",
+        "field_type": "quantity",
+        "printed_header": "SAL",
+        "product_key": "LIV-52 SYP 200ML",
+        "expected_raw": "33",
+        "expected_normalized": 33.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "liv200_cb",
+        "field_type": "quantity",
+        "printed_header": "CB",
+        "product_key": "LIV-52 SYP 200ML",
+        "expected_raw": "2",
+        "expected_normalized": 2.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "livds_ob",
+        "field_type": "quantity",
+        "printed_header": "OB",
+        "product_key": "LIV 52 DS TAB",
+        "expected_raw": "70",
+        "expected_normalized": 70.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "livds_sal",
+        "field_type": "quantity",
+        "printed_header": "SAL",
+        "product_key": "LIV 52 DS TAB",
+        "expected_raw": "16",
+        "expected_normalized": 16.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "livds_cb",
+        "field_type": "quantity",
+        "printed_header": "CB",
+        "product_key": "LIV 52 DS TAB",
+        "expected_raw": "54",
+        "expected_normalized": 54.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      }
+    ],
+    "stock_equation": {
+      "accepted": false,
+      "fail_count": 0,
+      "is_valid": false,
+      "healthy_rows": 0,
+      "failing_rows": 0,
+      "reasons": [
+        "empty_line_items",
+        "low_ocr_quality_score"
+      ]
+    },
+    "result": {
+      "stockist_name": null,
+      "company_name": null,
+      "line_item_count": 0,
+      "line_items": [],
+      "extraction_method": "di_ocr_html_override",
+      "di_ocr_override": true,
+      "phase1_validation": {
+        "accepted": false,
+        "status": "unresolved",
+        "reasons": [
+          "empty_line_items",
+          "low_ocr_quality_score"
+        ],
+        "checks": {
+          "schema": true,
+          "quality": false,
+          "stock_identity": true,
+          "rows": false,
+          "duplicates": true,
+          "cell_validation": true,
+          "column_mapping": true,
+          "ocr_verified": true
+        },
+        "quality_score": 0,
+        "parser": "di_ocr_html_override",
+        "failure_type": "EMPTY_OUTPUT",
+        "business_validation": {
+          "status": "unknown",
+          "reason": "identity_profile_unknown"
+        },
+        "source_agreement": null,
+        "source_evidence": true,
+        "cell_validation": {
+          "issues": [],
+          "column_report": {
+            "assignments": [],
+            "unresolved_headers": [],
+            "ambiguous_fields": [],
+            "issues": [
+              "unknown_layout_no_mapping"
+            ],
+            "layout_id": "unknown",
+            "mapping_confidence": 0.0,
+            "has_column_confusion": false
+          },
+          "accepted_critical_fields": 0,
+          "unresolved_critical_fields": 0,
+          "has_blocking_issues": false
+        }
+      },
+      "phase2": {
+        "status": "unresolved",
+        "failure_type": "EMPTY_OUTPUT",
+        "strategy": "structured_reread",
+        "attempts": 2,
+        "applied": false,
+        "accepted": false,
+        "recovery_log": [
+          {
+            "attempt": 1,
+            "accepted": false,
+            "parsed": false,
+            "returned": []
+          },
+          {
+            "attempt": 2,
+            "accepted": false,
+            "parsed": false,
+            "returned": []
+          }
+        ],
+        "original_values": [],
+        "manual_review": "UNRESOLVED"
+      }
+    }
+  },
+  "comparison": {
+    "field_accuracy_off": 0.16666666666666666,
+    "field_accuracy_on": 0.16666666666666666,
+    "field_accuracy_delta": 0.0,
+    "quantity_accuracy_off": 0.0,
+    "quantity_accuracy_on": 0.0,
+    "quantity_accuracy_delta": 0.0,
+    "product_identity_recall_off": 0.0,
+    "product_identity_recall_on": 0.0,
+    "missing_values_off": 15,
+    "missing_values_on": 15,
+    "missing_values_delta": 0
+  },
+  "healthy_row_check": {
+    "healthy_rows_checked": 0,
+    "healthy_rows_changed": 0,
+    "unchanged": true,
+    "changes": []
+  }
+}

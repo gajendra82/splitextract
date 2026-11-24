@@ -1,0 +1,290 @@
+{
+  "file": "0000701151_2026_08_ZL_14_361_03092026025650.jpg",
+  "path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000701151_2026_08_ZL_14_361_03092026025650.jpg",
+  "format": "Sales & Stock Statement",
+  "api_method": "gemini_extraction_fallback",
+  "status": "FAIL",
+  "expected_rows": 42,
+  "extracted_rows": 42,
+  "matched_rows": 41,
+  "missing_rows": [
+    {
+      "product": "LIV 52SYP. 200ML",
+      "opening_qty": 638,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    }
+  ],
+  "extra_rows": [
+    {
+      "product": "LIV 52 SYP.",
+      "opening_qty": 638,
+      "sales_qty": 1080,
+      "closing_qty": 1728,
+      "kind": "extra_product"
+    }
+  ],
+  "duplicates": [],
+  "mismatches": [
+    {
+      "product": "YASHTIMADHU CAPS",
+      "field": "receipts_qty",
+      "expected": 60134,
+      "actual": 60,
+      "kind": "wrong_receipt_qty"
+    },
+    {
+      "product": "TRIPHALA CAPS",
+      "field": "receipts_qty",
+      "expected": 107,
+      "actual": 0,
+      "kind": "wrong_receipt_qty"
+    },
+    {
+      "product": "TRIKATU CAPS",
+      "field": "receipts_qty",
+      "expected": 95,
+      "actual": 0,
+      "kind": "wrong_receipt_qty"
+    },
+    {
+      "product": "TAGARA TAB",
+      "field": "closing_qty",
+      "expected": 5,
+      "actual": 75,
+      "kind": "wrong_closing_qty"
+    },
+    {
+      "product": "RENALKA 100ML SYP",
+      "field": "receipts_qty",
+      "expected": 64,
+      "actual": 0,
+      "kind": "wrong_receipt_qty"
+    },
+    {
+      "product": "PURIM TAB",
+      "field": "receipts_qty",
+      "expected": 28,
+      "actual": 0,
+      "kind": "wrong_receipt_qty"
+    },
+    {
+      "product": "LIV 52 HB CAPS",
+      "field": "receipts_qty",
+      "expected": 112,
+      "actual": 0,
+      "kind": "wrong_receipt_qty"
+    },
+    {
+      "product": "HIMCOLIN 30GM GEL",
+      "field": "receipts_qty",
+      "expected": 50,
+      "actual": 0,
+      "kind": "wrong_receipt_qty"
+    },
+    {
+      "product": "HAIR ZONE SOLN —",
+      "field": "receipts_qty",
+      "expected": 16,
+      "actual": 0,
+      "kind": "wrong_receipt_qty"
+    },
+    {
+      "product": "HADJOD TAB",
+      "field": "receipts_qty",
+      "expected": 27,
+      "actual": 0,
+      "kind": "wrong_receipt_qty"
+    },
+    {
+      "product": "DIAREX TAB",
+      "field": "receipts_qty",
+      "expected": 24,
+      "actual": 0,
+      "kind": "wrong_receipt_qty"
+    },
+    {
+      "product": "DIABECON TAB",
+      "field": "receipts_qty",
+      "expected": 83,
+      "actual": 0,
+      "kind": "wrong_receipt_qty"
+    },
+    {
+      "product": "CLARINA 30GM CREA",
+      "field": "receipts_qty",
+      "expected": 18,
+      "actual": 0,
+      "kind": "wrong_receipt_qty"
+    },
+    {
+      "product": "AMALAKI TAB",
+      "field": "receipts_qty",
+      "expected": 58,
+      "actual": 0,
+      "kind": "wrong_receipt_qty"
+    },
+    {
+      "product": "ALTHEA LOTION",
+      "field": "receipts_qty",
+      "expected": 26,
+      "actual": 0,
+      "kind": "wrong_receipt_qty"
+    },
+    {
+      "product": "PILEXFORTE TAB",
+      "field": "receipts_qty",
+      "expected": 143,
+      "actual": 0,
+      "kind": "wrong_receipt_qty"
+    },
+    {
+      "product": "AACTARILSOAP",
+      "field": "receipts_qty",
+      "expected": 68,
+      "actual": 0,
+      "kind": "wrong_receipt_qty"
+    },
+    {
+      "product": "CLARINA FACE-WASH60ML",
+      "field": "receipts_qty",
+      "expected": 62,
+      "actual": 0,
+      "kind": "wrong_receipt_qty"
+    },
+    {
+      "product": "TENTEX FORTE TAB",
+      "field": "receipts_qty",
+      "expected": 267,
+      "actual": 0,
+      "kind": "wrong_receipt_qty"
+    },
+    {
+      "product": "OPTHACARE EYE DR",
+      "field": "receipts_qty",
+      "expected": 149,
+      "actual": 0,
+      "kind": "wrong_receipt_qty"
+    },
+    {
+      "product": "CONFIDO TAB",
+      "field": "receipts_qty",
+      "expected": 100131,
+      "actual": 100,
+      "kind": "wrong_receipt_qty"
+    },
+    {
+      "product": "LIV 52SYP.100ML",
+      "field": "receipts_qty",
+      "expected": 875,
+      "actual": 0,
+      "kind": "wrong_receipt_qty"
+    },
+    {
+      "product": "41 rows",
+      "field": "sales_value",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 41,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    },
+    {
+      "product": "41 rows",
+      "field": "closing_value",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 41,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    },
+    {
+      "product": "41 rows",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 41,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    }
+  ],
+  "ocr_review": [
+    {
+      "product": "HERBOLAX CAP",
+      "field": "opening_qty",
+      "expected": null,
+      "actual": 96,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "PILEXFORTE OINT",
+      "field": "closing_qty",
+      "expected": null,
+      "actual": 266,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "SHALLAKICAPS",
+      "field": "closing_qty",
+      "expected": null,
+      "actual": 74,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "LIV 52 SUGAR FREE",
+      "field": "closing_qty",
+      "expected": null,
+      "actual": 236,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "QUISTA DN 400G (",
+      "field": "closing_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "TENTEX FORTE TAB",
+      "field": "closing_qty",
+      "expected": null,
+      "actual": 233,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "OPTHACARE EYE DR",
+      "field": "closing_qty",
+      "expected": null,
+      "actual": 115,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "CONFIDO TAB",
+      "field": "closing_qty",
+      "expected": null,
+      "actual": 112,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "LIV 52SYP.100ML",
+      "field": "closing_qty",
+      "expected": null,
+      "actual": 122,
+      "note": "Ground truth did not read this cell confidently."
+    }
+  ],
+  "accounting": [],
+  "confidence": "medium",
+  "notes": [
+    "OCR used tesseract psm 6."
+  ],
+  "result_key": "0000701151_2026_08_ZL_14_361_03092026025650",
+  "unavailable_fields": {
+    "sales_value": 41,
+    "closing_value": 41,
+    "sales_qty": 41
+  },
+  "formula_checked": "none"
+}

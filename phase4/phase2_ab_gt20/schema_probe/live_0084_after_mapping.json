@@ -1,0 +1,886 @@
+{
+  "header": {
+    "company_name": "JIGAR PHARMA",
+    "period_from": "01/08/2026",
+    "period_to": "31/08/2026",
+    "report_title": "Stock Statement",
+    "stockist_address": null,
+    "stockist_name": null
+  },
+  "line_items": [
+    {
+      "fixed": {
+        "opening_qty": -3.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 0.0,
+        "sales_value": null
+      },
+      "dynamic": {
+        "Sr. No.": "1",
+        "Product Name": "ABANA TAB.",
+        "Packing": "60TAB",
+        "closing_qty": -3.0,
+        "Early Exp.": "-Nil-",
+        "Rem": null,
+        "Avg. Sal 3 Months": "33.7",
+        "Order": "3.0"
+      }
+    },
+    {
+      "fixed": {
+        "opening_qty": 64.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 20.0,
+        "sales_value": null
+      },
+      "dynamic": {
+        "Sr. No.": "2",
+        "Product Name": "ACTARIL SOAP",
+        "Packing": "75GM",
+        "closing_qty": 44.0,
+        "Early Exp.": "04/2029",
+        "Rem": null,
+        "Avg. Sal 3 Months": "9.3",
+        "Order": "0.0"
+      }
+    },
+    {
+      "fixed": {
+        "opening_qty": 0.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 0.0,
+        "sales_value": null
+      },
+      "dynamic": {
+        "Sr. No.": "3",
+        "Product Name": "ALTHELA LOTION 100",
+        "Packing": "100ML",
+        "closing_qty": 0.0,
+        "Early Exp.": "-Nil-",
+        "Rem": "&",
+        "Avg. Sal 3 Months": "0.0",
+        "Order": "0.0"
+      }
+    },
+    {
+      "fixed": {
+        "opening_qty": 45.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 20.0,
+        "sales_value": null
+      },
+      "dynamic": {
+        "Sr. No.": "4",
+        "Product Name": "BLEMINOR ANTI.BL.C",
+        "Packing": "30ML",
+        "closing_qty": 25.0,
+        "Early Exp.": "12/2028",
+        "Rem": null,
+        "Avg. Sal 3 Months": "8.3",
+        "Order": "0.0"
+      }
+    },
+    {
+      "fixed": {
+        "opening_qty": 70.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 0.0,
+        "sales_value": null
+      },
+      "dynamic": {
+        "Sr. No.": "5",
+        "Product Name": "CLARINA ACTI ACNE",
+        "Packing": "30GM",
+        "closing_qty": 70.0,
+        "Early Exp.": "12/2028",
+        "Rem": "&?",
+        "Avg. Sal 3 Months": "0.0",
+        "Order": "0.0"
+      }
+    },
+    {
+      "fixed": {
+        "opening_qty": 14.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 0.0,
+        "sales_value": null
+      },
+      "dynamic": {
+        "Sr. No.": "6",
+        "Product Name": "CLARINA FACE WASH",
+        "Packing": "60ML",
+        "closing_qty": 14.0,
+        "Early Exp.": "11/2027",
+        "Rem": "#?",
+        "Avg. Sal 3 Months": "16.7",
+        "Order": "0.0"
+      }
+    },
+    {
+      "fixed": {
+        "opening_qty": 37.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 5.0,
+        "sales_value": null
+      },
+      "dynamic": {
+        "Sr. No.": "7",
+        "Product Name": "CLARINA OINT.",
+        "Packing": "30GM",
+        "closing_qty": 32.0,
+        "Early Exp.": "04/2021",
+        "Rem": "#?",
+        "Avg. Sal 3 Months": "1.7",
+        "Order": "0.0"
+      }
+    },
+    {
+      "fixed": {
+        "opening_qty": 8.0,
+        "receipts_qty": 100.0,
+        "sales_qty": 40.0,
+        "sales_value": null
+      },
+      "dynamic": {
+        "Sr. No.": "8",
+        "Product Name": "CONFIDO TAB.",
+        "Packing": "60TAB",
+        "closing_qty": 68.0,
+        "Early Exp.": "02/2029",
+        "Rem": "#",
+        "Avg. Sal 3 Months": "30.3",
+        "Order": "0.0"
+      }
+    },
+    {
+      "fixed": {
+        "opening_qty": 12.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 0.0,
+        "sales_value": null
+      },
+      "dynamic": {
+        "Sr. No.": "9",
+        "Product Name": "DIABECON DS TAB",
+        "Packing": "60TAB",
+        "closing_qty": 12.0,
+        "Early Exp.": "11/2022",
+        "Rem": "#?",
+        "Avg. Sal 3 Months": "0.3",
+        "Order": "0.0"
+      }
+    },
+    {
+      "fixed": {
+        "opening_qty": 95.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 0.0,
+        "sales_value": null
+      },
+      "dynamic": {
+        "Sr. No.": "10",
+        "Product Name": "DIABECON TAB.",
+        "Packing": "60TAB",
+        "closing_qty": 95.0,
+        "Early Exp.": "10/2021",
+        "Rem": "#&?",
+        "Avg. Sal 3 Months": "0.0",
+        "Order": "0.0"
+      }
+    },
+    {
+      "fixed": {
+        "opening_qty": 22.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 9.0,
+        "sales_value": null
+      },
+      "dynamic": {
+        "Sr. No.": "11",
+        "Product Name": "DIAREX TAB.",
+        "Packing": "30TAB",
+        "closing_qty": 13.0,
+        "Early Exp.": "12/2027",
+        "Rem": "#",
+        "Avg. Sal 3 Months": "4.7",
+        "Order": "0.0"
+      }
+    },
+    {
+      "fixed": {
+        "opening_qty": 33.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 0.0,
+        "sales_value": null
+      },
+      "dynamic": {
+        "Sr. No.": "12",
+        "Product Name": "HADJOD TAB",
+        "Packing": "60CAP",
+        "closing_qty": 33.0,
+        "Early Exp.": "01/2029",
+        "Rem": "#?",
+        "Avg. Sal 3 Months": "22.3",
+        "Order": "0.0"
+      }
+    },
+    {
+      "fixed": {
+        "opening_qty": 8.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 0.0,
+        "sales_value": null
+      },
+      "dynamic": {
+        "Sr. No.": "13",
+        "Product Name": "HAIR ZONE SOLUTION",
+        "Packing": "60ML",
+        "closing_qty": 8.0,
+        "Early Exp.": "01/2025",
+        "Rem": "#&?",
+        "Avg. Sal 3 Months": "0.0",
+        "Order": "0.0"
+      }
+    },
+    {
+      "fixed": {
+        "opening_qty": 47.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 0.0,
+        "sales_value": null
+      },
+      "dynamic": {
+        "Sr. No.": "14",
+        "Product Name": "HERBOLAX CAP.",
+        "Packing": "10CAP",
+        "closing_qty": 47.0,
+        "Early Exp.": "11/2027",
+        "Rem": "#?",
+        "Avg. Sal 3 Months": "17.3",
+        "Order": "0.0"
+      }
+    },
+    {
+      "fixed": {
+        "opening_qty": 26.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 11.0,
+        "sales_value": null
+      },
+      "dynamic": {
+        "Sr. No.": "15",
+        "Product Name": "HERBOLAX TAB.",
+        "Packing": "100TAB",
+        "closing_qty": 15.0,
+        "Early Exp.": "12/2028",
+        "Rem": "#",
+        "Avg. Sal 3 Months": "7.3",
+        "Order": "0.0"
+      }
+    },
+    {
+      "fixed": {
+        "opening_qty": 0.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 0.0,
+        "sales_value": null
+      },
+      "dynamic": {
+        "Sr. No.": "16",
+        "Product Name": "HIMA.COLD BALM",
+        "Packing": "10G",
+        "closing_qty": 0.0,
+        "Early Exp.": "-Nil-",
+        "Rem": "&",
+        "Avg. Sal 3 Months": "0.0",
+        "Order": "0.0"
+      }
+    },
+    {
+      "fixed": {
+        "opening_qty": 0.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 0.0,
+        "sales_value": null
+      },
+      "dynamic": {
+        "Sr. No.": "17",
+        "Product Name": "HIMCOCID SUSP. MIN",
+        "Packing": "200ML",
+        "closing_qty": 0.0,
+        "Early Exp.": "-Nil-",
+        "Rem": "&",
+        "Avg. Sal 3 Months": "0.0",
+        "Order": "0.0"
+      }
+    },
+    {
+      "fixed": {
+        "opening_qty": -1.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 0.0,
+        "sales_value": null
+      },
+      "dynamic": {
+        "Sr. No.": "18",
+        "Product Name": "HIMCOCID SUSP. SAUN",
+        "Packing": "200ML",
+        "closing_qty": -1.0,
+        "Early Exp.": "-Nil-",
+        "Rem": "&",
+        "Avg. Sal 3 Months": "0.0",
+        "Order": "1.0"
+      }
+    },
+    {
+      "fixed": {
+        "opening_qty": 0.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 0.0,
+        "sales_value": null
+      },
+      "dynamic": {
+        "Sr. No.": "19",
+        "Product Name": "HIMCOCID SUSP. SF B",
+        "Packing": "200ML",
+        "closing_qty": 0.0,
+        "Early Exp.": "-Nil-",
+        "Rem": "&",
+        "Avg. Sal 3 Months": "0.0",
+        "Order": "0.0"
+      }
+    },
+    {
+      "fixed": {
+        "opening_qty": 0.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 0.0,
+        "sales_value": null
+      },
+      "dynamic": {
+        "Sr. No.": "20",
+        "Product Name": "HIMCOCID SUSP. SF M",
+        "Packing": "200ML",
+        "closing_qty": 0.0,
+        "Early Exp.": "-Nil-",
+        "Rem": "#&",
+        "Avg. Sal 3 Months": "0.0",
+        "Order": "0.0"
+      }
+    },
+    {
+      "fixed": {
+        "opening_qty": 0.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 0.0,
+        "sales_value": null
+      },
+      "dynamic": {
+        "Sr. No.": "21",
+        "Product Name": "HIMCOCID SUSP. SF S",
+        "Packing": "200ML",
+        "closing_qty": 0.0,
+        "Early Exp.": "-Nil-",
+        "Rem": "#",
+        "Avg. Sal 3 Months": "0.0",
+        "Order": "0.0"
+      }
+    },
+    {
+      "fixed": {
+        "opening_qty": 56.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 50.0,
+        "sales_value": null
+      },
+      "dynamic": {
+        "Sr. No.": "22",
+        "Product Name": "HIMCOLIN GEL",
+        "Packing": "30GM",
+        "closing_qty": 6.0,
+        "Early Exp.": "09/2026",
+        "Rem": "#",
+        "Avg. Sal 3 Months": "20.7",
+        "Order": "44.0"
+      }
+    },
+    {
+      "fixed": {
+        "opening_qty": 0.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 0.0,
+        "sales_value": null
+      },
+      "dynamic": {
+        "Sr. No.": "23",
+        "Product Name": "HIOWNA KIDZ POW CH",
+        "Packing": "200GM.",
+        "closing_qty": 0.0,
+        "Early Exp.": "-Nil-",
+        "Rem": "&",
+        "Avg. Sal 3 Months": "0.0",
+        "Order": "0.0"
+      }
+    },
+    {
+      "fixed": {
+        "opening_qty": 0.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 0.0,
+        "sales_value": null
+      },
+      "dynamic": {
+        "Sr. No.": "24",
+        "Product Name": "IMMUSANTE TAB 20",
+        "Packing": "20TAB",
+        "closing_qty": 0.0,
+        "Early Exp.": "-Nil-",
+        "Rem": "#&",
+        "Avg. Sal 3 Months": "0.0",
+        "Order": "0.0"
+      }
+    },
+    {
+      "fixed": {
+        "opening_qty": 2.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 0.0,
+        "sales_value": null
+      },
+      "dynamic": {
+        "Sr. No.": "25",
+        "Product Name": "KOFLET LOZ.",
+        "Packing": "10TAB",
+        "closing_qty": 2.0,
+        "Early Exp.": "01/2023",
+        "Rem": "#&?",
+        "Avg. Sal 3 Months": "0.0",
+        "Order": "0.0"
+      }
+    },
+    {
+      "fixed": {
+        "opening_qty": 0.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 0.0,
+        "sales_value": null
+      },
+      "dynamic": {
+        "Sr. No.": "26",
+        "Product Name": "KOFLET LOZ.160+40",
+        "Packing": "160+40",
+        "closing_qty": 0.0,
+        "Early Exp.": "-Nil-",
+        "Rem": "#",
+        "Avg. Sal 3 Months": "0.0",
+        "Order": "0.0"
+      }
+    },
+    {
+      "fixed": {
+        "opening_qty": 0.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 0.0,
+        "sales_value": null
+      },
+      "dynamic": {
+        "Sr. No.": "27",
+        "Product Name": "KOFLET LOZ.175+25",
+        "Packing": "175+25",
+        "closing_qty": 0.0,
+        "Early Exp.": "-Nil-",
+        "Rem": "&",
+        "Avg. Sal 3 Months": "0.0",
+        "Order": "0.0"
+      }
+    },
+    {
+      "fixed": {
+        "opening_qty": -1.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 0.0,
+        "sales_value": null
+      },
+      "dynamic": {
+        "Sr. No.": "28",
+        "Product Name": "LIV 52 DS SYR.100M",
+        "Packing": "100ML",
+        "closing_qty": -1.0,
+        "Early Exp.": "-Nil-",
+        "Rem": "#&",
+        "Avg. Sal 3 Months": "0.0",
+        "Order": "1.0"
+      }
+    },
+    {
+      "fixed": {
+        "opening_qty": -9.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 0.0,
+        "sales_value": null
+      },
+      "dynamic": {
+        "Sr. No.": "29",
+        "Product Name": "LIV 52 HB CAP",
+        "Packing": "10TAB",
+        "closing_qty": -9.0,
+        "Early Exp.": "-Nil-",
+        "Rem": "&",
+        "Avg. Sal 3 Months": "0.0",
+        "Order": "9.0"
+      }
+    },
+    {
+      "fixed": {
+        "opening_qty": 78.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 66.0,
+        "sales_value": null
+      },
+      "dynamic": {
+        "Sr. No.": "30",
+        "Product Name": "LIV 52 SYP 100",
+        "Packing": "100ML",
+        "closing_qty": 12.0,
+        "Early Exp.": "04/2029",
+        "Rem": "#",
+        "Avg. Sal 3 Months": "184.7",
+        "Order": "54.0"
+      }
+    },
+    {
+      "fixed": {
+        "opening_qty": 0.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 0.0,
+        "sales_value": null
+      },
+      "dynamic": {
+        "Sr. No.": "31",
+        "Product Name": "LIV 52 SYP 100(SUG)",
+        "Packing": "100ML",
+        "closing_qty": 0.0,
+        "Early Exp.": "-Nil-",
+        "Rem": "&",
+        "Avg. Sal 3 Months": "0.0",
+        "Order": "0.0"
+      }
+    },
+    {
+      "fixed": {
+        "opening_qty": 110.0,
+        "receipts_qty": 71.0,
+        "sales_qty": 100.0,
+        "sales_value": null
+      },
+      "dynamic": {
+        "Sr. No.": "32",
+        "Product Name": "LIV 52 SYP. 200",
+        "Packing": "200ML",
+        "closing_qty": 81.0,
+        "Early Exp.": "06/2022",
+        "Rem": "#",
+        "Avg. Sal 3 Months": "87.7",
+        "Order": "19.0"
+      }
+    },
+    {
+      "fixed": {
+        "opening_qty": 117.0,
+        "receipts_qty": 100.0,
+        "sales_qty": 70.0,
+        "sales_value": null
+      },
+      "dynamic": {
+        "Sr. No.": "33",
+        "Product Name": "LIV 52 TAB.",
+        "Packing": "100TAB",
+        "closing_qty": 147.0,
+        "Early Exp.": "05/2029",
+        "Rem": "#",
+        "Avg. Sal 3 Months": "71.7",
+        "Order": "0.0"
+      }
+    },
+    {
+      "fixed": {
+        "opening_qty": 82.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 0.0,
+        "sales_value": null
+      },
+      "dynamic": {
+        "Sr. No.": "34",
+        "Product Name": "OPTHACARE EYE DROP",
+        "Packing": "10ML",
+        "closing_qty": 82.0,
+        "Early Exp.": "04/2029",
+        "Rem": "#",
+        "Avg. Sal 3 Months": "32.0",
+        "Order": "0.0"
+      }
+    },
+    {
+      "fixed": {
+        "opening_qty": 1.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 0.0,
+        "sales_value": null
+      },
+      "dynamic": {
+        "Sr. No.": "35",
+        "Product Name": "ORO-T ORAL RINSE L",
+        "Packing": "100ML",
+        "closing_qty": 1.0,
+        "Early Exp.": "10/2023",
+        "Rem": "#",
+        "Avg. Sal 3 Months": "1.0",
+        "Order": "0.0"
+      }
+    },
+    {
+      "fixed": {
+        "opening_qty": -4.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 0.0,
+        "sales_value": null
+      },
+      "dynamic": {
+        "Sr. No.": "36",
+        "Product Name": "ORO-T ORAL RINSE L",
+        "Packing": "200ML",
+        "closing_qty": -4.0,
+        "Early Exp.": "-Nil-",
+        "Rem": "&",
+        "Avg. Sal 3 Months": "0.0",
+        "Order": "4.0"
+      }
+    },
+    {
+      "fixed": {
+        "opening_qty": 0.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 0.0,
+        "sales_value": null
+      },
+      "dynamic": {
+        "Sr. No.": "37",
+        "Product Name": "OXYTARD CAP",
+        "Packing": "10CAP",
+        "closing_qty": 0.0,
+        "Early Exp.": "-Nil-",
+        "Rem": "&",
+        "Avg. Sal 3 Months": "0.0",
+        "Order": "0.0"
+      }
+    },
+    {
+      "fixed": {
+        "opening_qty": 123.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 0.0,
+        "sales_value": null
+      },
+      "dynamic": {
+        "Sr. No.": "38",
+        "Product Name": "PILEX FORTE OINTME",
+        "Packing": "30GM",
+        "closing_qty": 123.0,
+        "Early Exp.": "01/2029",
+        "Rem": "?",
+        "Avg. Sal 3 Months": "17.0",
+        "Order": "0.0"
+      }
+    },
+    {
+      "fixed": {
+        "opening_qty": -2.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 0.0,
+        "sales_value": null
+      },
+      "dynamic": {
+        "Sr. No.": "39",
+        "Product Name": "PILEX FORTE.TAB",
+        "Packing": "30TAB",
+        "closing_qty": -2.0,
+        "Early Exp.": "-Nil-",
+        "Rem": "#&",
+        "Avg. Sal 3 Months": "0.0",
+        "Order": "2.0"
+      }
+    },
+    {
+      "fixed": {
+        "opening_qty": 36.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 2.0,
+        "sales_value": null
+      },
+      "dynamic": {
+        "Sr. No.": "40",
+        "Product Name": "PILEX TAB.",
+        "Packing": "60TAB",
+        "closing_qty": 34.0,
+        "Early Exp.": "03/2029",
+        "Rem": "#",
+        "Avg. Sal 3 Months": "70.7",
+        "Order": "0.0"
+      }
+    },
+    {
+      "fixed": {
+        "opening_qty": 0.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 0.0,
+        "sales_value": null
+      },
+      "dynamic": {
+        "Sr. No.": "41",
+        "Product Name": "Q-DEE TAB",
+        "Packing": "8TAB",
+        "closing_qty": 0.0,
+        "Early Exp.": "-Nil-",
+        "Rem": "#",
+        "Avg. Sal 3 Months": "0.0",
+        "Order": "0.0"
+      }
+    },
+    {
+      "fixed": {
+        "opening_qty": 77.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 20.0,
+        "sales_value": null
+      },
+      "dynamic": {
+        "Sr. No.": "42",
+        "Product Name": "RENALKA SYP.",
+        "Packing": "100ML",
+        "closing_qty": 57.0,
+        "Early Exp.": "01/2021",
+        "Rem": "#",
+        "Avg. Sal 3 Months": "17.7",
+        "Order": "0.0"
+      }
+    },
+    {
+      "fixed": {
+        "opening_qty": 28.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 0.0,
+        "sales_value": null
+      },
+      "dynamic": {
+        "Sr. No.": "43",
+        "Product Name": "RENALKA SYP.200",
+        "Packing": "200ML",
+        "closing_qty": 28.0,
+        "Early Exp.": "04/2029",
+        "Rem": "?",
+        "Avg. Sal 3 Months": "5.7",
+        "Order": "0.0"
+      }
+    },
+    {
+      "fixed": {
+        "opening_qty": 4.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 0.0,
+        "sales_value": null
+      },
+      "dynamic": {
+        "Sr. No.": "44",
+        "Product Name": "RUMALAYA GEL",
+        "Packing": "30GM",
+        "closing_qty": 4.0,
+        "Early Exp.": "11/2021",
+        "Rem": "#&?",
+        "Avg. Sal 3 Months": "0.0",
+        "Order": "0.0"
+      }
+    },
+    {
+      "fixed": {
+        "opening_qty": 12.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 0.0,
+        "sales_value": null
+      },
+      "dynamic": {
+        "Sr. No.": "45",
+        "Product Name": "SHALLAKI TAB",
+        "Packing": "60CAP",
+        "closing_qty": 12.0,
+        "Early Exp.": "02/2021",
+        "Rem": "#",
+        "Avg. Sal 3 Months": "0.7",
+        "Order": "0.0"
+      }
+    },
+    {
+      "fixed": {
+        "opening_qty": 35.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 0.0,
+        "sales_value": null
+      },
+      "dynamic": {
+        "Sr. No.": "46",
+        "Product Name": "TALEKT CAP.",
+        "Packing": "60 CAP",
+        "closing_qty": 35.0,
+        "Early Exp.": "02/2021",
+        "Rem": "#&?",
+        "Avg. Sal 3 Months": "0.0",
+        "Order": "0.0"
+      }
+    },
+    {
+      "fixed": {
+        "opening_qty": 89.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 0.0,
+        "sales_value": null
+      },
+      "dynamic": {
+        "Sr. No.": "47",
+        "Product Name": "TALEKT SYP.",
+        "Packing": "120ML",
+        "closing_qty": 89.0,
+        "Early Exp.": "05/2023",
+        "Rem": "#&?",
+        "Avg. Sal 3 Months": "0.0",
+        "Order": "0.0"
+      }
+    },
+    {
+      "fixed": {
+        "opening_qty": 135.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 10.0,
+        "sales_value": null
+      },
+      "dynamic": {
+        "Sr. No.": "48",
+        "Product Name": "TENTEX FORTE TAB.",
+        "Packing": "10TAB",
+        "closing_qty": 125.0,
+        "Early Exp.": "02/2029",
+        "Rem": "#",
+        "Avg. Sal 3 Months": "85.7",
+        "Order": "0.0"
+      }
+    },
+    {
+      "fixed": {
+        "opening_qty": 0.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 0.0,
+        "sales_value": null
+      },
+      "dynamic": {
+        "Sr. No.": "49",
+        "Product Name": "TRIPHLA SY.HINA.20",
+        "Packing": "200ML",
+        "closing_qty":

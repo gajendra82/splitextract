@@ -1,0 +1,289 @@
+{
+  "source": "original 37 STOCK_IDENTITY_FAILURE from identity_failure_manifest.json",
+  "baseline_also_had_non_identity_fail": {
+    "PROVIDER_ERROR": 4,
+    "EMPTY_OUTPUT": 3,
+    "note": "Unchanged; not ranked as identity clusters"
+  },
+  "closed_fully": [
+    {
+      "document_id": "0000700017_2026_08_ZL_06_476_02092026121836.pdf",
+      "closed_in": "phase3_3",
+      "reason": "op_pur_orec_sale_oiss named parser"
+    },
+    {
+      "document_id": "0000734248_2026_08_ZL_12_554_07092026051856.XLS",
+      "closed_in": "phase3_3",
+      "reason": "Marg PURCHASE DETAIL boundary"
+    },
+    {
+      "document_id": "0000701555_2026_08_ZL_37_390_06092026182510.docx",
+      "closed_in": "phase3_3",
+      "reason": "Profitmaker paragraph header"
+    },
+    {
+      "document_id": "0000700283_2026_08_ZL_18_377_01092026063405.pdf",
+      "closed_in": "phase3_6",
+      "reason": "Issues/Sh.Exp boundary"
+    },
+    {
+      "document_id": "0000700398_2026_08_ZL_18_377_01092026063708.pdf",
+      "closed_in": "phase3_6",
+      "reason": "Issues/Sh.Exp boundary"
+    },
+    {
+      "document_id": "0000700325_2026_08_ZL_18_379_03092026175634.jpg",
+      "closed_in": "phase3_8",
+      "reason": "photo free/goods fold + Issues geometry; document valid"
+    }
+  ],
+  "partially_fixed_still_open": [
+    {
+      "document_id": "0000700259_2026_08_ZL_18_379_03092026174312.jpg",
+      "closed_in_part": "phase3_8",
+      "remaining": "3 OCR_ERROR rows (phase3_9)",
+      "class": "OCR",
+      "do_not_fix_now": true
+    }
+  ],
+  "remaining_open_count": 31,
+  "clusters": [
+    {
+      "cluster_id": "product_wise_pdf_free_columns",
+      "count": 1,
+      "class": "mapping",
+      "parser": "product_wise_stock_statement_pdf",
+      "profile": "generic",
+      "file_types": [".pdf"],
+      "documents": [
+        "0000700238_2026_08_ZL_18_377_03092026154026.pdf"
+      ],
+      "evidence_strength": "high",
+      "reusable_fix_likelihood": "medium",
+      "regression_risk": "medium",
+      "notes": "Delta equals receipts_free / issues_free_repl on extra. Opposite of photo fold. Profile generic because method is on known-generic list. Not OCR. Frozen from blind fold in 3.3; still open for semantic investigation."
+    },
+    {
+      "cluster_id": "psr_closstock_one_row",
+      "count": 1,
+      "class": "parser",
+      "parser": "psr_closstock_columns",
+      "profile": "saleret",
+      "file_types": [".pdf"],
+      "documents": [
+        "0000700026_2026_08_ZL_06_313_03092026130418.pdf"
+      ],
+      "evidence_strength": "high",
+      "reusable_fix_likelihood": "low",
+      "regression_risk": "low",
+      "notes": "24/25 rows pass saleret. One digital row opening 3 receipts 210 sales 113 sale_return 0 closing 97 expected 100. No missing adjustment column identified."
+    },
+    {
+      "cluster_id": "sale_return_other_qty",
+      "count": 1,
+      "class": "mapping",
+      "parser": "semantic spreadsheet",
+      "profile": "saleret",
+      "file_types": [".xlsx"],
+      "documents": [
+        "0000728682_2026_08_ZL _10_380_04092026092536.xlsx"
+      ],
+      "evidence_strength": "high",
+      "reusable_fix_likelihood": "low",
+      "regression_risk": "medium",
+      "notes": "Sale_Ret_Qty fixed in 3.3. VASAKA Other_Qty -27 still fails. Other_Qty is not sale_return and must not be aliased blindly to stock_out."
+    },
+    {
+      "cluster_id": "product_wise_photo_ocr_leftovers",
+      "count": 1,
+      "class": "OCR",
+      "parser": "product_wise_stock_statement_image",
+      "profile": "product_wise_image",
+      "file_types": [".jpg"],
+      "documents": [
+        "0000700259_2026_08_ZL_18_379_03092026174312.jpg"
+      ],
+      "evidence_strength": "high",
+      "reusable_fix_likelihood": "none_now",
+      "regression_risk": "n/a",
+      "notes": "Phase 3.9: glued 3752/3337 and polluted «18. Do not change Tesseract. Do not reconstruct glued Jul+Issues. Optional «18 cleanup deferred."
+    },
+    {
+      "cluster_id": "zandra_stock_sale_vision",
+      "count": 4,
+      "class": "unknown",
+      "parser": "zandra_stock_sale_vision",
+      "profile": "generic",
+      "file_types": [".pdf", "(none)"],
+      "documents": [
+        "0000700084_2026_08_ZL_06_8236_03092026155136.pdf",
+        "0000702913_2026_08_ZL_22_413A_04092026075910",
+        "0000722000_2026_08_ZL_04_742_03092026185220.pdf",
+        "0000723881_2026_08_ZL_06_550_04092026145241.pdf"
+      ],
+      "evidence_strength": "low",
+      "reusable_fix_likelihood": "unknown",
+      "regression_risk": "unknown",
+      "notes": "0000700084 page and parser agree on Opstk/Rcpt/Sale/Clstk figures that do not close. No fifth movement identified. Not OCR_ERROR. Other three not row-compared."
+    },
+    {
+      "cluster_id": "gemini_extraction_fallback",
+      "count": 4,
+      "class": "unknown",
+      "parser": "gemini_extraction_fallback",
+      "profile": "generic",
+      "file_types": [".jpg", ".jpeg", ".pdf"],
+      "documents": [
+        "0000701051_2026_08_ZL_11_423_03092026184131.jpg",
+        "0000701273_2026_08_ZL_03_368_06092026130923.jpeg",
+        "0000704337_2026_08_ZL_24_259_03092026042213.pdf",
+        "0000730089_2026_08_ZL_24_244_05092026160041.pdf"
+      ],
+      "evidence_strength": "low",
+      "reusable_fix_likelihood": "low",
+      "regression_risk": "unknown",
+      "notes": "Fallback bucket, not one printed layout."
+    },
+    {
+      "cluster_id": "swil_receipt_pur_value_vision",
+      "count": 3,
+      "class": "unknown",
+      "parser": "swil_receipt_pur_value_vision",
+      "layout": "swil_receipt_pur_value",
+      "profile": "generic",
+      "file_types": [".pdf"],
+      "documents": [
+        "0000700124_2026_08_ZL_06_521_02092026204703.pdf",
+        "0000700317_2026_08_ZL_18_374_02092026171443.pdf",
+        "0000729951_2026_08_ZL_20_471_04092026104138.pdf"
+      ],
+      "evidence_strength": "low",
+      "reusable_fix_likelihood": "unknown",
+      "regression_risk": "unknown",
+      "notes": "Same method label. No row-level source comparison. Not OCR_ERROR merely as PDF/image path."
+    },
+    {
+      "cluster_id": "pdf_split_page_images",
+      "count": 3,
+      "class": "unknown",
+      "parser": "pdf_split_page_images",
+      "profile": "generic",
+      "file_types": [".pdf"],
+      "documents": [
+        "0000700275_2026_08_ZL_18_374_04092026171615.pdf",
+        "0000700358_2026_08_ZL_18_8173_05092026185826.pdf",
+        "0000729971_2026_08_ZL_18_374_04092026174632.pdf"
+      ],
+      "evidence_strength": "low",
+      "reusable_fix_likelihood": "unknown",
+      "regression_risk": "unknown"
+    },
+    {
+      "cluster_id": "pack_op_pur_bal_stock_sale_vision",
+      "count": 3,
+      "class": "unknown",
+      "parser": "pack_op_pur_bal_stock_sale_vision",
+      "layout": "pack_op_pur_bal_stock_sale",
+      "profile": "generic",
+      "file_types": [".jpg", ".jpeg"],
+      "documents": [
+        "0000700434_2026_08_ZL_10_386_05092026034503.jpg",
+        "0000700481_2026_08_ZL_10_389_04092026110107.jpeg",
+        "0000701468_2026_08_ZL_37_8181_04092026181217.jpg"
+      ],
+      "evidence_strength": "low",
+      "reusable_fix_likelihood": "unknown",
+      "regression_risk": "unknown"
+    },
+    {
+      "cluster_id": "gemini_vision",
+      "count": 3,
+      "class": "unknown",
+      "parser": "gemini_vision",
+      "profile": "generic",
+      "file_types": [".jpg", ".jpeg"],
+      "documents": [
+        "0000701012_2026_08_ZL_11_423_03092026183736.jpg",
+        "0000701078_2026_08_ZL_03_362_05092026080346.jpeg",
+        "0000701209_2026_08_ZL_14_361_03092026025829.jpg"
+      ],
+      "evidence_strength": "low",
+      "reusable_fix_likelihood": "low",
+      "regression_risk": "unknown",
+      "notes": "Provider vision path, not one proven layout mechanism."
+    },
+    {
+      "cluster_id": "pharma_hub_jun_jul_photo",
+      "count": 2,
+      "class": "unknown",
+      "parser": "pharma_hub_jun_jul_photo",
+      "layout": "pharma_hub_jun_jul",
+      "profile": "generic",
+      "file_types": [".jpg"],
+      "documents": [
+        "0000700536_2026_08_ZL_10_383_04092026205548.jpg",
+        "0000700624_2026_08_ZL_10_383_05092026055419.jpg"
+      ],
+      "evidence_strength": "low",
+      "reusable_fix_likelihood": "unknown",
+      "regression_risk": "unknown",
+      "notes": "Tesseract peeks header; Gemini reads quantities. Not classified OCR_ERROR."
+    },
+    {
+      "cluster_id": "swilerp_one_row",
+      "count": 1,
+      "class": "unknown",
+      "parser": "swilerp_retrn_sales_stock",
+      "profile": "generic",
+      "file_types": [".pdf"],
+      "documents": [
+        "0000700379_2026_08_ZL_18_375_05092026174136.PDF"
+      ],
+      "evidence_strength": "low",
+      "reusable_fix_likelihood": "low",
+      "regression_risk": "low",
+      "notes": "One row off by 1. Digital text. Cause not established."
+    },
+    {
+      "cluster_id": "order_form_fail_closed",
+      "count": 1,
+      "class": "profile",
+      "parser": "zandra_two_column_order_form",
+      "profile": "unknown",
+      "file_types": [".jpg"],
+      "documents": [
+        "0000701789_2026_08_ZL_20_557_05092026163636.jpg"
+      ],
+      "evidence_strength": "high",
+      "reusable_fix_likelihood": "none",
+      "regression_risk": "n/a",
+      "notes": "Intentional fail-closed. Do not add a stock profile to force PASS."
+    },
+    {
+      "cluster_id": "singleton_vision_or_photo",
+      "count": 3,
+      "class": "unknown",
+      "documents": [
+        {
+          "document_id": "0000701116_2026_08_ZL_03_362_05092026080412.jpeg",
+          "parser": "marg_closing_mexp_photo"
+        },
+        {
+          "document_id": "0000701275_2026_08_ZL_03_360_02092026152716.jpg",
+          "parser": "pack_opening_receipt_issue_mexp",
+          "note": "Only remaining Tesseract-geometry candidate from 3.1; not row-compared"
+        },
+        {
+          "document_id": "0000701904_2026_08_ZL_20_8227_05092026154848.jpg",
+          "parser": "main_stock_sales_statement"
+        }
+      ],
+      "evidence_strength": "low",
+      "reusable_fix_likelihood": "low",
+      "regression_risk": "unknown"
+    }
+  ],
+  "ranking_note": "Largest remaining method groups are UNKNOWN vision/fallback. Ranking prefers evidence + reusable safe fix over count.",
+  "recommended_next_cluster_id": "product_wise_pdf_free_columns",
+  "decision": "TARGETED_INVESTIGATION"
+}

@@ -32,6 +32,10 @@ PROFILE_OP_PI = "stock_sales_op_pi_clqty"
 PROFILE_FREE_RETURN = "item_pack_free_return"
 PROFILE_OP_PUR_OREC = "op_pur_orec_sale_oiss"
 PROFILE_SWIL_RECEIPT = "swil_receipt_issue"
+PROFILE_DAILY_STOCK = "daily_stock_summary"
+PROFILE_PRO_AGE = "pro_age_opening_pur_sale_closing"
+PROFILE_SALE_CLOSING = "sale_closing_only"
+PROFILE_MEDIVISION_SCM = "medivision_op_scm_pdf"
 PROFILE_NOT_SCORED = "not_scored"
 PROFILE_UNKNOWN = "unknown"
 
@@ -85,6 +89,7 @@ _NOT_SCORED_LAYOUTS = {
     "zl_opening_primary_closing",
 }
 _KNOWN_GENERIC_METHODS = {
+    "vl_html_table_parse",
     "pack_opening_receipt_issue_mexp",
     "ps_pharma_parser",
     "swil_stacked_opbal_expiry_near",
@@ -94,7 +99,6 @@ _KNOWN_GENERIC_METHODS = {
     "swilerp_retrn_sales_stock",
     "opbal_sales_stock_txt",
     "txt_stock_fallback",
-    "daily_stock_summary_txt",
     "legacy_doc_text",
     "item_description_stock_sales_analysis_docx",
     "profitmaker_ostk_docx",
@@ -139,6 +143,8 @@ _KNOWN_GENERIC_METHODS = {
     "item_desc_opening_sales_purchase",
     "purc_sale_cl_layout",
     "medivision_op_wsale_photo",
+    "medivision_op_wsale_html",
+    "pro_age_opening_pur_sale_closing",
     "pharma_hub_jun_jul_photo",
     "stock_sales_consolidated_opval",
     "stock_sales_detail_opval",
@@ -295,6 +301,14 @@ def _choose_profile(result: Dict[str, Any]) -> IdentityProfile:
         return _scored(PROFILE_FREE_RETURN)
     if method == "op_pur_orec_sale_oiss" or layout == "op_pur_orec_sale_oiss":
         return _scored(PROFILE_OP_PUR_OREC)
+    if method == "daily_stock_summary_txt" or layout == "daily_stock_summary_company_wise":
+        return _scored(PROFILE_DAILY_STOCK)
+    if method == "pro_age_opening_pur_sale_closing" or layout == "pro_age_opening_pur_sale_closing":
+        return _scored(PROFILE_PRO_AGE)
+    if method == "sale_closing_analysis_docx":
+        return _scored(PROFILE_SALE_CLOSING)
+    if method == "medivision_op_scm_pdf" or layout == "medivision_op_scm_pdf":
+        return _scored(PROFILE_MEDIVISION_SCM)
 
     explicit = _explicit_kind(result)
     if (
@@ -411,6 +425,79 @@ def swil_row_ok(item: Dict[str, Any]) -> bool:
     return _within(_num(total), swil_expected_total(item))
 
 
+def pro_age_expected_closing(item: Dict[str, Any]) -> float:
+    """Opening + purchase - sale + credit note - debit note.
+
+    The Krishna header prints CR.NO. as ST.[+] and DR.NO. as ST.[-].
+    """
+    extra = _row_extra(item)
+    return round(
+        _num(item.get("opening_qty"))
+        + _num(item.get("receipts_qty"))
+        - _num(item.get("sales_qty"))
+        + _num(extra.get("credit_note_qty"))
+        - _num(extra.get("debit_note_qty")),
+        2,
+    )
+
+
+def sale_closing_only_row_ok(item: Dict[str, Any]) -> bool:
+    """Sale and closing are printed. Opening and receipts are not on the page.
+
+    Those absent columns stay null. The four-column stock equation does not
+    apply. A row that does print opening or receipts uses that equation.
+    """
+    if item.get("opening_qty") not in (None, "") or item.get("receipts_qty") not in (None, ""):
+        return generic_row_ok(item, formula=generic_expected_closing)
+    if item.get("sales_qty") in (None, "") or item.get("closing_qty") in (None, ""):
+        return False
+    return True
+
+
+def medivision_scm_expected_closing(item: Dict[str, Any]) -> float:
+    """Op + Purc + purchase scheme - sales return - Sale - sale scheme + Add - Less.
+
+    The second Scm column is on the sale side. One EVECARE row is
+    18 + 28 - 14 - 1 = 31, not 32.
+    """
+    extra = _row_extra(item)
+    return round(
+        _num(item.get("opening_qty"))
+        + _num(item.get("receipts_qty"))
+        + _num(extra.get("scheme_in_qty"))
+        - _num(extra.get("sales_return_qty"))
+        - _num(item.get("sales_qty"))
+        - _num(extra.get("scheme_out_qty"))
+        + _num(extra.get("add_qty"))
+        - _num(extra.get("less_qty")),
+        2,
+    )
+
+
+def daily_stock_expected_closing(item: Dict[str, Any]) -> float:
+    """Daily Stock Summary (Company-wise) only.
+
+    Printed columns, left to right: Op. Stock, Pur. Qty, Sales Retu.,
+    Sales Qty, Adj./Dmg, Cl. Stock, Order Qty.
+
+    Cl. Stock = Op. Stock + Pur. Qty - Sales Retu. - Sales Qty + Adj./Dmg.
+
+    Order Qty is a reorder figure. On the Narayan sample it is the negative
+    of Cl. Stock and is not a stock movement. The generic
+    opening + receipts - sales rule ignores Adj./Dmg, so CLARINA
+    51 + 0 - 9 = 42 while the printed closing is 41 because Adj./Dmg is -1.
+    """
+    extra = _row_extra(item)
+    return round(
+        _num(item.get("opening_qty"))
+        + _num(item.get("receipts_qty"))
+        - _num(extra.get("sales_return_qty"))
+        - _num(item.get("sales_qty"))
+        + _num(extra.get("adj_dmg_qty")),
+        2,
+    )
+
+
 def generic_expected_closing(item: Dict[str, Any]) -> float:
     """opening + receipts - sales - scheme - stock out."""
     extra = _row_extra(item)
@@ -516,6 +603,10 @@ def _src(item: Dict[str, Any], field: str, *fallbacks: str) -> float:
 
 
 def item_pack_sreturn_figures(item: Dict[str, Any]) -> tuple:
+    extra = _row_extra(item)
+    states = extra.get("qty_cell_state") if isinstance(extra.get("qty_cell_state"), dict) else {}
+    if any(states.get(name) == "blank" for name in states):
+        return False, None, None
     opening = _src(item, "opening_qty")
     purchase = _src(item, "purchase_qty", "receipts_qty")
     sales_return = _src(item, "sales_return_qty")
@@ -713,6 +804,18 @@ def _row_ok(profile: IdentityProfile, item: Dict[str, Any]) -> bool:
         )
     if profile_id == PROFILE_SWIL_RECEIPT:
         return swil_row_ok(item)
+    if profile_id == PROFILE_DAILY_STOCK:
+        return _within(
+            daily_stock_expected_closing(item), _num(item.get("closing_qty"))
+        )
+    if profile_id == PROFILE_PRO_AGE:
+        return _within(pro_age_expected_closing(item), _num(item.get("closing_qty")))
+    if profile_id == PROFILE_SALE_CLOSING:
+        return sale_closing_only_row_ok(item)
+    if profile_id == PROFILE_MEDIVISION_SCM:
+        return _within(
+            medivision_scm_expected_closing(item), _num(item.get("closing_qty"))
+        )
     if profile_id == PROFILE_OP_PUR_OREC:
         expected = op_pur_orec_expected_closing(item)
         closing = _present_qty(item, "closing_qty")

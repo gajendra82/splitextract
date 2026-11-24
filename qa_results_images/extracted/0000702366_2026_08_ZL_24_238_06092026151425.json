@@ -1,0 +1,510 @@
+{
+  "source_file": "0000702366_2026_08_ZL_24_238_06092026151425.jpg",
+  "source_format": "jpg",
+  "stockist_name": "HIMAL Z",
+  "stockist_address": null,
+  "company_name": "HIMAL Z",
+  "period_from": "2026-08-01",
+  "period_to": "2026-08-31",
+  "report_title": "STOCK STATEMENT COMPANY & PRODUCT WISE",
+  "line_items": [
+    {
+      "product_code": null,
+      "product_name": "AMARTIPUR SOAP",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 29.0,
+      "closing_value": 1682.58,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ALTHEA CREAM",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 6.0,
+      "closing_value": 716.7,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ALTHEA LOTION",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 239.0,
+      "closing_value": 38304.53,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "BLEMINOR ANTI BLANIS",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 274.0,
+      "closing_value": 35422.72,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "CHINOPEN CREAM",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 274.0,
+      "closing_value": 6871.74,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "CLARINA ANTI ACNE CREA",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 34.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "CLARINA ANTI ACNE FACE",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 4.0,
+      "closing_value": 204.84,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "CLARINA ANTI ACNE ST",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 56.0,
+      "closing_value": 7300.16,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "CLEARVITAL GEL SONG",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 48.0,
+      "closing_value": 9731.52,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "OLABECOM DO T",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 85.0,
+      "closing_value": 4709.85,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "NERBOLAK C",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 28.0,
+      "closing_value": 2150.4,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "CHINOPEN CREAM",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 12.0,
+      "closing_value": 2457.84,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "CLARINA ANTI ACNE CREA",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 44.0,
+      "closing_value": 6522.12,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "CLARINA ANTI ACNE FACE",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 139.0,
+      "closing_value": 13385.7,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "CLARINA ANTI ACNE ST",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 700.0,
+      "closing_value": 112807.78,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "CLEARVITAL GEL SONG",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 394.0,
+      "closing_value": 59631.9,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "GRETARD CARLO",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 10.0,
+      "closing_value": 1314.9,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "OPTRACARE ETE GRUP",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 80.0,
+      "closing_value": 12381.6,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "GRETARD CARLO",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 40.0,
+      "closing_value": 1877.6,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PILEX PORTE TA",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 469.0,
+      "closing_value": 46398.17,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "FILEX TAB",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": -7.0,
+      "closing_value": 0.0,
+      "extra": {
+        "rejected_closing_value": -645.05,
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PIRIN TAB",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 383.0,
+      "closing_value": 61651.51,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "QUESTA ACTIV 2000",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 234.0,
+      "closing_value": 6390.54,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "QUESTA 20-200",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 38.0,
+      "closing_value": 7662.7,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "TALKET TAR",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 12.0,
+      "closing_value": 2912.76,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "TENTEX PORTE",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 85.0,
+      "closing_value": 7848.05,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": false
+      }
+    }
+  ],
+  "totals": {
+    "sales_value": null,
+    "closing_value": 449693.16,
+    "extra": {
+      "extraction_method": "gemini_extraction_fallback",
+      "line_sales_value_sum": 0.0,
+      "line_closing_value_sum": 450338.21,
+      "sales_qty": 0.0,
+      "closing_qty": 3710.0,
+      "stock_identity_kind": "opening_receipts_sales_closing",
+      "stock_identity_formula": "closing=opening+receipts-sales",
+      "stock_identity_fail_count": 26,
+      "stock_validation": {
+        "opening_plus_purchase": 0.0,
+        "expected_total": 0.0,
+        "calculated_closing": 0.0,
+        "extracted_closing": 3710.0,
+        "is_valid": false
+      },
+      "extraction_quality": {
+        "quality": "good",
+        "score": 100,
+        "reasons": [],
+        "threshold": 75.0
+      },
+      "gemini_fallback": "not_called",
+      "early_vision_reason": "missing_stock_headers,low_ocr_quality_score"
+    }
+  }
+}

@@ -1,0 +1,590 @@
+{
+  "file": "0000701406_2026_08_ZL_37_391_04092026155529.jpg",
+  "path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000701406_2026_08_ZL_37_391_04092026155529.jpg",
+  "format": "STOCK & SALES ANALYSIS",
+  "api_method": "gemini_extraction_fallback",
+  "status": "FAIL",
+  "expected_rows": 70,
+  "extracted_rows": 0,
+  "matched_rows": 0,
+  "missing_rows": [
+    {
+      "product": "BANA 60TA",
+      "opening_qty": 0,
+      "receipts_qty": 100,
+      "sales_qty": 0,
+      "closing_qty": 100,
+      "kind": "missing_product"
+    },
+    {
+      "product": "BONNISAN DROPS",
+      "opening_qty": 25,
+      "receipts_qty": null,
+      "sales_qty": 7,
+      "closing_qty": 18,
+      "kind": "missing_product"
+    },
+    {
+      "product": "BONNISAN LIQ 100M",
+      "opening_qty": 112.3,
+      "receipts_qty": 0,
+      "sales_qty": 42,
+      "closing_qty": 70.3,
+      "kind": "missing_product"
+    },
+    {
+      "product": "BRESOL NS",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "BRESOL SUSP 100M",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "BRESOL TAB 60TA",
+      "opening_qty": null,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "CHIROPEX CREAM",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "CLARINA CREAM",
+      "opening_qty": null,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "CONFIDO 60TA",
+      "opening_qty": 19,
+      "receipts_qty": 0,
+      "sales_qty": 4,
+      "closing_qty": 15,
+      "kind": "missing_product"
+    },
+    {
+      "product": "CYSTONE 60TA",
+      "opening_qty": 98,
+      "receipts_qty": 0,
+      "sales_qty": 23,
+      "closing_qty": 75,
+      "kind": "missing_product"
+    },
+    {
+      "product": "CYSTONE FORTE 30TA",
+      "opening_qty": 23,
+      "receipts_qty": 0,
+      "sales_qty": 2,
+      "closing_qty": 21,
+      "kind": "missing_product"
+    },
+    {
+      "product": "CYSTONE SYP 100M",
+      "opening_qty": null,
+      "receipts_qty": 0,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "DIABECON 60TA",
+      "opening_qty": 38,
+      "receipts_qty": 0,
+      "sales_qty": 5,
+      "closing_qty": 33,
+      "kind": "missing_product"
+    },
+    {
+      "product": "DIABECON D.S T 60TA",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "EVECARE CAP 30CA",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "EVECARE FORTE 200M",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "EVECARE SYP 200M",
+      "opening_qty": null,
+      "receipts_qty": 28,
+      "sales_qty": null,
+      "closing_qty": 28,
+      "kind": "missing_product"
+    },
+    {
+      "product": "GASEX 100T",
+      "opening_qty": 13,
+      "receipts_qty": 0,
+      "sales_qty": 13,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "GASEX SYP 200M",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "GERIFORTE SYP 200M",
+      "opening_qty": 21,
+      "receipts_qty": -21,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "GERIFORTE TAB 100T",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "HIMCOCID SF SU 200",
+      "opening_qty": 9,
+      "receipts_qty": null,
+      "sales_qty": 5,
+      "closing_qty": 4,
+      "kind": "missing_product"
+    },
+    {
+      "product": "HIMCOLIN GEL 306M",
+      "opening_qty": 50,
+      "receipts_qty": 0,
+      "sales_qty": 22,
+      "closing_qty": 28,
+      "kind": "missing_product"
+    },
+    {
+      "product": "HIMPLASIA TAB 30TA",
+      "opening_qty": 0,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "HIOWNA CHOCOLA",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "HIOWNA KIDZ —",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "HIOWNA MOMZ VA",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "KOFLET S.F SYP 100M",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "KOFLET-EX LINC 100M",
+      "opening_qty": null,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "LIv 52 DS SYP 100M",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "LIv 52 HB 10CA",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "LIV.52 DS TAB",
+      "opening_qty": 0,
+      "receipts_qty": 100,
+      "sales_qty": 2,
+      "closing_qty": 98,
+      "kind": "missing_product"
+    },
+    {
+      "product": "LIV.52 SYP (BI 200M",
+      "opening_qty": 32,
+      "receipts_qty": 105,
+      "sales_qty": 42,
+      "closing_qty": 95,
+      "kind": "missing_product"
+    },
+    {
+      "product": "LIV.52 SYP (SM 100M",
+      "opening_qty": 70,
+      "receipts_qty": 0,
+      "sales_qty": 11,
+      "closing_qty": 59,
+      "kind": "missing_product"
+    },
+    {
+      "product": "LIV.52 TAB 100*",
+      "opening_qty": 35,
+      "receipts_qty": 0,
+      "sales_qty": 14,
+      "closing_qty": 21,
+      "kind": "missing_product"
+    },
+    {
+      "product": "LIV.52DROPS (S",
+      "opening_qty": 67,
+      "receipts_qty": 0,
+      "sales_qty": 58,
+      "closing_qty": 9,
+      "kind": "missing_product"
+    },
+    {
+      "product": "LUKOL 60TA",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "MENOSAN TAB 30TA",
+      "opening_qty": null,
+      "receipts_qty": 0,
+      "sales_qty": null,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "MENTAT SYP 200M",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "MENTAT TAB 60TA",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "(2633 OPTHACARE DROP",
+      "opening_qty": 7,
+      "receipts_qty": 0,
+      "sales_qty": 6,
+      "closing_qty": 1,
+      "kind": "missing_product"
+    },
+    {
+      "product": "OXITARD CAPS 10CA",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "PILEX FORTE OI",
+      "opening_qty": 49,
+      "receipts_qty": 0,
+      "sales_qty": 23,
+      "closing_qty": 26,
+      "kind": "missing_product"
+    },
+    {
+      "product": "PILEX FORTE TA 30TA",
+      "opening_qty": null,
+      "receipts_qty": 0,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "PILEX TAB 60TA",
+      "opening_qty": 40,
+      "receipts_qty": 0,
+      "sales_qty": 28,
+      "closing_qty": 12,
+      "kind": "missing_product"
+    },
+    {
+      "product": "PLATENZA SYP 100M",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "PLATENZA TAB 20TA",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "PURE HANDS 100 100M",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "PURE HANDS ADV 500M",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "PURE HANDS ADV 2X50",
+      "opening_qty": null,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "PURE HANDS ADV 750M",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "PURE HANDS ADV 750M",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "PURE HANDS LEM 100M",
+      "opening_qty": null,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "PURE HANDS LIT 100M",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": null,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "PURE HANDS ORA 100M",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "PURE HANDS ORA 500M",
+      "opening_qty": 0,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "PURE HANDS PIN 500M",
+      "opening_qty": null,
+      "receipts_qty": 0,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "PURE HANDS STR 100M",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "RENALKA (BIG) 200M",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "RENALKA (SMALL 100M",
+      "opening_qty": 40,
+      "receipts_qty": 0,
+      "sales_qty": 3,
+      "closing_qty": 37,
+      "kind": "missing_product"
+    },
+    {
+      "product": "REOSTO 30TA",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "RUMALAYA FORTE 30TA",
+      "opening_qty": 1,
+      "receipts_qty": 0,
+      "sales_qty": 1,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "RUMALAYA GEL",
+      "opening_qty": 1,
+      "receipts_qty": 0,
+      "sales_qty": null,
+      "closing_qty": 1,
+      "kind": "missing_product"
+    },
+    {
+      "product": "RUMALAYA LINME",
+      "opening_qty": 45,
+      "receipts_qty": 0,
+      "sales_qty": 2,
+      "closing_qty": 43,
+      "kind": "missing_product"
+    },
+    {
+      "product": "RUMALAYA TAB 60TA",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "SEPTILIN SYP 200M",
+      "opening_qty": 8,
+      "receipts_qty": 0,
+      "sales_qty": 8,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "SEPTILIN TAB 60TA",
+      "opening_qty": 26,
+      "receipts_qty": 0,
+      "sales_qty": 5,
+      "closing_qty": 21,
+      "kind": "missing_product"
+    },
+    {
+      "product": "SPEMAN 60TA",
+      "opening_qty": 12,
+      "receipts_qty": 50,
+      "sales_qty": 15,
+      "closing_qty": 47,
+      "kind": "missing_product"
+    },
+    {
+      "product": "TENTEX FORTE 10TA",
+      "opening_qty": 86,
+      "receipts_qty": 0,
+      "sales_qty": 12,
+      "closing_qty": 74,
+      "kind": "missing_product"
+    },
+    {
+      "product": "TENTEX ROYAL",
+      "opening_qty": 67,
+      "receipts_qty": 0,
+      "sales_qty": 11,
+      "closing_qty": 56,
+      "kind": "missing_product"
+    }
+  ],
+  "extra_rows": [],
+  "duplicates": [
+    {
+      "side": "ground_truth",
+      "product": "PURE HANDS ADV 750M",
+      "count": 2
+    }
+  ],
+  "mismatches": [],
+  "ocr_review": [],
+  "accounting": [],
+  "confidence": "medium",
+  "notes": [
+    "OCR used tesseract psm 6."
+  ],
+  "result_key": "0000701406_2026_08_ZL_37_391_04092026155529",
+  "unavailable_fields": {},
+  "formula_checked": "simple"
+}

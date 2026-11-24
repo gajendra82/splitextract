@@ -1,0 +1,978 @@
+{
+  "0000700025_2026_08_ZL_06_476_02092026122943.jpeg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T13:28:11",
+    "format": "Stock Statement (Datewise)",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000700025_2026_08_ZL_06_476_02092026122943"
+  },
+  "0000700077_2026_08_ZL_06_304_06092026141652.jpeg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T13:30:39",
+    "format": "Stock Statement",
+    "handler": "pharma_hub_jun_jul_photo",
+    "result_key": "0000700077_2026_08_ZL_06_304_06092026141652"
+  },
+  "0000700081_2026_08_ZL_06_313_05092026163820.jpg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T13:31:28",
+    "format": "Stock Statement",
+    "handler": "pharma_hub_jun_jul_photo",
+    "result_key": "0000700081_2026_08_ZL_06_313_05092026163820"
+  },
+  "0000700106_2026_08_ZL_06_310_04092026144120.jpg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T14:01:16",
+    "format": "gemini_extraction_fallback",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000700106_2026_08_ZL_06_310_04092026144120"
+  },
+  "0000700206_2026_08_ZL_18_377_04092026042611.png": {
+    "status": "FAIL",
+    "batch": 1,
+    "timestamp": "2026-09-30T13:31:35",
+    "format": "Product wise stock statement",
+    "handler": "product_wise_stock_statement_image",
+    "result_key": "0000700206_2026_08_ZL_18_377_04092026042611"
+  },
+  "0000700220_2026_08_ZL_18_8189_05092026022949.jpeg": {
+    "status": "FAIL",
+    "batch": 1,
+    "timestamp": "2026-09-30T13:31:53",
+    "format": "Product wise stock statement",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000700220_2026_08_ZL_18_8189_05092026022949"
+  },
+  "0000700221_2026_08_ZL_18_377_04092026042846.png": {
+    "status": "FAIL",
+    "batch": 1,
+    "timestamp": "2026-09-30T13:31:59",
+    "format": "Product wise stock statement",
+    "handler": "product_wise_stock_statement_image",
+    "result_key": "0000700221_2026_08_ZL_18_377_04092026042846"
+  },
+  "0000700223_2026_08_ZL_18_377_04092026043208.png": {
+    "status": "FAIL",
+    "batch": 1,
+    "timestamp": "2026-09-30T13:32:05",
+    "format": "Product wise stock statement",
+    "handler": "product_wise_stock_statement_image",
+    "result_key": "0000700223_2026_08_ZL_18_377_04092026043208"
+  },
+  "0000700253_2026_08_ZL_18_377_04092026043422.png": {
+    "status": "FAIL",
+    "batch": 1,
+    "timestamp": "2026-09-30T14:01:25",
+    "format": "Product wise stock statement",
+    "handler": "product_wise_stock_statement_image",
+    "result_key": "0000700253_2026_08_ZL_18_377_04092026043422"
+  },
+  "0000700259_2026_08_ZL_18_379_03092026174312.jpg": {
+    "status": "FAIL",
+    "batch": 1,
+    "timestamp": "2026-09-30T14:02:47",
+    "format": "Product wise stock statement",
+    "handler": "product_wise_stock_statement_image",
+    "result_key": "0000700259_2026_08_ZL_18_379_03092026174312"
+  },
+  "0000700237_2026_08_ZL_18_8175_04092026055920.jpg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T14:02:52",
+    "format": "Stock Statement",
+    "handler": "pharma_hub_jun_jul_photo",
+    "result_key": "0000700237_2026_08_ZL_18_8175_04092026055920"
+  },
+  "0000700261_2026_08_ZL_18_377_04092026145403.jpg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T14:16:07",
+    "format": "Product wise stock statement",
+    "handler": "pharma_hub_jun_jul_photo",
+    "result_key": "0000700261_2026_08_ZL_18_377_04092026145403"
+  },
+  "0000700267_2026_08_ZL_18_8175_03092026073538.jpg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T15:14:20",
+    "format": "Product wise stock statement",
+    "handler": "pharma_hub_jun_jul_photo",
+    "result_key": "0000700267_2026_08_ZL_18_8175_03092026073538"
+  },
+  "0000700268_2026_08_ZL_18_8175_04092026060607.jpg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T15:14:07",
+    "format": "STOCK & SALES ANALYSIS",
+    "handler": "pharma_hub_jun_jul_photo",
+    "result_key": "0000700268_2026_08_ZL_18_8175_04092026060607"
+  },
+  "0000700307_2026_08_ZL_18_8175_04092026055200.jpg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T15:17:53",
+    "format": "gemini_extraction_fallback",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000700307_2026_08_ZL_18_8175_04092026055200"
+  },
+  "0000700310_2026_08_ZL_18_8183_05092026060431.jpg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T15:18:31",
+    "format": "Product wise stock statement",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000700310_2026_08_ZL_18_8183_05092026060431"
+  },
+  "0000700320_2026_08_ZL_18_375_05092026174343.jpeg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T15:19:11",
+    "format": "STOCK REPORT",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000700320_2026_08_ZL_18_375_05092026174343"
+  },
+  "0000700325_2026_08_ZL_18_379_03092026175634.jpg": {
+    "status": "FAIL",
+    "batch": 1,
+    "timestamp": "2026-09-30T15:18:55",
+    "format": "Product wise stock statement",
+    "handler": "product_wise_stock_statement_image",
+    "result_key": "0000700325_2026_08_ZL_18_379_03092026175634"
+  },
+  "0000700308_2026_08_ZL_18_8175_03092026072320.jpg": {
+    "status": "FAIL",
+    "batch": 1,
+    "timestamp": "2026-09-30T15:18:00",
+    "format": "Product wise stock statement",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000700308_2026_08_ZL_18_8175_03092026072320"
+  },
+  "0000700345_2026_08_ZL_18_377_04092026043609.png": {
+    "status": "FAIL",
+    "batch": 1,
+    "timestamp": "2026-09-30T15:19:03",
+    "format": "Product wise stock statement",
+    "handler": "product_wise_stock_statement_image",
+    "result_key": "0000700345_2026_08_ZL_18_377_04092026043609"
+  },
+  "0000700352_2026_08_ZL_18_8183_04092026125745.jpg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T15:20:14",
+    "format": "Product wise stock statement",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000700352_2026_08_ZL_18_8183_04092026125745"
+  },
+  "0000700365_2026_08_ZL_18_377_04092026043750.png": {
+    "status": "FAIL",
+    "batch": 1,
+    "timestamp": "2026-09-30T15:19:18",
+    "format": "Product wise stock statement",
+    "handler": "product_wise_stock_statement_image",
+    "result_key": "0000700365_2026_08_ZL_18_377_04092026043750"
+  },
+  "0000700374_2026_08_ZL_18_377_04092026044112.png": {
+    "status": "FAIL",
+    "batch": 1,
+    "timestamp": "2026-09-30T15:19:27",
+    "format": "Product wise stock statement",
+    "handler": "product_wise_stock_statement_image",
+    "result_key": "0000700374_2026_08_ZL_18_377_04092026044112"
+  },
+  "0000700378_2026_08_ZL_18_8189_05092026030400.jpeg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T15:21:12",
+    "format": "STOCK REGISTER",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000700378_2026_08_ZL_18_8189_05092026030400"
+  },
+  "0000700381_2026_08_ZL_18_377_04092026045438.png": {
+    "status": "FAIL",
+    "batch": 1,
+    "timestamp": "2026-09-30T15:20:23",
+    "format": "Product wise stock statement",
+    "handler": "product_wise_stock_statement_image",
+    "result_key": "0000700381_2026_08_ZL_18_377_04092026045438"
+  },
+  "0000700400_2026_08_ZL_18_377_04092026044551.png": {
+    "status": "FAIL",
+    "batch": 1,
+    "timestamp": "2026-09-30T15:21:19",
+    "format": "Product wise stock statement",
+    "handler": "product_wise_stock_statement_image",
+    "result_key": "0000700400_2026_08_ZL_18_377_04092026044551"
+  },
+  "0000700406_2026_08_ZL_10_384_05092026140711.jpg": {
+    "status": "FAIL",
+    "batch": 1,
+    "timestamp": "2026-09-30T15:21:31",
+    "format": "Stock & Sales Statement",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000700406_2026_08_ZL_10_384_05092026140711"
+  },
+  "0000700395_2026_08_ZL_18_8189_05092026032102.jpeg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T15:22:18",
+    "format": "STOCK REPORT (Sales-%)",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000700395_2026_08_ZL_18_8189_05092026032102"
+  },
+  "0000700413_2026_08_ZL_10_385_06092026161709.jpg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T15:23:36",
+    "format": "gemini_extraction_fallback",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000700413_2026_08_ZL_10_385_06092026161709"
+  },
+  "0000700410_2026_08_ZL_10_388_08092026024416.jpg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T15:25:23",
+    "format": "Stock and Sale Statement",
+    "handler": "pack_op_pur_bal_stock_sale_vision",
+    "result_key": "0000700410_2026_08_ZL_10_388_08092026024416"
+  },
+  "0000700422_2026_08_ZL_10_388_08092026042929.jpg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T15:27:02",
+    "format": "Stock Statement",
+    "handler": "pharma_hub_jun_jul_photo",
+    "result_key": "0000700422_2026_08_ZL_10_388_08092026042929"
+  },
+  "0000700424_2026_08_ZL_10_381_05092026031124.png": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T15:26:13",
+    "format": "gemini_extraction_fallback",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000700424_2026_08_ZL_10_381_05092026031124"
+  },
+  "0000700434_2026_08_ZL_10_386_05092026034503.jpg": {
+    "status": "FAIL",
+    "batch": 1,
+    "timestamp": "2026-09-30T15:28:21",
+    "format": "Stock and Sale Report",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000700434_2026_08_ZL_10_386_05092026034503"
+  },
+  "0000700464_2026_08_ZL_10_8251_07092026134537.jpg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T15:29:27",
+    "format": "Stock and Sales Detail Report",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000700464_2026_08_ZL_10_8251_07092026134537"
+  },
+  "0000700479_2026_08_ZL_10_383_04092026195730.jpg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T15:28:50",
+    "format": "STOCK & SALES STATEMENT",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000700479_2026_08_ZL_10_383_04092026195730"
+  },
+  "0000700481_2026_08_ZL_10_389_04092026110107.jpeg": {
+    "status": "FAIL",
+    "batch": 1,
+    "timestamp": "2026-09-30T15:30:18",
+    "format": "Stock and Sales Report For Month Of Aug 2026",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000700481_2026_08_ZL_10_389_04092026110107"
+  },
+  "0000700488_2026_08_ZL_10_383_04092026201429.jpg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T15:32:46",
+    "format": "gemini_extraction_fallback",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000700488_2026_08_ZL_10_383_04092026201429"
+  },
+  "0000700534_2026_08_ZL_10_388_08092026023947.jpg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T15:33:31",
+    "format": "gemini_extraction_fallback",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000700534_2026_08_ZL_10_388_08092026023947"
+  },
+  "0000700536_2026_08_ZL_10_383_04092026205548.jpg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T15:36:04",
+    "format": "gemini_extraction_fallback",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000700536_2026_08_ZL_10_383_04092026205548"
+  },
+  "0000700546_2026_08_ZL_10_380_04092026100145.jpg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T15:39:02",
+    "format": "Stock and Sales Detail Report",
+    "handler": "pharma_hub_jun_jul_photo",
+    "result_key": "0000700546_2026_08_ZL_10_380_04092026100145"
+  },
+  "0000700576_2026_08_ZL_10_383_04092026210324.jpg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T15:39:31",
+    "format": "gemini_extraction_fallback",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000700576_2026_08_ZL_10_383_04092026210324"
+  },
+  "0000700581_2026_08_ZL_10_382_04092026115317.jpg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T15:40:01",
+    "format": "Stock & Sales Statement",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000700581_2026_08_ZL_10_382_04092026115317"
+  },
+  "0000700592_2026_08_ZL_10_381_05092026035412.png": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T15:40:20",
+    "format": "gemini_extraction_fallback",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000700592_2026_08_ZL_10_381_05092026035412"
+  },
+  "0000700609_2026_08_ZL_10_8251_07092026134940.jpg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T15:40:52",
+    "format": "Stock & Sales Statement",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000700609_2026_08_ZL_10_8251_07092026134940"
+  },
+  "0000700623_2026_08_ZL _10_380_04092026033622.jpg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T15:44:02",
+    "format": "gemini_extraction_fallback",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000700623_2026_08_ZL _10_380_04092026033622"
+  },
+  "0000700624_2026_08_ZL_10_383_05092026055419.jpg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T15:44:37",
+    "format": "Stock Statement",
+    "handler": "pharma_hub_jun_jul_photo",
+    "result_key": "0000700624_2026_08_ZL_10_383_05092026055419"
+  },
+  "0000700633_2026_08_ZL_10_382_04092026114220.jpg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T15:48:26",
+    "format": "STOCK & SALES STATEMENT",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000700633_2026_08_ZL_10_382_04092026114220"
+  },
+  "0000700625_2026_08_ZL_10_383_05092026054825.jpg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T15:47:11",
+    "format": "gemini_extraction_fallback",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000700625_2026_08_ZL_10_383_05092026054825"
+  },
+  "0000700648_2026_08_ZL_10_388_03092026150719.jpg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T15:48:57",
+    "format": "Saleable Stock Report",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000700648_2026_08_ZL_10_388_03092026150719"
+  },
+  "0000700651_2026_08_ZL_10_383_05092026061037.jpg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T15:51:46",
+    "format": "gemini_extraction_fallback",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000700651_2026_08_ZL_10_383_05092026061037"
+  },
+  "0000700791_2026_08_ZL_25_442_03092026172516.jpeg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T15:50:50",
+    "format": "Sales & Stock Statement",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000700791_2026_08_ZL_25_442_03092026172516"
+  },
+  "0000700835_2026_08_ZL_25_447_03092026105819.jpeg": {
+    "status": "FAIL",
+    "batch": 1,
+    "timestamp": "2026-09-30T15:51:48",
+    "format": "Sales & Stock Statement",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000700835_2026_08_ZL_25_447_03092026105819"
+  },
+  "0000700903_2026_08_ZL_30_750_01092026093242.jpg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T15:55:01",
+    "format": "STOCK & SALES ANALYSIS",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000700903_2026_08_ZL_30_750_01092026093242"
+  },
+  "0000700961_2026_08_ZL_11_423_03092026183227.jpg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T15:55:15",
+    "format": "STOCK & SALES ANALYSIS",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000700961_2026_08_ZL_11_423_03092026183227"
+  },
+  "0000701006_2026_08_ZL_11_426_05092026145713.jpeg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T15:56:04",
+    "format": "Stock & Sales Statement",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701006_2026_08_ZL_11_426_05092026145713"
+  },
+  "0000701012_2026_08_ZL_11_423_03092026183736.jpg": {
+    "status": "FAIL",
+    "batch": 1,
+    "timestamp": "2026-09-30T15:57:25",
+    "format": "STOCK STATUS REPORT",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701012_2026_08_ZL_11_423_03092026183736"
+  },
+  "0000701013_2026_08_ZL_11_423_03092026183839.jpg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T15:58:06",
+    "format": "gemini_extraction_fallback",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701013_2026_08_ZL_11_423_03092026183839"
+  },
+  "0000701056_2026_08_ZL_11_423_03092026184325.jpg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T16:01:09",
+    "format": "gemini_extraction_fallback",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701056_2026_08_ZL_11_423_03092026184325"
+  },
+  "0000701051_2026_08_ZL_11_423_03092026184131.jpg": {
+    "status": "FAIL",
+    "batch": 1,
+    "timestamp": "2026-09-30T16:01:24",
+    "format": "Stock Statement",
+    "handler": "pharma_hub_jun_jul_photo",
+    "result_key": "0000701051_2026_08_ZL_11_423_03092026184131"
+  },
+  "0000701078_2026_08_ZL_03_362_05092026080346.jpeg": {
+    "status": "FAIL",
+    "batch": 1,
+    "timestamp": "2026-09-30T16:03:53",
+    "format": "Sales & Stock Statement",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701078_2026_08_ZL_03_362_05092026080346"
+  },
+  "0000701094_2026_08_ZL_03_365_06092026110209.jpg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T16:04:01",
+    "format": "gemini_extraction_fallback",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701094_2026_08_ZL_03_365_06092026110209"
+  },
+  "0000701116_2026_08_ZL_03_362_05092026080412.jpeg": {
+    "status": "FAIL",
+    "batch": 1,
+    "timestamp": "2026-09-30T16:04:33",
+    "format": "STOCK & SALES ANALYSIS",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701116_2026_08_ZL_03_362_05092026080412"
+  },
+  "0000701128_2026_08_ZL_03_371_06092026133730.jpeg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T16:07:14",
+    "format": "STOCK & SALES ANALYSIS",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701128_2026_08_ZL_03_371_06092026133730"
+  },
+  "0000701120_2026_08_ZL_03_8248_06092026164909.jpeg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T16:07:30",
+    "format": "gemini_extraction_fallback",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701120_2026_08_ZL_03_8248_06092026164909"
+  },
+  "0000701151_2026_08_ZL_14_361_03092026025650.jpg": {
+    "status": "FAIL",
+    "batch": 1,
+    "timestamp": "2026-09-30T16:07:49",
+    "format": "Sales & Stock Statement",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701151_2026_08_ZL_14_361_03092026025650"
+  },
+  "0000701141_2026_08_ZL_16_525_02092026055122.jpg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T16:11:00",
+    "format": "gemini_extraction_fallback",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701141_2026_08_ZL_16_525_02092026055122"
+  },
+  "0000701167_2026_08_ZL_16_525_02092026055225.jpg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T16:11:42",
+    "format": "gemini_extraction_fallback",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701167_2026_08_ZL_16_525_02092026055225"
+  },
+  "0000701175_2026_08_ZL_16_525_02092026055023.jpg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T16:17:41",
+    "format": "gemini_extraction_fallback",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701175_2026_08_ZL_16_525_02092026055023"
+  },
+  "0000701202_2026_08_ZL_03_9203_07092026044839.jpeg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T16:18:04",
+    "format": "gemini_extraction_fallback",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701202_2026_08_ZL_03_9203_07092026044839"
+  },
+  "0000701189_2026_08_ZL_03_365_05092026083117.jpg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T16:18:18",
+    "format": "gemini_extraction_fallback",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701189_2026_08_ZL_03_365_05092026083117"
+  },
+  "0000701206_2026_08_ZL_03_359_06092026162957.jpeg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T16:20:12",
+    "format": "gemini_extraction_fallback",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701206_2026_08_ZL_03_359_06092026162957"
+  },
+  "0000701209_2026_08_ZL_14_361_03092026025829.jpg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T16:19:30",
+    "format": "gemini_extraction_fallback",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701209_2026_08_ZL_14_361_03092026025829"
+  },
+  "0000701214_2026_08_ZL_03_362_05092026080810.jpeg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T16:20:47",
+    "format": "STOCK & SALES ANALYSIS",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701214_2026_08_ZL_03_362_05092026080810"
+  },
+  "0000701218_2026_08_ZL_03_365_02092026122801.jpg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T16:23:33",
+    "format": "gemini_extraction_fallback",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701218_2026_08_ZL_03_365_02092026122801"
+  },
+  "0000701259_2026_08_ZL_03_364_04092026141428.jpg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T16:22:56",
+    "format": "Sales & Stock Statement",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701259_2026_08_ZL_03_364_04092026141428"
+  },
+  "0000701247_2026_08_ZL_03_362_05092026081157.jpeg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T16:22:13",
+    "format": "STOCK & SALES ANALYSIS",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701247_2026_08_ZL_03_362_05092026081157"
+  },
+  "0000701267_2026_08_ZL_03_365_02092026113412.jpg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T16:26:29",
+    "format": "Stock & Sales Statement",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701267_2026_08_ZL_03_365_02092026113412"
+  },
+  "0000701268_2026_08_ZL_16_525_02092026055410.jpg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T16:27:13",
+    "format": "gemini_extraction_fallback",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701268_2026_08_ZL_16_525_02092026055410"
+  },
+  "0000701269_2026_08_ZL_03_602_07092026064928.jpeg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T16:28:27",
+    "format": "STOCK & SALES ANALYSIS",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701269_2026_08_ZL_03_602_07092026064928"
+  },
+  "0000701271_2026_08_ZL_16_525_02092026055513.jpg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T16:30:46",
+    "format": "gemini_extraction_fallback",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701271_2026_08_ZL_16_525_02092026055513"
+  },
+  "0000701273_2026_08_ZL_03_368_06092026130923.jpeg": {
+    "status": "FAIL",
+    "batch": 1,
+    "timestamp": "2026-09-30T16:30:01",
+    "format": "gemini_extraction_fallback",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701273_2026_08_ZL_03_368_06092026130923"
+  },
+  "0000701275_2026_08_ZL_03_360_02092026152716.jpg": {
+    "status": "FAIL",
+    "batch": 1,
+    "timestamp": "2026-09-30T16:30:21",
+    "format": "STOCK & SALES ANALYSIS",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701275_2026_08_ZL_03_360_02092026152716"
+  },
+  "0000701278_2026_08_ZL_03_371_06092026135441.jpeg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T16:30:36",
+    "format": "STOCK & SALES ANALYSIS",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701278_2026_08_ZL_03_371_06092026135441"
+  },
+  "0000701279_2026_08_ZL_15_366_03092026165324.jpeg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T16:32:48",
+    "format": "STOCK & SALES ANALYSIS",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701279_2026_08_ZL_15_366_03092026165324"
+  },
+  "0000701385_2026_08_ZL_37_392_05092026050220.jpg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T16:34:02",
+    "format": "gemini_extraction_fallback",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701385_2026_08_ZL_37_392_05092026050220"
+  },
+  "0000701386_2026_08_ZL_37_392_05092026045819.jpg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T16:36:10",
+    "format": "gemini_extraction_fallback",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701386_2026_08_ZL_37_392_05092026045819"
+  },
+  "0000701406_2026_08_ZL_37_391_04092026155529.jpg": {
+    "status": "FAIL",
+    "batch": 1,
+    "timestamp": "2026-09-30T16:36:18",
+    "format": "STOCK & SALES ANALYSIS",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701406_2026_08_ZL_37_391_04092026155529"
+  },
+  "0000701468_2026_08_ZL_37_8181_04092026181217.jpg": {
+    "status": "FAIL",
+    "batch": 1,
+    "timestamp": "2026-09-30T16:36:39",
+    "format": "gemini_extraction_fallback",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701468_2026_08_ZL_37_8181_04092026181217"
+  },
+  "0000701444_2026_08_ZL_37_8176_05092026064547.jpg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T16:39:55",
+    "format": "Stock & Sales Statement",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701444_2026_08_ZL_37_8176_05092026064547"
+  },
+  "0000701486_2026_08_ZL_37_392_05092026045121.jpg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T16:40:20",
+    "format": "gemini_extraction_fallback",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701486_2026_08_ZL_37_392_05092026045121"
+  },
+  "0000701487_2026_08_ZL_37_392_05092026044705.jpg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T16:43:15",
+    "format": "gemini_extraction_fallback",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701487_2026_08_ZL_37_392_05092026044705"
+  },
+  "0000701497_2026_08_ZL_37_392_05092026045202.jpg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T16:43:39",
+    "format": "gemini_extraction_fallback",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701497_2026_08_ZL_37_392_05092026045202"
+  },
+  "0000701518_2026_08_ZL_37_392_05092026044102.jpg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T16:46:39",
+    "format": "gemini_extraction_fallback",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701518_2026_08_ZL_37_392_05092026044102"
+  },
+  "0000701554_2026_08_ZL_37_8176_05092026065206.jpg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T12:54:41",
+    "format": "STOCK & SALES ANALYSIS",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701554_2026_08_ZL_37_8176_05092026065206"
+  },
+  "0000701568_2026_08_ZL_37_8176_03092026162410.jpg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T12:56:13",
+    "format": "Stock and Sale Report (Reps)",
+    "handler": "pharma_hub_jun_jul_photo",
+    "result_key": "0000701568_2026_08_ZL_37_8176_03092026162410"
+  },
+  "0000701590_2026_08_ZL_01_396_03092026103913.png": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T12:56:48",
+    "format": "Untitled spre...",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701590_2026_08_ZL_01_396_03092026103913"
+  },
+  "0000701608_2026_08_ZL_37_391_04092026155820.jpg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T12:59:09",
+    "format": "Stock & Sales Statement",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701608_2026_08_ZL_37_391_04092026155820"
+  },
+  "0000701626_2026_08_ZL_01_396_03092026104117.png": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T12:59:44",
+    "format": "Untitled spre...",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701626_2026_08_ZL_01_396_03092026104117"
+  },
+  "0000701628_2026_08_ZL_01_396_03092026105359.png": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T13:00:56",
+    "format": "Untitled spre...",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701628_2026_08_ZL_01_396_03092026105359"
+  },
+  "0000701648_2026_08_ZL_37_394_04092026175700.jpg": {
+    "status": "REVIEW",
+    "batch": 1,
+    "timestamp": "2026-09-30T13:01:03",
+    "format": "Stock & Sales Statement",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701648_2026_08_ZL_37_394_04092026175700"
+  },
+  "0000701658_2026_08_ZL_01_396_03092026105623.png": {
+    "status": "REVIEW",
+    "batch": 2,
+    "timestamp": "2026-09-30T13:03:37",
+    "format": "Untitled spre...",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701658_2026_08_ZL_01_396_03092026105623"
+  },
+  "0000701675_2026_08_ZL_37_8176_04092026132953.jpg": {
+    "status": "REVIEW",
+    "batch": 2,
+    "timestamp": "2026-09-30T13:09:07",
+    "format": "Stock & Sales Statement",
+    "handler": "pharma_hub_jun_jul_photo",
+    "result_key": "0000701675_2026_08_ZL_37_8176_04092026132953"
+  },
+  "0000701692_2026_08_ZL_37_391_04092026155945.jpg": {
+    "status": "REVIEW",
+    "batch": 2,
+    "timestamp": "2026-09-30T13:09:28",
+    "format": "Stock & Sales Statement",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701692_2026_08_ZL_37_391_04092026155945"
+  },
+  "0000701715_2026_08_ZL_01_396_03092026110153.png": {
+    "status": "REVIEW",
+    "batch": 2,
+    "timestamp": "2026-09-30T13:11:34",
+    "format": "Untitled spre...",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701715_2026_08_ZL_01_396_03092026110153"
+  },
+  "0000701699_2026_08_ZL_37_392_05092026050353.jpg": {
+    "status": "REVIEW",
+    "batch": 2,
+    "timestamp": "2026-09-30T13:12:24",
+    "format": "gemini_extraction_fallback",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701699_2026_08_ZL_37_392_05092026050353"
+  },
+  "0000701727_2026_08_ZL_37_391_04092026155901.jpg": {
+    "status": "REVIEW",
+    "batch": 2,
+    "timestamp": "2026-09-30T13:12:24",
+    "format": "Stock & Sales Statement",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701727_2026_08_ZL_37_391_04092026155901"
+  },
+  "0000701789_2026_08_ZL_20_557_05092026163636.jpg": {
+    "status": "FAIL",
+    "batch": 2,
+    "timestamp": "2026-09-30T13:13:15",
+    "format": "Sales & Stock Statement",
+    "handler": "zandra_two_column_order_form",
+    "result_key": "0000701789_2026_08_ZL_20_557_05092026163636"
+  },
+  "0000701754_2026_08_ZL_37_391_04092026155735.jpg": {
+    "status": "REVIEW",
+    "batch": 2,
+    "timestamp": "2026-09-30T13:14:03",
+    "format": "Stock & Sales Statement",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701754_2026_08_ZL_37_391_04092026155735"
+  },
+  "0000701824_2026_08_ZL_20_298_05092026145445.jpg": {
+    "status": "REVIEW",
+    "batch": 2,
+    "timestamp": "2026-09-30T13:14:57",
+    "format": "STOCK & SALES ANALYSIS",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701824_2026_08_ZL_20_298_05092026145445"
+  },
+  "0000701825_2026_08_ZL_20_298_05092026145628.jpg": {
+    "status": "REVIEW",
+    "batch": 2,
+    "timestamp": "2026-09-30T13:16:20",
+    "format": "Stock & Sales Statement",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701825_2026_08_ZL_20_298_05092026145628"
+  },
+  "0000701830_2026_08_ZL_20_298_05092026145731.jpg": {
+    "status": "REVIEW",
+    "batch": 2,
+    "timestamp": "2026-09-30T13:18:07",
+    "format": "Stock & Sales Statement",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701830_2026_08_ZL_20_298_05092026145731"
+  },
+  "0000701842_2026_08_ZL_20_299_05092026022230.png": {
+    "status": "REVIEW",
+    "batch": 2,
+    "timestamp": "2026-09-30T13:19:01",
+    "format": "gemini_extraction_fallback",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701842_2026_08_ZL_20_299_05092026022230"
+  },
+  "0000701831_2026_08_ZL_20_8229_06092026072053.jpg": {
+    "status": "REVIEW",
+    "batch": 2,
+    "timestamp": "2026-09-30T13:19:22",
+    "format": "STOCK & SALES ANALYSIS",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701831_2026_08_ZL_20_8229_06092026072053"
+  },
+  "0000701851_2026_08_ZL_20_302_03092026134940.jpg": {
+    "status": "FAIL",
+    "batch": 2,
+    "timestamp": "2026-09-30T13:19:36",
+    "format": "Sales & Stock Statement",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701851_2026_08_ZL_20_302_03092026134940"
+  },
+  "0000701862_2026_08_ZL_20_302_03092026134909.jpg": {
+    "status": "FAIL",
+    "batch": 2,
+    "timestamp": "2026-09-30T13:20:54",
+    "format": "STOCK & SALES ANALYSIS",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701862_2026_08_ZL_20_302_03092026134909"
+  },
+  "0000701852_2026_08_ZL_20_299_05092026022658.png": {
+    "status": "REVIEW",
+    "batch": 2,
+    "timestamp": "2026-09-30T13:20:59",
+    "format": "gemini_extraction_fallback",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701852_2026_08_ZL_20_299_05092026022658"
+  },
+  "0000701864_2026_08_ZL_20_5015_03092026091037.jpg": {
+    "status": "FAIL",
+    "batch": 2,
+    "timestamp": "2026-09-30T13:21:10",
+    "format": "Sales & Stock Statement",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701864_2026_08_ZL_20_5015_03092026091037"
+  },
+  "0000701902_2026_08_ZL_20_293_07092026043547.jpeg": {
+    "status": "REVIEW",
+    "batch": 2,
+    "timestamp": "2026-09-30T13:22:15",
+    "format": "Stock & Sales Statement",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701902_2026_08_ZL_20_293_07092026043547"
+  },
+  "0000701904_2026_08_ZL_20_8227_05092026154848.jpg": {
+    "status": "FAIL",
+    "batch": 2,
+    "timestamp": "2026-09-30T13:23:20",
+    "format": "Stock & Sales Statement",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701904_2026_08_ZL_20_8227_05092026154848"
+  },
+  "0000701912_2026_08_ZL_20_296_03092026131905.jpg": {
+    "status": "REVIEW",
+    "batch": 2,
+    "timestamp": "2026-09-30T13:26:20",
+    "format": "Stock & Sales Analysis",
+    "handler": "pharma_hub_jun_jul_photo",
+    "result_key": "0000701912_2026_08_ZL_20_296_03092026131905"
+  },
+  "0000701949_2026_08_ZL_20_8227_05092026160138.jpg": {
+    "status": "REVIEW",
+    "batch": 2,
+    "timestamp": "2026-09-30T13:26:33",
+    "format": "Stock & Sales Statement",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701949_2026_08_ZL_20_8227_05092026160138"
+  },
+  "0000701934_2026_08_ZL_20_557_05092026163504.jpg": {
+    "status": "REVIEW",
+    "batch": 2,
+    "timestamp": "2026-09-30T13:26:40",
+    "format": "gemini_extraction_fallback",
+    "handler": "gemini_extraction_fallback",
+    "result_key": "0000701934_2026_08_ZL_20_557_05092026163504"
+  }
+}

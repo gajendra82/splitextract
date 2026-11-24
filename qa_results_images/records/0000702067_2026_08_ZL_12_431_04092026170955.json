@@ -1,0 +1,168 @@
+{
+  "file": "0000702067_2026_08_ZL_12_431_04092026170955.jpeg",
+  "path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000702067_2026_08_ZL_12_431_04092026170955.jpeg",
+  "format": "STOCK & SALES ANALYSIS",
+  "api_method": "gemini_extraction_fallback",
+  "status": "FAIL",
+  "expected_rows": 3,
+  "extracted_rows": 17,
+  "matched_rows": 0,
+  "missing_rows": [
+    {
+      "product": "AACTARIL SOAP gaa CR a. 30m \\L-SEEMINOR ANTI-BLE — 6OML, SCOOCTARINA ACNEFACE WAS — CLARINA ANTI ACNE CR 30 GM DIABECON DS TAB. 60. So",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": 33,
+      "kind": "missing_product"
+    },
+    {
+      "product": "HAIR-ZONE SOLUTION 60m) RECOLIN Ge ieee",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": 69,
+      "kind": "missing_product"
+    },
+    {
+      "product": "52 8B car oh_HIV",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 3,
+      "closing_qty": null,
+      "kind": "missing_product"
+    }
+  ],
+  "extra_rows": [
+    {
+      "product": "AACTARIL SOAP",
+      "opening_qty": 12,
+      "sales_qty": 9,
+      "closing_qty": 75,
+      "kind": "extra_product"
+    },
+    {
+      "product": "BLEMINOR ANTI-BLE CR",
+      "opening_qty": 13,
+      "sales_qty": 8,
+      "closing_qty": 5,
+      "kind": "extra_product"
+    },
+    {
+      "product": "CLARINA ACNEFACE WAS",
+      "opening_qty": 13,
+      "sales_qty": 8,
+      "closing_qty": 5,
+      "kind": "extra_product"
+    },
+    {
+      "product": "CLARINA ANTI ACNE CR",
+      "opening_qty": 42,
+      "sales_qty": 12,
+      "closing_qty": 30,
+      "kind": "extra_product"
+    },
+    {
+      "product": "DIABECON DS TAB.",
+      "opening_qty": 29,
+      "sales_qty": 21,
+      "closing_qty": 8,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HAIR-ZONE SOLUTION",
+      "opening_qty": 21,
+      "sales_qty": 8,
+      "closing_qty": 13,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HIMCOLIN GEL",
+      "opening_qty": 36,
+      "sales_qty": 2,
+      "closing_qty": 34,
+      "kind": "extra_product"
+    },
+    {
+      "product": "LIV 52 HB CAP",
+      "opening_qty": 69,
+      "sales_qty": 0,
+      "closing_qty": 69,
+      "kind": "extra_product"
+    },
+    {
+      "product": "LIV 52 SYP",
+      "opening_qty": 54,
+      "sales_qty": 73,
+      "closing_qty": 51,
+      "kind": "extra_product"
+    },
+    {
+      "product": "LIV 52 SYP",
+      "opening_qty": 49,
+      "sales_qty": 62,
+      "closing_qty": 57,
+      "kind": "extra_product"
+    },
+    {
+      "product": "LIV 52 TAB",
+      "opening_qty": 36,
+      "sales_qty": 0,
+      "closing_qty": 2,
+      "kind": "extra_product"
+    },
+    {
+      "product": "OPTHACARE EYE DROP",
+      "opening_qty": 2,
+      "sales_qty": 0,
+      "closing_qty": 2,
+      "kind": "extra_product"
+    },
+    {
+      "product": "ORO-T ORAL RINSE LIQ.",
+      "opening_qty": 20,
+      "sales_qty": 14,
+      "closing_qty": 6,
+      "kind": "extra_product"
+    },
+    {
+      "product": "OXITARD CAP.",
+      "opening_qty": 3,
+      "sales_qty": 0,
+      "closing_qty": 3,
+      "kind": "extra_product"
+    },
+    {
+      "product": "PILEX FORTE OINTMENT",
+      "opening_qty": 61,
+      "sales_qty": 21,
+      "closing_qty": 40,
+      "kind": "extra_product"
+    },
+    {
+      "product": "PILEX TAB",
+      "opening_qty": 92,
+      "sales_qty": 32,
+      "closing_qty": 60,
+      "kind": "extra_product"
+    },
+    {
+      "product": "TENTEX FORTE TAB",
+      "opening_qty": 113,
+      "sales_qty": 14,
+      "closing_qty": 99,
+      "kind": "extra_product"
+    }
+  ],
+  "duplicates": [],
+  "mismatches": [],
+  "ocr_review": [],
+  "accounting": [],
+  "confidence": "medium",
+  "notes": [
+    "OCR used tesseract psm 6."
+  ],
+  "result_key": "0000702067_2026_08_ZL_12_431_04092026170955",
+  "unavailable_fields": {},
+  "formula_checked": "none"
+}

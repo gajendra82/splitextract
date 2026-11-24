@@ -100,7 +100,8 @@ class TestSaleClosingPackPhoto(unittest.TestCase):
         word = _parse_sale_closing_analysis_lines(PCS.splitlines(), "lachmi.docx")
         self.assertIsNotNone(word)
         self.assertEqual(word["line_items"][0]["sales_qty"], 15)
-        self.assertEqual(word["line_items"][0]["receipts_qty"], 0)
+        self.assertIsNone(word["line_items"][0]["opening_qty"])
+        self.assertIsNone(word["line_items"][0]["receipts_qty"])
         self.assertEqual(
             word["totals"]["extra"]["extraction_method"],
             "sale_closing_analysis_docx",

@@ -518,7 +518,7 @@ def _prose_evidence(
 
 def _prose_text(file_bytes: bytes, suffix: str) -> Optional[str]:
     if not file_bytes:
-        return None
+        return None 
     if suffix in _TEXT_SUFFIXES:
         raw = file_bytes.decode("utf-8", errors="replace")
         if suffix in {".htm", ".html"}:

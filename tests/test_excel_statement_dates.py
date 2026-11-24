@@ -163,7 +163,8 @@ class TestExcelHeaderPeriod(unittest.TestCase):
 
 class TestSindAgenciesXlsxRegression(unittest.TestCase):
     def test_sample_xlsx_period_from_content_not_filename(self):
-        self.assertTrue(SAMPLE_XLSX.is_file(), f"missing fixture {SAMPLE_XLSX}")
+        if not SAMPLE_XLSX.is_file():
+            self.skipTest(f"missing fixture {SAMPLE_XLSX}")
         data = SAMPLE_XLSX.read_bytes()
         result = extract_sales_statement(
             data, "0000737569_2026_08_ZL_13_285_01092026073322.xlsx"
@@ -286,7 +287,8 @@ class TestMatNameExcelHeaders(unittest.TestCase):
         self.assertEqual(colmap["sale"], 11)
 
     def test_sample_xlsx_mat_name_and_code(self):
-        self.assertTrue(MAT_NAME_XLSX.is_file(), f"missing fixture {MAT_NAME_XLSX}")
+        if not MAT_NAME_XLSX.is_file():
+            self.skipTest(f"missing fixture {MAT_NAME_XLSX}")
         result = extract_sales_statement(MAT_NAME_XLSX.read_bytes(), MAT_NAME_XLSX.name)
         self.assertEqual(result["stockist_name"], "RICHA PHARMA")
         self.assertEqual(result["totals"]["extra"].get("stockist_code"), "0000737608")

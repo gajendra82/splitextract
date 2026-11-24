@@ -1,0 +1,336 @@
+{
+  "document_id": "0000701864_2026_08_ZL_20_5015_03092026091037.jpg",
+  "verified_fields": 20,
+  "stored": {
+    "label": "stored",
+    "error": null,
+    "wall_latency_ms": 7,
+    "mode": "stored_vl",
+    "ocr": {
+      "pages": 0,
+      "timeout_pages": 0,
+      "empty_pages": 0,
+      "cache_hits": 0,
+      "engines": [],
+      "recovery_engines": [],
+      "page_timing": [],
+      "ocr_timed_out": false,
+      "has_table_html": true,
+      "di_ocr_override": true,
+      "ocr_source": "paddleocr-vl-stored",
+      "text_length": 2547
+    },
+    "field_accuracy": 0.85,
+    "quantity_accuracy": 0.875,
+    "missing_values": null,
+    "table_structure_ok": true,
+    "score": {
+      "metrics": {
+        "verified_fields": 20,
+        "correct_fields": 17,
+        "field_accuracy": 0.85,
+        "numeric_accuracy": 0.875,
+        "quantity_accuracy": 0.875,
+        "price_accuracy": null,
+        "date_accuracy": null,
+        "batch_accuracy": null,
+        "header_accuracy": 1.0,
+        "table_column_accuracy": 0.875,
+        "text_accuracy": 0.75,
+        "precision": 1.0,
+        "recall": 0.85,
+        "f1": 0.9189189189189189,
+        "silent_wrong_rate": 0.0,
+        "silent_wrong_count": 0,
+        "silent_wrong_denominator_verified_fields": 20,
+        "accepted_field_silent_wrong_rate": 0.0,
+        "accepted_field_silent_wrong_count": 0,
+        "accepted_field_denominator": 17,
+        "explicit_unresolved_rate": 0.0,
+        "missing_value_rate": 0.05,
+        "critical_error_rate": 0.1,
+        "by_type_prf": {
+          "numeric": {
+            "precision": 1.0,
+            "recall": 0.875,
+            "f1": 0.9333333333333333,
+            "n": 16
+          },
+          "text": {
+            "precision": 1.0,
+            "recall": 0.75,
+            "f1": 0.8571428571428571,
+            "n": 4
+          },
+          "table": {
+            "precision": 1.0,
+            "recall": 0.875,
+            "f1": 0.9333333333333333,
+            "n": 16
+          }
+        },
+        "error_type_counts": {
+          "MISSING": 1,
+          "MISSING_PRODUCT": 2
+        }
+      },
+      "document_status": "PARTIALLY_CORRECT",
+      "quantity_accuracy": 0.875,
+      "product_identity": {
+        "gt_products": 5,
+        "found_products": 4,
+        "recall": 0.8
+      },
+      "missing_values": 3,
+      "verified_fields": 20,
+      "correct_fields": 17
+    },
+    "result": {
+      "stockist_name": "\ud83c\udfe0\ud83d\udce7 Q \u2702\ufe0f :",
+      "company_name": "HIMALYA DRUG COMPANY",
+      "line_item_count": 18,
+      "line_items": [
+        {
+          "product_name": "ABANA",
+          "opening_qty": 49,
+          "receipts_qty": 0,
+          "sales_qty": 11,
+          "closing_qty": 38,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "CLARINA-CREAM",
+          "opening_qty": 15,
+          "receipts_qty": 0,
+          "sales_qty": 4,
+          "closing_qty": 11,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "CONFIDO TAB",
+          "opening_qty": 3,
+          "receipts_qty": 100,
+          "sales_qty": 13,
+          "closing_qty": 90,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "HIMCOLIN GEL",
+          "opening_qty": 2,
+          "receipts_qty": 50,
+          "sales_qty": 7,
+          "closing_qty": 45,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "LIV-52 SYP.",
+          "opening_qty": 25,
+          "receipts_qty": 140,
+          "sales_qty": 128,
+          "closing_qty": 37,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "LIV-52 SYRUP",
+          "opening_qty": 69,
+          "receipts_qty": 70,
+          "sales_qty": 54,
+          "closing_qty": 85,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "LIV-52 TAB",
+          "opening_qty": 104,
+          "receipts_qty": 100,
+          "sales_qty": 104,
+          "closing_qty": 100,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "PILEX TAB",
+          "opening_qty": 43,
+          "receipts_qty": 0,
+          "sales_qty": 38,
+          "closing_qty": 5,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "TENTEX FORTE",
+          "opening_qty": 247,
+          "receipts_qty": 0,
+          "sales_qty": 76,
+          "closing_qty": 171,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "DIABECON-DS TAB",
+          "opening_qty": 44,
+          "receipts_qty": 0,
+          "sales_qty": 12,
+          "closing_qty": 32,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "OXITARD CAP.",
+          "opening_qty": 1,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 1,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "CLARINA ANTI ACN",
+          "opening_qty": 3,
+          "receipts_qty": 0,
+          "sales_qty": 2,
+          "closing_qty": 1,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "HAIR ZONE SOL.",
+          "opening_qty": 17,
+          "receipts_qty": 0,
+          "sales_qty": 8,
+          "closing_qty": 9,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "LIV-52 HB CAP",
+          "opening_qty": 21,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 21,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "ORO-T 100ML",
+          "opening_qty": 30,
+          "receipts_qty": 51,
+          "sales_qty": 31,
+          "closing_qty": 50,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "QUISTA -DN 400GM",
+          "opening_qty": 0,
+          "receipts_qty": 12,
+          "sales_qty": 12,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "PILEX FORTE OINT.",
+          "opening_qty": 79,
+          "receipts_qty": 0,
+          "sales_qty": 28,
+          "closing_qty": 51,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "QUISTA ACTIVE",
+          "opening_qty": 0,
+          "receipts_qty": 12,
+          "sales_qty": 12,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        }
+      ],
+      "extraction_method": "vl_html_table_parse",
+      "di_ocr_override": true,
+      "phase1_validation": {
+        "accepted": true,
+        "status": "pass",
+        "reasons": [],
+        "checks": {
+          "schema": true,
+          "quality": true,
+          "stock_identity": true,
+          "rows": true,
+          "duplicates": true,
+          "cell_validation": true,
+          "column_mapping": true,
+          "ocr_verified": true
+        },
+        "quality_score": 100,
+        "parser": "vl_html_table_parse",
+        "failure_type": null,
+        "business_validation": {
+          "status": "consistent",
+          "reason": null
+        },
+        "source_agreement": null,
+        "source_evidence": true,
+        "cell_validation": {
+          "issues": [],
+          "column_report": {
+            "assignments": [],
+            "unresolved_headers": [],
+            "ambiguous_fields": [],
+            "issues": [],
+            "layout_id": "vl_html_table_parse",
+            "mapping_confidence": 1.0,
+            "has_column_confusion": false
+          },
+          "accepted_critical_fields": 72,
+          "unresolved_critical_fields": 0,
+          "has_blocking_issues": false
+        }
+      },
+      "phase2": null
+    }
+  }
+}

@@ -1,0 +1,3272 @@
+{
+  "results": [
+    {
+      "document_id": "0000700017_2026_08_ZL_06_476_02092026121836.pdf",
+      "extension": ".pdf",
+      "elapsed_ms": 395,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "op_pur_orec_sale_oiss",
+        "extraction_method": "op_pur_orec_sale_oiss",
+        "layout": "op_pur_orec_sale_oiss",
+        "profile": "",
+        "row_count": 49,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": 173109.53,
+          "closing_value": 327687.99,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "op_pur_orec_sale_oiss",
+        "extraction_method": "op_pur_orec_sale_oiss",
+        "layout": "op_pur_orec_sale_oiss",
+        "profile": "",
+        "row_count": 49,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": 173109.53,
+          "closing_value": 327687.99,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "VERIFIED",
+      "stored_baseline_outcome": "FAIL",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000700026_2026_08_ZL_06_313_03092026130418.pdf",
+      "extension": ".pdf",
+      "elapsed_ms": 576,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "psr_closstock_columns",
+        "extraction_method": "psr_closstock_columns",
+        "layout": "closstock_saleret_expdmg",
+        "profile": "",
+        "row_count": 25,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": 87954.0,
+          "closing_value": 166426.62,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "psr_closstock_columns",
+        "extraction_method": "psr_closstock_columns",
+        "layout": "closstock_saleret_expdmg",
+        "profile": "",
+        "row_count": 25,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": 87954.0,
+          "closing_value": 166426.62,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "UNRESOLVED",
+      "stored_baseline_outcome": "FAIL",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000700029_2026_08_ZL_06_476_02092026113447.pdf",
+      "extension": ".pdf",
+      "elapsed_ms": 485,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "prompt_datewise_layout",
+        "extraction_method": "prompt_datewise_layout",
+        "layout": "",
+        "profile": "",
+        "row_count": 49,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": null,
+          "closing_value": 82955.0,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "prompt_datewise_layout",
+        "extraction_method": "prompt_datewise_layout",
+        "layout": "",
+        "profile": "",
+        "row_count": 49,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": null,
+          "closing_value": 82955.0,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "VERIFIED",
+      "stored_baseline_outcome": "PASS",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000700046_2026_08_ZL_06_521_02092026053734.pdf",
+      "extension": ".pdf",
+      "elapsed_ms": 631,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "prompt_datewise_layout",
+        "extraction_method": "prompt_datewise_layout",
+        "layout": "",
+        "profile": "",
+        "row_count": 62,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": null,
+          "closing_value": 72908.0,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "prompt_datewise_layout",
+        "extraction_method": "prompt_datewise_layout",
+        "layout": "",
+        "profile": "",
+        "row_count": 62,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": null,
+          "closing_value": 72908.0,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "VERIFIED",
+      "stored_baseline_outcome": "PASS",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000700060_2026_08_ZL_06_748_04092026113445.pdf",
+      "extension": ".pdf",
+      "elapsed_ms": 395,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "prompt_datewise_layout",
+        "extraction_method": "prompt_datewise_layout",
+        "layout": "",
+        "profile": "",
+        "row_count": 59,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": 283497.0,
+          "closing_value": 448202.0,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "prompt_datewise_layout",
+        "extraction_method": "prompt_datewise_layout",
+        "layout": "",
+        "profile": "",
+        "row_count": 59,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": 283497.0,
+          "closing_value": 448202.0,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "VERIFIED",
+      "stored_baseline_outcome": "PASS",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000700079_2026_08_ZL_06_476_01092026063244.PDF",
+      "extension": ".pdf",
+      "elapsed_ms": 299,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "ostock_purqty_datewise_layout",
+        "extraction_method": "ostock_purqty_datewise_layout",
+        "layout": "ostock_purqty_datewise",
+        "profile": "",
+        "row_count": 34,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": null,
+          "closing_value": 153421.29,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "ostock_purqty_datewise_layout",
+        "extraction_method": "ostock_purqty_datewise_layout",
+        "layout": "ostock_purqty_datewise",
+        "profile": "",
+        "row_count": 34,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": null,
+          "closing_value": 153421.29,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "VERIFIED",
+      "stored_baseline_outcome": "PASS",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000700080_2026_08_ZL_06_305_02092026004326.pdf",
+      "extension": ".pdf",
+      "elapsed_ms": 626,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "prompt_datewise_layout",
+        "extraction_method": "prompt_datewise_layout",
+        "layout": "",
+        "profile": "",
+        "row_count": 58,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": 46294.0,
+          "closing_value": 72294.0,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "prompt_datewise_layout",
+        "extraction_method": "prompt_datewise_layout",
+        "layout": "",
+        "profile": "",
+        "row_count": 58,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": 46294.0,
+          "closing_value": 72294.0,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "VERIFIED",
+      "stored_baseline_outcome": "PASS",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000700084_2026_08_ZL_06_8236_03092026155136.pdf",
+      "extension": ".pdf",
+      "elapsed_ms": 1008649,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "pdf_split_page_images",
+        "extraction_method": "pdf_split_page_images",
+        "layout": "",
+        "profile": "",
+        "row_count": 43,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "pdf_split_page_images",
+        "extraction_method": "pdf_split_page_images",
+        "layout": "",
+        "profile": "",
+        "row_count": 43,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "UNRESOLVED",
+      "stored_baseline_outcome": "FAIL",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000700088_2026_08_ZL_06_304_06092026142123.pdf",
+      "extension": ".pdf",
+      "elapsed_ms": 375,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "ezeal_inward_outward_layout",
+        "extraction_method": "ezeal_inward_outward_layout",
+        "layout": "",
+        "profile": "",
+        "row_count": 76,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "ezeal_inward_outward_layout",
+        "extraction_method": "ezeal_inward_outward_layout",
+        "layout": "",
+        "profile": "",
+        "row_count": 76,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "VERIFIED",
+      "stored_baseline_outcome": "PASS",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000700096_2026_08_ZL_06_8236_03092026155517.pdf",
+      "extension": ".pdf",
+      "elapsed_ms": 144,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "prompt_datewise_layout",
+        "extraction_method": "prompt_datewise_layout",
+        "layout": "",
+        "profile": "",
+        "row_count": 20,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": 9609.0,
+          "closing_value": 60926.0,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "prompt_datewise_layout",
+        "extraction_method": "prompt_datewise_layout",
+        "layout": "",
+        "profile": "",
+        "row_count": 20,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": 9609.0,
+          "closing_value": 60926.0,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "VERIFIED",
+      "stored_baseline_outcome": "PASS",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000700112_2026_08_ZL_06_305_02092026004955.pdf",
+      "extension": ".pdf",
+      "elapsed_ms": 838,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "prompt_datewise_layout",
+        "extraction_method": "prompt_datewise_layout",
+        "layout": "",
+        "profile": "",
+        "row_count": 155,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": null,
+          "closing_value": 762352.0,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "prompt_datewise_layout",
+        "extraction_method": "prompt_datewise_layout",
+        "layout": "",
+        "profile": "",
+        "row_count": 155,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": null,
+          "closing_value": 762352.0,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "VERIFIED",
+      "stored_baseline_outcome": "PASS",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000700124_2026_08_ZL_06_521_02092026204703.pdf",
+      "extension": ".pdf",
+      "elapsed_ms": 824237,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "pdf_split_page_images",
+        "extraction_method": "pdf_split_page_images",
+        "layout": "",
+        "profile": "",
+        "row_count": 44,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "pdf_split_page_images",
+        "extraction_method": "pdf_split_page_images",
+        "layout": "",
+        "profile": "",
+        "row_count": 44,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "UNRESOLVED",
+      "stored_baseline_outcome": "FAIL",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000700206_2026_08_ZL_18_377_04092026042611.png",
+      "extension": ".png",
+      "elapsed_ms": 3794,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "product_wise_stock_statement_image",
+        "extraction_method": "product_wise_stock_statement_image",
+        "layout": "product_wise_stock_statement_photo",
+        "profile": "",
+        "row_count": 35,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "product_wise_stock_statement_image",
+        "extraction_method": "product_wise_stock_statement_image",
+        "layout": "product_wise_stock_statement_photo",
+        "profile": "",
+        "row_count": 35,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "VERIFIED",
+      "stored_baseline_outcome": "PASS",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000700209_2026_08_ZL_18_374_04092026060313.pdf",
+      "extension": ".pdf",
+      "elapsed_ms": 317293,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "group_wise_sales_opstock",
+        "extraction_method": "group_wise_sales_opstock",
+        "layout": "",
+        "profile": "",
+        "row_count": 57,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "group_wise_sales_opstock",
+        "extraction_method": "group_wise_sales_opstock",
+        "layout": "",
+        "profile": "",
+        "row_count": 57,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "UNRESOLVED",
+      "stored_baseline_outcome": "FAIL",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000700218_2026_08_ZL_18_8178_02092026173735.PDF",
+      "extension": ".pdf",
+      "elapsed_ms": 196,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "swil_tax_pack_dump_near",
+        "extraction_method": "swil_tax_pack_dump_near",
+        "layout": "",
+        "profile": "",
+        "row_count": 50,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "swil_tax_pack_dump_near",
+        "extraction_method": "swil_tax_pack_dump_near",
+        "layout": "",
+        "profile": "",
+        "row_count": 50,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "VERIFIED",
+      "stored_baseline_outcome": "PASS",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000700220_2026_08_ZL_18_8189_05092026022949.jpeg",
+      "extension": ".jpeg",
+      "elapsed_ms": 142771,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "tesseract_heuristic",
+        "extraction_method": "tesseract_heuristic",
+        "layout": "",
+        "profile": "",
+        "row_count": 31,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "tesseract_heuristic",
+        "extraction_method": "tesseract_heuristic",
+        "layout": "",
+        "profile": "",
+        "row_count": 31,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "UNRESOLVED",
+      "stored_baseline_outcome": "PASS",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000700221_2026_08_ZL_18_377_04092026042846.png",
+      "extension": ".png",
+      "elapsed_ms": 3436,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "product_wise_stock_statement_image",
+        "extraction_method": "product_wise_stock_statement_image",
+        "layout": "product_wise_stock_statement_photo",
+        "profile": "",
+        "row_count": 35,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "product_wise_stock_statement_image",
+        "extraction_method": "product_wise_stock_statement_image",
+        "layout": "product_wise_stock_statement_photo",
+        "profile": "",
+        "row_count": 35,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "VERIFIED",
+      "stored_baseline_outcome": "PASS",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000700223_2026_08_ZL_18_377_04092026043208.png",
+      "extension": ".png",
+      "elapsed_ms": 3385,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "product_wise_stock_statement_image",
+        "extraction_method": "product_wise_stock_statement_image",
+        "layout": "product_wise_stock_statement_photo",
+        "profile": "",
+        "row_count": 35,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "product_wise_stock_statement_image",
+        "extraction_method": "product_wise_stock_statement_image",
+        "layout": "product_wise_stock_statement_photo",
+        "profile": "",
+        "row_count": 35,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "VERIFIED",
+      "stored_baseline_outcome": "PASS",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000700224_2026_08_ZL_18_373_03092026133548.pdf",
+      "extension": ".pdf",
+      "elapsed_ms": 272,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "product_wise_stock_statement",
+        "extraction_method": "product_wise_stock_statement",
+        "layout": "",
+        "profile": "",
+        "row_count": 98,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": 0.0,
+          "closing_value": 0.0,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "product_wise_stock_statement",
+        "extraction_method": "product_wise_stock_statement",
+        "layout": "",
+        "profile": "",
+        "row_count": 98,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": 0.0,
+          "closing_value": 0.0,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "VERIFIED",
+      "stored_baseline_outcome": "PASS",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000700238_2026_08_ZL_18_377_03092026154026.pdf",
+      "extension": ".pdf",
+      "elapsed_ms": 95,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "product_wise_stock_statement_pdf",
+        "extraction_method": "product_wise_stock_statement_pdf",
+        "layout": "",
+        "profile": "",
+        "row_count": 50,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": 102499.0,
+          "closing_value": 116383.0,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "product_wise_stock_statement_pdf",
+        "extraction_method": "product_wise_stock_statement_pdf",
+        "layout": "",
+        "profile": "",
+        "row_count": 50,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": 102499.0,
+          "closing_value": 116383.0,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "UNRESOLVED",
+      "stored_baseline_outcome": "FAIL",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000700253_2026_08_ZL_18_377_04092026043422.png",
+      "extension": ".png",
+      "elapsed_ms": 3729,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "product_wise_stock_statement_image",
+        "extraction_method": "product_wise_stock_statement_image",
+        "layout": "product_wise_stock_statement_photo",
+        "profile": "",
+        "row_count": 35,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "product_wise_stock_statement_image",
+        "extraction_method": "product_wise_stock_statement_image",
+        "layout": "product_wise_stock_statement_photo",
+        "profile": "",
+        "row_count": 35,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "VERIFIED",
+      "stored_baseline_outcome": "PASS",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000700259_2026_08_ZL_18_379_03092026174312.jpg",
+      "extension": ".jpg",
+      "elapsed_ms": 6209,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "product_wise_stock_statement_image",
+        "extraction_method": "product_wise_stock_statement_image",
+        "layout": "product_wise_stock_statement_photo",
+        "profile": "",
+        "row_count": 17,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": 36624.0,
+          "closing_value": 144261.0,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "product_wise_stock_statement_image",
+        "extraction_method": "product_wise_stock_statement_image",
+        "layout": "product_wise_stock_statement_photo",
+        "profile": "",
+        "row_count": 17,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": 36624.0,
+          "closing_value": 144261.0,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "UNRESOLVED",
+      "stored_baseline_outcome": "FAIL",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000700262_2026_08_ZL_18_376_04092026170456.PDF",
+      "extension": ".pdf",
+      "elapsed_ms": 166,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "opbal_issue_closing_parser",
+        "extraction_method": "opbal_issue_closing_parser",
+        "layout": "",
+        "profile": "",
+        "row_count": 15,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "opbal_issue_closing_parser",
+        "extraction_method": "opbal_issue_closing_parser",
+        "layout": "",
+        "profile": "",
+        "row_count": 15,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "VERIFIED",
+      "stored_baseline_outcome": "PASS",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000700275_2026_08_ZL_18_374_04092026171615.pdf",
+      "extension": ".pdf",
+      "elapsed_ms": 477090,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "pdf_split_page_images",
+        "extraction_method": "pdf_split_page_images",
+        "layout": "",
+        "profile": "",
+        "row_count": 14,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": 0.0,
+          "closing_value": 429.0,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "pdf_split_page_images",
+        "extraction_method": "pdf_split_page_images",
+        "layout": "",
+        "profile": "",
+        "row_count": 14,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": 0.0,
+          "closing_value": 429.0,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "UNRESOLVED",
+      "stored_baseline_outcome": "FAIL",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000700283_2026_08_ZL_18_377_01092026063405.pdf",
+      "extension": ".pdf",
+      "elapsed_ms": 105,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "product_wise_stock_statement",
+        "extraction_method": "product_wise_stock_statement",
+        "layout": "product_wise_stock_statement",
+        "profile": "",
+        "row_count": 23,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": 30266.71,
+          "closing_value": 69381.56,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "product_wise_stock_statement",
+        "extraction_method": "product_wise_stock_statement",
+        "layout": "product_wise_stock_statement",
+        "profile": "",
+        "row_count": 23,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": 30266.71,
+          "closing_value": 69381.56,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "VERIFIED",
+      "stored_baseline_outcome": "FAIL",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000700284_2026_08_ZL_18_245_05092026055948.pdf",
+      "extension": ".pdf",
+      "elapsed_ms": 409,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "ps_pharma_parser",
+        "extraction_method": "ps_pharma_parser",
+        "layout": "",
+        "profile": "",
+        "row_count": 27,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "ps_pharma_parser",
+        "extraction_method": "ps_pharma_parser",
+        "layout": "",
+        "profile": "",
+        "row_count": 27,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "VERIFIED",
+      "stored_baseline_outcome": "PASS",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000700288_2026_08_ZL_18_374_04092026172821.pdf",
+      "extension": ".pdf",
+      "elapsed_ms": 368,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "product_wise_stock_statement",
+        "extraction_method": "product_wise_stock_statement",
+        "layout": "",
+        "profile": "",
+        "row_count": 80,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": 0.0,
+          "closing_value": 0.0,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "product_wise_stock_statement",
+        "extraction_method": "product_wise_stock_statement",
+        "layout": "",
+        "profile": "",
+        "row_count": 80,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": 0.0,
+          "closing_value": 0.0,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "VERIFIED",
+      "stored_baseline_outcome": "PASS",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000700308_2026_08_ZL_18_8175_03092026072320.jpg",
+      "extension": ".jpg",
+      "elapsed_ms": 802738,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "tesseract_heuristic",
+        "extraction_method": "tesseract_heuristic",
+        "layout": "",
+        "profile": "",
+        "row_count": 6,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "tesseract_heuristic",
+        "extraction_method": "tesseract_heuristic",
+        "layout": "",
+        "profile": "",
+        "row_count": 6,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "UNRESOLVED",
+      "stored_baseline_outcome": "PASS",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000700317_2026_08_ZL_18_374_02092026171443.pdf",
+      "extension": ".pdf",
+      "elapsed_ms": 175654,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "pdf_split_page_images",
+        "extraction_method": "pdf_split_page_images",
+        "layout": "",
+        "profile": "",
+        "row_count": 0,
+        "validation_accepted": false,
+        "primary_failure": "EMPTY_OUTPUT",
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "pdf_split_page_images",
+        "extraction_method": "pdf_split_page_images",
+        "layout": "",
+        "profile": "",
+        "row_count": 0,
+        "validation_accepted": false,
+        "primary_failure": "EMPTY_OUTPUT",
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "UNRESOLVED",
+      "stored_baseline_outcome": "FAIL",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000700325_2026_08_ZL_18_379_03092026175634.jpg",
+      "extension": ".jpg",
+      "elapsed_ms": 4023,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "product_wise_stock_statement_image",
+        "extraction_method": "product_wise_stock_statement_image",
+        "layout": "product_wise_stock_statement_photo",
+        "profile": "",
+        "row_count": 44,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": 162635.0,
+          "closing_value": 167486.0,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "product_wise_stock_statement_image",
+        "extraction_method": "product_wise_stock_statement_image",
+        "layout": "product_wise_stock_statement_photo",
+        "profile": "",
+        "row_count": 44,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": 162635.0,
+          "closing_value": 167486.0,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "VERIFIED",
+      "stored_baseline_outcome": "FAIL",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000700345_2026_08_ZL_18_377_04092026043609.png",
+      "extension": ".png",
+      "elapsed_ms": 3374,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "product_wise_stock_statement_image",
+        "extraction_method": "product_wise_stock_statement_image",
+        "layout": "product_wise_stock_statement_photo",
+        "profile": "",
+        "row_count": 35,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "product_wise_stock_statement_image",
+        "extraction_method": "product_wise_stock_statement_image",
+        "layout": "product_wise_stock_statement_photo",
+        "profile": "",
+        "row_count": 35,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "VERIFIED",
+      "stored_baseline_outcome": "PASS",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000700346_2026_08_ZL_18_8189_05092026025159.pdf",
+      "extension": ".pdf",
+      "elapsed_ms": 61277,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "tesseract_heuristic",
+        "extraction_method": "tesseract_heuristic",
+        "layout": "",
+        "profile": "",
+        "row_count": 97,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": 36276.46,
+          "closing_value": 72704.4,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "tesseract_heuristic",
+        "extraction_method": "tesseract_heuristic",
+        "layout": "",
+        "profile": "",
+        "row_count": 97,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": 36276.46,
+          "closing_value": 72704.4,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "UNRESOLVED",
+      "stored_baseline_outcome": "FAIL",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000700358_2026_08_ZL_18_8173_05092026185826.pdf",
+      "extension": ".pdf",
+      "elapsed_ms": 51784,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "pdf_split_page_images",
+        "extraction_method": "pdf_split_page_images",
+        "layout": "",
+        "profile": "",
+        "row_count": 20,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "pdf_split_page_images",
+        "extraction_method": "pdf_split_page_images",
+        "layout": "",
+        "profile": "",
+        "row_count": 20,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "UNRESOLVED",
+      "stored_baseline_outcome": "FAIL",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000700364_2026_08_ZL_18_8173_05092026190156.pdf",
+      "extension": ".pdf",
+      "elapsed_ms": 141296,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "swil_receipt_pur_value_vision",
+        "extraction_method": "swil_receipt_pur_value_vision",
+        "layout": "",
+        "profile": "",
+        "row_count": 28,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "swil_receipt_pur_value_vision",
+        "extraction_method": "swil_receipt_pur_value_vision",
+        "layout": "",
+        "profile": "",
+        "row_count": 28,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "UNRESOLVED",
+      "stored_baseline_outcome": "PASS",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000700365_2026_08_ZL_18_377_04092026043750.png",
+      "extension": ".png",
+      "elapsed_ms": 3454,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "product_wise_stock_statement_image",
+        "extraction_method": "product_wise_stock_statement_image",
+        "layout": "product_wise_stock_statement_photo",
+        "profile": "",
+        "row_count": 35,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "product_wise_stock_statement_image",
+        "extraction_method": "product_wise_stock_statement_image",
+        "layout": "product_wise_stock_statement_photo",
+        "profile": "",
+        "row_count": 35,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "VERIFIED",
+      "stored_baseline_outcome": "PASS",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000700374_2026_08_ZL_18_377_04092026044112.png",
+      "extension": ".png",
+      "elapsed_ms": 3461,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "product_wise_stock_statement_image",
+        "extraction_method": "product_wise_stock_statement_image",
+        "layout": "product_wise_stock_statement_photo",
+        "profile": "",
+        "row_count": 35,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "product_wise_stock_statement_image",
+        "extraction_method": "product_wise_stock_statement_image",
+        "layout": "product_wise_stock_statement_photo",
+        "profile": "",
+        "row_count": 35,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "VERIFIED",
+      "stored_baseline_outcome": "PASS",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000700376_2026_08_ZL_18_376_04092026170135.PDF",
+      "extension": ".pdf",
+      "elapsed_ms": 153,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "opbal_issue_closing_parser",
+        "extraction_method": "opbal_issue_closing_parser",
+        "layout": "",
+        "profile": "",
+        "row_count": 51,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "opbal_issue_closing_parser",
+        "extraction_method": "opbal_issue_closing_parser",
+        "layout": "",
+        "profile": "",
+        "row_count": 51,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "VERIFIED",
+      "stored_baseline_outcome": "PASS",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000700379_2026_08_ZL_18_375_05092026174136.PDF",
+      "extension": ".pdf",
+      "elapsed_ms": 971,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "swilerp_retrn_sales_stock",
+        "extraction_method": "swilerp_retrn_sales_stock",
+        "layout": "",
+        "profile": "",
+        "row_count": 22,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "swilerp_retrn_sales_stock",
+        "extraction_method": "swilerp_retrn_sales_stock",
+        "layout": "",
+        "profile": "",
+        "row_count": 22,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "UNRESOLVED",
+      "stored_baseline_outcome": "FAIL",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000700381_2026_08_ZL_18_377_04092026045438.png",
+      "extension": ".png",
+      "elapsed_ms": 3419,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "product_wise_stock_statement_image",
+        "extraction_method": "product_wise_stock_statement_image",
+        "layout": "product_wise_stock_statement_photo",
+        "profile": "",
+        "row_count": 35,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "product_wise_stock_statement_image",
+        "extraction_method": "product_wise_stock_statement_image",
+        "layout": "product_wise_stock_statement_photo",
+        "profile": "",
+        "row_count": 35,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "VERIFIED",
+      "stored_baseline_outcome": "PASS",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000700398_2026_08_ZL_18_377_01092026063708.pdf",
+      "extension": ".pdf",
+      "elapsed_ms": 63,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "product_wise_stock_statement",
+        "extraction_method": "product_wise_stock_statement",
+        "layout": "product_wise_stock_statement",
+        "profile": "",
+        "row_count": 36,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": 6700.8,
+          "closing_value": 16179.53,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "product_wise_stock_statement",
+        "extraction_method": "product_wise_stock_statement",
+        "layout": "product_wise_stock_statement",
+        "profile": "",
+        "row_count": 36,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": 6700.8,
+          "closing_value": 16179.53,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "VERIFIED",
+      "stored_baseline_outcome": "FAIL",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000700400_2026_08_ZL_18_377_04092026044551.png",
+      "extension": ".png",
+      "elapsed_ms": 3309,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "product_wise_stock_statement_image",
+        "extraction_method": "product_wise_stock_statement_image",
+        "layout": "product_wise_stock_statement_photo",
+        "profile": "",
+        "row_count": 35,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "product_wise_stock_statement_image",
+        "extraction_method": "product_wise_stock_statement_image",
+        "layout": "product_wise_stock_statement_photo",
+        "profile": "",
+        "row_count": 35,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "VERIFIED",
+      "stored_baseline_outcome": "PASS",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000700406_2026_08_ZL_10_384_05092026140711.jpg",
+      "extension": ".jpg",
+      "elapsed_ms": 48028,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "main_stock_sales_statement",
+        "extraction_method": "main_stock_sales_statement",
+        "layout": "opening_receive_issue_closing",
+        "profile": "",
+        "row_count": 36,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "main_stock_sales_statement",
+        "extraction_method": "main_stock_sales_statement",
+        "layout": "opening_receive_issue_closing",
+        "profile": "",
+        "row_count": 36,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "VERIFIED",
+      "stored_baseline_outcome": "PASS",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000700434_2026_08_ZL_10_386_05092026034503.jpg",
+      "extension": ".jpg",
+      "elapsed_ms": 291718,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "tesseract_heuristic",
+        "extraction_method": "tesseract_heuristic",
+        "layout": "",
+        "profile": "",
+        "row_count": 63,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "tesseract_heuristic",
+        "extraction_method": "tesseract_heuristic",
+        "layout": "",
+        "profile": "",
+        "row_count": 63,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "UNRESOLVED",
+      "stored_baseline_outcome": "FAIL",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000700481_2026_08_ZL_10_389_04092026110107.jpeg",
+      "extension": ".jpeg",
+      "elapsed_ms": 182228,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "tesseract_heuristic",
+        "extraction_method": "tesseract_heuristic",
+        "layout": "",
+        "profile": "",
+        "row_count": 16,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": 87.0,
+          "closing_value": 39215.53,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "tesseract_heuristic",
+        "extraction_method": "tesseract_heuristic",
+        "layout": "",
+        "profile": "",
+        "row_count": 16,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": 87.0,
+          "closing_value": 39215.53,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "UNRESOLVED",
+      "stored_baseline_outcome": "FAIL",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000700536_2026_08_ZL_10_383_04092026205548.jpg",
+      "extension": ".jpg",
+      "elapsed_ms": 568099,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "tesseract_heuristic",
+        "extraction_method": "tesseract_heuristic",
+        "layout": "",
+        "profile": "",
+        "row_count": 11,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "tesseract_heuristic",
+        "extraction_method": "tesseract_heuristic",
+        "layout": "",
+        "profile": "",
+        "row_count": 11,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "UNRESOLVED",
+      "stored_baseline_outcome": "FAIL",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000700624_2026_08_ZL_10_383_05092026055419.jpg",
+      "extension": ".jpg",
+      "elapsed_ms": 777634,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "tesseract_heuristic",
+        "extraction_method": "tesseract_heuristic",
+        "layout": "",
+        "profile": "",
+        "row_count": 15,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "tesseract_heuristic",
+        "extraction_method": "tesseract_heuristic",
+        "layout": "",
+        "profile": "",
+        "row_count": 15,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "UNRESOLVED",
+      "stored_baseline_outcome": "FAIL",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000700625_2026_08_ZL_10_383_05092026054825.jpg",
+      "extension": ".jpg",
+      "elapsed_ms": 192786,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": null,
+        "extraction_method": null,
+        "layout": "",
+        "profile": "",
+        "row_count": 0,
+        "validation_accepted": false,
+        "primary_failure": "EMPTY_OUTPUT",
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": null,
+        "extraction_method": null,
+        "layout": "",
+        "profile": "",
+        "row_count": 0,
+        "validation_accepted": false,
+        "primary_failure": "EMPTY_OUTPUT",
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "UNRESOLVED",
+      "stored_baseline_outcome": "FAIL",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000700648_2026_08_ZL_10_388_03092026150719.jpg",
+      "extension": ".jpg",
+      "elapsed_ms": 283534,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "tesseract_heuristic",
+        "extraction_method": "tesseract_heuristic",
+        "layout": "",
+        "profile": "",
+        "row_count": 34,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": 0.0,
+          "closing_value": 332547.27,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "tesseract_heuristic",
+        "extraction_method": "tesseract_heuristic",
+        "layout": "",
+        "profile": "",
+        "row_count": 34,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": 0.0,
+          "closing_value": 332547.27,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "UNRESOLVED",
+      "stored_baseline_outcome": "PASS",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000700835_2026_08_ZL_25_447_03092026105819.jpeg",
+      "extension": ".jpeg",
+      "elapsed_ms": 136122,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "tesseract_heuristic",
+        "extraction_method": "tesseract_heuristic",
+        "layout": "",
+        "profile": "",
+        "row_count": 25,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": 107708.0,
+          "closing_value": 330707.0,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "tesseract_heuristic",
+        "extraction_method": "tesseract_heuristic",
+        "layout": "",
+        "profile": "",
+        "row_count": 25,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": 107708.0,
+          "closing_value": 330707.0,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "UNRESOLVED",
+      "stored_baseline_outcome": "PASS",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000701012_2026_08_ZL_11_423_03092026183736.jpg",
+      "extension": ".jpg",
+      "elapsed_ms": 282883,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "tesseract_heuristic",
+        "extraction_method": "tesseract_heuristic",
+        "layout": "",
+        "profile": "",
+        "row_count": 40,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "tesseract_heuristic",
+        "extraction_method": "tesseract_heuristic",
+        "layout": "",
+        "profile": "",
+        "row_count": 40,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "UNRESOLVED",
+      "stored_baseline_outcome": "FAIL",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000701051_2026_08_ZL_11_423_03092026184131.jpg",
+      "extension": ".jpg",
+      "elapsed_ms": 187930,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "tesseract_heuristic",
+        "extraction_method": "tesseract_heuristic",
+        "layout": "",
+        "profile": "",
+        "row_count": 1,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "tesseract_heuristic",
+        "extraction_method": "tesseract_heuristic",
+        "layout": "",
+        "profile": "",
+        "row_count": 1,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "VERIFIED",
+      "stored_baseline_outcome": "FAIL",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000701078_2026_08_ZL_03_362_05092026080346.jpeg",
+      "extension": ".jpeg",
+      "elapsed_ms": 363084,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "tesseract_heuristic",
+        "extraction_method": "tesseract_heuristic",
+        "layout": "",
+        "profile": "",
+        "row_count": 63,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "tesseract_heuristic",
+        "extraction_method": "tesseract_heuristic",
+        "layout": "",
+        "profile": "",
+        "row_count": 63,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "UNRESOLVED",
+      "stored_baseline_outcome": "FAIL",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000701116_2026_08_ZL_03_362_05092026080412.jpeg",
+      "extension": ".jpeg",
+      "elapsed_ms": 199721,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "tesseract_heuristic",
+        "extraction_method": "tesseract_heuristic",
+        "layout": "",
+        "profile": "",
+        "row_count": 21,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": 1732.0,
+          "closing_value": 277887.0,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "tesseract_heuristic",
+        "extraction_method": "tesseract_heuristic",
+        "layout": "",
+        "profile": "",
+        "row_count": 21,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": 1732.0,
+          "closing_value": 277887.0,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "UNRESOLVED",
+      "stored_baseline_outcome": "FAIL",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000701151_2026_08_ZL_14_361_03092026025650.jpg",
+      "extension": ".jpg",
+      "elapsed_ms": 6093,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "swilerp_opbal_ocr_pages",
+        "extraction_method": "swilerp_opbal_ocr_pages",
+        "layout": "",
+        "profile": "",
+        "row_count": 39,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "swilerp_opbal_ocr_pages",
+        "extraction_method": "swilerp_opbal_ocr_pages",
+        "layout": "",
+        "profile": "",
+        "row_count": 39,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "UNRESOLVED",
+      "stored_baseline_outcome": "PASS",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000701202_2026_08_ZL_03_9203_07092026044839.jpeg",
+      "extension": ".jpeg",
+      "elapsed_ms": 234297,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "opbal_issue_closing_parser",
+        "extraction_method": "opbal_issue_closing_parser",
+        "layout": "",
+        "profile": "",
+        "row_count": 3,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "opbal_issue_closing_parser",
+        "extraction_method": "opbal_issue_closing_parser",
+        "layout": "",
+        "profile": "",
+        "row_count": 3,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "UNRESOLVED",
+      "stored_baseline_outcome": "PASS",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000701209_2026_08_ZL_14_361_03092026025829.jpg",
+      "extension": ".jpg",
+      "elapsed_ms": 193303,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "tesseract_heuristic",
+        "extraction_method": "tesseract_heuristic",
+        "layout": "",
+        "profile": "",
+        "row_count": 16,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "tesseract_heuristic",
+        "extraction_method": "tesseract_heuristic",
+        "layout": "",
+        "profile": "",
+        "row_count": 16,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "UNRESOLVED",
+      "stored_baseline_outcome": "FAIL",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000701273_2026_08_ZL_03_368_06092026130923.jpeg",
+      "extension": ".jpeg",
+      "elapsed_ms": 58594,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "tesseract_heuristic",
+        "extraction_method": "tesseract_heuristic",
+        "layout": "",
+        "profile": "",
+        "row_count": 1,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "tesseract_heuristic",
+        "extraction_method": "tesseract_heuristic",
+        "layout": "",
+        "profile": "",
+        "row_count": 1,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "VERIFIED",
+      "stored_baseline_outcome": "FAIL",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000701275_2026_08_ZL_03_360_02092026152716.jpg",
+      "extension": ".jpg",
+      "elapsed_ms": 59320,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "pack_opening_receipt_issue_mexp",
+        "extraction_method": "pack_opening_receipt_issue_mexp",
+        "layout": "pack_opening_receipt_issue_mexp",
+        "profile": "",
+        "row_count": 44,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "pack_opening_receipt_issue_mexp",
+        "extraction_method": "pack_opening_receipt_issue_mexp",
+        "layout": "pack_opening_receipt_issue_mexp",
+        "profile": "",
+        "row_count": 44,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "UNRESOLVED",
+      "stored_baseline_outcome": "FAIL",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000701406_2026_08_ZL_37_391_04092026155529.jpg",
+      "extension": ".jpg",
+      "elapsed_ms": 369611,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "tesseract_heuristic",
+        "extraction_method": "tesseract_heuristic",
+        "layout": "",
+        "profile": "",
+        "row_count": 35,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": 44100.0,
+          "closing_value": 94837.0,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "tesseract_heuristic",
+        "extraction_method": "tesseract_heuristic",
+        "layout": "",
+        "profile": "",
+        "row_count": 35,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": 44100.0,
+          "closing_value": 94837.0,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "UNRESOLVED",
+      "stored_baseline_outcome": "FAIL",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000701432_2026_08_ZL_37_390_05092026065901.docx",
+      "extension": ".docx",
+      "elapsed_ms": 1178,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": null,
+        "extraction_method": null,
+        "layout": "",
+        "profile": "",
+        "row_count": 47,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": null,
+        "extraction_method": null,
+        "layout": "",
+        "profile": "",
+        "row_count": 47,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "UNRESOLVED",
+      "stored_baseline_outcome": "PASS",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000701468_2026_08_ZL_37_8181_04092026181217.jpg",
+      "extension": ".jpg",
+      "elapsed_ms": 150607,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "tesseract_heuristic",
+        "extraction_method": "tesseract_heuristic",
+        "layout": "",
+        "profile": "",
+        "row_count": 33,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "tesseract_heuristic",
+        "extraction_method": "tesseract_heuristic",
+        "layout": "",
+        "profile": "",
+        "row_count": 33,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "UNRESOLVED",
+      "stored_baseline_outcome": "FAIL",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000701555_2026_08_ZL_37_390_06092026182510.docx",
+      "extension": ".docx",
+      "elapsed_ms": 182,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "profitmaker_ostk_docx",
+        "extraction_method": "profitmaker_ostk_docx",
+        "layout": "ostk_purc_tot_sale_qoh_value_age",
+        "profile": "",
+        "row_count": 68,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": 49420.43,
+          "closing_value": 89042.72,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "profitmaker_ostk_docx",
+        "extraction_method": "profitmaker_ostk_docx",
+        "layout": "ostk_purc_tot_sale_qoh_value_age",
+        "profile": "",
+        "row_count": 68,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": 49420.43,
+          "closing_value": 89042.72,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "VERIFIED",
+      "stored_baseline_outcome": "FAIL",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000701789_2026_08_ZL_20_557_05092026163636.jpg",
+      "extension": ".jpg",
+      "elapsed_ms": 185311,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "tesseract_heuristic",
+        "extraction_method": "tesseract_heuristic",
+        "layout": "",
+        "profile": "",
+        "row_count": 1,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "tesseract_heuristic",
+        "extraction_method": "tesseract_heuristic",
+        "layout": "",
+        "profile": "",
+        "row_count": 1,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "UNRESOLVED",
+      "stored_baseline_outcome": "FAIL",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000701808_2026_08_ZL_20_8233_03092026155729.XLS",
+      "extension": ".xls",
+      "elapsed_ms": 138,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "marg_erp_xls_receive_issue_value",
+        "extraction_method": "marg_erp_xls_receive_issue_value",
+        "layout": "",
+        "profile": "",
+        "row_count": 11,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": 198617.07,
+          "closing_value": 139890.06,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "marg_erp_xls_receive_issue_value",
+        "extraction_method": "marg_erp_xls_receive_issue_value",
+        "layout": "",
+        "profile": "",
+        "row_count": 11,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": 198617.07,
+          "closing_value": 139890.06,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "VERIFIED",
+      "stored_baseline_outcome": "PASS",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000701845_2026_08_ZL_20_8233_06092026153908.XLS",
+      "extension": ".xls",
+      "elapsed_ms": 15,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "marg_erp_xls_receive_issue_value",
+        "extraction_method": "marg_erp_xls_receive_issue_value",
+        "layout": "",
+        "profile": "",
+        "row_count": 56,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": 114243.17,
+          "closing_value": 216587.04,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "marg_erp_xls_receive_issue_value",
+        "extraction_method": "marg_erp_xls_receive_issue_value",
+        "layout": "",
+        "profile": "",
+        "row_count": 56,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": 114243.17,
+          "closing_value": 216587.04,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "VERIFIED",
+      "stored_baseline_outcome": "PASS",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000701851_2026_08_ZL_20_302_03092026134940.jpg",
+      "extension": ".jpg",
+      "elapsed_ms": 5421,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "swilerp_opbal_ocr_pages",
+        "extraction_method": "swilerp_opbal_ocr_pages",
+        "layout": "",
+        "profile": "",
+        "row_count": 3,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "swilerp_opbal_ocr_pages",
+        "extraction_method": "swilerp_opbal_ocr_pages",
+        "layout": "",
+        "profile": "",
+        "row_count": 3,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "UNRESOLVED",
+      "stored_baseline_outcome": "PASS",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000701862_2026_08_ZL_20_302_03092026134909.jpg",
+      "extension": ".jpg",
+      "elapsed_ms": 85155,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "rate_qty_value_columns",
+        "extraction_method": "rate_qty_value_columns",
+        "layout": "",
+        "profile": "",
+        "row_count": 35,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "rate_qty_value_columns",
+        "extraction_method": "rate_qty_value_columns",
+        "layout": "",
+        "profile": "",
+        "row_count": 35,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "VERIFIED",
+      "stored_baseline_outcome": "PASS",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000701864_2026_08_ZL_20_5015_03092026091037.jpg",
+      "extension": ".jpg",
+      "elapsed_ms": 129697,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "tesseract_heuristic",
+        "extraction_method": "tesseract_heuristic",
+        "layout": "",
+        "profile": "",
+        "row_count": 18,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": 729.0,
+          "closing_value": 117.0,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "tesseract_heuristic",
+        "extraction_method": "tesseract_heuristic",
+        "layout": "",
+        "profile": "",
+        "row_count": 18,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": 729.0,
+          "closing_value": 117.0,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "UNRESOLVED",
+      "stored_baseline_outcome": "PASS",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000701904_2026_08_ZL_20_8227_05092026154848.jpg",
+      "extension": ".jpg",
+      "elapsed_ms": 191940,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "main_stock_sales_statement",
+        "extraction_method": "main_stock_sales_statement",
+        "layout": "opening_receive_issue_closing",
+        "profile": "",
+        "row_count": 102,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "main_stock_sales_statement",
+        "extraction_method": "main_stock_sales_statement",
+        "layout": "opening_receive_issue_closing",
+        "profile": "",
+        "row_count": 102,
+        "validation_accepted": false,
+        "primary_failure": "STOCK_IDENTITY_FAILURE",
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "UNRESOLVED",
+      "stored_baseline_outcome": "FAIL",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000702233_2026_08_ZL_24_631_05092026142054.xlsx",
+      "extension": ".xlsx",
+      "elapsed_ms": 1670,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": "zl_secondary_xlsx",
+        "extraction_method": "zl_secondary_xlsx",
+        "layout": "zl_opening_primary_closing",
+        "profile": "",
+        "row_count": 77,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": null,
+          "closing_value": 170928.28,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": "zl_secondary_xlsx",
+        "extraction_method": "zl_secondary_xlsx",
+        "layout": "zl_opening_primary_closing",
+        "profile": "",
+        "row_count": 77,
+        "validation_accepted": true,
+        "primary_failure": null,
+        "totals": {
+          "sales_value": null,
+          "closing_value": 170928.28,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "VERIFIED",
+      "stored_baseline_outcome": "PASS",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    },
+    {
+      "document_id": "0000702848_2026_08_ZL_22_419_02092026074109.doc",
+      "extension": ".doc",
+      "elapsed_ms": 11072,
+      "old_error": "",
+      "phase4_error": "",
+      "business_equal": true,
+      "flags": [],
+      "old": {
+        "parser": null,
+        "extraction_method": null,
+        "layout": "",
+        "profile": "",
+        "row_count": 0,
+        "validation_accepted": false,
+        "primary_failure": "EMPTY_OUTPUT",
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4": {
+        "parser": null,
+        "extraction_method": null,
+        "layout": "",
+        "profile": "",
+        "row_count": 0,
+        "validation_accepted": false,
+        "primary_failure": "EMPTY_OUTPUT",
+        "totals": {
+          "sales_value": null,
+          "closing_value": null,
+          "opening_value": null
+        }
+      },
+      "phase4_decision": "UNRESOLVED",
+      "stored_baseline_outcome": "FAIL",
+      "pass_to_wrong": false,
+      "null_became_zero": false,
+      "canonical_changed": false,
+      "dynamic_corruption": false,
+      "unknown_layout_accepted": false,
+      "provider_error_to_success": false,
+      "ocr_invoked_in_pipeline": false
+    }
+  ],
+  "updated_at": 1791453008.983904,
+  "count": 71
+}

@@ -1,0 +1,857 @@
+{
+  "hardware": {
+    "python": "3.12.6",
+    "cwd": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract",
+    "timestamp_utc": "2026-11-03T05:40:02.740096+00:00",
+    "rss_mb": 20.2,
+    "vram_mb": 132.0,
+    "cpu_count": 12,
+    "sales_deadline_s": 600,
+    "phase2": "false",
+    "secondary_repair": "false",
+    "ram_gb": 15.31,
+    "gpu": "NVIDIA GeForce RTX 3050 6GB Laptop GPU, 6144 MiB, 551.76"
+  },
+  "documents": [
+    {
+      "label": "xlsx",
+      "file": "0000711172_2026_08_ZA_30_313_04092026034007.xlsx",
+      "path": "C:\\Users\\amnsa\\Downloads\\ZA_2026_August\\0000711172_2026_08_ZA_30_313_04092026034007.xlsx",
+      "bytes": 15142,
+      "ext": ".xlsx",
+      "deadline_s": 600,
+      "di_override_env": false,
+      "ok": true,
+      "seconds": 1.749,
+      "within_deadline": true,
+      "peak_rss_mb": 58.9,
+      "vram_mb": {
+        "before": 0.0,
+        "after": 0.0
+      },
+      "rows": 16,
+      "method": "item_pack_sreturn_others",
+      "verified": true,
+      "status": "VERIFIED",
+      "reason": "schema_evidence_business_ok",
+      "timings": {
+        "route": 0.0,
+        "evidence": 0.0001,
+        "ocr_policy": 0.0001,
+        "layout": 0.0002,
+        "strategy": 0.0002,
+        "extraction": 1.3099,
+        "phase1": 1.627,
+        "validation_stack": 1.627,
+        "verification": 1.6271,
+        "recovery": 1.6271,
+        "decision": 1.6271,
+        "total": 1.6271
+      },
+      "ocr_engines": null,
+      "ocr_page_count": null,
+      "ocr_timed_out": null,
+      "di_ocr_override": false,
+      "grounding": {
+        "status": "checked",
+        "reader": "spreadsheet_cells",
+        "compared_rows": 16,
+        "discrepancy_count": 0,
+        "blank_read_as_zero": 0,
+        "blocks_verification": false
+      },
+      "source_evidence": true,
+      "verification_passed": true,
+      "verification_issues": [],
+      "schema_class": null,
+      "fail_count": 0,
+      "sample_rows": [
+        {
+          "product_name": "CYSTONE TABLETS",
+          "opening_qty": 700.0,
+          "receipts_qty": null,
+          "sales_qty": null,
+          "closing_qty": 700.0
+        },
+        {
+          "product_name": "EVECARE SYRUP 200 ML",
+          "opening_qty": 196.0,
+          "receipts_qty": null,
+          "sales_qty": 196.0,
+          "closing_qty": null
+        },
+        {
+          "product_name": "LIV 52 DROP 100ML",
+          "opening_qty": 336.0,
+          "receipts_qty": null,
+          "sales_qty": null,
+          "closing_qty": 336.0
+        },
+        {
+          "product_name": "LIV. 52 DROPS 60ML",
+          "opening_qty": 2700.0,
+          "receipts_qty": null,
+          "sales_qty": 1800.0,
+          "closing_qty": 900.0
+        },
+        {
+          "product_name": "LIV.52 DS SYRUP 200ML",
+          "opening_qty": 8715.0,
+          "receipts_qty": null,
+          "sales_qty": 1610.0,
+          "closing_qty": 7105.0
+        }
+      ]
+    },
+    {
+      "label": "xls",
+      "file": "0000700848_2026_08_ZA_30_578_05092026144147.XLS",
+      "path": "C:\\Users\\amnsa\\Downloads\\ZA_2026_August\\0000700848_2026_08_ZA_30_578_05092026144147.XLS",
+      "bytes": 5516,
+      "ext": ".xls",
+      "deadline_s": 600,
+      "di_override_env": false,
+      "ok": true,
+      "seconds": 0.264,
+      "within_deadline": true,
+      "peak_rss_mb": 59.2,
+      "vram_mb": {
+        "before": 0.0,
+        "after": 0.0
+      },
+      "rows": 20,
+      "method": "",
+      "verified": true,
+      "status": "VERIFIED",
+      "reason": "schema_evidence_business_ok",
+      "timings": {
+        "route": 0.0001,
+        "evidence": 0.0001,
+        "ocr_policy": 0.0001,
+        "layout": 0.0002,
+        "strategy": 0.0002,
+        "extraction": 0.2455,
+        "phase1": 0.2642,
+        "validation_stack": 0.2642,
+        "verification": 0.2642,
+        "recovery": 0.2642,
+        "decision": 0.2643,
+        "total": 0.2643
+      },
+      "ocr_engines": null,
+      "ocr_page_count": null,
+      "ocr_timed_out": null,
+      "di_ocr_override": false,
+      "grounding": {
+        "status": "checked",
+        "reader": "spreadsheet_cells",
+        "compared_rows": 20,
+        "discrepancy_count": 0,
+        "blank_read_as_zero": 0,
+        "blocks_verification": false
+      },
+      "source_evidence": true,
+      "verification_passed": true,
+      "verification_issues": [],
+      "schema_class": null,
+      "fail_count": 0,
+      "sample_rows": [
+        {
+          "product_name": "BONNISAN DROP 30ML",
+          "opening_qty": 6.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 1.0,
+          "closing_qty": 5.0
+        },
+        {
+          "product_name": "BONNISAN SYP 100ml",
+          "opening_qty": 5.0,
+          "receipts_qty": 16.0,
+          "sales_qty": 11.0,
+          "closing_qty": 10.0
+        },
+        {
+          "product_name": "BRESOL SYP 200ML 200ML",
+          "opening_qty": 2.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 1.0,
+          "closing_qty": 1.0
+        },
+        {
+          "product_name": "CYSTONE SYP 200ML 200ML",
+          "opening_qty": 28.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 1.0,
+          "closing_qty": 27.0
+        },
+        {
+          "product_name": "CYSTONE TAB 60 s",
+          "opening_qty": 40.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 11.0,
+          "closing_qty": 29.0
+        }
+      ]
+    },
+    {
+      "label": "docx",
+      "file": "0000713511_2026_08_ZA_24_255_07092026171904.docx",
+      "path": "C:\\Users\\amnsa\\Downloads\\ZA_2026_August\\0000713511_2026_08_ZA_24_255_07092026171904.docx",
+      "bytes": 13119,
+      "ext": ".docx",
+      "deadline_s": 600,
+      "di_override_env": false,
+      "ok": true,
+      "seconds": 0.419,
+      "within_deadline": true,
+      "peak_rss_mb": 64.7,
+      "vram_mb": {
+        "before": 0.0,
+        "after": 0.0
+      },
+      "rows": 55,
+      "method": "sale_closing_analysis_docx",
+      "verified": true,
+      "status": "VERIFIED",
+      "reason": "schema_evidence_business_ok",
+      "timings": {
+        "route": 0.0001,
+        "evidence": 0.0001,
+        "ocr_policy": 0.0001,
+        "layout": 0.0002,
+        "strategy": 0.0002,
+        "extraction": 0.3359,
+        "phase1": 0.4185,
+        "validation_stack": 0.4185,
+        "verification": 0.4186,
+        "recovery": 0.4186,
+        "decision": 0.4186,
+        "total": 0.4186
+      },
+      "ocr_engines": null,
+      "ocr_page_count": null,
+      "ocr_timed_out": null,
+      "di_ocr_override": false,
+      "grounding": {
+        "status": "checked",
+        "reader": "docx_paragraphs",
+        "compared_rows": 55,
+        "discrepancy_count": 0,
+        "blank_read_as_zero": 0,
+        "blocks_verification": false
+      },
+      "source_evidence": true,
+      "verification_passed": true,
+      "verification_issues": [],
+      "schema_class": null,
+      "fail_count": 0,
+      "sample_rows": [
+        {
+          "product_name": "ARJUNA TAB",
+          "opening_qty": null,
+          "receipts_qty": null,
+          "sales_qty": 15.0,
+          "closing_qty": 1.0
+        },
+        {
+          "product_name": "BONNISAN 200ML",
+          "opening_qty": null,
+          "receipts_qty": null,
+          "sales_qty": 17.0,
+          "closing_qty": 11.0
+        },
+        {
+          "product_name": "BONNISAN DROP",
+          "opening_qty": null,
+          "receipts_qty": null,
+          "sales_qty": 9.0,
+          "closing_qty": 87.0
+        },
+        {
+          "product_name": "BONNISAN SYP",
+          "opening_qty": null,
+          "receipts_qty": null,
+          "sales_qty": 0.0,
+          "closing_qty": 1.0
+        },
+        {
+          "product_name": "BONNISPAZ DROP",
+          "opening_qty": null,
+          "receipts_qty": null,
+          "sales_qty": 62.0,
+          "closing_qty": 84.0
+        }
+      ]
+    },
+    {
+      "label": "txt",
+      "file": "0000732705_2026_08_ZA_24_270_04092026051409.TXT",
+      "path": "C:\\Users\\amnsa\\Downloads\\ZA_2026_August\\0000732705_2026_08_ZA_24_270_04092026051409.TXT",
+      "bytes": 2281,
+      "ext": ".txt",
+      "deadline_s": 600,
+      "di_override_env": false,
+      "ok": true,
+      "seconds": 0.011,
+      "within_deadline": true,
+      "peak_rss_mb": 63.7,
+      "vram_mb": {
+        "before": 0.0,
+        "after": 0.0
+      },
+      "rows": 20,
+      "method": "pro_age_opening_pur_sale_closing",
+      "verified": true,
+      "status": "VERIFIED",
+      "reason": "schema_evidence_business_ok",
+      "timings": {
+        "route": 0.0001,
+        "evidence": 0.0001,
+        "ocr_policy": 0.0001,
+        "layout": 0.0001,
+        "strategy": 0.0002,
+        "extraction": 0.0022,
+        "phase1": 0.0108,
+        "validation_stack": 0.0108,
+        "verification": 0.0108,
+        "recovery": 0.0108,
+        "decision": 0.0108,
+        "total": 0.0108
+      },
+      "ocr_engines": null,
+      "ocr_page_count": null,
+      "ocr_timed_out": null,
+      "di_ocr_override": false,
+      "grounding": {
+        "status": "checked",
+        "reader": "delimited_text",
+        "compared_rows": 20,
+        "discrepancy_count": 0,
+        "blank_read_as_zero": 0,
+        "blocks_verification": false
+      },
+      "source_evidence": true,
+      "verification_passed": true,
+      "verification_issues": [],
+      "schema_class": null,
+      "fail_count": 0,
+      "sample_rows": [
+        {
+          "product_name": "BLEMINOR CREAM",
+          "opening_qty": 8.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 8.0
+        },
+        {
+          "product_name": "BONNISAN DROPS",
+          "opening_qty": 118.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 80.0,
+          "closing_qty": 38.0
+        },
+        {
+          "product_name": "BONNISAN LIQUID",
+          "opening_qty": 54.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 54.0,
+          "closing_qty": 0.0
+        },
+        {
+          "product_name": "BRESOL SYRUP",
+          "opening_qty": 66.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 11.0,
+          "closing_qty": 55.0
+        },
+        {
+          "product_name": "CYSTONE FORTE TAB",
+          "opening_qty": 40.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 40.0
+        }
+      ]
+    },
+    {
+      "label": "html",
+      "file": "0000734246_2026_08_ZA_13_249_06092026162117.html",
+      "path": "C:\\Users\\amnsa\\Downloads\\ZA_2026_August\\0000734246_2026_08_ZA_13_249_06092026162117.html",
+      "bytes": 21979,
+      "ext": ".html",
+      "deadline_s": 600,
+      "di_override_env": false,
+      "ok": true,
+      "seconds": 0.288,
+      "within_deadline": true,
+      "peak_rss_mb": 68.2,
+      "vram_mb": {
+        "before": 0.0,
+        "after": 0.0
+      },
+      "rows": 44,
+      "method": "medivision_op_wsale_html",
+      "verified": false,
+      "status": "UNRESOLVED",
+      "reason": "stock_identity_failure",
+      "timings": {
+        "route": 0.0,
+        "evidence": 0.0001,
+        "ocr_policy": 0.0001,
+        "layout": 0.0001,
+        "strategy": 0.0001,
+        "extraction": 0.2152,
+        "phase1": 0.2878,
+        "validation_stack": 0.2878,
+        "verification": 0.2878,
+        "recovery": 0.2879,
+        "decision": 0.2879,
+        "total": 0.2879
+      },
+      "ocr_engines": null,
+      "ocr_page_count": null,
+      "ocr_timed_out": null,
+      "di_ocr_override": false,
+      "grounding": {
+        "status": "checked",
+        "reader": "html_table",
+        "compared_rows": 44,
+        "discrepancy_count": 0,
+        "blank_read_as_zero": 0,
+        "blocks_verification": false
+      },
+      "source_evidence": true,
+      "verification_passed": false,
+      "verification_issues": [
+        "validation_not_accepted",
+        "stock_identity_failure",
+        "cell_validation_failure"
+      ],
+      "schema_class": null,
+      "fail_count": 3,
+      "sample_rows": [
+        {
+          "product_name": "BONNISAN DROPS 30ML",
+          "opening_qty": 55.0,
+          "receipts_qty": null,
+          "sales_qty": 10.0,
+          "closing_qty": 45.0
+        },
+        {
+          "product_name": "BONNISAN LIQ 100ML",
+          "opening_qty": 59.0,
+          "receipts_qty": null,
+          "sales_qty": 52.0,
+          "closing_qty": 7.0
+        },
+        {
+          "product_name": "BONNISAN LIQ 200ML",
+          "opening_qty": 13.0,
+          "receipts_qty": null,
+          "sales_qty": null,
+          "closing_qty": 13.0
+        },
+        {
+          "product_name": "BONNISPAZ DROPS 15ML",
+          "opening_qty": 72.0,
+          "receipts_qty": null,
+          "sales_qty": 5.0,
+          "closing_qty": 67.0
+        },
+        {
+          "product_name": "BRESOL -NS SALINE NASAL SOLUTION 10ML",
+          "opening_qty": 43.0,
+          "receipts_qty": null,
+          "sales_qty": null,
+          "closing_qty": 43.0
+        }
+      ]
+    },
+    {
+      "label": "digital_pdf",
+      "file": "0000734513_2026_08_ZA_13_704_06092026081229.pdf",
+      "path": "C:\\Users\\amnsa\\Downloads\\ZA_2026_August\\0000734513_2026_08_ZA_13_704_06092026081229.pdf",
+      "bytes": 80042,
+      "ext": ".pdf",
+      "deadline_s": 600,
+      "di_override_env": false,
+      "ok": true,
+      "seconds": 0.425,
+      "within_deadline": true,
+      "peak_rss_mb": 93.5,
+      "vram_mb": {
+        "before": 0.0,
+        "after": 0.0
+      },
+      "rows": 49,
+      "method": "medivision_op_scm_pdf",
+      "verified": false,
+      "status": "UNRESOLVED",
+      "reason": "stock_identity_failure",
+      "timings": {
+        "route": 0.2217,
+        "evidence": 0.2218,
+        "ocr_policy": 0.2218,
+        "layout": 0.2218,
+        "strategy": 0.2218,
+        "extraction": 0.3109,
+        "phase1": 0.4247,
+        "validation_stack": 0.4247,
+        "verification": 0.4247,
+        "recovery": 0.4247,
+        "decision": 0.4247,
+        "total": 0.4248
+      },
+      "ocr_engines": null,
+      "ocr_page_count": null,
+      "ocr_timed_out": null,
+      "di_ocr_override": false,
+      "grounding": {
+        "status": "checked",
+        "reader": "pdf_header_positions",
+        "compared_rows": 49,
+        "discrepancy_count": 0,
+        "blank_read_as_zero": 0,
+        "blocks_verification": false
+      },
+      "source_evidence": true,
+      "verification_passed": false,
+      "verification_issues": [
+        "validation_not_accepted",
+        "stock_identity_failure",
+        "cell_validation_failure"
+      ],
+      "schema_class": null,
+      "fail_count": 9,
+      "sample_rows": [
+        {
+          "product_name": "BONNISAN DROP",
+          "opening_qty": 50.0,
+          "receipts_qty": 50.0,
+          "sales_qty": 50.0,
+          "closing_qty": 50.0
+        },
+        {
+          "product_name": "BONNISAN LIQUID",
+          "opening_qty": 138.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 4.0,
+          "closing_qty": 134.0
+        },
+        {
+          "product_name": "200ML BONNISAN LIQUID",
+          "opening_qty": 27.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 27.0
+        },
+        {
+          "product_name": "BONNISPAZ DROP",
+          "opening_qty": 10.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 4.0,
+          "closing_qty": 6.0
+        },
+        {
+          "product_name": "BRESOL NS SALINE",
+          "opening_qty": 42.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 12.0,
+          "closing_qty": 30.0
+        }
+      ]
+    },
+    {
+      "label": "scanned_pdf_1page",
+      "file": "0000700124_2026_08_ZL_06_521_02092026204703.pdf",
+      "path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700124_2026_08_ZL_06_521_02092026204703.pdf",
+      "bytes": 151067,
+      "ext": ".pdf",
+      "deadline_s": 600,
+      "di_override_env": true,
+      "ok": true,
+      "seconds": 276.394,
+      "within_deadline": true,
+      "peak_rss_mb": 100.6,
+      "vram_mb": {
+        "before": 0.0,
+        "after": 5948.0
+      },
+      "rows": 0,
+      "method": "di_ocr_html_override",
+      "verified": false,
+      "status": "UNRESOLVED",
+      "reason": "insufficient_source_evidence",
+      "timings": {
+        "route": 0.0012,
+        "evidence": 0.0012,
+        "ocr_policy": 276.3619,
+        "layout": 276.362,
+        "strategy": 276.362,
+        "extraction": 276.3776,
+        "phase1": 276.378,
+        "validation_stack": 276.3934,
+        "verification": 276.3935,
+        "recovery": 276.3936,
+        "decision": 276.3936,
+        "total": 276.3937
+      },
+      "ocr_engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "ocr_page_count": 1,
+      "ocr_timed_out": false,
+      "di_ocr_override": true,
+      "grounding": {
+        "status": "insufficient_source_evidence",
+        "reader": null,
+        "compared_rows": 0,
+        "discrepancy_count": 0,
+        "blank_read_as_zero": 0,
+        "blocks_verification": false
+      },
+      "source_evidence": false,
+      "verification_passed": false,
+      "verification_issues": [
+        "validation_not_accepted",
+        "column_confusion",
+        "cell_validation_failure",
+        "insufficient_source_evidence"
+      ],
+      "schema_class": null,
+      "fail_count": 0,
+      "sample_rows": []
+    },
+    {
+      "label": "image_png",
+      "file": "0000727190_2026_08_ZA_06_333_04092026081416.png",
+      "path": "C:\\Users\\amnsa\\Downloads\\ZA_2026_August\\0000727190_2026_08_ZA_06_333_04092026081416.png",
+      "bytes": 187332,
+      "ext": ".png",
+      "deadline_s": 600,
+      "di_override_env": true,
+      "ok": true,
+      "seconds": 109.487,
+      "within_deadline": true,
+      "peak_rss_mb": 102.4,
+      "vram_mb": {
+        "before": 5948.0,
+        "after": 5948.0
+      },
+      "rows": 25,
+      "method": "di_ocr_html_override",
+      "verified": false,
+      "status": "UNRESOLVED",
+      "reason": "identity_profile_unknown",
+      "timings": {
+        "route": 0.0,
+        "evidence": 0.0005,
+        "ocr_policy": 109.4452,
+        "layout": 109.4452,
+        "strategy": 109.4452,
+        "extraction": 109.452,
+        "phase1": 109.4763,
+        "validation_stack": 109.4866,
+        "verification": 109.4866,
+        "recovery": 109.4867,
+        "decision": 109.4867,
+        "total": 109.4867
+      },
+      "ocr_engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "ocr_page_count": 1,
+      "ocr_timed_out": false,
+      "di_ocr_override": true,
+      "grounding": {
+        "status": "checked",
+        "reader": "ocr_text",
+        "compared_rows": 24,
+        "discrepancy_count": 44,
+        "blank_read_as_zero": 0,
+        "blocks_verification": false
+      },
+      "source_evidence": true,
+      "verification_passed": false,
+      "verification_issues": [
+        "validation_not_accepted",
+        "cell_validation_failure",
+        "source_discrepancy"
+      ],
+      "schema_class": null,
+      "fail_count": 0,
+      "sample_rows": [
+        {
+          "product_name": "HIORA SG GEL",
+          "opening_qty": 5.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0
+        },
+        {
+          "product_name": "LASUNA TAB 60'S",
+          "opening_qty": 13.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0
+        },
+        {
+          "product_name": "LIV 52 DROPS [100ML]",
+          "opening_qty": 54.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0
+        },
+        {
+          "product_name": "LIV 52 DROPS [60 ML]",
+          "opening_qty": 64.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0
+        },
+        {
+          "product_name": "LIV 52 DS SYRUP [100 ML]",
+          "opening_qty": 40.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0
+        }
+      ]
+    },
+    {
+      "label": "multipage_scanned_2p",
+      "file": "0000700037_2026_08_ZA_06_609_04092026172645.pdf",
+      "path": "C:\\Users\\amnsa\\Downloads\\ZA_2026_August\\0000700037_2026_08_ZA_06_609_04092026172645.pdf",
+      "bytes": 190428,
+      "ext": ".pdf",
+      "deadline_s": 600,
+      "di_override_env": true,
+      "ok": true,
+      "seconds": 343.238,
+      "within_deadline": true,
+      "peak_rss_mb": 106.7,
+      "vram_mb": {
+        "before": 5948.0,
+        "after": 5484.0
+      },
+      "rows": 0,
+      "method": "di_ocr_html_override",
+      "verified": false,
+      "status": "UNRESOLVED",
+      "reason": "insufficient_source_evidence",
+      "timings": {
+        "route": 0.0017,
+        "evidence": 0.0018,
+        "ocr_policy": 343.1776,
+        "layout": 343.1777,
+        "strategy": 343.1777,
+        "extraction": 343.2023,
+        "phase1": 343.2028,
+        "validation_stack": 343.2368,
+        "verification": 343.2369,
+        "recovery": 343.2371,
+        "decision": 343.2371,
+        "total": 343.2371
+      },
+      "ocr_engines": [
+        "paddleocr-vl-1.6",
+        "paddleocr-vl-1.6"
+      ],
+      "ocr_page_count": 2,
+      "ocr_timed_out": false,
+      "di_ocr_override": true,
+      "grounding": {
+        "status": "insufficient_source_evidence",
+        "reader": null,
+        "compared_rows": 0,
+        "discrepancy_count": 0,
+        "blank_read_as_zero": 0,
+        "blocks_verification": false
+      },
+      "source_evidence": false,
+      "verification_passed": false,
+      "verification_issues": [
+        "validation_not_accepted",
+        "column_confusion",
+        "cell_validation_failure",
+        "insufficient_source_evidence"
+      ],
+      "schema_class": null,
+      "fail_count": 0,
+      "sample_rows": [],
+      "page_count": 2,
+      "native_text_chars": [
+        0,
+        0
+      ]
+    }
+  ],
+  "multipage_live": {
+    "label": "multipage_scanned_2p",
+    "file": "0000700037_2026_08_ZA_06_609_04092026172645.pdf",
+    "path": "C:\\Users\\amnsa\\Downloads\\ZA_2026_August\\0000700037_2026_08_ZA_06_609_04092026172645.pdf",
+    "bytes": 190428,
+    "ext": ".pdf",
+    "deadline_s": 600,
+    "di_override_env": true,
+    "ok": true,
+    "seconds": 343.238,
+    "within_deadline": true,
+    "peak_rss_mb": 106.7,
+    "vram_mb": {
+      "before": 5948.0,
+      "after": 5484.0
+    },
+    "rows": 0,
+    "method": "di_ocr_html_override",
+    "verified": false,
+    "status": "UNRESOLVED",
+    "reason": "insufficient_source_evidence",
+    "timings": {
+      "route": 0.0017,
+      "evidence": 0.0018,
+      "ocr_policy": 343.1776,
+      "layout": 343.1777,
+      "strategy": 343.1777,
+      "extraction": 343.2023,
+      "phase1": 343.2028,
+      "validation_stack": 343.2368,
+      "verification": 343.2369,
+      "recovery": 343.2371,
+      "decision": 343.2371,
+      "total": 343.2371
+    },
+    "ocr_engines": [
+      "paddleocr-vl-1.6",
+      "paddleocr-vl-1.6"
+    ],
+    "ocr_page_count": 2,
+    "ocr_timed_out": false,
+    "di_ocr_override": true,
+    "grounding": {
+      "status": "insufficient_source_evidence",
+      "reader": null,
+      "compared_rows": 0,
+      "discrepancy_count": 0,
+      "blank_read_as_zero": 0,
+      "blocks_verification": false
+    },
+    "source_evidence": false,
+    "verification_passed": false,
+    "verification_issues": [
+      "validation_not_accepted",
+      "column_confusion",
+      "cell_validation_failure",
+      "insufficient_source_evidence"
+    ],
+    "schema_class": null,
+    "fail_count": 0,
+    "sample_rows": [],
+    "page_count": 2,
+    "native_text_chars": [
+      0,
+      0
+    ]
+  },
+  "reenriched": true
+}

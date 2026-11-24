@@ -1,0 +1,5017 @@
+{
+  "document_id": "0000701765_2026_08_ZA_37_216_01092026071349.png",
+  "source_file": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000701765_2026_08_ZA_37_216_01092026071349.png",
+  "source_file_exists": true,
+  "verification_status": "unverified",
+  "annotation_origin": "AI_PROPOSED",
+  "ai_generated": true,
+  "human_verified": false,
+  "rows": [
+    {
+      "row_id": "r01",
+      "row_index": 1,
+      "product_name": {
+        "raw": "BONNISAN-DROPS",
+        "normalized": "BONNISAN-DROPS",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "30ML",
+        "normalized": "30ML",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "O.Stk",
+          "semantic": "opening_qty",
+          "raw": "22",
+          "normalized": 22.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Purc",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Tot",
+          "semantic": "unknown",
+          "raw": "22",
+          "normalized": 22.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Sale",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Qoh",
+          "semantic": "closing_qty",
+          "raw": "22",
+          "normalized": 22.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Value",
+          "semantic": "not_quantity",
+          "raw": "1376.09",
+          "normalized": 1376.09,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Age",
+          "semantic": "unknown",
+          "raw": "334",
+          "normalized": 334.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r02",
+      "row_index": 2,
+      "product_name": {
+        "raw": "BONNISAN-LIQ",
+        "normalized": "BONNISAN-LIQ",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "100ML",
+        "normalized": "100ML",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "O.Stk",
+          "semantic": "opening_qty",
+          "raw": "37",
+          "normalized": 37.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Purc",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Tot",
+          "semantic": "unknown",
+          "raw": "37",
+          "normalized": 37.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Sale",
+          "semantic": "sales_qty",
+          "raw": "1",
+          "normalized": 1.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Qoh",
+          "semantic": "closing_qty",
+          "raw": "36",
+          "normalized": 36.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Value",
+          "semantic": "not_quantity",
+          "raw": "1914.57",
+          "normalized": 1914.57,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Age",
+          "semantic": "unknown",
+          "raw": "487",
+          "normalized": 487.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r03",
+      "row_index": 3,
+      "product_name": {
+        "raw": "BONNISAN-SYP 200ML",
+        "normalized": "BONNISAN-SYP 200ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200ML",
+        "normalized": "200ML",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "O.Stk",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Purc",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Tot",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Sale",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Qoh",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Age",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r04",
+      "row_index": 4,
+      "product_name": {
+        "raw": "BONNISPAZ-DROP'S",
+        "normalized": "BONNISPAZ-DROP'S",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "15ML",
+        "normalized": "15ML",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "O.Stk",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Purc",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Tot",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Sale",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Qoh",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Age",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r05",
+      "row_index": 5,
+      "product_name": {
+        "raw": "BRESOL-NSSALINENASLSOLUTI",
+        "normalized": "BRESOL-NSSALINENASLSOLUTI",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "10ML",
+        "normalized": "10ML",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "O.Stk",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Purc",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Tot",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Sale",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Qoh",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Age",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r06",
+      "row_index": 6,
+      "product_name": {
+        "raw": "BRESOL-SYP",
+        "normalized": "BRESOL-SYP",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200ML",
+        "normalized": "200ML",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "O.Stk",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Purc",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Tot",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Sale",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Qoh",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Age",
+          "semantic": "unknown",
+          "raw": "1171",
+          "normalized": 1171.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r07",
+      "row_index": 7,
+      "product_name": {
+        "raw": "CYSTONE FORTE TAB",
+        "normalized": "CYSTONE FORTE TAB",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "30TAB",
+        "normalized": "30TAB",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "O.Stk",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Purc",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Tot",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Sale",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Qoh",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Age",
+          "semantic": "unknown",
+          "raw": "791",
+          "normalized": 791.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r08",
+      "row_index": 8,
+      "product_name": {
+        "raw": "CYSTONE SYRUP 200ML",
+        "normalized": "CYSTONE SYRUP 200ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200ML",
+        "normalized": "200ML",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "O.Stk",
+          "semantic": "opening_qty",
+          "raw": "14",
+          "normalized": 14.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Purc",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Tot",
+          "semantic": "unknown",
+          "raw": "14",
+          "normalized": 14.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Sale",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Qoh",
+          "semantic": "closing_qty",
+          "raw": "14",
+          "normalized": 14.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Value",
+          "semantic": "not_quantity",
+          "raw": "2015.81",
+          "normalized": 2015.81,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Age",
+          "semantic": "unknown",
+          "raw": "791",
+          "normalized": 791.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r09",
+      "row_index": 9,
+      "product_name": {
+        "raw": "CYSTONE-SYP",
+        "normalized": "CYSTONE-SYP",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "100ML",
+        "normalized": "100ML",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "O.Stk",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Purc",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Tot",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Sale",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Qoh",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Age",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r10",
+      "row_index": 10,
+      "product_name": {
+        "raw": "CYSTONE-TAB",
+        "normalized": "CYSTONE-TAB",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60'S",
+        "normalized": "60'S",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "O.Stk",
+          "semantic": "opening_qty",
+          "raw": "121",
+          "normalized": 121.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Purc",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Tot",
+          "semantic": "unknown",
+          "raw": "121",
+          "normalized": 121.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Sale",
+          "semantic": "sales_qty",
+          "raw": "58",
+          "normalized": 58.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Qoh",
+          "semantic": "closing_qty",
+          "raw": "63",
+          "normalized": 63.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Value",
+          "semantic": "not_quantity",
+          "raw": "10531.46",
+          "normalized": 10531.46,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Age",
+          "semantic": "unknown",
+          "raw": "61",
+          "normalized": 61.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r11",
+      "row_index": 11,
+      "product_name": {
+        "raw": "EVECARE FORTE LIQUID200ML",
+        "normalized": "EVECARE FORTE LIQUID200ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200ML",
+        "normalized": "200ML",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "O.Stk",
+          "semantic": "opening_qty",
+          "raw": "19",
+          "normalized": 19.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Purc",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Tot",
+          "semantic": "unknown",
+          "raw": "19",
+          "normalized": 19.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Sale",
+          "semantic": "sales_qty",
+          "raw": "13",
+          "normalized": 13.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Qoh",
+          "semantic": "closing_qty",
+          "raw": "6",
+          "normalized": 6.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Value",
+          "semantic": "not_quantity",
+          "raw": "991.49",
+          "normalized": 991.49,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Age",
+          "semantic": "unknown",
+          "raw": "61",
+          "normalized": 61.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r12",
+      "row_index": 12,
+      "product_name": {
+        "raw": "EVECARE-CAP",
+        "normalized": "EVECARE-CAP",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "30'S",
+        "normalized": "30'S",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "O.Stk",
+          "semantic": "opening_qty",
+          "raw": "7",
+          "normalized": 7.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Purc",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Tot",
+          "semantic": "unknown",
+          "raw": "7",
+          "normalized": 7.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Sale",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Qoh",
+          "semantic": "closing_qty",
+          "raw": "7",
+          "normalized": 7.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Value",
+          "semantic": "not_quantity",
+          "raw": "918.24",
+          "normalized": 918.24,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Age",
+          "semantic": "unknown",
+          "raw": "852",
+          "normalized": 852.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r13",
+      "row_index": 13,
+      "product_name": {
+        "raw": "EVECARE-SYP",
+        "normalized": "EVECARE-SYP",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200ML",
+        "normalized": "200ML",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "O.Stk",
+          "semantic": "opening_qty",
+          "raw": "11",
+          "normalized": 11.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Purc",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Tot",
+          "semantic": "unknown",
+          "raw": "11",
+          "normalized": 11.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Sale",
+          "semantic": "sales_qty",
+          "raw": "11",
+          "normalized": 11.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Qoh",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Age",
+          "semantic": "unknown",
+          "raw": "61",
+          "normalized": 61.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r14",
+      "row_index": 14,
+      "product_name": {
+        "raw": "EVECARE-SYP 400ML",
+        "normalized": "EVECARE-SYP 400ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "400ML",
+        "normalized": "400ML",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "O.Stk",
+          "semantic": "opening_qty",
+          "raw": "12",
+          "normalized": 12.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Purc",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Tot",
+          "semantic": "unknown",
+          "raw": "12",
+          "normalized": 12.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Sale",
+          "semantic": "sales_qty",
+          "raw": "12",
+          "normalized": 12.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Qoh",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Age",
+          "semantic": "unknown",
+          "raw": "61",
+          "normalized": 61.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r15",
+      "row_index": 15,
+      "product_name": {
+        "raw": "FLORASANTE CAP",
+        "normalized": "FLORASANTE CAP",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "20CAPA",
+        "normalized": "20CAPA",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "O.Stk",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Purc",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Tot",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Sale",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Qoh",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Age",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r16",
+      "row_index": 16,
+      "product_name": {
+        "raw": "GERIFORTE-SYP",
+        "normalized": "GERIFORTE-SYP",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200ML",
+        "normalized": "200ML",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "O.Stk",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Purc",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Tot",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Sale",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Qoh",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Age",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r17",
+      "row_index": 17,
+      "product_name": {
+        "raw": "GERIFORTE-TAB",
+        "normalized": "GERIFORTE-TAB",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "100'S",
+        "normalized": "100'S",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "O.Stk",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Purc",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Tot",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Sale",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Qoh",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Age",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r18",
+      "row_index": 18,
+      "product_name": {
+        "raw": "HIMCOSPAZ-SOFT CAP'S",
+        "normalized": "HIMCOSPAZ-SOFT CAP'S",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "10'S",
+        "normalized": "10'S",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "O.Stk",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Purc",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Tot",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Sale",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Qoh",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Age",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r19",
+      "row_index": 19,
+      "product_name": {
+        "raw": "HIMPLASIA-TAB",
+        "normalized": "HIMPLASIA-TAB",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "30'S",
+        "normalized": "30'S",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "O.Stk",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Purc",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Tot",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Sale",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Qoh",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Age",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r20",
+      "row_index": 20,
+      "product_name": {
+        "raw": "HIORA K M/W&HIORA K PASTE",
+        "normalized": "HIORA K M/W&HIORA K PASTE",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "KIT",
+        "normalized": "KIT",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "O.Stk",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Purc",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Tot",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Sale",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Qoh",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Age",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r21",
+      "row_index": 21,
+      "product_name": {
+        "raw": "HIORA K MOUTHWASH",
+        "normalized": "HIORA K MOUTHWASH",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "150 ML",
+        "normalized": "150 ML",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "O.Stk",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Purc",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Tot",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Sale",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Qoh",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Age",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r22",
+      "row_index": 22,
+      "product_name": {
+        "raw": "HIORA TOOTHPASTE 100GM",
+        "normalized": "HIORA TOOTHPASTE 100GM",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "100GRM",
+        "normalized": "100GRM",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "O.Stk",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Purc",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Tot",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Sale",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Qoh",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Age",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r23",
+      "row_index": 23,
+      "product_name": {
+        "raw": "HIORA-GA GEL",
+        "normalized": "HIORA-GA GEL",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "15ML",
+        "normalized": "15ML",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "O.Stk",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Purc",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Tot",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Sale",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Qoh",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Age",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r24",
+      "row_index": 24,
+      "product_name": {
+        "raw": "HIORA-K TOOTHPASTE",
+        "normalized": "HIORA-K TOOTHPASTE",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "100GRM",
+        "normalized": "100GRM",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "O.Stk",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Purc",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Tot",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Sale",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Qoh",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Age",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r25",
+      "row_index": 25,
+      "product_name": {
+        "raw": "HIORA-K TOOTHPASTE 50GRM'",
+        "normalized": "HIORA-K TOOTHPASTE 50GRM'",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "50GRMS",
+        "normalized": "50GRMS",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "O.Stk",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Purc",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Tot",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Sale",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Qoh",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Age",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r26",
+      "row_index": 26,
+      "product_name": {
+        "raw": "HIORA-SG GEL",
+        "normalized": "HIORA-SG GEL",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "10GRMS",
+        "normalized": "10GRMS",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "O.Stk",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Purc",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Tot",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Sale",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Qoh",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Age",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r27",
+      "row_index": 27,
+      "product_name": {
+        "raw": "IMMUSANTE TAB",
+        "normalized": "IMMUSANTE TAB",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "20S",
+        "normalized": "20S",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "O.Stk",
+          "semantic": "opening_qty",
+          "raw": "105",
+          "normalized": 105.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Purc",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Tot",
+          "semantic": "unknown",
+          "raw": "105",
+          "normalized": 105.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Sale",
+          "semantic": "sales_qty",
+          "raw": "60",
+          "normalized": 60.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Qoh",
+          "semantic": "closing_qty",
+          "raw": "45",
+          "normalized": 45.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Value",
+          "semantic": "not_quantity",
+          "raw": "4308.73",
+          "normalized": 4308.73,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Age",
+          "semantic": "unknown",
+          "raw": "61",
+          "normalized": 61.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r28",
+      "row_index": 28,
+      "product_name": {
+        "raw": "LIV 52 DS SYRUP 200ML",
+        "normalized": "LIV 52 DS SYRUP 200ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200ML",
+        "normalized": "200ML",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "O.Stk",
+          "semantic": "opening_qty",
+          "raw": "16",
+          "normalized": 16.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Purc",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Tot",
+          "semantic": "unknown",
+          "raw": "16",
+          "normalized": 16.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Sale",
+          "semantic": "sales_qty",
+          "raw": "8",
+          "normalized": 8.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Qoh",
+          "semantic": "closing_qty",
+          "raw": "8",
+          "normalized": 8.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Value",
+          "semantic": "not_quantity",
+          "raw": "1978.94",
+          "normalized": 1978.94,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Age",
+          "semantic": "unknown",
+          "raw": "207",
+          "normalized": 207.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r29",
+      "row_index": 29,
+      "product_name": {
+        "raw": "LIV.52 DROPS",
+        "normalized": "LIV.52 DROPS",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "100ML",
+        "normalized": "100ML",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "O.Stk",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Purc",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Tot",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Sale",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Qoh",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Age",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r30",
+      "row_index": 30,
+      "product_name": {
+        "raw": "LIV.52 DROPS 60ML",
+        "normalized": "LIV.52 DROPS 60ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60ML",
+        "normalized": "60ML",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "O.Stk",
+          "semantic": "opening_qty",
+          "raw": "25",
+          "normalized": 25.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Purc",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Tot",
+          "semantic": "unknown",
+          "raw": "25",
+          "normalized": 25.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Sale",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Qoh",
+          "semantic": "closing_qty",
+          "raw": "25",
+          "normalized": 25.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Value",
+          "semantic": "not_quantity",
+          "raw": "2111.80",
+          "normalized": 2111.8,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Age",
+          "semantic": "unknown",
+          "raw": "576",
+          "normalized": 576.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r31",
+      "row_index": 31,
+      "product_name": {
+        "raw": "LIV.52 DS SYP",
+        "normalized": "LIV.52 DS SYP",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "100ML",
+        "normalized": "100ML",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "O.Stk",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Purc",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Tot",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Sale",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Qoh",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Age",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r32",
+      "row_index": 32,
+      "product_name": {
+        "raw": "LIV-52DS TAB",
+        "normalized": "LIV-52DS TAB",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60'S",
+        "normalized": "60'S",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "O.Stk",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Purc",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Tot",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Sale",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Qoh",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Age",
+          "semantic": "unknown",
+          "raw": "852",
+          "normalized": 852.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r33",
+      "row_index": 33,
+      "product_name": {
+        "raw": "LUKOL SYRUP",
+        "normalized": "LUKOL SYRUP",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200ML",
+        "normalized": "200ML",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "O.Stk",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Purc",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Tot",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Sale",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Qoh",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Age",
+          "semantic": "unknown",
+          "raw": "576",
+          "normalized": 576.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r34",
+      "row_index": 34,
+      "product_name": {
+        "raw": "LUKOL-TAB",
+        "normalized": "LUKOL-TAB",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60'S",
+        "normalized": "60'S",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "O.Stk",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Purc",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Tot",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Sale",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Qoh",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Age",
+          "semantic": "unknown",
+          "raw": "942",
+          "normalized": 942.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r35",
+      "row_index": 35,
+      "product_name": {
+        "raw": "MENOSAN-TAB",
+        "normalized": "MENOSAN-TAB",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "30'S",
+        "normalized": "30'S",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "O.Stk",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Purc",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Tot",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Sale",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Qoh",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Age",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r36",
+      "row_index": 36,
+      "product_name": {
+        "raw": "MENTAT-SYP",
+        "normalized": "MENTAT-SYP",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200ML",
+        "normalized": "200ML",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "O.Stk",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Purc",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Tot",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Sale",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Qoh",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Age",
+          "semantic": "unknown",
+          "raw": "973",
+          "normalized": 973.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r37",
+      "row_index": 37,
+      "product_name": {
+        "raw": "MENTAT-TAB",
+        "normalized": "MENTAT-TAB",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60'S",
+        "normalized": "60'S",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "O.Stk",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Purc",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Tot",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Sale",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Qoh",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Age",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r38",
+      "row_index": 38,
+      "product_name": {
+        "raw": "PILEXFORTE TAB",
+        "normalized": "PILEXFORTE TAB",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "30tab",
+        "normalized": "30tab",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "O.Stk",
+          "semantic": "opening_qty",
+          "raw": "56",
+          "normalized": 56.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Purc",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Tot",
+          "semantic": "unknown",
+          "raw": "56",
+          "normalized": 56.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Sale",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Qoh",
+          "semantic": "closing_qty",
+          "raw": "56",
+          "normalized": 56.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Value",
+          "semantic": "not_quantity",
+          "raw": "5688.23",
+          "normalized": 5688.23,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Age",
+          "semantic": "unknown",
+          "raw": "61",
+          "normalized": 61.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r39",
+      "row_index": 39,
+      "product_name": {
+        "raw": "QUISTA KIDZ 200GM VANILLA",
+        "normalized": "QUISTA KIDZ 200GM VANILLA",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200GM",
+        "normalized": "200GM",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "O.Stk",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Purc",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Tot",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Sale",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Qoh",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Age",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r40",
+      "row_index": 40,
+      "product_name": {
+        "raw": "QUISTA KIDZ 200GMCHOCOLAT",
+        "normalized": "QUISTA KIDZ 200GMCHOCOLAT",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200GM",
+        "normalized": "200GM",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "O.Stk",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Purc",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Tot",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Sale",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Qoh",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Age",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r41",
+      "row_index": 41,
+      "product_name": {
+        "raw": "RENALKA SYP",
+        "normalized": "RENALKA SYP",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "100ML",
+        "normalized": "100ML",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "O.Stk",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Purc",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Tot",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Sale",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Qoh",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Age",
+          "semantic": "unknown",
+          "raw": "883",
+          "normalized": 883.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r42",
+      "row_index": 42,
+      "product_name": {
+        "raw": "RENALKA SYRUP 200ML",
+        "normalized": "RENALKA SYRUP 200ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200ML",
+        "normalized": "200ML",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "O.Stk",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Purc",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Tot",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Sale",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Qoh",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Age",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r43",
+      "row_index": 43,
+      "product_name": {
+        "raw": "REOSTO-TAB",
+        "normalized": "REOSTO-TAB",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "30'S",
+        "normalized": "30'S",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "O.Stk",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Purc",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Tot",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Sale",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Qoh",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Age",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r44",
+      "row_index": 44,
+      "product_name": {
+        "raw": "SEPTILIN DROPS",
+        "normalized": "SEPTILIN DROPS",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60ML",
+        "normalized": "60ML",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "O.Stk",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Purc",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Tot",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Sale",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Qoh",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Age",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r45",
+      "row_index": 45,
+      "product_name": {
+        "raw": "SEPTILIN-SYP",
+        "normalized": "SEPTILIN-SYP",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200ML",
+        "normalized": "200ML",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "O.Stk",
+          "semantic": "opening_qty",
+          "raw": "29",
+          "normalized": 29.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Purc",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Tot",
+          "semantic": "unknown",
+          "raw": "29",
+          "normalized": 29.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Sale",
+          "semantic": "sales_qty",
+          "raw": "5",
+          "normalized": 5.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Qoh",
+          "semantic": "closing_qty",
+          "raw": "24",
+          "normalized": 24.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Value",
+          "semantic": "not_quantity",
+          "raw": "3695.50",
+          "normalized": 3695.5,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Age",
+          "semantic": "unknown",
+          "raw": "92",
+          "normalized": 92.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r46",
+      "row_index": 46,
+      "product_name": {
+        "raw": "SEPTILIN-TAB",
+        "normalized": "SEPTILIN-TAB",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60'S",
+        "normalized": "60'S",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "O.Stk",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Purc",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Tot",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Sale",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Qoh",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Age",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r47",
+      "row_index": 47,
+      "product_name": {
+        "raw": "SPEMAN-TAB",
+        "normalized": "SPEMAN-TAB",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60'S",
+        "normalized": "60'S",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "O.Stk",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Purc",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Tot",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Sale",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Qoh",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Age",
+          "semantic": "unknown",
+          "raw": "1171",
+          "normalized": 1171.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r48",
+      "row_index": 48,
+      "product_name": {
+        "raw": "STYPLON-TAB",
+        "normalized": "STYPLON-TAB",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "30'S",
+        "normalized": "30'S",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "O.Stk",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Purc",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Tot",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Sale",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Qoh",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Value",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Age",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r49",
+      "row_index": 49,
+      "product_name": {
+        "raw": "V-GEL gel",
+        "normalized": "V-GEL gel",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "30GRMS",
+        "normalized": "30GRMS",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "O.Stk",
+          "semantic": "opening_qty",
+          "raw": "15",
+          "normalized": 15.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Purc",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Tot",
+          "semantic": "unknown",
+          "raw": "15",
+          "normalized": 15.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Sale",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Qoh",
+          "semantic": "closing_qty",
+          "raw": "15",
+          "normalized": 15.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Value",
+          "semantic": "not_quantity",
+          "raw": "1542.56",
+          "normalized": 1542.56,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Age",
+          "semantic": "unknown",
+          "raw": "61",
+          "normalized": 61.0,
+          "status": "uncertain"
+        }
+      ]
+    }
+  ],
+  "headers": [],
+  "notes": [
+    "AI_PROPOSED from the original image only. Not verified. Named quantities are set only when a printed header was copied. Blank cells were not stored as zero."
+  ],
+  "failure": null,
+  "vision_model": "gemini-2.5-flash",
+  "vision_input": "original",
+  "ocr_used_as_label": false
+}

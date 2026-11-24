@@ -1,0 +1,26 @@
+{
+  "source_file": "0000701912_2026_08_ZL_20_296_03092026131905.jpg",
+  "format": "Unknown layout",
+  "confidence": "low",
+  "source": "embedded",
+  "formula": "none",
+  "present_fields": [],
+  "absent_fields": [
+    "product_code",
+    "opening_qty",
+    "opening_value",
+    "receipts_qty",
+    "receipts_value",
+    "sales_qty",
+    "sales_value",
+    "closing_qty",
+    "closing_value"
+  ],
+  "columns": [],
+  "line_items": [],
+  "notes": [
+    "OCR psm 6 failed: (15, '')",
+    "No stock-grid header with product rows was found in this PDF."
+  ],
+  "partial": false
+}

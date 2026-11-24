@@ -1,0 +1,364 @@
+{
+  "document_id": "0000701864_2026_08_ZL_20_5015_03092026091037.jpg",
+  "role": "compatible_himalaya_qty",
+  "source_path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000701864_2026_08_ZL_20_5015_03092026091037.jpg",
+  "off": {
+    "correct_count": 20,
+    "field_count": 20,
+    "silent_wrong_count": 0,
+    "missing_count": 0,
+    "secondary_ocr_ms": 3.0,
+    "pipeline_helper_ms": 2.9,
+    "text_sha": "9653a1608dc4b271",
+    "repair_report": {
+      "document_id": "0000701864_2026_08_ZL_20_5015_03092026091037.jpg",
+      "repairs": [],
+      "unresolved": [
+        {
+          "reason": "secondary_repair_disabled"
+        }
+      ]
+    }
+  },
+  "on": {
+    "correct_count": 20,
+    "field_count": 20,
+    "silent_wrong_count": 0,
+    "missing_count": 0,
+    "secondary_ocr_ms": 1429.7,
+    "pipeline_helper_ms": 1379.7,
+    "text_sha": "9653a1608dc4b271",
+    "repair_report": {
+      "document_id": "0000701864_2026_08_ZL_20_5015_03092026091037.jpg",
+      "repairs": [],
+      "unresolved": []
+    },
+    "pipeline_text_matches": true
+  },
+  "deltas": [],
+  "repair_types_on": [],
+  "matches_off": [
+    {
+      "field_id": "vendor",
+      "expected_raw": "JAJRA DRUG AGENCY",
+      "predicted_raw": "JAJRA DRUG AGENCY",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_op",
+      "expected_raw": "Op.Bal. Qty.",
+      "predicted_raw": "Op.Bal. Qty.",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_iss",
+      "expected_raw": "Issue Qty.",
+      "predicted_raw": "Issue Qty.",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_cl",
+      "expected_raw": "Closing Balance",
+      "predicted_raw": "Closing Balance",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "abana_op",
+      "expected_raw": "49",
+      "predicted_raw": "49",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "abana_iss",
+      "expected_raw": "11",
+      "predicted_raw": "11",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "abana_cl",
+      "expected_raw": "38",
+      "predicted_raw": "38",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "conf_op",
+      "expected_raw": "3",
+      "predicted_raw": "3",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "conf_rec",
+      "expected_raw": "100",
+      "predicted_raw": "100",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "conf_iss",
+      "expected_raw": "13",
+      "predicted_raw": "13",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "conf_cl",
+      "expected_raw": "90",
+      "predicted_raw": "90",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv_op",
+      "expected_raw": "69",
+      "predicted_raw": "69",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv_rec",
+      "expected_raw": "70",
+      "predicted_raw": "70",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv_iss",
+      "expected_raw": "54",
+      "predicted_raw": "54",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv_cl",
+      "expected_raw": "85",
+      "predicted_raw": "85",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "pilex_op",
+      "expected_raw": "43",
+      "predicted_raw": "43",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "pilex_iss",
+      "expected_raw": "38",
+      "predicted_raw": "38",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "pilex_cl",
+      "expected_raw": "5",
+      "predicted_raw": "5",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tot_op",
+      "expected_raw": "95222",
+      "predicted_raw": "95222",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tot_cl",
+      "expected_raw": "101577",
+      "predicted_raw": "101577",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    }
+  ],
+  "matches_on": [
+    {
+      "field_id": "vendor",
+      "expected_raw": "JAJRA DRUG AGENCY",
+      "predicted_raw": "JAJRA DRUG AGENCY",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_op",
+      "expected_raw": "Op.Bal. Qty.",
+      "predicted_raw": "Op.Bal. Qty.",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_iss",
+      "expected_raw": "Issue Qty.",
+      "predicted_raw": "Issue Qty.",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_cl",
+      "expected_raw": "Closing Balance",
+      "predicted_raw": "Closing Balance",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "abana_op",
+      "expected_raw": "49",
+      "predicted_raw": "49",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "abana_iss",
+      "expected_raw": "11",
+      "predicted_raw": "11",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "abana_cl",
+      "expected_raw": "38",
+      "predicted_raw": "38",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "conf_op",
+      "expected_raw": "3",
+      "predicted_raw": "3",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "conf_rec",
+      "expected_raw": "100",
+      "predicted_raw": "100",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "conf_iss",
+      "expected_raw": "13",
+      "predicted_raw": "13",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "conf_cl",
+      "expected_raw": "90",
+      "predicted_raw": "90",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv_op",
+      "expected_raw": "69",
+      "predicted_raw": "69",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv_rec",
+      "expected_raw": "70",
+      "predicted_raw": "70",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv_iss",
+      "expected_raw": "54",
+      "predicted_raw": "54",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv_cl",
+      "expected_raw": "85",
+      "predicted_raw": "85",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "pilex_op",
+      "expected_raw": "43",
+      "predicted_raw": "43",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "pilex_iss",
+      "expected_raw": "38",
+      "predicted_raw": "38",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "pilex_cl",
+      "expected_raw": "5",
+      "predicted_raw": "5",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tot_op",
+      "expected_raw": "95222",
+      "predicted_raw": "95222",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tot_cl",
+      "expected_raw": "101577",
+      "predicted_raw": "101577",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    }
+  ]
+}

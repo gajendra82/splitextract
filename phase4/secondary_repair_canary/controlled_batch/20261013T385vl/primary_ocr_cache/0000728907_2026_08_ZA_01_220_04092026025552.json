@@ -1,0 +1,8 @@
+{
+  "document_id": "0000728907_2026_08_ZA_01_220_04092026025552.jpg",
+  "sha256": "47f70b5b1110acb9efaa6a9596ad0932fcef770488c6811f5668090ddf91828e",
+  "engine": "paddleocr-vl-1.6",
+  "text": "YAWADA\nChoose file | No file chosen\n<table><tr><td>Mat Name  $ \\uparrow\\downarrow $</td><td>MRP</td><td>Secondary Rate</td><td>OB (Qty)</td><td>Primary (Qty)</td><td>CB (Qty)  $ \\uparrow\\downarrow $</td><td>Secondary Qty total</td></tr><tr><td>RJUNA TABLETS 60 S INDIA</td><td>325</td><td>220.63</td><td>52</td><td>0.00</td><td>0</td><td>52</td></tr><tr><td>RESOL SYRUP 200ML INDIA</td><td>215</td><td>145.21</td><td>8</td><td>0.00</td><td>0</td><td>8</td></tr><tr><td>RESOL-NS SALINE NASAL SOLUTION 10ML IND</td><td>75</td><td>50.65</td><td>50</td><td>0.00</td><td>0</td><td>50</td></tr><tr><td>YSTONE TABS (FC) 60 s (AQ)</td><td>243</td><td>164.13</td><td>4</td><td>0.00</td><td>0</td><td>4</td></tr><tr><td>ALACTOSURE GRANULES 200G (ELAICHI FLR)</td><td>394</td><td>266.13</td><td>24</td><td>0.00</td><td>0</td><td>24</td></tr><tr><td>EPTILIN SYRUP 200ml</td><td>225</td><td>151.96</td><td>1</td><td>0.00</td><td>0</td><td>1</td></tr><tr><td>EPTILIN TABS (FC) 60 s (AQ)</td><td>257</td><td>173.58</td><td>6</td><td>0.00</td><td>0</td><td>6</td></tr><tr><td>ONNISAN DROPS 30ml</td><td>98</td><td>66.19</td><td>0</td><td>0.00</td><td>0</td><td>0</td></tr><tr><td>ONNISAN LIQUID 100ML (HINDI TEXT) INDIA</td><td>65</td><td>43.9</td><td>0</td><td>0.00</td><td>0</td><td>0</td></tr><tr><td>ONNISAN LIQUID 100ML (ORIYA TEXT) INDIA</td><td>70</td><td>42.66</td><td>0</td><td>0.00</td><td>0</td><td>0</td></tr></table>",
+  "text_len": 1413,
+  "status": "success"
+}

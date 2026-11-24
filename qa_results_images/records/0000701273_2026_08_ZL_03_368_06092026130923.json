@@ -1,0 +1,128 @@
+{
+  "file": "0000701273_2026_08_ZL_03_368_06092026130923.jpeg",
+  "path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000701273_2026_08_ZL_03_368_06092026130923.jpeg",
+  "format": "gemini_extraction_fallback",
+  "api_method": "gemini_extraction_fallback",
+  "status": "FAIL",
+  "expected_rows": 13,
+  "extracted_rows": 0,
+  "matched_rows": 0,
+  "missing_rows": [
+    {
+      "product": "AACTARIL SOAP",
+      "opening_qty": 26,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": 6,
+      "kind": "missing_product"
+    },
+    {
+      "product": "ABANA TAB",
+      "opening_qty": 0,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "CLARINA CREAM",
+      "opening_qty": 0,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": 4,
+      "kind": "missing_product"
+    },
+    {
+      "product": "CLARINA FACE WAS",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": 10,
+      "kind": "missing_product"
+    },
+    {
+      "product": "CONFIDO TAB",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "DIABECON DS TAB",
+      "opening_qty": 0,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "HAIR ZONE SOLUTIO",
+      "opening_qty": 0,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "HIMCOLIN GEL",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "LIV $2 HB CAP",
+      "opening_qty": 144,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": 44,
+      "kind": "missing_product"
+    },
+    {
+      "product": "LIV52S/F SYP 100M",
+      "opening_qty": 0,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "Liv 52 SYP",
+      "opening_qty": 204,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": 42,
+      "kind": "missing_product"
+    },
+    {
+      "product": "S2.SYP,",
+      "opening_qty": 320,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": 4,
+      "kind": "missing_product"
+    },
+    {
+      "product": "S52 TAB",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": 5,
+      "kind": "missing_product"
+    }
+  ],
+  "extra_rows": [],
+  "duplicates": [],
+  "mismatches": [],
+  "ocr_review": [],
+  "accounting": [],
+  "confidence": "medium",
+  "notes": [
+    "OCR used tesseract psm 6."
+  ],
+  "result_key": "0000701273_2026_08_ZL_03_368_06092026130923",
+  "unavailable_fields": {},
+  "formula_checked": "none"
+}

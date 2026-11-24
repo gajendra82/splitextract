@@ -1,0 +1,482 @@
+{
+  "document_id": "0000701151_2026_08_ZL_14_361_03092026025650.jpg",
+  "role": "total_footer",
+  "source_path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000701151_2026_08_ZL_14_361_03092026025650.jpg",
+  "off": {
+    "elapsed_ms": 13.0,
+    "text_sha_prefix": "87827662341163f7",
+    "correct_count": 17,
+    "field_count": 19,
+    "silent_wrong_count": 0,
+    "missing_count": 2,
+    "repair_report": {
+      "document_id": "0000701151_2026_08_ZL_14_361_03092026025650.jpg",
+      "repairs": [],
+      "unresolved": [
+        {
+          "reason": "secondary_repair_disabled"
+        }
+      ]
+    },
+    "pipeline_bundle_matches_entrypoint": true
+  },
+  "on": {
+    "elapsed_ms": 4375.6,
+    "text_sha_prefix": "3af7abe3487ef2a3",
+    "correct_count": 19,
+    "field_count": 19,
+    "silent_wrong_count": 0,
+    "missing_count": 0,
+    "repair_report": {
+      "document_id": "0000701151_2026_08_ZL_14_361_03092026025650.jpg",
+      "repairs": [
+        {
+          "type": "total_footer_ocr",
+          "corrected": true,
+          "values": {
+            "Op.Bal. Qty.": "834578",
+            "Closing Balance": "775274"
+          },
+          "raw": "SHALLAKI CAPS 60'S 59 60 119 45 74 i)\nSHIGRU TAB 60'S 80 i) 80 12 68 i)\nTAGARA TAB 60'S 33 60 93 18 75 i)\nTALEKT CAPS 10'S 31 i) 31 1 30 i)\nTENTEX FORTE TAB 1X10 267 i) 267 34 233 i)\nTRIKATU CAPS 60'S 95 i) 95 13 82 i)\nTRIKATU SYRUP 200ML_ "
+        }
+      ],
+      "unresolved": []
+    },
+    "pipeline_bundle_matches_entrypoint": true
+  },
+  "deltas": [
+    {
+      "field_id": "tot_cl",
+      "expected": "775274",
+      "off_pred": null,
+      "on_pred": "775274",
+      "off_correct": false,
+      "on_correct": true,
+      "off_error": "MISSING",
+      "on_error": null
+    },
+    {
+      "field_id": "tot_op",
+      "expected": "834578",
+      "off_pred": null,
+      "on_pred": "834578",
+      "off_correct": false,
+      "on_correct": true,
+      "off_error": "MISSING",
+      "on_error": null
+    }
+  ],
+  "repair_types_on": [
+    "total_footer_ocr"
+  ],
+  "unexpected_repairs": [],
+  "missing_expected_repairs": [],
+  "watch_field_detail": {
+    "tot_op": {
+      "off": {
+        "field_id": "tot_op",
+        "expected_raw": "834578",
+        "predicted_raw": null,
+        "correct": false,
+        "error_type": "MISSING",
+        "silent_wrong": false,
+        "match_mode": null
+      },
+      "on": {
+        "field_id": "tot_op",
+        "expected_raw": "834578",
+        "predicted_raw": "834578",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "match_mode": "column_aware_table"
+      }
+    },
+    "tot_cl": {
+      "off": {
+        "field_id": "tot_cl",
+        "expected_raw": "775274",
+        "predicted_raw": null,
+        "correct": false,
+        "error_type": "MISSING",
+        "silent_wrong": false,
+        "match_mode": null
+      },
+      "on": {
+        "field_id": "tot_cl",
+        "expected_raw": "775274",
+        "predicted_raw": "775274",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "match_mode": "column_aware_table"
+      }
+    },
+    "aact_cl": {
+      "off": {
+        "field_id": "aact_cl",
+        "expected_raw": "54",
+        "predicted_raw": "54",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "match_mode": "column_aware_table"
+      },
+      "on": {
+        "field_id": "aact_cl",
+        "expected_raw": "54",
+        "predicted_raw": "54",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "match_mode": "column_aware_table"
+      }
+    }
+  },
+  "off_full_matches": [
+    {
+      "field_id": "vendor",
+      "expected_raw": "JAIPUR MEDICAL HALL",
+      "predicted_raw": "JAIPUR MEDICAL HALL",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "text_contains"
+    },
+    {
+      "field_id": "h_op",
+      "expected_raw": "Op.Bal. Qty.",
+      "predicted_raw": "Op.Bal. Qty.",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "header_presence"
+    },
+    {
+      "field_id": "h_iss",
+      "expected_raw": "Issue Qty.",
+      "predicted_raw": "Issue Qty.",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "header_presence"
+    },
+    {
+      "field_id": "h_cl",
+      "expected_raw": "Closing Balance",
+      "predicted_raw": "Closing Balance",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "header_presence"
+    },
+    {
+      "field_id": "aact_op",
+      "expected_raw": "68",
+      "predicted_raw": "68",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "column_aware_table"
+    },
+    {
+      "field_id": "aact_iss",
+      "expected_raw": "14",
+      "predicted_raw": "14",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "column_aware_table"
+    },
+    {
+      "field_id": "aact_cl",
+      "expected_raw": "54",
+      "predicted_raw": "54",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "column_aware_table"
+    },
+    {
+      "field_id": "clar_op",
+      "expected_raw": "75",
+      "predicted_raw": "75",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "column_aware_table"
+    },
+    {
+      "field_id": "clar_iss",
+      "expected_raw": "6",
+      "predicted_raw": "6",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "column_aware_table"
+    },
+    {
+      "field_id": "clar_cl",
+      "expected_raw": "69",
+      "predicted_raw": "69",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "column_aware_table"
+    },
+    {
+      "field_id": "talekt_op",
+      "expected_raw": "31",
+      "predicted_raw": "31",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "column_aware_table"
+    },
+    {
+      "field_id": "talekt_iss",
+      "expected_raw": "1",
+      "predicted_raw": "1",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "column_aware_table"
+    },
+    {
+      "field_id": "talekt_cl",
+      "expected_raw": "30",
+      "predicted_raw": "30",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "column_aware_table"
+    },
+    {
+      "field_id": "yash_op",
+      "expected_raw": "74",
+      "predicted_raw": "74",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "column_aware_table"
+    },
+    {
+      "field_id": "yash_rec",
+      "expected_raw": "60",
+      "predicted_raw": "60",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "column_aware_table"
+    },
+    {
+      "field_id": "yash_iss",
+      "expected_raw": "45",
+      "predicted_raw": "45",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "column_aware_table"
+    },
+    {
+      "field_id": "yash_cl",
+      "expected_raw": "89",
+      "predicted_raw": "89",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "column_aware_table"
+    },
+    {
+      "field_id": "tot_op",
+      "expected_raw": "834578",
+      "predicted_raw": null,
+      "correct": false,
+      "error_type": "MISSING",
+      "silent_wrong": false,
+      "match_mode": null
+    },
+    {
+      "field_id": "tot_cl",
+      "expected_raw": "775274",
+      "predicted_raw": null,
+      "correct": false,
+      "error_type": "MISSING",
+      "silent_wrong": false,
+      "match_mode": null
+    }
+  ],
+  "on_full_matches": [
+    {
+      "field_id": "vendor",
+      "expected_raw": "JAIPUR MEDICAL HALL",
+      "predicted_raw": "JAIPUR MEDICAL HALL",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "text_contains"
+    },
+    {
+      "field_id": "h_op",
+      "expected_raw": "Op.Bal. Qty.",
+      "predicted_raw": "Op.Bal. Qty.",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "header_presence"
+    },
+    {
+      "field_id": "h_iss",
+      "expected_raw": "Issue Qty.",
+      "predicted_raw": "Issue Qty.",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "header_presence"
+    },
+    {
+      "field_id": "h_cl",
+      "expected_raw": "Closing Balance",
+      "predicted_raw": "Closing Balance",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "header_presence"
+    },
+    {
+      "field_id": "aact_op",
+      "expected_raw": "68",
+      "predicted_raw": "68",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "column_aware_table"
+    },
+    {
+      "field_id": "aact_iss",
+      "expected_raw": "14",
+      "predicted_raw": "14",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "column_aware_table"
+    },
+    {
+      "field_id": "aact_cl",
+      "expected_raw": "54",
+      "predicted_raw": "54",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "column_aware_table"
+    },
+    {
+      "field_id": "clar_op",
+      "expected_raw": "75",
+      "predicted_raw": "75",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "column_aware_table"
+    },
+    {
+      "field_id": "clar_iss",
+      "expected_raw": "6",
+      "predicted_raw": "6",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "column_aware_table"
+    },
+    {
+      "field_id": "clar_cl",
+      "expected_raw": "69",
+      "predicted_raw": "69",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "column_aware_table"
+    },
+    {
+      "field_id": "talekt_op",
+      "expected_raw": "31",
+      "predicted_raw": "31",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "column_aware_table"
+    },
+    {
+      "field_id": "talekt_iss",
+      "expected_raw": "1",
+      "predicted_raw": "1",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "column_aware_table"
+    },
+    {
+      "field_id": "talekt_cl",
+      "expected_raw": "30",
+      "predicted_raw": "30",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "column_aware_table"
+    },
+    {
+      "field_id": "yash_op",
+      "expected_raw": "74",
+      "predicted_raw": "74",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "column_aware_table"
+    },
+    {
+      "field_id": "yash_rec",
+      "expected_raw": "60",
+      "predicted_raw": "60",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "column_aware_table"
+    },
+    {
+      "field_id": "yash_iss",
+      "expected_raw": "45",
+      "predicted_raw": "45",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "column_aware_table"
+    },
+    {
+      "field_id": "yash_cl",
+      "expected_raw": "89",
+      "predicted_raw": "89",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "column_aware_table"
+    },
+    {
+      "field_id": "tot_op",
+      "expected_raw": "834578",
+      "predicted_raw": "834578",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "column_aware_table"
+    },
+    {
+      "field_id": "tot_cl",
+      "expected_raw": "775274",
+      "predicted_raw": "775274",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "column_aware_table"
+    }
+  ]
+}

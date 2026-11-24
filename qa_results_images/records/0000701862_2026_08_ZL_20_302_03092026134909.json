@@ -1,0 +1,931 @@
+{
+  "file": "0000701862_2026_08_ZL_20_302_03092026134909.jpg",
+  "path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000701862_2026_08_ZL_20_302_03092026134909.jpg",
+  "format": "STOCK & SALES ANALYSIS",
+  "api_method": "gemini_extraction_fallback",
+  "status": "FAIL",
+  "expected_rows": 35,
+  "extracted_rows": 36,
+  "matched_rows": 32,
+  "missing_rows": [
+    {
+      "product": "KAPIKACHHU TAB 6OTAB",
+      "opening_qty": null,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "RENALKA SYP loom.",
+      "opening_qty": null,
+      "receipts_qty": 0,
+      "sales_qty": 8,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "‘TENTEX FORTE TAB OTA",
+      "opening_qty": null,
+      "receipts_qty": 0,
+      "sales_qty": null,
+      "closing_qty": -2297.57,
+      "kind": "missing_product"
+    }
+  ],
+  "extra_rows": [
+    {
+      "product": "ZEAL HIMALAYA",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "ΚΑΡΙΚΑCHHU TAB",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "RENALKA SYP",
+      "opening_qty": 25,
+      "sales_qty": 0,
+      "closing_qty": 17,
+      "kind": "extra_product"
+    },
+    {
+      "product": "TENTEX FORTE TAB",
+      "opening_qty": 137,
+      "sales_qty": 0,
+      "closing_qty": 27,
+      "kind": "extra_product"
+    }
+  ],
+  "duplicates": [],
+  "mismatches": [
+    {
+      "product": "‘TRIKATU SYP",
+      "field": "opening_value",
+      "expected": 0,
+      "actual": null,
+      "kind": "wrong_opening_value"
+    },
+    {
+      "product": "‘TRIKATU SYP",
+      "field": "receipts_value",
+      "expected": 0,
+      "actual": null,
+      "kind": "wrong_receipt_value"
+    },
+    {
+      "product": "TALEKT SYP.",
+      "field": "opening_value",
+      "expected": 0,
+      "actual": null,
+      "kind": "wrong_opening_value"
+    },
+    {
+      "product": "TALEKT SYP.",
+      "field": "receipts_value",
+      "expected": 0,
+      "actual": null,
+      "kind": "wrong_receipt_value"
+    },
+    {
+      "product": "TALEKT CAP",
+      "field": "opening_value",
+      "expected": 0,
+      "actual": null,
+      "kind": "wrong_opening_value"
+    },
+    {
+      "product": "TALEKT CAP",
+      "field": "receipts_value",
+      "expected": 0,
+      "actual": null,
+      "kind": "wrong_receipt_value"
+    },
+    {
+      "product": "VASAKA SYP 200mL.",
+      "field": "opening_value",
+      "expected": 0,
+      "actual": null,
+      "kind": "wrong_opening_value"
+    },
+    {
+      "product": "VASAKA SYP 200mL.",
+      "field": "receipts_value",
+      "expected": 0,
+      "actual": null,
+      "kind": "wrong_receipt_value"
+    },
+    {
+      "product": "TAGARA TAB 6OTAB",
+      "field": "opening_value",
+      "expected": 0,
+      "actual": null,
+      "kind": "wrong_opening_value"
+    },
+    {
+      "product": "TAGARA TAB 6OTAB",
+      "field": "receipts_value",
+      "expected": 0,
+      "actual": null,
+      "kind": "wrong_receipt_value"
+    },
+    {
+      "product": "QUSTA ACTIVE POW 2006M =",
+      "field": "opening_value",
+      "expected": 0,
+      "actual": null,
+      "kind": "wrong_opening_value"
+    },
+    {
+      "product": "QUSTA ACTIVE POW 2006M =",
+      "field": "receipts_value",
+      "expected": 0,
+      "actual": null,
+      "kind": "wrong_receipt_value"
+    },
+    {
+      "product": "QUSTA ACTIVE CHOCO. 2006M =",
+      "field": "opening_value",
+      "expected": 0,
+      "actual": null,
+      "kind": "wrong_opening_value"
+    },
+    {
+      "product": "QUSTA ACTIVE CHOCO. 2006M =",
+      "field": "receipts_value",
+      "expected": 0,
+      "actual": null,
+      "kind": "wrong_receipt_value"
+    },
+    {
+      "product": "QUISTA DN VANILLA F. 400cM =",
+      "field": "opening_value",
+      "expected": 0,
+      "actual": null,
+      "kind": "wrong_opening_value"
+    },
+    {
+      "product": "QUISTA DN VANILLA F. 400cM =",
+      "field": "receipts_value",
+      "expected": 0,
+      "actual": null,
+      "kind": "wrong_receipt_value"
+    },
+    {
+      "product": "LIV 52 SYP SUGAR FREE 00m.",
+      "field": "opening_value",
+      "expected": 0,
+      "actual": null,
+      "kind": "wrong_opening_value"
+    },
+    {
+      "product": "LIV 52 SYP SUGAR FREE 00m.",
+      "field": "receipts_value",
+      "expected": 0,
+      "actual": null,
+      "kind": "wrong_receipt_value"
+    },
+    {
+      "product": "CLARINA ANTI ACNE F.WASH — 6OML,",
+      "field": "opening_value",
+      "expected": 0,
+      "actual": null,
+      "kind": "wrong_opening_value"
+    },
+    {
+      "product": "CLARINA ANTI ACNE F.WASH — 6OML,",
+      "field": "receipts_value",
+      "expected": 0,
+      "actual": null,
+      "kind": "wrong_receipt_value"
+    },
+    {
+      "product": "HERBOLEX CAP LOCAP",
+      "field": "opening_value",
+      "expected": 0,
+      "actual": null,
+      "kind": "wrong_opening_value"
+    },
+    {
+      "product": "HERBOLEX CAP LOCAP",
+      "field": "receipts_value",
+      "expected": 0,
+      "actual": null,
+      "kind": "wrong_receipt_value"
+    },
+    {
+      "product": "QUSTA DN MILK M. 2006M =",
+      "field": "opening_value",
+      "expected": 2503.1,
+      "actual": null,
+      "kind": "wrong_opening_value"
+    },
+    {
+      "product": "QUSTA DN MILK M. 2006M =",
+      "field": "receipts_value",
+      "expected": 0,
+      "actual": null,
+      "kind": "wrong_receipt_value"
+    },
+    {
+      "product": "QUSTA DN MILK M. 2006M =",
+      "field": "closing_qty",
+      "expected": 2503.1,
+      "actual": 10,
+      "kind": "wrong_closing_qty"
+    },
+    {
+      "product": "LIV 52 SYP 200M~",
+      "field": "receipts_value",
+      "expected": 21463.19,
+      "actual": null,
+      "kind": "wrong_receipt_value"
+    },
+    {
+      "product": "LIV 52 SYP 200M~",
+      "field": "sales_value",
+      "expected": -27449.1,
+      "actual": 0,
+      "kind": "wrong_sales_value"
+    },
+    {
+      "product": "LIV 52 SYP 200M~",
+      "field": "closing_qty",
+      "expected": -23762.82,
+      "actual": 155,
+      "kind": "wrong_closing_qty"
+    },
+    {
+      "product": "‘ABANA TAB 6oTAR",
+      "field": "opening_value",
+      "expected": 847.02,
+      "actual": null,
+      "kind": "wrong_opening_value"
+    },
+    {
+      "product": "‘ABANA TAB 6oTAR",
+      "field": "receipts_value",
+      "expected": 42351,
+      "actual": null,
+      "kind": "wrong_receipt_value"
+    },
+    {
+      "product": "‘ABANA TAB 6oTAR",
+      "field": "sales_value",
+      "expected": -27169.81,
+      "actual": 0,
+      "kind": "wrong_sales_value"
+    },
+    {
+      "product": "‘ABANA TAB 6oTAR",
+      "field": "closing_qty",
+      "expected": -14117,
+      "actual": 100,
+      "kind": "wrong_closing_qty"
+    },
+    {
+      "product": "OXITARD CAP LOCAP",
+      "field": "opening_value",
+      "expected": 2592,
+      "actual": null,
+      "kind": "wrong_opening_value"
+    },
+    {
+      "product": "OXITARD CAP LOCAP",
+      "field": "receipts_value",
+      "expected": 0,
+      "actual": null,
+      "kind": "wrong_receipt_value"
+    },
+    {
+      "product": "OXITARD CAP LOCAP",
+      "field": "closing_qty",
+      "expected": 2592,
+      "actual": 30,
+      "kind": "wrong_closing_qty"
+    },
+    {
+      "product": "PILEX FORTE TAB",
+      "field": "receipts_value",
+      "expected": 0,
+      "actual": null,
+      "kind": "wrong_receipt_value"
+    },
+    {
+      "product": "PILEX FORTE TAB",
+      "field": "sales_qty",
+      "expected": 29,
+      "actual": 0,
+      "kind": "wrong_sales_qty"
+    },
+    {
+      "product": "PILEX FORTE TAB",
+      "field": "sales_value",
+      "expected": 3385.25,
+      "actual": 0,
+      "kind": "wrong_sales_value"
+    },
+    {
+      "product": "PILEX FORTE TAB",
+      "field": "closing_qty",
+      "expected": 473.29,
+      "actual": 5,
+      "kind": "wrong_closing_qty"
+    },
+    {
+      "product": "LIV 52 HB CAP",
+      "field": "opening_value",
+      "expected": 4474.06,
+      "actual": null,
+      "kind": "wrong_opening_value"
+    },
+    {
+      "product": "LIV 52 HB CAP",
+      "field": "receipts_value",
+      "expected": 0,
+      "actual": null,
+      "kind": "wrong_receipt_value"
+    },
+    {
+      "product": "LIV 52 HB CAP",
+      "field": "sales_qty",
+      "expected": 3,
+      "actual": 0,
+      "kind": "wrong_sales_qty"
+    },
+    {
+      "product": "LIV 52 HB CAP",
+      "field": "sales_value",
+      "expected": 498.83,
+      "actual": 0,
+      "kind": "wrong_sales_value"
+    },
+    {
+      "product": "LIV 52 HB CAP",
+      "field": "closing_qty",
+      "expected": 4026.65,
+      "actual": 27,
+      "kind": "wrong_closing_qty"
+    },
+    {
+      "product": "HAIR ZONE SOLUTION som,",
+      "field": "opening_value",
+      "expected": 7668.76,
+      "actual": null,
+      "kind": "wrong_opening_value"
+    },
+    {
+      "product": "HAIR ZONE SOLUTION som,",
+      "field": "receipts_value",
+      "expected": 0,
+      "actual": null,
+      "kind": "wrong_receipt_value"
+    },
+    {
+      "product": "HAIR ZONE SOLUTION som,",
+      "field": "sales_value",
+      "expected": 4295.52,
+      "actual": 0,
+      "kind": "wrong_sales_value"
+    },
+    {
+      "product": "HAIR ZONE SOLUTION som,",
+      "field": "closing_qty",
+      "expected": 3702.16,
+      "actual": 14,
+      "kind": "wrong_closing_qty"
+    },
+    {
+      "product": "‘CONFIDO",
+      "field": "opening_value",
+      "expected": 1093.06,
+      "actual": null,
+      "kind": "wrong_opening_value"
+    },
+    {
+      "product": "‘CONFIDO",
+      "field": "receipts_value",
+      "expected": 0,
+      "actual": null,
+      "kind": "wrong_receipt_value"
+    },
+    {
+      "product": "‘CONFIDO",
+      "field": "sales_qty",
+      "expected": 12,
+      "actual": 0,
+      "kind": "wrong_sales_qty"
+    },
+    {
+      "product": "‘CONFIDO",
+      "field": "sales_value",
+      "expected": 2164.32,
+      "actual": 0,
+      "kind": "wrong_sales_value"
+    },
+    {
+      "product": "‘CONFIDO",
+      "field": "closing_qty",
+      "expected": 9158.45,
+      "actual": 62,
+      "kind": "wrong_closing_qty"
+    },
+    {
+      "product": "RENALKA SYP 200M =",
+      "field": "opening_value",
+      "expected": 7680.63,
+      "actual": null,
+      "kind": "wrong_opening_value"
+    },
+    {
+      "product": "RENALKA SYP 200M =",
+      "field": "receipts_value",
+      "expected": 0,
+      "actual": null,
+      "kind": "wrong_receipt_value"
+    },
+    {
+      "product": "RENALKA SYP 200M =",
+      "field": "sales_qty",
+      "expected": 2,
+      "actual": 0,
+      "kind": "wrong_sales_qty"
+    },
+    {
+      "product": "RENALKA SYP 200M =",
+      "field": "sales_value",
+      "expected": 320,
+      "actual": 0,
+      "kind": "wrong_sales_value"
+    },
+    {
+      "product": "RENALKA SYP 200M =",
+      "field": "closing_qty",
+      "expected": 7411.13,
+      "actual": 55,
+      "kind": "wrong_closing_qty"
+    },
+    {
+      "product": "PURIM TAB 6OTAB",
+      "field": "opening_value",
+      "expected": 2043.91,
+      "actual": null,
+      "kind": "wrong_opening_value"
+    },
+    {
+      "product": "PURIM TAB 6OTAB",
+      "field": "receipts_value",
+      "expected": 0,
+      "actual": null,
+      "kind": "wrong_receipt_value"
+    },
+    {
+      "product": "PURIM TAB 6OTAB",
+      "field": "sales_qty",
+      "expected": 7,
+      "actual": 0,
+      "kind": "wrong_sales_qty"
+    },
+    {
+      "product": "PURIM TAB 6OTAB",
+      "field": "sales_value",
+      "expected": 918.14,
+      "actual": 0,
+      "kind": "wrong_sales_value"
+    },
+    {
+      "product": "PURIM TAB 6OTAB",
+      "field": "closing_qty",
+      "expected": 1202.3,
+      "actual": 10,
+      "kind": "wrong_closing_qty"
+    },
+    {
+      "product": "PILEX TAB 6OTAB",
+      "field": "opening_value",
+      "expected": 3644.46,
+      "actual": null,
+      "kind": "wrong_opening_value"
+    },
+    {
+      "product": "PILEX TAB 6OTAB",
+      "field": "receipts_value",
+      "expected": 0,
+      "actual": null,
+      "kind": "wrong_receipt_value"
+    },
+    {
+      "product": "PILEX TAB 6OTAB",
+      "field": "sales_qty",
+      "expected": 67,
+      "actual": 0,
+      "kind": "wrong_sales_qty"
+    },
+    {
+      "product": "PILEX TAB 6OTAB",
+      "field": "sales_value",
+      "expected": 1655.91,
+      "actual": 0,
+      "kind": "wrong_sales_value"
+    },
+    {
+      "product": "PILEX TAB 6OTAB",
+      "field": "closing_qty",
+      "expected": 3372.79,
+      "actual": 22,
+      "kind": "wrong_closing_qty"
+    },
+    {
+      "product": "PILEX FORTE OIN. 306m",
+      "field": "opening_value",
+      "expected": 7443.25,
+      "actual": null,
+      "kind": "wrong_opening_value"
+    },
+    {
+      "product": "PILEX FORTE OIN. 306m",
+      "field": "receipts_value",
+      "expected": 0,
+      "actual": null,
+      "kind": "wrong_receipt_value"
+    },
+    {
+      "product": "PILEX FORTE OIN. 306m",
+      "field": "sales_qty",
+      "expected": 36,
+      "actual": 0,
+      "kind": "wrong_sales_qty"
+    },
+    {
+      "product": "PILEX FORTE OIN. 306m",
+      "field": "sales_value",
+      "expected": 4029.5,
+      "actual": 0,
+      "kind": "wrong_sales_value"
+    },
+    {
+      "product": "PILEX FORTE OIN. 306m",
+      "field": "closing_qty",
+      "expected": 4051.39,
+      "actual": 43,
+      "kind": "wrong_closing_qty"
+    },
+    {
+      "product": "ORO-T LIQ 100m =",
+      "field": "opening_value",
+      "expected": 1532.16,
+      "actual": null,
+      "kind": "wrong_opening_value"
+    },
+    {
+      "product": "ORO-T LIQ 100m =",
+      "field": "receipts_value",
+      "expected": 0,
+      "actual": null,
+      "kind": "wrong_receipt_value"
+    },
+    {
+      "product": "ORO-T LIQ 100m =",
+      "field": "sales_qty",
+      "expected": 3,
+      "actual": 0,
+      "kind": "wrong_sales_qty"
+    },
+    {
+      "product": "ORO-T LIQ 100m =",
+      "field": "sales_value",
+      "expected": 384,
+      "actual": 0,
+      "kind": "wrong_sales_value"
+    },
+    {
+      "product": "ORO-T LIQ 100m =",
+      "field": "closing_qty",
+      "expected": 1203.84,
+      "actual": 11,
+      "kind": "wrong_closing_qty"
+    },
+    {
+      "product": "OPTHACARE DROP 20M",
+      "field": "opening_value",
+      "expected": 1300.2,
+      "actual": null,
+      "kind": "wrong_opening_value"
+    },
+    {
+      "product": "OPTHACARE DROP 20M",
+      "field": "receipts_value",
+      "expected": 0,
+      "actual": null,
+      "kind": "wrong_receipt_value"
+    },
+    {
+      "product": "OPTHACARE DROP 20M",
+      "field": "sales_qty",
+      "expected": 4,
+      "actual": 0,
+      "kind": "wrong_sales_qty"
+    },
+    {
+      "product": "OPTHACARE DROP 20M",
+      "field": "sales_value",
+      "expected": 293.32,
+      "actual": 0,
+      "kind": "wrong_sales_value"
+    },
+    {
+      "product": "OPTHACARE DROP 20M",
+      "field": "closing_qty",
+      "expected": 1040.16,
+      "actual": 16,
+      "kind": "wrong_closing_qty"
+    },
+    {
+      "product": "LIV 52 TAB 1OOTAB",
+      "field": "opening_value",
+      "expected": -38485.91,
+      "actual": null,
+      "kind": "wrong_opening_value"
+    },
+    {
+      "product": "LIV 52 TAB 1OOTAB",
+      "field": "receipts_value",
+      "expected": 0,
+      "actual": null,
+      "kind": "wrong_receipt_value"
+    },
+    {
+      "product": "LIV 52 TAB 1OOTAB",
+      "field": "sales_qty",
+      "expected": 94,
+      "actual": 0,
+      "kind": "wrong_sales_qty"
+    },
+    {
+      "product": "LIV 52 TAB 1OOTAB",
+      "field": "sales_value",
+      "expected": 1380.8,
+      "actual": 0,
+      "kind": "wrong_sales_value"
+    },
+    {
+      "product": "LIV 52 TAB 1OOTAB",
+      "field": "closing_qty",
+      "expected": 24936.57,
+      "actual": 173,
+      "kind": "wrong_closing_qty"
+    },
+    {
+      "product": "LIV 52 SYP 100m.",
+      "field": "receipts_value",
+      "expected": 0,
+      "actual": null,
+      "kind": "wrong_receipt_value"
+    },
+    {
+      "product": "LIV 52 SYP 100m.",
+      "field": "sales_qty",
+      "expected": 49,
+      "actual": 0,
+      "kind": "wrong_sales_qty"
+    },
+    {
+      "product": "LIV 52 SYP 100m.",
+      "field": "sales_value",
+      "expected": 5122.88,
+      "actual": 0,
+      "kind": "wrong_sales_value"
+    },
+    {
+      "product": "LIV 52 SYP 100m.",
+      "field": "closing_qty",
+      "expected": 8437.64,
+      "actual": 92,
+      "kind": "wrong_closing_qty"
+    },
+    {
+      "product": "HIMCOLIN GEL 306m",
+      "field": "opening_value",
+      "expected": 14629.76,
+      "actual": null,
+      "kind": "wrong_opening_value"
+    },
+    {
+      "product": "HIMCOLIN GEL 306m",
+      "field": "receipts_value",
+      "expected": 0,
+      "actual": null,
+      "kind": "wrong_receipt_value"
+    },
+    {
+      "product": "HIMCOLIN GEL 306m",
+      "field": "sales_qty",
+      "expected": 3,
+      "actual": 0,
+      "kind": "wrong_sales_qty"
+    },
+    {
+      "product": "HIMCOLIN GEL 306m",
+      "field": "sales_value",
+      "expected": 680.96,
+      "actual": 0,
+      "kind": "wrong_sales_value"
+    },
+    {
+      "product": "HIMCOLIN GEL 306m",
+      "field": "closing_qty",
+      "expected": 14044.56,
+      "actual": 72,
+      "kind": "wrong_closing_qty"
+    },
+    {
+      "product": "DIABECON DS TAB 6OTAB",
+      "field": "opening_value",
+      "expected": 2599.17,
+      "actual": null,
+      "kind": "wrong_opening_value"
+    },
+    {
+      "product": "DIABECON DS TAB 6OTAB",
+      "field": "receipts_value",
+      "expected": 0,
+      "actual": null,
+      "kind": "wrong_receipt_value"
+    },
+    {
+      "product": "DIABECON DS TAB 6OTAB",
+      "field": "sales_qty",
+      "expected": 3,
+      "actual": 0,
+      "kind": "wrong_sales_qty"
+    },
+    {
+      "product": "DIABECON DS TAB 6OTAB",
+      "field": "sales_value",
+      "expected": 638.39,
+      "actual": 0,
+      "kind": "wrong_sales_value"
+    },
+    {
+      "product": "DIABECON DS TAB 6OTAB",
+      "field": "closing_qty",
+      "expected": -2042.21,
+      "actual": 11,
+      "kind": "wrong_closing_qty"
+    },
+    {
+      "product": "CLARINA OINT 306m",
+      "field": "receipts_value",
+      "expected": 0,
+      "actual": null,
+      "kind": "wrong_receipt_value"
+    },
+    {
+      "product": "CLARINA OINT 306m",
+      "field": "sales_qty",
+      "expected": 4,
+      "actual": 0,
+      "kind": "wrong_sales_qty"
+    },
+    {
+      "product": "CLARINA OINT 306m",
+      "field": "sales_value",
+      "expected": 567.02,
+      "actual": 0,
+      "kind": "wrong_sales_value"
+    },
+    {
+      "product": "CLARINA OINT 306m",
+      "field": "closing_qty",
+      "expected": 5018.62,
+      "actual": 43,
+      "kind": "wrong_closing_qty"
+    },
+    {
+      "product": "BLEMINOR CREAM 30M,",
+      "field": "receipts_value",
+      "expected": 0,
+      "actual": null,
+      "kind": "wrong_receipt_value"
+    },
+    {
+      "product": "BLEMINOR CREAM 30M,",
+      "field": "sales_qty",
+      "expected": 7,
+      "actual": 0,
+      "kind": "wrong_sales_qty"
+    },
+    {
+      "product": "BLEMINOR CREAM 30M,",
+      "field": "sales_value",
+      "expected": 1292.28,
+      "actual": 0,
+      "kind": "wrong_sales_value"
+    },
+    {
+      "product": "BLEMINOR CREAM 30M,",
+      "field": "closing_qty",
+      "expected": 6422.46,
+      "actual": 37,
+      "kind": "wrong_closing_qty"
+    },
+    {
+      "product": "‘AACTARIL SOAP 75am",
+      "field": "opening_value",
+      "expected": 236.57,
+      "actual": null,
+      "kind": "wrong_opening_value"
+    },
+    {
+      "product": "‘AACTARIL SOAP 75am",
+      "field": "receipts_value",
+      "expected": 0,
+      "actual": null,
+      "kind": "wrong_receipt_value"
+    },
+    {
+      "product": "‘AACTARIL SOAP 75am",
+      "field": "sales_qty",
+      "expected": 2,
+      "actual": 0,
+      "kind": "wrong_sales_qty"
+    },
+    {
+      "product": "‘AACTARIL SOAP 75am",
+      "field": "sales_value",
+      "expected": 169.98,
+      "actual": 0,
+      "kind": "wrong_sales_value"
+    },
+    {
+      "product": "‘AACTARIL SOAP 75am",
+      "field": "closing_qty",
+      "expected": 78.86,
+      "actual": 1,
+      "kind": "wrong_closing_qty"
+    },
+    {
+      "product": "32 rows",
+      "field": "closing_value",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 32,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    },
+    {
+      "product": "32 rows",
+      "field": "opening_qty",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 32,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    }
+  ],
+  "ocr_review": [
+    {
+      "product": "HERBOLEX CAP LOCAP",
+      "api_product": "HERBOLEX CAP",
+      "similarity": 0.8,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "OXITARD CAP LOCAP",
+      "api_product": "OXITARD CAP",
+      "similarity": 0.786,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "OXITARD CAP LOCAP",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "HAIR ZONE SOLUTION som,",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    }
+  ],
+  "accounting": [],
+  "confidence": "medium",
+  "notes": [
+    "OCR used tesseract psm 6."
+  ],
+  "result_key": "0000701862_2026_08_ZL_20_302_03092026134909",
+  "unavailable_fields": {
+    "closing_value": 32,
+    "opening_qty": 32
+  },
+  "formula_checked": "none"
+}

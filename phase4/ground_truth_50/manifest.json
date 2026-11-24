@@ -1,0 +1,1141 @@
+{
+  "source_manifest": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\phase3_eval\\selection.json",
+  "paddle_vl_summary": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\phase4\\paddle_vl_100.json",
+  "document_count": 50,
+  "documents": [
+    {
+      "document_id": "0000700218_2026_08_ZL_18_8178_02092026173735.PDF",
+      "source_file": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700218_2026_08_ZL_18_8178_02092026173735.PDF",
+      "file_kind": "pdf",
+      "pdf_kind": "digital",
+      "manifest_requires_ocr": false,
+      "pages": [
+        {
+          "page": 1,
+          "status": "skipped_native_text",
+          "paddle_vl_status": "skipped_native_text"
+        }
+      ],
+      "ocr_required_pages": [],
+      "paddle_vl_checkpoint": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\phase4\\paddle_vl_benchmark\\per_document\\0000700218_2026_08_ZL_18_8178_02092026173735.PDF.json"
+    },
+    {
+      "document_id": "0000700029_2026_08_ZL_06_476_02092026113447.pdf",
+      "source_file": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700029_2026_08_ZL_06_476_02092026113447.pdf",
+      "file_kind": "pdf",
+      "pdf_kind": "digital",
+      "manifest_requires_ocr": false,
+      "pages": [
+        {
+          "page": 1,
+          "status": "skipped_native_text",
+          "paddle_vl_status": "skipped_native_text"
+        },
+        {
+          "page": 2,
+          "status": "skipped_native_text",
+          "paddle_vl_status": "skipped_native_text"
+        }
+      ],
+      "ocr_required_pages": [],
+      "paddle_vl_checkpoint": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\phase4\\paddle_vl_benchmark\\per_document\\0000700029_2026_08_ZL_06_476_02092026113447.pdf.json"
+    },
+    {
+      "document_id": "0000700283_2026_08_ZL_18_377_01092026063405.pdf",
+      "source_file": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700283_2026_08_ZL_18_377_01092026063405.pdf",
+      "file_kind": "pdf",
+      "pdf_kind": "digital",
+      "manifest_requires_ocr": false,
+      "pages": [
+        {
+          "page": 1,
+          "status": "skipped_native_text",
+          "paddle_vl_status": "skipped_native_text"
+        }
+      ],
+      "ocr_required_pages": [],
+      "paddle_vl_checkpoint": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\phase4\\paddle_vl_benchmark\\per_document\\0000700283_2026_08_ZL_18_377_01092026063405.pdf.json"
+    },
+    {
+      "document_id": "0000700224_2026_08_ZL_18_373_03092026133548.pdf",
+      "source_file": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700224_2026_08_ZL_18_373_03092026133548.pdf",
+      "file_kind": "pdf",
+      "pdf_kind": "digital",
+      "manifest_requires_ocr": false,
+      "pages": [
+        {
+          "page": 1,
+          "status": "skipped_native_text",
+          "paddle_vl_status": "skipped_native_text"
+        },
+        {
+          "page": 2,
+          "status": "skipped_native_text",
+          "paddle_vl_status": "skipped_native_text"
+        },
+        {
+          "page": 3,
+          "status": "skipped_native_text",
+          "paddle_vl_status": "skipped_native_text"
+        }
+      ],
+      "ocr_required_pages": [],
+      "paddle_vl_checkpoint": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\phase4\\paddle_vl_benchmark\\per_document\\0000700224_2026_08_ZL_18_373_03092026133548.pdf.json"
+    },
+    {
+      "document_id": "0000700284_2026_08_ZL_18_245_05092026055948.pdf",
+      "source_file": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700284_2026_08_ZL_18_245_05092026055948.pdf",
+      "file_kind": "pdf",
+      "pdf_kind": "digital",
+      "manifest_requires_ocr": false,
+      "pages": [
+        {
+          "page": 1,
+          "status": "skipped_native_text",
+          "paddle_vl_status": "skipped_native_text"
+        }
+      ],
+      "ocr_required_pages": [],
+      "paddle_vl_checkpoint": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\phase4\\paddle_vl_benchmark\\per_document\\0000700284_2026_08_ZL_18_245_05092026055948.pdf.json"
+    },
+    {
+      "document_id": "0000700026_2026_08_ZL_06_313_03092026130418.pdf",
+      "source_file": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700026_2026_08_ZL_06_313_03092026130418.pdf",
+      "file_kind": "pdf",
+      "pdf_kind": "digital",
+      "manifest_requires_ocr": false,
+      "pages": [
+        {
+          "page": 1,
+          "status": "skipped_native_text",
+          "paddle_vl_status": "skipped_native_text"
+        },
+        {
+          "page": 2,
+          "status": "skipped_native_text",
+          "paddle_vl_status": "skipped_native_text"
+        }
+      ],
+      "ocr_required_pages": [],
+      "paddle_vl_checkpoint": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\phase4\\paddle_vl_benchmark\\per_document\\0000700026_2026_08_ZL_06_313_03092026130418.pdf.json"
+    },
+    {
+      "document_id": "0000700112_2026_08_ZL_06_305_02092026004955.pdf",
+      "source_file": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700112_2026_08_ZL_06_305_02092026004955.pdf",
+      "file_kind": "pdf",
+      "pdf_kind": "digital",
+      "manifest_requires_ocr": false,
+      "pages": [
+        {
+          "page": 1,
+          "status": "skipped_native_text",
+          "paddle_vl_status": "skipped_native_text"
+        },
+        {
+          "page": 2,
+          "status": "skipped_native_text",
+          "paddle_vl_status": "skipped_native_text"
+        },
+        {
+          "page": 3,
+          "status": "skipped_native_text",
+          "paddle_vl_status": "skipped_native_text"
+        },
+        {
+          "page": 4,
+          "status": "skipped_native_text",
+          "paddle_vl_status": "skipped_native_text"
+        },
+        {
+          "page": 5,
+          "status": "skipped_native_text",
+          "paddle_vl_status": "skipped_native_text"
+        },
+        {
+          "page": 6,
+          "status": "skipped_native_text",
+          "paddle_vl_status": "skipped_native_text"
+        },
+        {
+          "page": 7,
+          "status": "skipped_native_text",
+          "paddle_vl_status": "skipped_native_text"
+        }
+      ],
+      "ocr_required_pages": [],
+      "paddle_vl_checkpoint": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\phase4\\paddle_vl_benchmark\\per_document\\0000700112_2026_08_ZL_06_305_02092026004955.pdf.json"
+    },
+    {
+      "document_id": "0000700262_2026_08_ZL_18_376_04092026170456.PDF",
+      "source_file": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700262_2026_08_ZL_18_376_04092026170456.PDF",
+      "file_kind": "pdf",
+      "pdf_kind": "digital",
+      "manifest_requires_ocr": false,
+      "pages": [
+        {
+          "page": 1,
+          "status": "skipped_native_text",
+          "paddle_vl_status": "skipped_native_text"
+        },
+        {
+          "page": 2,
+          "status": "skipped_native_text",
+          "paddle_vl_status": "skipped_native_text"
+        },
+        {
+          "page": 3,
+          "status": "skipped_native_text",
+          "paddle_vl_status": "skipped_native_text"
+        },
+        {
+          "page": 4,
+          "status": "skipped_native_text",
+          "paddle_vl_status": "skipped_native_text"
+        },
+        {
+          "page": 5,
+          "status": "skipped_native_text",
+          "paddle_vl_status": "skipped_native_text"
+        }
+      ],
+      "ocr_required_pages": [],
+      "paddle_vl_checkpoint": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\phase4\\paddle_vl_benchmark\\per_document\\0000700262_2026_08_ZL_18_376_04092026170456.PDF.json"
+    },
+    {
+      "document_id": "0000700080_2026_08_ZL_06_305_02092026004326.pdf",
+      "source_file": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700080_2026_08_ZL_06_305_02092026004326.pdf",
+      "file_kind": "pdf",
+      "pdf_kind": "digital",
+      "manifest_requires_ocr": false,
+      "pages": [
+        {
+          "page": 1,
+          "status": "skipped_native_text",
+          "paddle_vl_status": "skipped_native_text"
+        },
+        {
+          "page": 2,
+          "status": "skipped_native_text",
+          "paddle_vl_status": "skipped_native_text"
+        }
+      ],
+      "ocr_required_pages": [],
+      "paddle_vl_checkpoint": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\phase4\\paddle_vl_benchmark\\per_document\\0000700080_2026_08_ZL_06_305_02092026004326.pdf.json"
+    },
+    {
+      "document_id": "0000700398_2026_08_ZL_18_377_01092026063708.pdf",
+      "source_file": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700398_2026_08_ZL_18_377_01092026063708.pdf",
+      "file_kind": "pdf",
+      "pdf_kind": "digital",
+      "manifest_requires_ocr": false,
+      "pages": [
+        {
+          "page": 1,
+          "status": "skipped_native_text",
+          "paddle_vl_status": "skipped_native_text"
+        }
+      ],
+      "ocr_required_pages": [],
+      "paddle_vl_checkpoint": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\phase4\\paddle_vl_benchmark\\per_document\\0000700398_2026_08_ZL_18_377_01092026063708.pdf.json"
+    },
+    {
+      "document_id": "0000700060_2026_08_ZL_06_748_04092026113445.pdf",
+      "source_file": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700060_2026_08_ZL_06_748_04092026113445.pdf",
+      "file_kind": "pdf",
+      "pdf_kind": "digital",
+      "manifest_requires_ocr": false,
+      "pages": [
+        {
+          "page": 1,
+          "status": "skipped_native_text",
+          "paddle_vl_status": "skipped_native_text"
+        },
+        {
+          "page": 2,
+          "status": "skipped_native_text",
+          "paddle_vl_status": "skipped_native_text"
+        }
+      ],
+      "ocr_required_pages": [],
+      "paddle_vl_checkpoint": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\phase4\\paddle_vl_benchmark\\per_document\\0000700060_2026_08_ZL_06_748_04092026113445.pdf.json"
+    },
+    {
+      "document_id": "0000700376_2026_08_ZL_18_376_04092026170135.PDF",
+      "source_file": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700376_2026_08_ZL_18_376_04092026170135.PDF",
+      "file_kind": "pdf",
+      "pdf_kind": "digital",
+      "manifest_requires_ocr": false,
+      "pages": [
+        {
+          "page": 1,
+          "status": "skipped_native_text",
+          "paddle_vl_status": "skipped_native_text"
+        },
+        {
+          "page": 2,
+          "status": "skipped_native_text",
+          "paddle_vl_status": "skipped_native_text"
+        },
+        {
+          "page": 3,
+          "status": "skipped_native_text",
+          "paddle_vl_status": "skipped_native_text"
+        },
+        {
+          "page": 4,
+          "status": "skipped_native_text",
+          "paddle_vl_status": "skipped_native_text"
+        },
+        {
+          "page": 5,
+          "status": "skipped_native_text",
+          "paddle_vl_status": "skipped_native_text"
+        }
+      ],
+      "ocr_required_pages": [],
+      "paddle_vl_checkpoint": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\phase4\\paddle_vl_benchmark\\per_document\\0000700376_2026_08_ZL_18_376_04092026170135.PDF.json"
+    },
+    {
+      "document_id": "0000700096_2026_08_ZL_06_8236_03092026155517.pdf",
+      "source_file": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700096_2026_08_ZL_06_8236_03092026155517.pdf",
+      "file_kind": "pdf",
+      "pdf_kind": "digital",
+      "manifest_requires_ocr": false,
+      "pages": [
+        {
+          "page": 1,
+          "status": "skipped_native_text",
+          "paddle_vl_status": "skipped_native_text"
+        }
+      ],
+      "ocr_required_pages": [],
+      "paddle_vl_checkpoint": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\phase4\\paddle_vl_benchmark\\per_document\\0000700096_2026_08_ZL_06_8236_03092026155517.pdf.json"
+    },
+    {
+      "document_id": "0000700088_2026_08_ZL_06_304_06092026142123.pdf",
+      "source_file": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700088_2026_08_ZL_06_304_06092026142123.pdf",
+      "file_kind": "pdf",
+      "pdf_kind": "digital",
+      "manifest_requires_ocr": false,
+      "pages": [
+        {
+          "page": 1,
+          "status": "skipped_native_text",
+          "paddle_vl_status": "skipped_native_text"
+        },
+        {
+          "page": 2,
+          "status": "skipped_native_text",
+          "paddle_vl_status": "skipped_native_text"
+        },
+        {
+          "page": 3,
+          "status": "skipped_native_text",
+          "paddle_vl_status": "skipped_native_text"
+        }
+      ],
+      "ocr_required_pages": [],
+      "paddle_vl_checkpoint": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\phase4\\paddle_vl_benchmark\\per_document\\0000700088_2026_08_ZL_06_304_06092026142123.pdf.json"
+    },
+    {
+      "document_id": "0000700046_2026_08_ZL_06_521_02092026053734.pdf",
+      "source_file": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700046_2026_08_ZL_06_521_02092026053734.pdf",
+      "file_kind": "pdf",
+      "pdf_kind": "digital",
+      "manifest_requires_ocr": false,
+      "pages": [
+        {
+          "page": 1,
+          "status": "skipped_native_text",
+          "paddle_vl_status": "skipped_native_text"
+        },
+        {
+          "page": 2,
+          "status": "skipped_native_text",
+          "paddle_vl_status": "skipped_native_text"
+        }
+      ],
+      "ocr_required_pages": [],
+      "paddle_vl_checkpoint": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\phase4\\paddle_vl_benchmark\\per_document\\0000700046_2026_08_ZL_06_521_02092026053734.pdf.json"
+    },
+    {
+      "document_id": "0000700079_2026_08_ZL_06_476_01092026063244.PDF",
+      "source_file": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700079_2026_08_ZL_06_476_01092026063244.PDF",
+      "file_kind": "pdf",
+      "pdf_kind": "digital",
+      "manifest_requires_ocr": false,
+      "pages": [
+        {
+          "page": 1,
+          "status": "skipped_native_text",
+          "paddle_vl_status": "skipped_native_text"
+        }
+      ],
+      "ocr_required_pages": [],
+      "paddle_vl_checkpoint": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\phase4\\paddle_vl_benchmark\\per_document\\0000700079_2026_08_ZL_06_476_01092026063244.PDF.json"
+    },
+    {
+      "document_id": "0000700379_2026_08_ZL_18_375_05092026174136.PDF",
+      "source_file": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700379_2026_08_ZL_18_375_05092026174136.PDF",
+      "file_kind": "pdf",
+      "pdf_kind": "digital",
+      "manifest_requires_ocr": false,
+      "pages": [
+        {
+          "page": 1,
+          "status": "success",
+          "paddle_vl_status": "success"
+        },
+        {
+          "page": 2,
+          "status": "skipped_native_text",
+          "paddle_vl_status": "skipped_native_text"
+        },
+        {
+          "page": 3,
+          "status": "skipped_native_text",
+          "paddle_vl_status": "skipped_native_text"
+        },
+        {
+          "page": 4,
+          "status": "skipped_native_text",
+          "paddle_vl_status": "skipped_native_text"
+        },
+        {
+          "page": 5,
+          "status": "skipped_native_text",
+          "paddle_vl_status": "skipped_native_text"
+        },
+        {
+          "page": 6,
+          "status": "skipped_native_text",
+          "paddle_vl_status": "skipped_native_text"
+        }
+      ],
+      "ocr_required_pages": [
+        1
+      ],
+      "paddle_vl_checkpoint": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\phase4\\paddle_vl_benchmark\\per_document\\0000700379_2026_08_ZL_18_375_05092026174136.PDF.json"
+    },
+    {
+      "document_id": "0000700017_2026_08_ZL_06_476_02092026121836.pdf",
+      "source_file": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700017_2026_08_ZL_06_476_02092026121836.pdf",
+      "file_kind": "pdf",
+      "pdf_kind": "digital",
+      "manifest_requires_ocr": false,
+      "pages": [
+        {
+          "page": 1,
+          "status": "skipped_native_text",
+          "paddle_vl_status": "skipped_native_text"
+        },
+        {
+          "page": 2,
+          "status": "skipped_native_text",
+          "paddle_vl_status": "skipped_native_text"
+        }
+      ],
+      "ocr_required_pages": [],
+      "paddle_vl_checkpoint": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\phase4\\paddle_vl_benchmark\\per_document\\0000700017_2026_08_ZL_06_476_02092026121836.pdf.json"
+    },
+    {
+      "document_id": "0000700288_2026_08_ZL_18_374_04092026172821.pdf",
+      "source_file": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700288_2026_08_ZL_18_374_04092026172821.pdf",
+      "file_kind": "pdf",
+      "pdf_kind": "digital",
+      "manifest_requires_ocr": false,
+      "pages": [
+        {
+          "page": 1,
+          "status": "skipped_native_text",
+          "paddle_vl_status": "skipped_native_text"
+        },
+        {
+          "page": 2,
+          "status": "skipped_native_text",
+          "paddle_vl_status": "skipped_native_text"
+        },
+        {
+          "page": 3,
+          "status": "skipped_native_text",
+          "paddle_vl_status": "skipped_native_text"
+        },
+        {
+          "page": 4,
+          "status": "skipped_native_text",
+          "paddle_vl_status": "skipped_native_text"
+        }
+      ],
+      "ocr_required_pages": [],
+      "paddle_vl_checkpoint": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\phase4\\paddle_vl_benchmark\\per_document\\0000700288_2026_08_ZL_18_374_04092026172821.pdf.json"
+    },
+    {
+      "document_id": "0000700238_2026_08_ZL_18_377_03092026154026.pdf",
+      "source_file": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700238_2026_08_ZL_18_377_03092026154026.pdf",
+      "file_kind": "pdf",
+      "pdf_kind": "digital",
+      "manifest_requires_ocr": false,
+      "pages": [
+        {
+          "page": 1,
+          "status": "skipped_native_text",
+          "paddle_vl_status": "skipped_native_text"
+        },
+        {
+          "page": 2,
+          "status": "skipped_native_text",
+          "paddle_vl_status": "skipped_native_text"
+        }
+      ],
+      "ocr_required_pages": [],
+      "paddle_vl_checkpoint": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\phase4\\paddle_vl_benchmark\\per_document\\0000700238_2026_08_ZL_18_377_03092026154026.pdf.json"
+    },
+    {
+      "document_id": "0000700358_2026_08_ZL_18_8173_05092026185826.pdf",
+      "source_file": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700358_2026_08_ZL_18_8173_05092026185826.pdf",
+      "file_kind": "pdf",
+      "pdf_kind": "scanned",
+      "manifest_requires_ocr": true,
+      "pages": [
+        {
+          "page": 1,
+          "status": "success",
+          "paddle_vl_status": "success"
+        }
+      ],
+      "ocr_required_pages": [
+        1
+      ],
+      "paddle_vl_checkpoint": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\phase4\\paddle_vl_benchmark\\per_document\\0000700358_2026_08_ZL_18_8173_05092026185826.pdf.json"
+    },
+    {
+      "document_id": "0000700364_2026_08_ZL_18_8173_05092026190156.pdf",
+      "source_file": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700364_2026_08_ZL_18_8173_05092026190156.pdf",
+      "file_kind": "pdf",
+      "pdf_kind": "scanned",
+      "manifest_requires_ocr": true,
+      "pages": [
+        {
+          "page": 1,
+          "status": "success",
+          "paddle_vl_status": "success"
+        },
+        {
+          "page": 2,
+          "status": "success",
+          "paddle_vl_status": "success"
+        }
+      ],
+      "ocr_required_pages": [
+        1,
+        2
+      ],
+      "paddle_vl_checkpoint": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\phase4\\paddle_vl_benchmark\\per_document\\0000700364_2026_08_ZL_18_8173_05092026190156.pdf.json"
+    },
+    {
+      "document_id": "0000700124_2026_08_ZL_06_521_02092026204703.pdf",
+      "source_file": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700124_2026_08_ZL_06_521_02092026204703.pdf",
+      "file_kind": "pdf",
+      "pdf_kind": "scanned",
+      "manifest_requires_ocr": true,
+      "pages": [
+        {
+          "page": 1,
+          "status": "success",
+          "paddle_vl_status": "success"
+        }
+      ],
+      "ocr_required_pages": [
+        1
+      ],
+      "paddle_vl_checkpoint": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\phase4\\paddle_vl_benchmark\\per_document\\0000700124_2026_08_ZL_06_521_02092026204703.pdf.json"
+    },
+    {
+      "document_id": "0000700209_2026_08_ZL_18_374_04092026060313.pdf",
+      "source_file": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700209_2026_08_ZL_18_374_04092026060313.pdf",
+      "file_kind": "pdf",
+      "pdf_kind": "scanned",
+      "manifest_requires_ocr": true,
+      "pages": [
+        {
+          "page": 1,
+          "status": "success",
+          "paddle_vl_status": "success"
+        }
+      ],
+      "ocr_required_pages": [
+        1
+      ],
+      "paddle_vl_checkpoint": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\phase4\\paddle_vl_benchmark\\per_document\\0000700209_2026_08_ZL_18_374_04092026060313.pdf.json"
+    },
+    {
+      "document_id": "0000700084_2026_08_ZL_06_8236_03092026155136.pdf",
+      "source_file": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700084_2026_08_ZL_06_8236_03092026155136.pdf",
+      "file_kind": "pdf",
+      "pdf_kind": "scanned",
+      "manifest_requires_ocr": true,
+      "pages": [
+        {
+          "page": 1,
+          "status": "success",
+          "paddle_vl_status": "success"
+        }
+      ],
+      "ocr_required_pages": [
+        1
+      ],
+      "paddle_vl_checkpoint": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\phase4\\paddle_vl_benchmark\\per_document\\0000700084_2026_08_ZL_06_8236_03092026155136.pdf.json"
+    },
+    {
+      "document_id": "0000700346_2026_08_ZL_18_8189_05092026025159.pdf",
+      "source_file": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700346_2026_08_ZL_18_8189_05092026025159.pdf",
+      "file_kind": "pdf",
+      "pdf_kind": "scanned",
+      "manifest_requires_ocr": true,
+      "pages": [
+        {
+          "page": 1,
+          "status": "success",
+          "paddle_vl_status": "success"
+        },
+        {
+          "page": 2,
+          "status": "success",
+          "paddle_vl_status": "success"
+        }
+      ],
+      "ocr_required_pages": [
+        1,
+        2
+      ],
+      "paddle_vl_checkpoint": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\phase4\\paddle_vl_benchmark\\per_document\\0000700346_2026_08_ZL_18_8189_05092026025159.pdf.json"
+    },
+    {
+      "document_id": "0000700317_2026_08_ZL_18_374_02092026171443.pdf",
+      "source_file": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700317_2026_08_ZL_18_374_02092026171443.pdf",
+      "file_kind": "pdf",
+      "pdf_kind": "scanned",
+      "manifest_requires_ocr": true,
+      "pages": [
+        {
+          "page": 1,
+          "status": "success",
+          "paddle_vl_status": "success"
+        }
+      ],
+      "ocr_required_pages": [
+        1
+      ],
+      "paddle_vl_checkpoint": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\phase4\\paddle_vl_benchmark\\per_document\\0000700317_2026_08_ZL_18_374_02092026171443.pdf.json"
+    },
+    {
+      "document_id": "0000700275_2026_08_ZL_18_374_04092026171615.pdf",
+      "source_file": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700275_2026_08_ZL_18_374_04092026171615.pdf",
+      "file_kind": "pdf",
+      "pdf_kind": "scanned",
+      "manifest_requires_ocr": true,
+      "pages": [
+        {
+          "page": 1,
+          "status": "success",
+          "paddle_vl_status": "success"
+        }
+      ],
+      "ocr_required_pages": [
+        1
+      ],
+      "paddle_vl_checkpoint": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\phase4\\paddle_vl_benchmark\\per_document\\0000700275_2026_08_ZL_18_374_04092026171615.pdf.json"
+    },
+    {
+      "document_id": "0000704337_2026_08_ZL_24_259_03092026042213.pdf",
+      "source_file": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000704337_2026_08_ZL_24_259_03092026042213.pdf",
+      "file_kind": "pdf",
+      "pdf_kind": "scanned",
+      "manifest_requires_ocr": true,
+      "pages": [
+        {
+          "page": 1,
+          "status": "success",
+          "paddle_vl_status": "success"
+        }
+      ],
+      "ocr_required_pages": [
+        1
+      ],
+      "paddle_vl_checkpoint": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\phase4\\paddle_vl_benchmark\\per_document\\0000704337_2026_08_ZL_24_259_03092026042213.pdf.json"
+    },
+    {
+      "document_id": "0000729951_2026_08_ZL_20_471_04092026104138.pdf",
+      "source_file": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000729951_2026_08_ZL_20_471_04092026104138.pdf",
+      "file_kind": "pdf",
+      "pdf_kind": "scanned",
+      "manifest_requires_ocr": true,
+      "pages": [
+        {
+          "page": 1,
+          "status": "success",
+          "paddle_vl_status": "success"
+        },
+        {
+          "page": 2,
+          "status": "success",
+          "paddle_vl_status": "success"
+        }
+      ],
+      "ocr_required_pages": [
+        1,
+        2
+      ],
+      "paddle_vl_checkpoint": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\phase4\\paddle_vl_benchmark\\per_document\\0000729951_2026_08_ZL_20_471_04092026104138.pdf.json"
+    },
+    {
+      "document_id": "0000730089_2026_08_ZL_24_244_05092026160041.pdf",
+      "source_file": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000730089_2026_08_ZL_24_244_05092026160041.pdf",
+      "file_kind": "pdf",
+      "pdf_kind": "scanned",
+      "manifest_requires_ocr": true,
+      "pages": [
+        {
+          "page": 1,
+          "status": "success",
+          "paddle_vl_status": "success"
+        },
+        {
+          "page": 2,
+          "status": "success",
+          "paddle_vl_status": "success"
+        },
+        {
+          "page": 3,
+          "status": "success",
+          "paddle_vl_status": "success"
+        },
+        {
+          "page": 4,
+          "status": "success",
+          "paddle_vl_status": "success"
+        }
+      ],
+      "ocr_required_pages": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "paddle_vl_checkpoint": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\phase4\\paddle_vl_benchmark\\per_document\\0000730089_2026_08_ZL_24_244_05092026160041.pdf.json"
+    },
+    {
+      "document_id": "0000702913_2026_08_ZL_22_413A_04092026075910",
+      "source_file": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000702913_2026_08_ZL_22_413A_04092026075910",
+      "file_kind": "pdf",
+      "pdf_kind": "scanned",
+      "manifest_requires_ocr": true,
+      "pages": [
+        {
+          "page": 1,
+          "status": "skipped_native_text",
+          "paddle_vl_status": "skipped_native_text"
+        }
+      ],
+      "ocr_required_pages": [],
+      "paddle_vl_checkpoint": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\phase4\\paddle_vl_benchmark\\per_document\\0000702913_2026_08_ZL_22_413A_04092026075910.json"
+    },
+    {
+      "document_id": "0000729971_2026_08_ZL_18_374_04092026174632.pdf",
+      "source_file": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000729971_2026_08_ZL_18_374_04092026174632.pdf",
+      "file_kind": "pdf",
+      "pdf_kind": "scanned",
+      "manifest_requires_ocr": true,
+      "pages": [
+        {
+          "page": 1,
+          "status": "success",
+          "paddle_vl_status": "success"
+        }
+      ],
+      "ocr_required_pages": [
+        1
+      ],
+      "paddle_vl_checkpoint": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\phase4\\paddle_vl_benchmark\\per_document\\0000729971_2026_08_ZL_18_374_04092026174632.pdf.json"
+    },
+    {
+      "document_id": "0000723881_2026_08_ZL_06_550_04092026145241.pdf",
+      "source_file": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000723881_2026_08_ZL_06_550_04092026145241.pdf",
+      "file_kind": "pdf",
+      "pdf_kind": "scanned",
+      "manifest_requires_ocr": true,
+      "pages": [
+        {
+          "page": 1,
+          "status": "success",
+          "paddle_vl_status": "success"
+        },
+        {
+          "page": 2,
+          "status": "success",
+          "paddle_vl_status": "success"
+        }
+      ],
+      "ocr_required_pages": [
+        1,
+        2
+      ],
+      "paddle_vl_checkpoint": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\phase4\\paddle_vl_benchmark\\per_document\\0000723881_2026_08_ZL_06_550_04092026145241.pdf.json"
+    },
+    {
+      "document_id": "0000722000_2026_08_ZL_04_742_03092026185220.pdf",
+      "source_file": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000722000_2026_08_ZL_04_742_03092026185220.pdf",
+      "file_kind": "pdf",
+      "pdf_kind": "scanned",
+      "manifest_requires_ocr": true,
+      "pages": [
+        {
+          "page": 1,
+          "status": "success",
+          "paddle_vl_status": "success"
+        },
+        {
+          "page": 2,
+          "status": "success",
+          "paddle_vl_status": "success"
+        },
+        {
+          "page": 3,
+          "status": "success",
+          "paddle_vl_status": "success"
+        },
+        {
+          "page": 4,
+          "status": "success",
+          "paddle_vl_status": "success"
+        }
+      ],
+      "ocr_required_pages": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "paddle_vl_checkpoint": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\phase4\\paddle_vl_benchmark\\per_document\\0000722000_2026_08_ZL_04_742_03092026185220.pdf.json"
+    },
+    {
+      "document_id": "0000731783_2026_08_ZL_13_270_07092026032432.pdf",
+      "source_file": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000731783_2026_08_ZL_13_270_07092026032432.pdf",
+      "file_kind": "pdf",
+      "pdf_kind": "unknown",
+      "manifest_requires_ocr": false,
+      "pages": [
+        {
+          "page": 1,
+          "status": "error",
+          "paddle_vl_status": "error"
+        }
+      ],
+      "ocr_required_pages": [],
+      "paddle_vl_checkpoint": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\phase4\\paddle_vl_benchmark\\per_document\\0000731783_2026_08_ZL_13_270_07092026032432.pdf.json"
+    },
+    {
+      "document_id": "0000719013_2026_08_ZL_20_300_03092026101215.pdf",
+      "source_file": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000719013_2026_08_ZL_20_300_03092026101215.pdf",
+      "file_kind": "pdf",
+      "pdf_kind": "unknown",
+      "manifest_requires_ocr": false,
+      "pages": [
+        {
+          "page": 1,
+          "status": "error",
+          "paddle_vl_status": "error"
+        }
+      ],
+      "ocr_required_pages": [],
+      "paddle_vl_checkpoint": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\phase4\\paddle_vl_benchmark\\per_document\\0000719013_2026_08_ZL_20_300_03092026101215.pdf.json"
+    },
+    {
+      "document_id": "0000700406_2026_08_ZL_10_384_05092026140711.jpg",
+      "source_file": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700406_2026_08_ZL_10_384_05092026140711.jpg",
+      "file_kind": "image",
+      "pdf_kind": null,
+      "manifest_requires_ocr": true,
+      "pages": [
+        {
+          "page": 1,
+          "status": "success",
+          "paddle_vl_status": "success"
+        }
+      ],
+      "ocr_required_pages": [
+        1
+      ],
+      "paddle_vl_checkpoint": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\phase4\\paddle_vl_benchmark\\per_document\\0000700406_2026_08_ZL_10_384_05092026140711.jpg.json"
+    },
+    {
+      "document_id": "0000701904_2026_08_ZL_20_8227_05092026154848.jpg",
+      "source_file": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000701904_2026_08_ZL_20_8227_05092026154848.jpg",
+      "file_kind": "image",
+      "pdf_kind": null,
+      "manifest_requires_ocr": true,
+      "pages": [
+        {
+          "page": 1,
+          "status": "success",
+          "paddle_vl_status": "success"
+        }
+      ],
+      "ocr_required_pages": [
+        1
+      ],
+      "paddle_vl_checkpoint": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\phase4\\paddle_vl_benchmark\\per_document\\0000701904_2026_08_ZL_20_8227_05092026154848.jpg.json"
+    },
+    {
+      "document_id": "0000700835_2026_08_ZL_25_447_03092026105819.jpeg",
+      "source_file": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700835_2026_08_ZL_25_447_03092026105819.jpeg",
+      "file_kind": "image",
+      "pdf_kind": null,
+      "manifest_requires_ocr": true,
+      "pages": [
+        {
+          "page": 1,
+          "status": "success",
+          "paddle_vl_status": "success"
+        }
+      ],
+      "ocr_required_pages": [
+        1
+      ],
+      "paddle_vl_checkpoint": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\phase4\\paddle_vl_benchmark\\per_document\\0000700835_2026_08_ZL_25_447_03092026105819.jpeg.json"
+    },
+    {
+      "document_id": "0000700434_2026_08_ZL_10_386_05092026034503.jpg",
+      "source_file": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700434_2026_08_ZL_10_386_05092026034503.jpg",
+      "file_kind": "image",
+      "pdf_kind": null,
+      "manifest_requires_ocr": true,
+      "pages": [
+        {
+          "page": 1,
+          "status": "success",
+          "paddle_vl_status": "success"
+        }
+      ],
+      "ocr_required_pages": [
+        1
+      ],
+      "paddle_vl_checkpoint": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\phase4\\paddle_vl_benchmark\\per_document\\0000700434_2026_08_ZL_10_386_05092026034503.jpg.json"
+    },
+    {
+      "document_id": "0000701078_2026_08_ZL_03_362_05092026080346.jpeg",
+      "source_file": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000701078_2026_08_ZL_03_362_05092026080346.jpeg",
+      "file_kind": "image",
+      "pdf_kind": null,
+      "manifest_requires_ocr": true,
+      "pages": [
+        {
+          "page": 1,
+          "status": "success",
+          "paddle_vl_status": "success"
+        }
+      ],
+      "ocr_required_pages": [
+        1
+      ],
+      "paddle_vl_checkpoint": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\phase4\\paddle_vl_benchmark\\per_document\\0000701078_2026_08_ZL_03_362_05092026080346.jpeg.json"
+    },
+    {
+      "document_id": "0000701851_2026_08_ZL_20_302_03092026134940.jpg",
+      "source_file": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000701851_2026_08_ZL_20_302_03092026134940.jpg",
+      "file_kind": "image",
+      "pdf_kind": null,
+      "manifest_requires_ocr": true,
+      "pages": [
+        {
+          "page": 1,
+          "status": "success",
+          "paddle_vl_status": "success"
+        }
+      ],
+      "ocr_required_pages": [
+        1
+      ],
+      "paddle_vl_checkpoint": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\phase4\\paddle_vl_benchmark\\per_document\\0000701851_2026_08_ZL_20_302_03092026134940.jpg.json"
+    },
+    {
+      "document_id": "0000701275_2026_08_ZL_03_360_02092026152716.jpg",
+      "source_file": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000701275_2026_08_ZL_03_360_02092026152716.jpg",
+      "file_kind": "image",
+      "pdf_kind": null,
+      "manifest_requires_ocr": true,
+      "pages": [
+        {
+          "page": 1,
+          "status": "success",
+          "paddle_vl_status": "success"
+        }
+      ],
+      "ocr_required_pages": [
+        1
+      ],
+      "paddle_vl_checkpoint": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\phase4\\paddle_vl_benchmark\\per_document\\0000701275_2026_08_ZL_03_360_02092026152716.jpg.json"
+    },
+    {
+      "document_id": "0000701864_2026_08_ZL_20_5015_03092026091037.jpg",
+      "source_file": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000701864_2026_08_ZL_20_5015_03092026091037.jpg",
+      "file_kind": "image",
+      "pdf_kind": null,
+      "manifest_requires_ocr": true,
+      "pages": [
+        {
+          "page": 1,
+          "status": "success",
+          "paddle_vl_status": "success"
+        }
+      ],
+      "ocr_required_pages": [
+        1
+      ],
+      "paddle_vl_checkpoint": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\phase4\\paddle_vl_benchmark\\per_document\\0000701864_2026_08_ZL_20_5015_03092026091037.jpg.json"
+    },
+    {
+      "document_id": "0000700308_2026_08_ZL_18_8175_03092026072320.jpg",
+      "source_file": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700308_2026_08_ZL_18_8175_03092026072320.jpg",
+      "file_kind": "image",
+      "pdf_kind": null,
+      "manifest_requires_ocr": true,
+      "pages": [
+        {
+          "page": 1,
+          "status": "success",
+          "paddle_vl_status": "success"
+        }
+      ],
+      "ocr_required_pages": [
+        1
+      ],
+      "paddle_vl_checkpoint": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\phase4\\paddle_vl_benchmark\\per_document\\0000700308_2026_08_ZL_18_8175_03092026072320.jpg.json"
+    },
+    {
+      "document_id": "0000701151_2026_08_ZL_14_361_03092026025650.jpg",
+      "source_file": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000701151_2026_08_ZL_14_361_03092026025650.jpg",
+      "file_kind": "image",
+      "pdf_kind": null,
+      "manifest_requires_ocr": true,
+      "pages": [
+        {
+          "page": 1,
+          "status": "success",
+          "paddle_vl_status": "success"
+        }
+      ],
+      "ocr_required_pages": [
+        1
+      ],
+      "paddle_vl_checkpoint": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\phase4\\paddle_vl_benchmark\\per_document\\0000701151_2026_08_ZL_14_361_03092026025650.jpg.json"
+    },
+    {
+      "document_id": "0000700206_2026_08_ZL_18_377_04092026042611.png",
+      "source_file": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700206_2026_08_ZL_18_377_04092026042611.png",
+      "file_kind": "image",
+      "pdf_kind": null,
+      "manifest_requires_ocr": true,
+      "pages": [
+        {
+          "page": 1,
+          "status": "success",
+          "paddle_vl_status": "success"
+        }
+      ],
+      "ocr_required_pages": [
+        1
+      ],
+      "paddle_vl_checkpoint": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\phase4\\paddle_vl_benchmark\\per_document\\0000700206_2026_08_ZL_18_377_04092026042611.png.json"
+    },
+    {
+      "document_id": "0000700221_2026_08_ZL_18_377_04092026042846.png",
+      "source_file": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700221_2026_08_ZL_18_377_04092026042846.png",
+      "file_kind": "image",
+      "pdf_kind": null,
+      "manifest_requires_ocr": true,
+      "pages": [
+        {
+          "page": 1,
+          "status": "success",
+          "paddle_vl_status": "success"
+        }
+      ],
+      "ocr_required_pages": [
+        1
+      ],
+      "paddle_vl_checkpoint": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\phase4\\paddle_vl_benchmark\\per_document\\0000700221_2026_08_ZL_18_377_04092026042846.png.json"
+    },
+    {
+      "document_id": "0000701012_2026_08_ZL_11_423_03092026183736.jpg",
+      "source_file": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000701012_2026_08_ZL_11_423_03092026183736.jpg",
+      "file_kind": "image",
+      "pdf_kind": null,
+      "manifest_requires_ocr": true,
+      "pages": [
+        {
+          "page": 1,
+          "status": "success",
+          "paddle_vl_status": "success"
+        }
+      ],
+      "ocr_required_pages": [
+        1
+      ],
+      "paddle_vl_checkpoint": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\phase4\\paddle_vl_benchmark\\per_document\\0000701012_2026_08_ZL_11_423_03092026183736.jpg.json"
+    }
+  ],
+  "document_ids": [
+    "0000700218_2026_08_ZL_18_8178_02092026173735.PDF",
+    "0000700029_2026_08_ZL_06_476_02092026113447.pdf",
+    "0000700283_2026_08_ZL_18_377_01092026063405.pdf",
+    "0000700224_2026_08_ZL_18_373_03092026133548.pdf",
+    "0000700284_2026_08_ZL_18_245_05092026055948.pdf",
+    "0000700026_2026_08_ZL_06_313_03092026130418.pdf",
+    "0000700112_2026_08_ZL_06_305_02092026004955.pdf",
+    "0000700262_2026_08_ZL_18_376_04092026170456.PDF",
+    "0000700080_2026_08_ZL_06_305_02092026004326.pdf",
+    "0000700398_2026_08_ZL_18_377_01092026063708.pdf",
+    "0000700060_2026_08_ZL_06_748_04092026113445.pdf",
+    "0000700376_2026_08_ZL_18_376_04092026170135.PDF",
+    "0000700096_2026_08_ZL_06_8236_03092026155517.pdf",
+    "0000700088_2026_08_ZL_06_304_06092026142123.pdf",
+    "0000700046_2026_08_ZL_06_521_02092026053734.pdf",
+    "0000700079_2026_08_ZL_06_476_01092026063244.PDF",
+    "0000700379_2026_08_ZL_18_375_05092026174136.PDF",
+    "0000700017_2026_08_ZL_06_476_02092026121836.pdf",
+    "0000700288_2026_08_ZL_18_374_04092026172821.pdf",
+    "0000700238_2026_08_ZL_18_377_03092026154026.pdf",
+    "0000700358_2026_08_ZL_18_8173_05092026185826.pdf",
+    "0000700364_2026_08_ZL_18_8173_05092026190156.pdf",
+    "0000700124_2026_08_ZL_06_521_02092026204703.pdf",
+    "0000700209_2026_08_ZL_18_374_04092026060313.pdf",
+    "0000700084_2026_08_ZL_06_8236_03092026155136.pdf",
+    "0000700346_2026_08_ZL_18_8189_05092026025159.pdf",
+    "0000700317_2026_08_ZL_18_374_02092026171443.pdf",
+    "0000700275_2026_08_ZL_18_374_04092026171615.pdf",
+    "0000704337_2026_08_ZL_24_259_03092026042213.pdf",
+    "0000729951_2026_08_ZL_20_471_04092026104138.pdf",
+    "0000730089_2026_08_ZL_24_244_05092026160041.pdf",
+    "0000702913_2026_08_ZL_22_413A_04092026075910",
+    "0000729971_2026_08_ZL_18_374_04092026174632.pdf",
+    "0000723881_2026_08_ZL_06_550_04092026145241.pdf",
+    "0000722000_2026_08_ZL_04_742_03092026185220.pdf",
+    "0000731783_2026_08_ZL_13_270_07092026032432.pdf",
+    "0000719013_2026_08_ZL_20_300_03092026101215.pdf",
+    "0000700406_2026_08_ZL_10_384_05092026140711.jpg",
+    "0000701904_2026_08_ZL_20_8227_05092026154848.jpg",
+    "0000700835_2026_08_ZL_25_447_03092026105819.jpeg",
+    "0000700434_2026_08_ZL_10_386_05092026034503.jpg",
+    "0000701078_2026_08_ZL_03_362_05092026080346.jpeg",
+    "0000701851_2026_08_ZL_20_302_03092026134940.jpg",
+    "0000701275_2026_08_ZL_03_360_02092026152716.jpg",
+    "0000701864_2026_08_ZL_20_5015_03092026091037.jpg",
+    "0000700308_2026_08_ZL_18_8175_03092026072320.jpg",
+    "0000701151_2026_08_ZL_14_361_03092026025650.jpg",
+    "0000700206_2026_08_ZL_18_377_04092026042611.png",
+    "0000700221_2026_08_ZL_18_377_04092026042846.png",
+    "0000701012_2026_08_ZL_11_423_03092026183736.jpg"
+  ],
+  "note": "Exact first 50 entries from phase3_eval/selection.json, matching the completed PaddleOCR-VL 50-doc benchmark."
+}

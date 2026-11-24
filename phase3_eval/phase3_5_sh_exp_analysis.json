@@ -1,0 +1,236 @@
+{
+  "decision": "ALREADY_REPRESENTED_BUT_MISPARSED",
+  "equation_changed": false,
+  "production_code_changed": false,
+  "documents": [
+    {
+      "filename": "0000700283_2026_08_ZL_18_377_01092026063405.pdf",
+      "parser": "_parse_product_wise_stock_statement",
+      "layout": "product_wise_stock_statement",
+      "profile": "product_wise",
+      "extraction_method": "product_wise_stock_statement",
+      "headers": [
+        "Product Name",
+        "Packing",
+        "Opening",
+        "Receipt",
+        "Issues",
+        "Closing",
+        "Sh.Exp",
+        "Liquidation",
+        "Sales Amount",
+        "Closing Amount"
+      ],
+      "header_x": {
+        "Opening": [185.1, 219.1],
+        "Receipt": [237.3, 267.9],
+        "Issues": [284.6, 310.6],
+        "Closing": [323.9, 353.9],
+        "Sh.Exp": [369.6, 398.6],
+        "Liquidation": [404.9, 444.5]
+      },
+      "issues_band_right": 317.2,
+      "issues_digit_right_edge": 319.4,
+      "rows": 23,
+      "rows_where_gap_equals_stored_sh_exp": 23,
+      "rows_with_nonzero_stored_sh_exp": 9,
+      "rows_with_both_sales_qty_and_sh_exp": 0,
+      "quantity_tokens_under_sh_exp_header": 0,
+      "current_equation": "opening + receipt - issues = closing",
+      "equation_actually_executed": "issues_expected_closing; extra.sh_exp is not a term",
+      "parser_field_for_sh_exp": "line_items[].extra.sh_exp",
+      "mapping_for_sh_exp": "No layout mapping. _PRODUCT_WISE maps Opening, Receipt, Issues, and Closing only. The parser bins a number whose right edge is between 317.2 and 338.9 into extra.sh_exp.",
+      "semantic_conclusion": "The number stored as sh_exp is the right-aligned Issues quantity. It sits at x1=319.4, just past the Issues header (ends 310.6) and left of the Closing header (starts 323.9). The printed Sh.Exp header is further right (369.6-398.6) and has no quantity under it. Liquidation is a day count, not a stock quantity.",
+      "confidence": "high",
+      "representative_rows": [
+        {
+          "product": "CONFIDO TABS",
+          "printed": {
+            "opening_x1_228.6": 66,
+            "issues_x1_319.4": 3,
+            "closing_x1_367.4": 63,
+            "liquidation_days_x1_437.7": 567,
+            "under_sh_exp_header": null
+          },
+          "parser": {
+            "opening_qty": 66,
+            "receipts_qty": 0,
+            "sales_qty": 0,
+            "extra.sh_exp": 3,
+            "closing_qty": 63
+          },
+          "current_calculated_closing": 66,
+          "printed_closing": 63,
+          "gap": 3,
+          "sh_exp_as_stored": 3,
+          "if_stored_sh_exp_is_treated_as_issues": "66 - 3 = 63"
+        },
+        {
+          "product": "HAIR ZONE SOLN",
+          "printed": {
+            "opening_x1_228.6": 32,
+            "issues_x1_319.4": 3,
+            "closing_x1_367.4": 29,
+            "liquidation_days_x1_437.7": 348,
+            "under_sh_exp_header": null
+          },
+          "parser": {
+            "opening_qty": 32,
+            "receipts_qty": 0,
+            "sales_qty": 0,
+            "extra.sh_exp": 3,
+            "closing_qty": 29
+          },
+          "current_calculated_closing": 32,
+          "printed_closing": 29,
+          "gap": 3,
+          "sh_exp_as_stored": 3,
+          "if_stored_sh_exp_is_treated_as_issues": "32 - 3 = 29"
+        },
+        {
+          "product": "LIV-52 SYP 200ML",
+          "printed": {
+            "opening_x1_228.6": 42,
+            "receipt_x1_274.4": 70,
+            "issues_x1_319.4": 69,
+            "closing_x1_367.4": 43,
+            "liquidation_days_x1_437.7": 29,
+            "under_sh_exp_header": null
+          },
+          "parser": {
+            "opening_qty": 42,
+            "receipts_qty": 70,
+            "sales_qty": 0,
+            "extra.sh_exp": 69,
+            "closing_qty": 43
+          },
+          "current_calculated_closing": 112,
+          "printed_closing": 43,
+          "gap": 69,
+          "sh_exp_as_stored": 69,
+          "if_stored_sh_exp_is_treated_as_issues": "42 + 70 - 69 = 43"
+        }
+      ]
+    },
+    {
+      "filename": "0000700398_2026_08_ZL_18_377_01092026063708.pdf",
+      "parser": "_parse_product_wise_stock_statement",
+      "layout": "product_wise_stock_statement",
+      "profile": "product_wise",
+      "extraction_method": "product_wise_stock_statement",
+      "headers": [
+        "Product Name",
+        "Packing",
+        "Opening",
+        "Receipt",
+        "Issues",
+        "Closing",
+        "Sh.Exp",
+        "Liquidation",
+        "Sales Amount",
+        "Closing Amount"
+      ],
+      "header_x": {
+        "Opening": [185.1, 219.1],
+        "Receipt": [237.3, 267.9],
+        "Issues": [284.6, 310.6],
+        "Closing": [323.9, 353.9],
+        "Sh.Exp": [369.6, 398.6],
+        "Liquidation": [404.9, 444.5]
+      },
+      "issues_band_right": 317.2,
+      "issues_digit_right_edge": 319.4,
+      "rows": 36,
+      "rows_where_gap_equals_stored_sh_exp": 36,
+      "rows_with_nonzero_stored_sh_exp": 6,
+      "rows_with_both_sales_qty_and_sh_exp": 0,
+      "quantity_tokens_under_sh_exp_header": 0,
+      "current_equation": "opening + receipt - issues = closing",
+      "equation_actually_executed": "issues_expected_closing; extra.sh_exp is not a term",
+      "parser_field_for_sh_exp": "line_items[].extra.sh_exp",
+      "mapping_for_sh_exp": "No layout mapping. Same Issues/Sh.Exp band split as 0000700283.",
+      "semantic_conclusion": "Same mis-bin as 0000700283. Every failing row has sales_qty 0 and extra.sh_exp equal to the digit whose right edge is 319.4, the Issues column. No quantity sits under the Sh.Exp header.",
+      "confidence": "high",
+      "representative_rows": [
+        {
+          "product": "HIMCOCID SUSP. (MINT)",
+          "printed": {
+            "opening_x1_228.6": 23,
+            "issues_x1_319.4": 6,
+            "closing_x1_367.4": 17,
+            "liquidation_days_x1_437.7": 139,
+            "under_sh_exp_header": null
+          },
+          "parser": {
+            "opening_qty": 23,
+            "receipts_qty": 0,
+            "sales_qty": 0,
+            "extra.sh_exp": 6,
+            "closing_qty": 17
+          },
+          "current_calculated_closing": 23,
+          "printed_closing": 17,
+          "gap": 6,
+          "sh_exp_as_stored": 6,
+          "if_stored_sh_exp_is_treated_as_issues": "23 - 6 = 17"
+        },
+        {
+          "product": "LIV 52 SYR",
+          "printed": {
+            "note": "Same right-edge pattern. The value 23 is the Issues digit at x1=319.4, stored as sh_exp."
+          },
+          "parser": {
+            "opening_qty": 23,
+            "receipts_qty": 0,
+            "sales_qty": 0,
+            "extra.sh_exp": 23,
+            "closing_qty": 0
+          },
+          "current_calculated_closing": 23,
+          "printed_closing": 0,
+          "gap": 23,
+          "sh_exp_as_stored": 23,
+          "if_stored_sh_exp_is_treated_as_issues": "23 - 23 = 0"
+        },
+        {
+          "product": "PILEX FORTE TAB",
+          "parser": {
+            "opening_qty": 20,
+            "receipts_qty": 0,
+            "sales_qty": 0,
+            "extra.sh_exp": 5,
+            "closing_qty": 15
+          },
+          "current_calculated_closing": 20,
+          "printed_closing": 15,
+          "gap": 5,
+          "sh_exp_as_stored": 5,
+          "if_stored_sh_exp_is_treated_as_issues": "20 - 5 = 15"
+        },
+        {
+          "product": "LIV 52 TAB",
+          "parser": {
+            "opening_qty": 1,
+            "receipts_qty": 30,
+            "sales_qty": 0,
+            "extra.sh_exp": 1,
+            "closing_qty": 30
+          },
+          "current_calculated_closing": 31,
+          "printed_closing": 30,
+          "gap": 1,
+          "sh_exp_as_stored": 1,
+          "if_stored_sh_exp_is_treated_as_issues": "1 + 30 - 1 = 30"
+        }
+      ]
+    }
+  ],
+  "comparison_with_0000700238": {
+    "same_movement": false,
+    "0000700238_parser": "product_wise_stock_statement_pdf",
+    "0000700238_profile": "generic",
+    "0000700238_missing_field": "receipts_free and issues_free_repl",
+    "0000700238_sh_exp_on_failing_rows": null,
+    "reason": "0000700238 is the Bindal free/goods layout. Its failing gap is a free quantity kept on extra. 0000700283 and 0000700398 are the Sales-amount layout. Their stored sh_exp is a mis-binned Issues quantity, and the printed Sh.Exp column is empty."
+  }
+}

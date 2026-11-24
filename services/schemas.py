@@ -49,7 +49,7 @@ def parse_optional_number(value: Any, *, field: str = "value") -> Optional[float
     if isinstance(value, bool):
         raise SchemaValidationError(f"invalid numeric value for {field}")
     if isinstance(value, (int, float)):
-        return float(value)
+        return _finite_number(float(value), field)
     text = str(value).strip().replace("\u00a0", " ")
     if text.upper() in _MISSING_TEXT:
         return None
@@ -64,7 +64,13 @@ def parse_optional_number(value: Any, *, field: str = "value") -> Optional[float
             f"invalid numeric value for {field}: {value!r}"
         ) from exc
     if negative:
-        return -abs(number)
+        return _finite_number(-abs(number), field)
+    return _finite_number(number, field)
+
+
+def _finite_number(number: float, field: str) -> float:
+    if number != number or number in {float("inf"), float("-inf")}:
+        raise SchemaValidationError(f"invalid numeric value for {field}")
     return number
 
 
@@ -120,6 +126,7 @@ class SalesLineItem:
 def empty_sales_statement() -> Dict[str, Any]:
     return {
         "stockist_name": None,
+        "company_name": None,
         "period_from": None,
         "period_to": None,
         "line_items": [],
@@ -186,9 +193,10 @@ def _project_one(result: Dict[str, Any], errors: List[str], prefix: str) -> Dict
         ),
     }
     extra = totals_raw.get("extra") if isinstance(totals_raw.get("extra"), dict) else {}
-    totals["dynamic"] = _dynamic_copy(extra)
+    totals["dynamic"] = _dynamic_copy(extra, errors, "totals.dynamic")
     return {
         "stockist_name": parse_optional_text(result.get("stockist_name")),
+        "company_name": parse_optional_text(result.get("company_name")),
         "period_from": parse_optional_text(result.get("period_from")),
         "period_to": parse_optional_text(result.get("period_to")),
         "line_items": line_items,
@@ -213,24 +221,35 @@ def _project_line(raw: Dict[str, Any], errors: List[str], label: str) -> Dict[st
             errors.append(f"{label}.{name}: {exc}")
             setattr(item, name, None)
     projected = item.to_dict()
-    projected["dynamic"] = _dynamic_copy(raw.get("extra"))
+    projected["dynamic"] = _dynamic_copy(raw.get("extra"), errors, f"{label}.dynamic")
     return projected
 
 
-def _dynamic_copy(value: Any) -> Dict[str, Any]:
-    """JSON-safe copy of parser ``extra``. Non-JSON values are omitted."""
+def _dynamic_copy(
+    value: Any,
+    errors: Optional[List[str]] = None,
+    label: str = "dynamic",
+) -> Dict[str, Any]:
+    """JSON-safe copy of parser ``extra``. Rejected values are reported."""
     from services.hybrid_schema import HybridSchemaError, ensure_json_value
 
+    if value is None:
+        return {}
     if not isinstance(value, dict):
+        if errors is not None:
+            errors.append(f"{label}: not_an_object")
         return {}
     cleaned: Dict[str, Any] = {}
     for key, item in value.items():
         if not isinstance(key, str):
+            if errors is not None:
+                errors.append(f"{label}: non_string_key")
             continue
         try:
             cleaned[key] = ensure_json_value(item)
-        except HybridSchemaError:
-            continue
+        except HybridSchemaError as exc:
+            if errors is not None:
+                errors.append(f"{label}.{key}: {exc}")
     return cleaned
 
 

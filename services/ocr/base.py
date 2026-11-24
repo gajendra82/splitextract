@@ -31,6 +31,10 @@ class OCRResult:
     page: int = 1
     engine: str = ""
     metadata: Dict[str, Any] = field(default_factory=dict)
+    # Resilience fields (optional; engines may leave defaults).
+    timed_out: bool = False
+    timeout_s: Optional[float] = None
+    retry_count: int = 0
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -40,6 +44,9 @@ class OCRResult:
             "page": self.page,
             "engine": self.engine,
             "metadata": dict(self.metadata),
+            "timed_out": self.timed_out,
+            "timeout_s": self.timeout_s,
+            "retry_count": self.retry_count,
         }
 
 

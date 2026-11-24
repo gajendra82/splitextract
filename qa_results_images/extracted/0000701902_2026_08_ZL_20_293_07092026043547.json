@@ -1,0 +1,635 @@
+{
+  "source_file": "0000701902_2026_08_ZL_20_293_07092026043547.jpeg",
+  "source_format": "jpeg",
+  "stockist_name": "MITTAL PHARMA",
+  "stockist_address": "9 FILM COLONY JAIPUR 302003",
+  "company_name": null,
+  "period_from": "2026-08-01",
+  "period_to": "2026-08-31",
+  "report_title": "HIMALAYA ZEAL STOCK & SALES STATEMENT",
+  "line_items": [
+    {
+      "product_code": null,
+      "product_name": "ABANA TAB 60T",
+      "packing": null,
+      "opening_qty": 3.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 2.0,
+      "sales_value": 0.0,
+      "closing_qty": 1.0,
+      "closing_value": 148.81,
+      "extra": {
+        "expected_total": 3.0,
+        "expected_closing": 1.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "BLEMINOR CREAM HIMALAYA 30ML",
+      "packing": null,
+      "opening_qty": 5.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 5.0,
+      "closing_value": 871.31,
+      "extra": {
+        "expected_total": 5.0,
+        "expected_closing": 5.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "CLARINA ANTI ACNE CREAM. 30 GM",
+      "packing": null,
+      "opening_qty": 5.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 5.0,
+      "closing_value": 596.7,
+      "extra": {
+        "expected_total": 5.0,
+        "expected_closing": 5.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "CLARINA ANTI ACNE FACE WASHGEL 60 ML",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "CONFIDO TAB HIMALAYA 60T",
+      "packing": null,
+      "opening_qty": 66.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 22.0,
+      "sales_value": 0.0,
+      "closing_qty": 44.0,
+      "closing_value": 6716.2,
+      "extra": {
+        "expected_total": 66.0,
+        "expected_closing": 44.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "DIABECON DS TAB. 60T",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "DIABECON TAB 60T",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "DIAREX SYP 100ML",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "DIAREX TAB.HIMALAYA 30T",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "HAIR ZONE SOLUTION 60 ML",
+      "packing": null,
+      "opening_qty": 5.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 4.0,
+      "sales_value": 0.0,
+      "closing_qty": 1.0,
+      "closing_value": 265.49,
+      "extra": {
+        "expected_total": 5.0,
+        "expected_closing": 1.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "HERBOLAX CAP. 100",
+      "packing": null,
+      "opening_qty": 91.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 91.0,
+      "closing_value": 4437.16,
+      "extra": {
+        "expected_total": 91.0,
+        "expected_closing": 91.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "HERBOLAX TAB 100T",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "HIMCOLIN GEL. HIMALAYA 30GM",
+      "packing": null,
+      "opening_qty": 22.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 22.0,
+      "closing_value": 4201.05,
+      "extra": {
+        "expected_total": 22.0,
+        "expected_closing": 22.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV 52 SYP 100 100 ML",
+      "packing": null,
+      "opening_qty": 70.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 70.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 70.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV 52 SYP 100ML 100ML",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV-52 HB CAPSULE HIMALAYA 10C",
+      "packing": null,
+      "opening_qty": 4.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 4.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 4.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV-52 SYP HIMALAYA, 200ML",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 350.0,
+      "receipts_value": null,
+      "sales_qty": 20.0,
+      "sales_value": 0.0,
+      "closing_qty": 330.0,
+      "closing_value": 50864.78,
+      "extra": {
+        "expected_total": 350.0,
+        "expected_closing": 330.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV.52 TAB HIMALAYA 100T",
+      "packing": null,
+      "opening_qty": 149.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 130.0,
+      "sales_value": 0.0,
+      "closing_qty": 19.0,
+      "closing_value": 2738.7,
+      "extra": {
+        "expected_total": 149.0,
+        "expected_closing": 19.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "MENTAT DS SYP S.F 100ML",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 10.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 10.0,
+      "closing_value": 1525.64,
+      "extra": {
+        "expected_total": 10.0,
+        "expected_closing": 10.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "OPTHACARE EYE DROP 10ML",
+      "packing": null,
+      "opening_qty": 24.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 3.0,
+      "sales_value": 0.0,
+      "closing_qty": 21.0,
+      "closing_value": 1344.56,
+      "extra": {
+        "expected_total": 24.0,
+        "expected_closing": 21.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ORO-T ORAL RINSE 100ML",
+      "packing": null,
+      "opening_qty": 58.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 12.0,
+      "sales_value": 0.0,
+      "closing_qty": 46.0,
+      "closing_value": 4958.63,
+      "extra": {
+        "expected_total": 58.0,
+        "expected_closing": 46.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "OXITARD CAP HIMALAYA 10C",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PILEX FORTE OINTMENT 30 GM",
+      "packing": null,
+      "opening_qty": 30.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 30.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 30.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PILEX FORTE TABLET 30 TAB",
+      "packing": null,
+      "opening_qty": 23.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 21.0,
+      "sales_value": 0.0,
+      "closing_qty": 2.0,
+      "closing_value": 187.24,
+      "extra": {
+        "expected_total": 23.0,
+        "expected_closing": 2.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PILEX TAB HIMALAYA 60T",
+      "packing": null,
+      "opening_qty": 104.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 42.0,
+      "sales_value": 0.0,
+      "closing_qty": 62.0,
+      "closing_value": 9505.13,
+      "extra": {
+        "expected_total": 104.0,
+        "expected_closing": 62.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PURIM TAB 60T",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "RENALKA SYP HIMALAYA 100ML",
+      "packing": null,
+      "opening_qty": 43.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 43.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 43.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "RENALKA SYP. 200ML",
+      "packing": null,
+      "opening_qty": 19.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 4.0,
+      "sales_value": 0.0,
+      "closing_qty": 15.0,
+      "closing_value": 2127.6,
+      "extra": {
+        "expected_total": 19.0,
+        "expected_closing": 15.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "SERPINA TAB 100 TAB",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "TALEKT SYP. 120ML",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "TALEKT TAB 60T",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "TENTEX FORTE TAB HIMALAYA 10T",
+      "packing": null,
+      "opening_qty": 267.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 37.0,
+      "sales_value": 0.0,
+      "closing_qty": 230.0,
+      "closing_value": 20224.25,
+      "extra": {
+        "expected_total": 267.0,
+        "expected_closing": 230.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "TRIPHALA TAB 60 TAB",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    }
+  ],
+  "totals": {
+    "sales_value": null,
+    "closing_value": 110713.2,
+    "extra": {
+      "extraction_method": "gemini_extraction_fallback",
+      "line_sales_value_sum": 0.0,
+      "line_closing_value_sum": 110713.25,
+      "sales_qty": 444.0,
+      "closing_qty": 904.0,
+      "rejected_sales_value": 55212.6,
+      "stock_identity_kind": "opening_receipts_sales_closing",
+      "stock_identity_formula": "closing=opening+receipts-sales",
+      "stock_identity_fail_count": 0,
+      "stock_validation": {
+        "opening_plus_purchase": 1348.0,
+        "expected_total": 1348.0,
+        "calculated_closing": 904.0,
+        "extracted_closing": 904.0,
+        "is_valid": true
+      },
+      "extraction_quality": {
+        "quality": "good",
+        "score": 100,
+        "reasons": [],
+        "threshold": 75.0
+      },
+      "gemini_fallback": "not_called"
+    }
+  }
+}

@@ -1,0 +1,320 @@
+{
+  "document_id": "0000700084_2026_08_ZL_06_8236_03092026155136.pdf",
+  "role": "ordinary_compatible",
+  "source_path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700084_2026_08_ZL_06_8236_03092026155136.pdf",
+  "off": {
+    "elapsed_ms": 22.9,
+    "text_sha_prefix": "6f5429fb57ea9e9c",
+    "correct_count": 15,
+    "field_count": 15,
+    "silent_wrong_count": 0,
+    "missing_count": 0,
+    "repair_report": {
+      "document_id": "0000700084_2026_08_ZL_06_8236_03092026155136.pdf",
+      "repairs": [],
+      "unresolved": [
+        {
+          "reason": "secondary_repair_disabled"
+        }
+      ]
+    },
+    "pipeline_bundle_matches_entrypoint": true
+  },
+  "on": {
+    "elapsed_ms": 7889.3,
+    "text_sha_prefix": "6f5429fb57ea9e9c",
+    "correct_count": 15,
+    "field_count": 15,
+    "silent_wrong_count": 0,
+    "missing_count": 0,
+    "repair_report": {
+      "document_id": "0000700084_2026_08_ZL_06_8236_03092026155136.pdf",
+      "repairs": [],
+      "unresolved": [
+        {
+          "reason": "total_footer_layout_not_himalaya_qty"
+        }
+      ]
+    },
+    "pipeline_bundle_matches_entrypoint": true
+  },
+  "deltas": [],
+  "repair_types_on": [],
+  "unexpected_repairs": [],
+  "missing_expected_repairs": [],
+  "watch_field_detail": {},
+  "off_full_matches": [
+    {
+      "field_id": "vendor",
+      "expected_raw": "JIGAR PHARMA",
+      "predicted_raw": "JIGAR PHARMA",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "text_contains"
+    },
+    {
+      "field_id": "h_op",
+      "expected_raw": "OpStk",
+      "predicted_raw": "OpStk",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "header_presence"
+    },
+    {
+      "field_id": "h_sale",
+      "expected_raw": "Sale Qty",
+      "predicted_raw": "Sale Qty",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "header_presence"
+    },
+    {
+      "field_id": "h_cl",
+      "expected_raw": "Clstk",
+      "predicted_raw": "Clstk",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "header_presence"
+    },
+    {
+      "field_id": "act_op",
+      "expected_raw": "64.0",
+      "predicted_raw": "64.0",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "column_aware_table"
+    },
+    {
+      "field_id": "act_sale",
+      "expected_raw": "20.0",
+      "predicted_raw": "20.0",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "column_aware_table"
+    },
+    {
+      "field_id": "act_cl",
+      "expected_raw": "44.0",
+      "predicted_raw": "44.0",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "column_aware_table"
+    },
+    {
+      "field_id": "act_exp",
+      "expected_raw": "04/2029",
+      "predicted_raw": "04/2029",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "column_aware_table"
+    },
+    {
+      "field_id": "talekt_cap_op",
+      "expected_raw": "35.0",
+      "predicted_raw": "35.0",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "column_aware_table"
+    },
+    {
+      "field_id": "talekt_cap_cl",
+      "expected_raw": "35.0",
+      "predicted_raw": "35.0",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "column_aware_table"
+    },
+    {
+      "field_id": "talekt_syp_op",
+      "expected_raw": "89.0",
+      "predicted_raw": "89.0",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "column_aware_table"
+    },
+    {
+      "field_id": "talekt_syp_cl",
+      "expected_raw": "89.0",
+      "predicted_raw": "89.0",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "column_aware_table"
+    },
+    {
+      "field_id": "tot_op_rs",
+      "expected_raw": "155431.48",
+      "predicted_raw": "155431.48",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "standalone_numeric_token"
+    },
+    {
+      "field_id": "tot_sale_rs",
+      "expected_raw": "61250.78",
+      "predicted_raw": "61250.78",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "standalone_numeric_token"
+    },
+    {
+      "field_id": "tot_cl_rs",
+      "expected_raw": "141755.46",
+      "predicted_raw": "141755.46",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "standalone_numeric_token"
+    }
+  ],
+  "on_full_matches": [
+    {
+      "field_id": "vendor",
+      "expected_raw": "JIGAR PHARMA",
+      "predicted_raw": "JIGAR PHARMA",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "text_contains"
+    },
+    {
+      "field_id": "h_op",
+      "expected_raw": "OpStk",
+      "predicted_raw": "OpStk",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "header_presence"
+    },
+    {
+      "field_id": "h_sale",
+      "expected_raw": "Sale Qty",
+      "predicted_raw": "Sale Qty",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "header_presence"
+    },
+    {
+      "field_id": "h_cl",
+      "expected_raw": "Clstk",
+      "predicted_raw": "Clstk",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "header_presence"
+    },
+    {
+      "field_id": "act_op",
+      "expected_raw": "64.0",
+      "predicted_raw": "64.0",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "column_aware_table"
+    },
+    {
+      "field_id": "act_sale",
+      "expected_raw": "20.0",
+      "predicted_raw": "20.0",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "column_aware_table"
+    },
+    {
+      "field_id": "act_cl",
+      "expected_raw": "44.0",
+      "predicted_raw": "44.0",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "column_aware_table"
+    },
+    {
+      "field_id": "act_exp",
+      "expected_raw": "04/2029",
+      "predicted_raw": "04/2029",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "column_aware_table"
+    },
+    {
+      "field_id": "talekt_cap_op",
+      "expected_raw": "35.0",
+      "predicted_raw": "35.0",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "column_aware_table"
+    },
+    {
+      "field_id": "talekt_cap_cl",
+      "expected_raw": "35.0",
+      "predicted_raw": "35.0",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "column_aware_table"
+    },
+    {
+      "field_id": "talekt_syp_op",
+      "expected_raw": "89.0",
+      "predicted_raw": "89.0",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "column_aware_table"
+    },
+    {
+      "field_id": "talekt_syp_cl",
+      "expected_raw": "89.0",
+      "predicted_raw": "89.0",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "column_aware_table"
+    },
+    {
+      "field_id": "tot_op_rs",
+      "expected_raw": "155431.48",
+      "predicted_raw": "155431.48",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "standalone_numeric_token"
+    },
+    {
+      "field_id": "tot_sale_rs",
+      "expected_raw": "61250.78",
+      "predicted_raw": "61250.78",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "standalone_numeric_token"
+    },
+    {
+      "field_id": "tot_cl_rs",
+      "expected_raw": "141755.46",
+      "predicted_raw": "141755.46",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false,
+      "match_mode": "standalone_numeric_token"
+    }
+  ]
+}

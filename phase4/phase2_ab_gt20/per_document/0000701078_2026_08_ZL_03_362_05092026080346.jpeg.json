@@ -1,0 +1,3029 @@
+{
+  "document_id": "0000701078_2026_08_ZL_03_362_05092026080346.jpeg",
+  "source_path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000701078_2026_08_ZL_03_362_05092026080346.jpeg",
+  "verified_fields": 18,
+  "off": {
+    "error": null,
+    "telemetry": {
+      "gemini_calls": 0,
+      "prompt_tokens": 0,
+      "output_tokens": 0,
+      "latency_ms": 0,
+      "estimated_cost_usd": 0.0,
+      "pricing_note": "estimate using flash-lite ballpark $0.1/1M in + $0.4/1M out",
+      "calls": [],
+      "wall_latency_ms": 24,
+      "phase2_enabled": false,
+      "ocr_mode": "stored_vl_ocr",
+      "phase2_status": null,
+      "phase2_attempts": null,
+      "phase2_failure_type": null,
+      "extraction_method": "vl_html_table_parse"
+    },
+    "score": {
+      "metrics": {
+        "verified_fields": 18,
+        "correct_fields": 10,
+        "field_accuracy": 0.5555555555555556,
+        "numeric_accuracy": 0.4666666666666667,
+        "quantity_accuracy": 0.4666666666666667,
+        "price_accuracy": null,
+        "date_accuracy": null,
+        "batch_accuracy": null,
+        "header_accuracy": 1.0,
+        "table_column_accuracy": 0.4666666666666667,
+        "text_accuracy": 1.0,
+        "precision": 0.9090909090909091,
+        "recall": 0.5555555555555556,
+        "f1": 0.6896551724137931,
+        "silent_wrong_rate": 0.05555555555555555,
+        "silent_wrong_count": 1,
+        "silent_wrong_denominator_verified_fields": 18,
+        "accepted_field_silent_wrong_rate": 0.09090909090909091,
+        "accepted_field_silent_wrong_count": 1,
+        "accepted_field_denominator": 11,
+        "explicit_unresolved_rate": 0.0,
+        "missing_value_rate": 0.0,
+        "critical_error_rate": 0.4444444444444444,
+        "by_type_prf": {
+          "numeric": {
+            "precision": 0.875,
+            "recall": 0.4666666666666667,
+            "f1": 0.608695652173913,
+            "n": 15
+          },
+          "text": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 3
+          },
+          "table": {
+            "precision": 0.875,
+            "recall": 0.4666666666666667,
+            "f1": 0.608695652173913,
+            "n": 15
+          }
+        },
+        "error_type_counts": {
+          "WRONG_VALUE": 1,
+          "MISSING_PRODUCT": 6,
+          "UNMAPPED_HEADER": 1
+        }
+      },
+      "document_status": "PARTIALLY_CORRECT",
+      "quantity_accuracy": 0.4666666666666667,
+      "product_identity": {
+        "gt_products": 5,
+        "found_products": 3,
+        "recall": 0.6
+      },
+      "missing_values": 7,
+      "verified_fields": 18,
+      "correct_fields": 10
+    },
+    "matches": [
+      {
+        "field_id": "vendor",
+        "field_type": "text",
+        "printed_header": "vendor",
+        "product_key": null,
+        "expected_raw": "ALEX PHARMA",
+        "expected_normalized": null,
+        "predicted_raw": "ALEX PHARMA",
+        "match_mode": "extraction_text",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": false,
+        "priority": "medium"
+      },
+      {
+        "field_id": "h_op",
+        "field_type": "header",
+        "printed_header": "Op.Bal. Qty.",
+        "product_key": null,
+        "expected_raw": "Op.Bal. Qty.",
+        "expected_normalized": null,
+        "predicted_raw": "Op.Bal. Qty.",
+        "match_mode": "ocr_header_presence",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": false,
+        "priority": "high"
+      },
+      {
+        "field_id": "h_issue",
+        "field_type": "header",
+        "printed_header": "Issue Qty.",
+        "product_key": null,
+        "expected_raw": "Issue Qty.",
+        "expected_normalized": null,
+        "predicted_raw": "Issue Qty.",
+        "match_mode": "ocr_header_presence",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": false,
+        "priority": "high"
+      },
+      {
+        "field_id": "aact_op",
+        "field_type": "quantity",
+        "printed_header": "Op.Bal. Qty.",
+        "product_key": "AACTARIL SOAP",
+        "expected_raw": "82",
+        "expected_normalized": 82,
+        "predicted_raw": 82,
+        "match_mode": "extraction:opening_qty",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "aact_issue",
+        "field_type": "quantity",
+        "printed_header": "Issue Qty.",
+        "product_key": "AACTARIL SOAP",
+        "expected_raw": "13",
+        "expected_normalized": 13,
+        "predicted_raw": 13,
+        "match_mode": "extraction:sales_qty",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "aact_close",
+        "field_type": "quantity",
+        "printed_header": "Closing Balance",
+        "product_key": "AACTARIL SOAP",
+        "expected_raw": "69",
+        "expected_normalized": 69,
+        "predicted_raw": 89,
+        "match_mode": "extraction:closing_qty",
+        "correct": false,
+        "error_type": "WRONG_VALUE",
+        "silent_wrong": true,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "abana_op",
+        "field_type": "quantity",
+        "printed_header": "Op.Bal. Qty.",
+        "product_key": "ABANA TAB",
+        "expected_raw": "0",
+        "expected_normalized": 0,
+        "predicted_raw": 0,
+        "match_mode": "extraction:opening_qty",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "abana_rec",
+        "field_type": "quantity",
+        "printed_header": "Receipt Qty.",
+        "product_key": "ABANA TAB",
+        "expected_raw": "100",
+        "expected_normalized": 100,
+        "predicted_raw": 100,
+        "match_mode": "extraction:receipts_qty",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "abana_issue",
+        "field_type": "quantity",
+        "printed_header": "Issue Qty.",
+        "product_key": "ABANA TAB",
+        "expected_raw": "27",
+        "expected_normalized": 27,
+        "predicted_raw": 27,
+        "match_mode": "extraction:sales_qty",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "abana_close",
+        "field_type": "quantity",
+        "printed_header": "Closing Balance",
+        "product_key": "ABANA TAB",
+        "expected_raw": "73",
+        "expected_normalized": 73,
+        "predicted_raw": 73,
+        "match_mode": "extraction:closing_qty",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "liv200_op",
+        "field_type": "quantity",
+        "printed_header": "Op.Bal. Qty.",
+        "product_key": "LIV 52 SYP/ B",
+        "expected_raw": "2713",
+        "expected_normalized": 2713,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "liv200_issue",
+        "field_type": "quantity",
+        "printed_header": "Issue Qty.",
+        "product_key": "LIV 52 SYP/ B",
+        "expected_raw": "1872",
+        "expected_normalized": 1872,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "liv200_close",
+        "field_type": "quantity",
+        "printed_header": "Closing Balance",
+        "product_key": "LIV 52 SYP/ B",
+        "expected_raw": "841",
+        "expected_normalized": 841,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "liv100_op",
+        "field_type": "quantity",
+        "printed_header": "Op.Bal. Qty.",
+        "product_key": "LIV 52 SYP/ S",
+        "expected_raw": "3523",
+        "expected_normalized": 3523,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "liv100_issue",
+        "field_type": "quantity",
+        "printed_header": "Issue Qty.",
+        "product_key": "LIV 52 SYP/ S",
+        "expected_raw": "1816",
+        "expected_normalized": 1816,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "liv100_close",
+        "field_type": "quantity",
+        "printed_header": "Closing Balance",
+        "product_key": "LIV 52 SYP/ S",
+        "expected_raw": "1707",
+        "expected_normalized": 1707,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "talekt_exp",
+        "field_type": "quantity",
+        "printed_header": "Expiry Breakage",
+        "product_key": "TALEKT CAPS.",
+        "expected_raw": "12",
+        "expected_normalized": 12,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "UNMAPPED_HEADER",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "talekt_close",
+        "field_type": "quantity",
+        "printed_header": "Closing Balance",
+        "product_key": "TALEKT CAPS.",
+        "expected_raw": "0",
+        "expected_normalized": 0,
+        "predicted_raw": 0,
+        "match_mode": "extraction:closing_qty",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      }
+    ],
+    "stock_equation": {
+      "accepted": false,
+      "fail_count": 3,
+      "is_valid": false,
+      "healthy_rows": 59,
+      "failing_rows": 3,
+      "reasons": [
+        "stock_identity_failure"
+      ]
+    },
+    "result": {
+      "stockist_name": "ALEX PHARMA",
+      "company_name": "THE HIMALAYA DRUG (ZEAL",
+      "line_item_count": 62,
+      "line_items": [
+        {
+          "product_name": "AACTARIL SOAP",
+          "opening_qty": 82,
+          "receipts_qty": 0,
+          "sales_qty": 13,
+          "closing_qty": 89,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "ABANA TAB",
+          "opening_qty": 0,
+          "receipts_qty": 100,
+          "sales_qty": 27,
+          "closing_qty": 73,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "ALTHEA LOTION",
+          "opening_qty": 0,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "ANTI HAIR LOSS CREA",
+          "opening_qty": 0,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "BLEMINOR CREAM",
+          "opening_qty": 59,
+          "receipts_qty": 0,
+          "sales_qty": 6,
+          "closing_qty": 53,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "CLARINA CREAM",
+          "opening_qty": 74,
+          "receipts_qty": 50,
+          "sales_qty": 5,
+          "closing_qty": 119,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "CLARINA KIT",
+          "opening_qty": 0,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "CLARINA-F-WASH",
+          "opening_qty": 28,
+          "receipts_qty": 0,
+          "sales_qty": 6,
+          "closing_qty": 22,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "COLD BALM",
+          "opening_qty": 0,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "CONFIDO TAB",
+          "opening_qty": 0,
+          "receipts_qty": 300,
+          "sales_qty": 48,
+          "closing_qty": 252,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "DIABECON DS TAB",
+          "opening_qty": 32,
+          "receipts_qty": 0,
+          "sales_qty": 31,
+          "closing_qty": 1,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "DIABECON TAB.",
+          "opening_qty": 88,
+          "receipts_qty": 0,
+          "sales_qty": 23,
+          "closing_qty": 65,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "DIAREX SYP",
+          "opening_qty": 1,
+          "receipts_qty": 56,
+          "sales_qty": 2,
+          "closing_qty": 55,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "DIAREX TAB",
+          "opening_qty": 6,
+          "receipts_qty": 50,
+          "sales_qty": 8,
+          "closing_qty": 48,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "HADJOD CAP",
+          "opening_qty": 29,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 29,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "HAIRZONE SOLUTION",
+          "opening_qty": 6,
+          "receipts_qty": 28,
+          "sales_qty": 7,
+          "closing_qty": 27,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "HERBOLAX CAP",
+          "opening_qty": 0,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "HIMCOLIN GEL",
+          "opening_qty": 63,
+          "receipts_qty": 100,
+          "sales_qty": 57,
+          "closing_qty": 106,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "HIORA MWASH",
+          "opening_qty": 0,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "KAPIKACHHU CAP",
+          "opening_qty": 0,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "LIV 52 HB CAP",
+          "opening_qty": 0,
+          "receipts_qty": 84,
+          "sales_qty": 26,
+          "closing_qty": 58,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "LIV 52 SYP/B",
+          "opening_qty": 2713,
+          "receipts_qty": 0,
+          "sales_qty": 1872,
+          "closing_qty": 841,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "LIV 52 SYP/S",
+          "opening_qty": 3523,
+          "receipts_qty": 0,
+          "sales_qty": 1816,
+          "closing_qty": 1707,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "LIV 52 TAB",
+          "opening_qty": 294,
+          "receipts_qty": 500,
+          "sales_qty": 203,
+          "closing_qty": 591,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "LIV-52 SYP(SF)",
+          "opening_qty": 0,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "LIV-52 SYP(SF).",
+          "opening_qty": 7,
+          "receipts_qty": 0,
+          "sales_qty": 7,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "MANJISTHA CAP",
+          "opening_qty": 22,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 22,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "OPTHACARE E/DROPS",
+          "opening_qty": 142,
+          "receipts_qty": 0,
+          "sales_qty": 33,
+          "closing_qty": 109,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "ORO-T (S)",
+          "opening_qty": 50,
+          "receipts_qty": 0,
+          "sales_qty": 2,
+          "closing_qty": 48,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "ORO-T LIQ",
+          "opening_qty": 0,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "OXITARD CAPS.",
+          "opening_qty": 0,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "PAIN BALM STRONG",
+          "opening_qty": 0,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "PAIN BALM STRONG.",
+          "opening_qty": 0,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "PAIN RELIEF OIL",
+          "opening_qty": 0,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "PILEX FORTE OINT",
+          "opening_qty": 437,
+          "receipts_qty": 0,
+          "sales_qty": 165,
+          "closing_qty": 272,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "PILEX FORTE TAB",
+          "opening_qty": 103,
+          "receipts_qty": 0,
+          "sales_qty": 36,
+          "closing_qty": 67,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "PILEX TAB",
+          "opening_qty": 300,
+          "receipts_qty": 0,
+          "sales_qty": 109,
+          "closing_qty": 191,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "PURE HAND-STW",
+          "opening_qty": 0,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "PURE HANDS(LEMON)",
+          "opening_qty": 0,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "PURE HANDS-GA",
+          "opening_qty": 0,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "PUREHAND-F",
+          "opening_qty": 0,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "PUREHAND-O",
+          "opening_qty": 0,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "PURIM TAB",
+          "opening_qty": 0,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "QUISTA ACTIVE(CF)",
+          "opening_qty": 0,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "QUISTA ACTIVE(MMF)",
+          "opening_qty": 0,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "QUISTA DN POWDER(V400 GM)",
+          "opening_qty": 0,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "RENALKA SYP",
+          "opening_qty": 83,
+          "receipts_qty": 56,
+          "sales_qty": 13,
+          "closing_qty": 128,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "RENALKA SYP(B)",
+          "opening_qty": 46,
+          "receipts_qty": 84,
+          "sales_qty": 91,
+          "closing_qty": 39,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "SHALLAKI CAP.",
+          "opening_qty": 1,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 1,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "SHIGRU CAP.",
+          "opening_qty": 60,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 60,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "TAGARA CAP.",
+          "opening_qty": 48,
+          "receipts_qty": 0,
+          "sales_qty": 5,
+          "closing_qty": 43,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "TALEKT CAPS.",
+          "opening_qty": 12,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "TALEKT SYP.",
+          "opening_qty": 0,
+          "receipts_qty": 56,
+          "sales_qty": 13,
+          "closing_qty": 43,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "TENTEX FORTE TAB",
+          "opening_qty": 634,
+          "receipts_qty": 0,
+          "sales_qty": 88,
+          "closing_qty": 546,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "TRIKATU CAP.",
+          "opening_qty": 0,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "TRIKATU SYP",
+          "opening_qty": 12,
+          "receipts_qty": 0,
+          "sales_qty": 11,
+          "closing_qty": 1,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "TRIPHALA CAP.",
+          "opening_qty": 36,
+          "receipts_qty": 0,
+          "sales_qty": 8,
+          "closing_qty": 28,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "TRIPHALA SYP",
+          "opening_qty": 0,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "VASAKA SYRUP",
+          "opening_qty": 0,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "VEGECORT CREAM",
+          "opening_qty": 0,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "VRIKSHAMLA CAP.",
+          "opening_qty": 0,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "YASHTI MADHU CAP.",
+          "opening_qty": 15,
+          "receipts_qty": 0,
+          "sales_qty": 10,
+          "closing_qty": 5,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        }
+      ],
+      "extraction_method": "vl_html_table_parse",
+      "di_ocr_override": true,
+      "phase1_validation": {
+        "accepted": false,
+        "status": "unresolved",
+        "reasons": [
+          "stock_identity_failure"
+        ],
+        "checks": {
+          "schema": true,
+          "quality": false,
+          "stock_identity": false,
+          "rows": true,
+          "duplicates": true,
+          "cell_validation": true,
+          "column_mapping": true,
+          "ocr_verified": true
+        },
+        "quality_score": 75,
+        "parser": "vl_html_table_parse",
+        "failure_type": "STOCK_IDENTITY_FAILURE",
+        "business_validation": {
+          "status": "inconsistent",
+          "reason": "stock_identity_failure"
+        },
+        "source_agreement": null,
+        "source_evidence": true,
+        "cell_validation": {
+          "issues": [
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "AACTARIL SOAP",
+              "raw_value": 82,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "AACTARIL SOAP",
+              "raw_value": 0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "AACTARIL SOAP",
+              "raw_value": 13,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "AACTARIL SOAP",
+              "raw_value": 89,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "RENALKA SYP",
+              "raw_value": 83,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "RENALKA SYP",
+              "raw_value": 56,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "RENALKA SYP",
+              "raw_value": 13,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "RENALKA SYP",
+              "raw_value": 128,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "TALEKT CAPS.",
+              "raw_value": 12,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "TALEKT CAPS.",
+              "raw_value": 0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "TALEKT CAPS.",
+              "raw_value": 0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "TALEKT CAPS.",
+              "raw_value": 0,
+              "evidence_ref": null
+            }
+          ],
+          "column_report": {
+            "assignments": [],
+            "unresolved_headers": [],
+            "ambiguous_fields": [],
+            "issues": [],
+            "layout_id": "vl_html_table_parse",
+            "mapping_confidence": 1.0,
+            "has_column_confusion": false
+          },
+          "accepted_critical_fields": 236,
+          "unresolved_critical_fields": 12,
+          "has_blocking_issues": true
+        }
+      },
+      "phase2": null
+    }
+  },
+  "on": {
+    "error": null,
+    "telemetry": {
+      "gemini_calls": 2,
+      "prompt_tokens": 8238,
+      "output_tokens": 364,
+      "latency_ms": 2751,
+      "estimated_cost_usd": 0.000969,
+      "pricing_note": "estimate using flash-lite ballpark $0.1/1M in + $0.4/1M out",
+      "calls": [
+        {
+          "model": "gemini-2.5-flash-lite",
+          "timeout": 60,
+          "latency_ms": 1511,
+          "prompt_tokens": 4119,
+          "output_tokens": 182,
+          "error": null,
+          "response_mime_type": "application/json",
+          "schema_title": "SalesExtractionOutput",
+          "part_kinds": [
+            "text",
+            "text"
+          ]
+        },
+        {
+          "model": "gemini-2.5-flash-lite",
+          "timeout": 60,
+          "latency_ms": 1240,
+          "prompt_tokens": 4119,
+          "output_tokens": 182,
+          "error": null,
+          "response_mime_type": "application/json",
+          "schema_title": "SalesExtractionOutput",
+          "part_kinds": [
+            "text",
+            "text"
+          ]
+        }
+      ],
+      "wall_latency_ms": 6124,
+      "phase2_enabled": true,
+      "ocr_mode": "stored_vl_ocr",
+      "phase2_status": "unresolved",
+      "phase2_attempts": 2,
+      "phase2_failure_type": "STOCK_IDENTITY_FAILURE",
+      "extraction_method": "vl_html_table_parse"
+    },
+    "score": {
+      "metrics": {
+        "verified_fields": 18,
+        "correct_fields": 10,
+        "field_accuracy": 0.5555555555555556,
+        "numeric_accuracy": 0.4666666666666667,
+        "quantity_accuracy": 0.4666666666666667,
+        "price_accuracy": null,
+        "date_accuracy": null,
+        "batch_accuracy": null,
+        "header_accuracy": 1.0,
+        "table_column_accuracy": 0.4666666666666667,
+        "text_accuracy": 1.0,
+        "precision": 0.9090909090909091,
+        "recall": 0.5555555555555556,
+        "f1": 0.6896551724137931,
+        "silent_wrong_rate": 0.05555555555555555,
+        "silent_wrong_count": 1,
+        "silent_wrong_denominator_verified_fields": 18,
+        "accepted_field_silent_wrong_rate": 0.09090909090909091,
+        "accepted_field_silent_wrong_count": 1,
+        "accepted_field_denominator": 11,
+        "explicit_unresolved_rate": 0.0,
+        "missing_value_rate": 0.0,
+        "critical_error_rate": 0.4444444444444444,
+        "by_type_prf": {
+          "numeric": {
+            "precision": 0.875,
+            "recall": 0.4666666666666667,
+            "f1": 0.608695652173913,
+            "n": 15
+          },
+          "text": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 3
+          },
+          "table": {
+            "precision": 0.875,
+            "recall": 0.4666666666666667,
+            "f1": 0.608695652173913,
+            "n": 15
+          }
+        },
+        "error_type_counts": {
+          "WRONG_VALUE": 1,
+          "MISSING_PRODUCT": 6,
+          "UNMAPPED_HEADER": 1
+        }
+      },
+      "document_status": "PARTIALLY_CORRECT",
+      "quantity_accuracy": 0.4666666666666667,
+      "product_identity": {
+        "gt_products": 5,
+        "found_products": 3,
+        "recall": 0.6
+      },
+      "missing_values": 7,
+      "verified_fields": 18,
+      "correct_fields": 10
+    },
+    "matches": [
+      {
+        "field_id": "vendor",
+        "field_type": "text",
+        "printed_header": "vendor",
+        "product_key": null,
+        "expected_raw": "ALEX PHARMA",
+        "expected_normalized": null,
+        "predicted_raw": "ALEX PHARMA",
+        "match_mode": "extraction_text",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": false,
+        "priority": "medium"
+      },
+      {
+        "field_id": "h_op",
+        "field_type": "header",
+        "printed_header": "Op.Bal. Qty.",
+        "product_key": null,
+        "expected_raw": "Op.Bal. Qty.",
+        "expected_normalized": null,
+        "predicted_raw": "Op.Bal. Qty.",
+        "match_mode": "ocr_header_presence",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": false,
+        "priority": "high"
+      },
+      {
+        "field_id": "h_issue",
+        "field_type": "header",
+        "printed_header": "Issue Qty.",
+        "product_key": null,
+        "expected_raw": "Issue Qty.",
+        "expected_normalized": null,
+        "predicted_raw": "Issue Qty.",
+        "match_mode": "ocr_header_presence",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": false,
+        "priority": "high"
+      },
+      {
+        "field_id": "aact_op",
+        "field_type": "quantity",
+        "printed_header": "Op.Bal. Qty.",
+        "product_key": "AACTARIL SOAP",
+        "expected_raw": "82",
+        "expected_normalized": 82,
+        "predicted_raw": 82,
+        "match_mode": "extraction:opening_qty",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "aact_issue",
+        "field_type": "quantity",
+        "printed_header": "Issue Qty.",
+        "product_key": "AACTARIL SOAP",
+        "expected_raw": "13",
+        "expected_normalized": 13,
+        "predicted_raw": 13,
+        "match_mode": "extraction:sales_qty",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "aact_close",
+        "field_type": "quantity",
+        "printed_header": "Closing Balance",
+        "product_key": "AACTARIL SOAP",
+        "expected_raw": "69",
+        "expected_normalized": 69,
+        "predicted_raw": 89,
+        "match_mode": "extraction:closing_qty",
+        "correct": false,
+        "error_type": "WRONG_VALUE",
+        "silent_wrong": true,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "abana_op",
+        "field_type": "quantity",
+        "printed_header": "Op.Bal. Qty.",
+        "product_key": "ABANA TAB",
+        "expected_raw": "0",
+        "expected_normalized": 0,
+        "predicted_raw": 0,
+        "match_mode": "extraction:opening_qty",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "abana_rec",
+        "field_type": "quantity",
+        "printed_header": "Receipt Qty.",
+        "product_key": "ABANA TAB",
+        "expected_raw": "100",
+        "expected_normalized": 100,
+        "predicted_raw": 100,
+        "match_mode": "extraction:receipts_qty",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "abana_issue",
+        "field_type": "quantity",
+        "printed_header": "Issue Qty.",
+        "product_key": "ABANA TAB",
+        "expected_raw": "27",
+        "expected_normalized": 27,
+        "predicted_raw": 27,
+        "match_mode": "extraction:sales_qty",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "abana_close",
+        "field_type": "quantity",
+        "printed_header": "Closing Balance",
+        "product_key": "ABANA TAB",
+        "expected_raw": "73",
+        "expected_normalized": 73,
+        "predicted_raw": 73,
+        "match_mode": "extraction:closing_qty",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "liv200_op",
+        "field_type": "quantity",
+        "printed_header": "Op.Bal. Qty.",
+        "product_key": "LIV 52 SYP/ B",
+        "expected_raw": "2713",
+        "expected_normalized": 2713,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "liv200_issue",
+        "field_type": "quantity",
+        "printed_header": "Issue Qty.",
+        "product_key": "LIV 52 SYP/ B",
+        "expected_raw": "1872",
+        "expected_normalized": 1872,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "liv200_close",
+        "field_type": "quantity",
+        "printed_header": "Closing Balance",
+        "product_key": "LIV 52 SYP/ B",
+        "expected_raw": "841",
+        "expected_normalized": 841,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "liv100_op",
+        "field_type": "quantity",
+        "printed_header": "Op.Bal. Qty.",
+        "product_key": "LIV 52 SYP/ S",
+        "expected_raw": "3523",
+        "expected_normalized": 3523,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "liv100_issue",
+        "field_type": "quantity",
+        "printed_header": "Issue Qty.",
+        "product_key": "LIV 52 SYP/ S",
+        "expected_raw": "1816",
+        "expected_normalized": 1816,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "liv100_close",
+        "field_type": "quantity",
+        "printed_header": "Closing Balance",
+        "product_key": "LIV 52 SYP/ S",
+        "expected_raw": "1707",
+        "expected_normalized": 1707,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "talekt_exp",
+        "field_type": "quantity",
+        "printed_header": "Expiry Breakage",
+        "product_key": "TALEKT CAPS.",
+        "expected_raw": "12",
+        "expected_normalized": 12,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "UNMAPPED_HEADER",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "talekt_close",
+        "field_type": "quantity",
+        "printed_header": "Closing Balance",
+        "product_key": "TALEKT CAPS.",
+        "expected_raw": "0",
+        "expected_normalized": 0,
+        "predicted_raw": 0,
+        "match_mode": "extraction:closing_qty",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      }
+    ],
+    "stock_equation": {
+      "accepted": false,
+      "fail_count": 3,
+      "is_valid": false,
+      "healthy_rows": 59,
+      "failing_rows": 3,
+      "reasons": [
+        "stock_identity_failure"
+      ]
+    },
+    "result": {
+      "stockist_name": "ALEX PHARMA",
+      "company_name": "THE HIMALAYA DRUG (ZEAL",
+      "line_item_count": 62,
+      "line_items": [
+        {
+          "product_name": "AACTARIL SOAP",
+          "opening_qty": 82,
+          "receipts_qty": 0,
+          "sales_qty": 13,
+          "closing_qty": 89,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "ABANA TAB",
+          "opening_qty": 0,
+          "receipts_qty": 100,
+          "sales_qty": 27,
+          "closing_qty": 73,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "ALTHEA LOTION",
+          "opening_qty": 0,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "ANTI HAIR LOSS CREA",
+          "opening_qty": 0,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "BLEMINOR CREAM",
+          "opening_qty": 59,
+          "receipts_qty": 0,
+          "sales_qty": 6,
+          "closing_qty": 53,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "CLARINA CREAM",
+          "opening_qty": 74,
+          "receipts_qty": 50,
+          "sales_qty": 5,
+          "closing_qty": 119,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "CLARINA KIT",
+          "opening_qty": 0,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "CLARINA-F-WASH",
+          "opening_qty": 28,
+          "receipts_qty": 0,
+          "sales_qty": 6,
+          "closing_qty": 22,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "COLD BALM",
+          "opening_qty": 0,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "CONFIDO TAB",
+          "opening_qty": 0,
+          "receipts_qty": 300,
+          "sales_qty": 48,
+          "closing_qty": 252,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "DIABECON DS TAB",
+          "opening_qty": 32,
+          "receipts_qty": 0,
+          "sales_qty": 31,
+          "closing_qty": 1,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "DIABECON TAB.",
+          "opening_qty": 88,
+          "receipts_qty": 0,
+          "sales_qty": 23,
+          "closing_qty": 65,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "DIAREX SYP",
+          "opening_qty": 1,
+          "receipts_qty": 56,
+          "sales_qty": 2,
+          "closing_qty": 55,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "DIAREX TAB",
+          "opening_qty": 6,
+          "receipts_qty": 50,
+          "sales_qty": 8,
+          "closing_qty": 48,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "HADJOD CAP",
+          "opening_qty": 29,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 29,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "HAIRZONE SOLUTION",
+          "opening_qty": 6,
+          "receipts_qty": 28,
+          "sales_qty": 7,
+          "closing_qty": 27,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "HERBOLAX CAP",
+          "opening_qty": 0,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "HIMCOLIN GEL",
+          "opening_qty": 63,
+          "receipts_qty": 100,
+          "sales_qty": 57,
+          "closing_qty": 106,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "HIORA MWASH",
+          "opening_qty": 0,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "KAPIKACHHU CAP",
+          "opening_qty": 0,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "LIV 52 HB CAP",
+          "opening_qty": 0,
+          "receipts_qty": 84,
+          "sales_qty": 26,
+          "closing_qty": 58,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "LIV 52 SYP/B",
+          "opening_qty": 2713,
+          "receipts_qty": 0,
+          "sales_qty": 1872,
+          "closing_qty": 841,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "LIV 52 SYP/S",
+          "opening_qty": 3523,
+          "receipts_qty": 0,
+          "sales_qty": 1816,
+          "closing_qty": 1707,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "LIV 52 TAB",
+          "opening_qty": 294,
+          "receipts_qty": 500,
+          "sales_qty": 203,
+          "closing_qty": 591,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "LIV-52 SYP(SF)",
+          "opening_qty": 0,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "LIV-52 SYP(SF).",
+          "opening_qty": 7,
+          "receipts_qty": 0,
+          "sales_qty": 7,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "MANJISTHA CAP",
+          "opening_qty": 22,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 22,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "OPTHACARE E/DROPS",
+          "opening_qty": 142,
+          "receipts_qty": 0,
+          "sales_qty": 33,
+          "closing_qty": 109,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "ORO-T (S)",
+          "opening_qty": 50,
+          "receipts_qty": 0,
+          "sales_qty": 2,
+          "closing_qty": 48,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "ORO-T LIQ",
+          "opening_qty": 0,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "OXITARD CAPS.",
+          "opening_qty": 0,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "PAIN BALM STRONG",
+          "opening_qty": 0,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "PAIN BALM STRONG.",
+          "opening_qty": 0,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "PAIN RELIEF OIL",
+          "opening_qty": 0,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "PILEX FORTE OINT",
+          "opening_qty": 437,
+          "receipts_qty": 0,
+          "sales_qty": 165,
+          "closing_qty": 272,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "PILEX FORTE TAB",
+          "opening_qty": 103,
+          "receipts_qty": 0,
+          "sales_qty": 36,
+          "closing_qty": 67,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "PILEX TAB",
+          "opening_qty": 300,
+          "receipts_qty": 0,
+          "sales_qty": 109,
+          "closing_qty": 191,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "PURE HAND-STW",
+          "opening_qty": 0,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "PURE HANDS(LEMON)",
+          "opening_qty": 0,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "PURE HANDS-GA",
+          "opening_qty": 0,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "PUREHAND-F",
+          "opening_qty": 0,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "PUREHAND-O",
+          "opening_qty": 0,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "PURIM TAB",
+          "opening_qty": 0,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "QUISTA ACTIVE(CF)",
+          "opening_qty": 0,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "QUISTA ACTIVE(MMF)",
+          "opening_qty": 0,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "QUISTA DN POWDER(V400 GM)",
+          "opening_qty": 0,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "RENALKA SYP",
+          "opening_qty": 83,
+          "receipts_qty": 56,
+          "sales_qty": 13,
+          "closing_qty": 128,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "RENALKA SYP(B)",
+          "opening_qty": 46,
+          "receipts_qty": 84,
+          "sales_qty": 91,
+          "closing_qty": 39,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "SHALLAKI CAP.",
+          "opening_qty": 1,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 1,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "SHIGRU CAP.",
+          "opening_qty": 60,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 60,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "TAGARA CAP.",
+          "opening_qty": 48,
+          "receipts_qty": 0,
+          "sales_qty": 5,
+          "closing_qty": 43,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "TALEKT CAPS.",
+          "opening_qty": 12,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "TALEKT SYP.",
+          "opening_qty": 0,
+          "receipts_qty": 56,
+          "sales_qty": 13,
+          "closing_qty": 43,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "TENTEX FORTE TAB",
+          "opening_qty": 634,
+          "receipts_qty": 0,
+          "sales_qty": 88,
+          "closing_qty": 546,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "TRIKATU CAP.",
+          "opening_qty": 0,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "TRIKATU SYP",
+          "opening_qty": 12,
+          "receipts_qty": 0,
+          "sales_qty": 11,
+          "closing_qty": 1,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "TRIPHALA CAP.",
+          "opening_qty": 36,
+          "receipts_qty": 0,
+          "sales_qty": 8,
+          "closing_qty": 28,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "TRIPHALA SYP",
+          "opening_qty": 0,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "VASAKA SYRUP",
+          "opening_qty": 0,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "VEGECORT CREAM",
+          "opening_qty": 0,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "VRIKSHAMLA CAP.",
+          "opening_qty": 0,
+          "receipts_qty": 0,
+          "sales_qty": 0,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "YASHTI MADHU CAP.",
+          "opening_qty": 15,
+          "receipts_qty": 0,
+          "sales_qty": 10,
+          "closing_qty": 5,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        }
+      ],
+      "extraction_method": "vl_html_table_parse",
+      "di_ocr_override": true,
+      "phase1_validation": {
+        "accepted": false,
+        "status": "unresolved",
+        "reasons": [
+          "stock_identity_failure"
+        ],
+        "checks": {
+          "schema": true,
+          "quality": false,
+          "stock_identity": false,
+          "rows": true,
+          "duplicates": true,
+          "cell_validation": true,
+          "column_mapping": true,
+          "ocr_verified": true
+        },
+        "quality_score": 75,
+        "parser": "vl_html_table_parse",
+        "failure_type": "STOCK_IDENTITY_FAILURE",
+        "business_validation": {
+          "status": "inconsistent",
+          "reason": "stock_identity_failure"
+        },
+        "source_agreement": null,
+        "source_evidence": true,
+        "cell_validation": {
+          "issues": [
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "AACTARIL SOAP",
+              "raw_value": 82,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "AACTARIL SOAP",
+              "raw_value": 0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "AACTARIL SOAP",
+              "raw_value": 13,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "AACTARIL SOAP",
+              "raw_value": 89,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "RENALKA SYP",
+              "raw_value": 83,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "RENALKA SYP",
+              "raw_value": 56,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "RENALKA SYP",
+              "raw_value": 13,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "RENALKA SYP",
+              "raw_value": 128,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "TALEKT CAPS.",
+              "raw_value": 12,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "TALEKT CAPS.",
+              "raw_value": 0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "TALEKT CAPS.",
+              "raw_value": 0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "TALEKT CAPS.",
+              "raw_value": 0,
+              "evidence_ref": null
+            }
+          ],
+          "column_report": {
+            "assignments": [],
+            "unresolved_headers": [],
+            "ambiguous_fields": [],
+            "issues": [],
+            "layout_id": "vl_html_table_parse",
+            "mapping_confidence": 1.0,
+            "has_column_confusion": false
+          },
+          "accepted_critical_fields": 236,
+          "unresolved_critical_fields": 12,
+          "has_blocking_issues": true
+        }
+      },
+      "phase2": {
+        "status": "unresolved",
+        "failure_type": "STOCK_IDENTITY_FAILURE",
+        "strategy": "targeted_stock_extraction",
+        "attempts": 2,
+        "applied": false,
+        "accepted": false,
+        "recovery_log": [
+          {
+            "attempt": 1,
+            "accepted": false,
+            "parsed": true,
+            "returned": [
+              " opening=82.0 receipts=0.0 sales=13.0 stock_out=None closing=None",
+              " opening=83.0 receipts=56.0 sales=13.0 stock_out=None closing=None",
+              " opening=12.0 receipts=0.0 sales=0.0 stock_out=None closing=None"
+            ]
+          },
+          {
+            "attempt": 2,
+            "accepted": false,
+            "parsed": true,
+            "returned": [
+              " opening=82.0 receipts=0.0 sales=13.0 stock_out=None closing=None",
+              " opening=83.0 receipts=56.0 sales=13.0 stock_out=None closing=None",
+              " opening=12.0 receipts=0.0 sales=0.0 stock_out=None closing=None"
+            ]
+          }
+        ],
+        "original_values": [
+          {
+            "product_name": "AACTARIL SOAP",
+            "opening_qty": 82,
+            "receipts_qty": 0,
+            "sales_qty": 13,
+            "closing_qty": 89,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "ABANA TAB",
+            "opening_qty": 0,
+            "receipts_qty": 100,
+            "sales_qty": 27,
+            "closing_qty": 73,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "ALTHEA LOTION",
+            "opening_qty": 0,
+            "receipts_qty": 0,
+            "sales_qty": 0,
+            "closing_qty": 0,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "ANTI HAIR LOSS CREA",
+            "opening_qty": 0,
+            "receipts_qty": 0,
+            "sales_qty": 0,
+            "closing_qty": 0,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "BLEMINOR CREAM",
+            "opening_qty": 59,
+            "receipts_qty": 0,
+            "sales_qty": 6,
+            "closing_qty": 53,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "CLARINA CREAM",
+            "opening_qty": 74,
+            "receipts_qty": 50,
+            "sales_qty": 5,
+            "closing_qty": 119,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "CLARINA KIT",
+            "opening_qty": 0,
+            "receipts_qty": 0,
+            "sales_qty": 0,
+            "closing_qty": 0,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "CLARINA-F-WASH",
+            "opening_qty": 28,
+            "receipts_qty": 0,
+            "sales_qty": 6,
+            "closing_qty": 22,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "COLD BALM",
+            "opening_qty": 0,
+            "receipts_qty": 0,
+            "sales_qty": 0,
+            "closing_qty": 0,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "CONFIDO TAB",
+            "opening_qty": 0,
+            "receipts_qty": 300,
+            "sales_qty": 48,
+            "closing_qty": 252,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "DIABECON DS TAB",
+            "opening_qty": 32,
+            "receipts_qty": 0,
+            "sales_qty": 31,
+            "closing_qty": 1,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "DIABECON TAB.",
+            "opening_qty": 88,
+            "receipts_qty": 0,
+            "sales_qty": 23,
+            "closing_qty": 65,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "DIAREX SYP",
+            "opening_qty": 1,
+            "receipts_qty": 56,
+            "sales_qty": 2,
+            "closing_qty": 55,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "DIAREX TAB",
+            "opening_qty": 6,
+            "receipts_qty": 50,
+            "sales_qty": 8,
+            "closing_qty": 48,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "HADJOD CAP",
+            "opening_qty": 29,
+            "receipts_qty": 0,
+            "sales_qty": 0,
+            "closing_qty": 29,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "HAIRZONE SOLUTION",
+            "opening_qty": 6,
+            "receipts_qty": 28,
+            "sales_qty": 7,
+            "closing_qty": 27,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "HERBOLAX CAP",
+            "opening_qty": 0,
+            "receipts_qty": 0,
+            "sales_qty": 0,
+            "closing_qty": 0,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "HIMCOLIN GEL",
+            "opening_qty": 63,
+            "receipts_qty": 100,
+            "sales_qty": 57,
+            "closing_qty": 106,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "HIORA MWASH",
+            "opening_qty": 0,
+            "receipts_qty": 0,
+            "sales_qty": 0,
+            "closing_qty": 0,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "KAPIKACHHU CAP",
+            "opening_qty": 0,
+            "receipts_qty": 0,
+            "sales_qty": 0,
+            "closing_qty": 0,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "LIV 52 HB CAP",
+            "opening_qty": 0,
+            "receipts_qty": 84,
+            "sales_qty": 26,
+            "closing_qty": 58,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "LIV 52 SYP/B",
+            "opening_qty": 2713,
+            "receipts_qty": 0,
+            "sales_qty": 1872,
+            "closing_qty": 841,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "LIV 52 SYP/S",
+            "opening_qty": 3523,
+            "receipts_qty": 0,
+            "sales_qty": 1816,
+            "closing_qty": 1707,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "LIV 52 TAB",
+            "opening_qty": 294,
+            "receipts_qty": 500,
+            "sales_qty": 203,
+            "closing_qty": 591,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "LIV-52 SYP(SF)",
+            "opening_qty": 0,
+            "receipts_qty": 0,
+            "sales_qty": 0,
+            "closing_qty": 0,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "LIV-52 SYP(SF).",
+            "opening_qty": 7,
+            "receipts_qty": 0,
+            "sales_qty": 7,
+            "closing_qty": 0,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "MANJISTHA CAP",
+            "opening_qty": 22,
+            "receipts_qty": 0,
+            "sales_qty": 0,
+            "closing_qty": 22,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "OPTHACARE E/DROPS",
+            "opening_qty": 142,
+            "receipts_qty": 0,
+            "sales_qty": 33,
+            "closing_qty": 109,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "ORO-T (S)",
+            "opening_qty": 50,
+            "receipts_qty": 0,
+            "sales_qty": 2,
+            "closing_qty": 48,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "ORO-T LIQ",
+            "opening_qty": 0,
+            "receipts_qty": 0,
+            "sales_qty": 0,
+            "closing_qty": 0,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "OXITARD CAPS.",
+            "opening_qty": 0,
+            "receipts_qty": 0,
+            "sales_qty": 0,
+            "closing_qty": 0,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "PAIN BALM STRONG",
+            "opening_qty": 0,
+            "receipts_qty": 0,
+            "sales_qty": 0,
+            "closing_qty": 0,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "PAIN BALM STRONG.",
+            "opening_qty": 0,
+            "receipts_qty": 0,
+            "sales_qty": 0,
+            "closing_qty": 0,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "PAIN RELIEF OIL",
+            "opening_qty": 0,
+            "receipts_qty": 0,
+            "sales_qty": 0,
+            "closing_qty": 0,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "PILEX FORTE OINT",
+            "opening_qty": 437,
+            "receipts_qty": 0,
+            "sales_qty": 165,
+            "closing_qty": 272,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "PILEX FORTE TAB",
+            "opening_qty": 103,
+            "receipts_qty": 0,
+            "sales_qty": 36,
+            "closing_qty": 67,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "PILEX TAB",
+            "opening_qty": 300,
+            "receipts_qty": 0,
+            "sales_qty": 109,
+            "closing_qty": 191,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "PURE HAND-STW",
+            "opening_qty": 0,
+            "receipts_qty": 0,
+            "sales_qty": 0,
+            "closing_qty": 0,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "PURE HANDS(LEMON)",
+            "opening_qty": 0,
+            "receipts_qty": 0,
+            "sales_qty": 0,
+            "closing_qty": 0,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "PURE HANDS-GA",
+            "opening_qty": 0,
+            "receipts_qty": 0,
+            "sales_qty": 0,
+            "closing_qty": 0,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "PUREHAND-F",
+            "opening_qty": 0,
+            "receipts_qty": 0,
+            "sales_qty": 0,
+            "closing_qty": 0,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "PUREHAND-O",
+            "opening_qty": 0,
+            "receipts_qty": 0,
+            "sales_qty": 0,
+            "closing_qty": 0,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "PURIM TAB",
+            "opening_qty": 0,
+            "receipts_qty": 0,
+            "sales_qty": 0,
+            "closing_qty": 0,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "QUISTA ACTIVE(CF)",
+            "opening_qty": 0,
+            "receipts_qty": 0,
+            "sales_qty": 0,
+            "closing_qty": 0,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "QUISTA ACTIVE(MMF)",
+            "opening_qty": 0,
+            "receipts_qty": 0,
+            "sales_qty": 0,
+            "closing_qty": 0,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "QUISTA DN POWDER(V400 GM)",
+            "opening_qty": 0,
+            "receipts_qty": 0,
+            "sales_qty": 0,
+            "closing_qty": 0,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "RENALKA SYP",
+            "opening_qty": 83,
+            "receipts_qty": 56,
+            "sales_qty": 13,
+            "closing_qty": 128,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "RENALKA SYP(B)",
+            "opening_qty": 46,
+            "receipts_qty": 84,
+            "sales_qty": 91,
+            "closing_qty": 39,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "SHALLAKI CAP.",
+            "opening_qty": 1,
+            "receipts_qty": 0,
+            "sales_qty": 0,
+            "closing_qty": 1,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "SHIGRU CAP.",
+            "opening_qty": 60,
+            "receipts_qty": 0,
+            "sales_qty": 0,
+            "closing_qty": 60,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "TAGARA CAP.",
+            "opening_qty": 48,
+            "receipts_qty": 0,
+            "sales_qty": 5,
+            "closing_qty": 43,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "TALEKT CAPS.",
+            "opening_qty": 12,
+            "receipts_qty": 0,
+            "sales_qty": 0,
+            "closing_qty": 0,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "TALEKT SYP.",
+            "opening_qty": 0,
+            "receipts_qty": 56,
+            "sales_qty": 13,
+            "closing_qty": 43,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "TENTEX FORTE TAB",
+            "opening_qty": 634,
+            "receipts_qty": 0,
+            "sales_qty": 88,
+            "closing_qty": 546,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "TRIKATU CAP.",
+            "opening_qty": 0,
+            "receipts_qty": 0,
+            "sales_qty": 0,
+            "closing_qty": 0,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "TRIKATU SYP",
+            "opening_qty": 12,
+            "receipts_qty": 0,
+            "sales_qty": 11,
+            "closing_qty": 1,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "TRIPHALA CAP.",
+            "opening_qty": 36,
+            "receipts_qty": 0,
+            "sales_qty": 8,
+            "closing_qty": 28,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "TRIPHALA SYP",
+            "opening_qty": 0,
+            "receipts_qty": 0,
+            "sales_qty": 0,
+            "closing_qty": 0,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "VASAKA SYRUP",
+            "opening_qty": 0,
+            "receipts_qty": 0,
+            "sales_qty": 0,
+            "closing_qty": 0,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "VEGECORT CREAM",
+            "opening_qty": 0,
+            "receipts_qty": 0,
+            "sales_qty": 0,
+            "closing_qty": 0,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "VRIKSHAMLA CAP.",
+            "opening_qty": 0,
+            "receipts_qty": 0,
+            "sales_qty": 0,
+            "closing_qty": 0,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "YASHTI MADHU CAP.",
+            "opening_qty": 15,
+            "receipts_qty": 0,
+            "sales_qty": 10,
+            "closing_qty": 5,
+            "total_stock": null,
+            "validation_error": null
+          }
+        ],
+        "manual_review": "UNRESOLVED"
+      }
+    }
+  },
+  "comparison": {
+    "field_accuracy_off": 0.5555555555555556,
+    "field_accuracy_on": 0.5555555555555556,
+    "field_accuracy_delta": 0.0,
+    "quantity_accuracy_off": 0.4666666666666667,
+    "quantity_accuracy_on": 0.4666666666666667,
+    "quantity_accuracy_delta": 0.0,
+    "product_identity_recall_off": 0.6,
+    "product_identity_recall_on": 0.6,
+    "missing_values_off": 7,
+    "missing_values_on": 7,
+    "missing_values_delta": 0
+  },
+  "healthy_row_check": {
+    "healthy_rows_checked": 57,
+    "healthy_rows_changed": 0,
+    "unchanged": true,
+    "changes": []
+  }
+}

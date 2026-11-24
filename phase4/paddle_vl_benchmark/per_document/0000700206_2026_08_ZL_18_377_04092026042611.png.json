@@ -1,0 +1,264 @@
+{
+  "document_id": "0000700206_2026_08_ZL_18_377_04092026042611.png",
+  "relative_path": "0000700206_2026_08_ZL_18_377_04092026042611.png",
+  "source_path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700206_2026_08_ZL_18_377_04092026042611.png",
+  "file_type": "image",
+  "pdf_kind": null,
+  "manifest_ocr_required": true,
+  "engine": "paddleocr-vl-1.6",
+  "model": "PaddleOCR-VL-1.6",
+  "model_version": "v1.6",
+  "started_at": "2026-10-08T13:16:25.720808+00:00",
+  "pages": [
+    {
+      "engine": "paddleocr-vl-1.6",
+      "status": "success",
+      "model": "PaddleOCR-VL-1.6",
+      "model_version": "v1.6",
+      "text": "Product wise stock statement from 01/07/2026 to 29/07/2026\n<table><tr><td>Product Name</td><td>Packing</td><td>Opening</td><td>Receipt</td><td>Issues</td><td>Closing</td><td>Sh.Exp</td><td>Liquidation</td><td>Sales Amount</td><td>Closing Amount</td></tr><tr><td>THE HIMALAYA DRUG(ZIL)</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>CLARINA ANTI ACNE FACE WA</td><td>60ML</td><td>25</td><td></td><td></td><td>25</td><td></td><td>440 Days</td><td></td><td>2,828.00</td></tr><tr><td>CLARINA ANTI ACNE KIT [CM</td><td>1KIT</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>CLARINA ANTI-ACNE CREAM</td><td>30GM</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>FLORASANTE CAP</td><td>20&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>GASEX SYP</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>GASEX SYP[GINGER-LEMON]</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>GASEX SYRUP (ELAICHI FLA)</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>GASEX TAB</td><td>100&#x27;S</td><td>35</td><td></td><td>5</td><td>30</td><td></td><td>236 Days</td><td>667.75</td><td>4,008.90</td></tr><tr><td>GUDUCHI CAP</td><td>60&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HAIR ZONE LOTION</td><td>60ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HERBOLAX CAPS</td><td>10&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIMCOCID SUSP [BANANA FL]</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIMCOCID SUSP [MINT FLAV]</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIMCOCID SUSP [SNF FLAV]</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIMCOCID-SF SYP (MINT)</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIMCOCID-SF SYP [BANANA]</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIMCOCID-SF SYP [SAUNF]</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIOWNA CHOCOLATE FLAVOUR</td><td>200GM</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIOWNA CHOCOLATE FLAVOUR</td><td>400GM</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIOWNA JR CHOCOLATE FLAV</td><td>200GM</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIOWNA JR STRABERRY FLAV</td><td>200GM</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>KOFLET LOZENGES 175+25</td><td>JAR</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>KOFLET SF LINCTUS</td><td>100ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>KOFLET SYP</td><td>100ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>KOFLET-EX LINCTUS</td><td>100ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>LIV 52 SYP</td><td>100ML</td><td>64</td><td></td><td>27</td><td>37</td><td></td><td>70 Days</td><td>2,983.50</td><td>4,146.22</td></tr><tr><td>LIV 52 SYP</td><td>200ML</td><td>33</td><td></td><td>33</td><td></td><td></td><td></td><td>6,040.75</td><td></td></tr><tr><td>LIV 52 TAB</td><td>100&#x27;S</td><td>100</td><td></td><td>2</td><td>98</td><td></td><td>1372 Days</td><td>352.00</td><td>17,258.78</td></tr><tr><td>RUMALAYA FORTE TAB</td><td>30&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>RUMALAYA GEL</td><td>30GM</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>RUMALAYA LINIMENT</td><td>60ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>RUMALAYA TAB</td><td>60&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>TALEKT CAP</td><td>60&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>TALEKT SYP</td><td>120ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>TENTEX FORTE TAB</td><td>10&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>TENTEX ROYAL CAP</td><td>10&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td colspan=\"8\">**Liquidation is based on last three months sales</td><td>10,044.00</td><td>28,241.90</td></tr><tr><td colspan=\"8\">.F.</td><td></td><td></td></tr></table>",
+      "normalized_text": "Product wise stock statement from 01/07/2026 to 29/07/2026 <table><tr><td>Product Name</td><td>Packing</td><td>Opening</td><td>Receipt</td><td>Issues</td><td>Closing</td><td>Sh.Exp</td><td>Liquidation</td><td>Sales Amount</td><td>Closing Amount</td></tr><tr><td>THE HIMALAYA DRUG(ZIL)</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>CLARINA ANTI ACNE FACE WA</td><td>60ML</td><td>25</td><td></td><td></td><td>25</td><td></td><td>440 Days</td><td></td><td>2,828.00</td></tr><tr><td>CLARINA ANTI ACNE KIT [CM</td><td>1KIT</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>CLARINA ANTI-ACNE CREAM</td><td>30GM</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>FLORASANTE CAP</td><td>20&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>GASEX SYP</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>GASEX SYP[GINGER-LEMON]</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>GASEX SYRUP (ELAICHI FLA)</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>GASEX TAB</td><td>100&#x27;S</td><td>35</td><td></td><td>5</td><td>30</td><td></td><td>236 Days</td><td>667.75</td><td>4,008.90</td></tr><tr><td>GUDUCHI CAP</td><td>60&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HAIR ZONE LOTION</td><td>60ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HERBOLAX CAPS</td><td>10&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIMCOCID SUSP [BANANA FL]</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIMCOCID SUSP [MINT FLAV]</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIMCOCID SUSP [SNF FLAV]</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIMCOCID-SF SYP (MINT)</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIMCOCID-SF SYP [BANANA]</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIMCOCID-SF SYP [SAUNF]</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIOWNA CHOCOLATE FLAVOUR</td><td>200GM</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIOWNA CHOCOLATE FLAVOUR</td><td>400GM</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIOWNA JR CHOCOLATE FLAV</td><td>200GM</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIOWNA JR STRABERRY FLAV</td><td>200GM</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>KOFLET LOZENGES 175+25</td><td>JAR</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>KOFLET SF LINCTUS</td><td>100ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>KOFLET SYP</td><td>100ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>KOFLET-EX LINCTUS</td><td>100ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>LIV 52 SYP</td><td>100ML</td><td>64</td><td></td><td>27</td><td>37</td><td></td><td>70 Days</td><td>2,983.50</td><td>4,146.22</td></tr><tr><td>LIV 52 SYP</td><td>200ML</td><td>33</td><td></td><td>33</td><td></td><td></td><td></td><td>6,040.75</td><td></td></tr><tr><td>LIV 52 TAB</td><td>100&#x27;S</td><td>100</td><td></td><td>2</td><td>98</td><td></td><td>1372 Days</td><td>352.00</td><td>17,258.78</td></tr><tr><td>RUMALAYA FORTE TAB</td><td>30&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>RUMALAYA GEL</td><td>30GM</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>RUMALAYA LINIMENT</td><td>60ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>RUMALAYA TAB</td><td>60&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>TALEKT CAP</td><td>60&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>TALEKT SYP</td><td>120ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>TENTEX FORTE TAB</td><td>10&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>TENTEX ROYAL CAP</td><td>10&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td colspan=\"8\">**Liquidation is based on last three months sales</td><td>10,044.00</td><td>28,241.90</td></tr><tr><td colspan=\"8\">.F.</td><td></td><td></td></tr></table>",
+      "word_count": 96,
+      "line_count": 2,
+      "numeric_tokens": [
+        "25",
+        "25",
+        "440",
+        "2,828.00",
+        "20",
+        "100",
+        "35",
+        "5",
+        "30",
+        "236",
+        "667.75",
+        "4,008.90",
+        "60",
+        "10",
+        "175",
+        "25",
+        "52",
+        "64",
+        "27",
+        "37",
+        "70",
+        "2,983.50",
+        "4,146.22",
+        "52",
+        "33",
+        "33",
+        "6,040.75",
+        "52",
+        "100",
+        "100",
+        "2",
+        "98",
+        "1372",
+        "352.00",
+        "17,258.78",
+        "30",
+        "60",
+        "60",
+        "10",
+        "10",
+        "8",
+        "10,044.00",
+        "28,241.90",
+        "8"
+      ],
+      "words": [
+        {
+          "text": "Product wise stock statement from 01/07/2026 to 29/07/2026",
+          "bbox": [
+            64.0,
+            8.0,
+            601.0,
+            29.0
+          ],
+          "confidence": null,
+          "page": 1
+        },
+        {
+          "text": "<table><tr><td>Product Name</td><td>Packing</td><td>Opening</td><td>Receipt</td><td>Issues</td><td>Closing</td><td>Sh.Exp</td><td>Liquidation</td><td>Sales Amount</td><td>Closing Amount</td></tr><tr><td>THE HIMALAYA DRUG(ZIL)</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>CLARINA ANTI ACNE FACE WA</td><td>60ML</td><td>25</td><td></td><td></td><td>25</td><td></td><td>440 Days</td><td></td><td>2,828.00</td></tr><tr><td>CLARINA ANTI ACNE KIT [CM</td><td>1KIT</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>CLARINA ANTI-ACNE CREAM</td><td>30GM</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>FLORASANTE CAP</td><td>20&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>GASEX SYP</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>GASEX SYP[GINGER-LEMON]</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>GASEX SYRUP (ELAICHI FLA)</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>GASEX TAB</td><td>100&#x27;S</td><td>35</td><td></td><td>5</td><td>30</td><td></td><td>236 Days</td><td>667.75</td><td>4,008.90</td></tr><tr><td>GUDUCHI CAP</td><td>60&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HAIR ZONE LOTION</td><td>60ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HERBOLAX CAPS</td><td>10&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIMCOCID SUSP [BANANA FL]</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIMCOCID SUSP [MINT FLAV]</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIMCOCID SUSP [SNF FLAV]</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIMCOCID-SF SYP (MINT)</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIMCOCID-SF SYP [BANANA]</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIMCOCID-SF SYP [SAUNF]</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIOWNA CHOCOLATE FLAVOUR</td><td>200GM</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIOWNA CHOCOLATE FLAVOUR</td><td>400GM</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIOWNA JR CHOCOLATE FLAV</td><td>200GM</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIOWNA JR STRABERRY FLAV</td><td>200GM</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>KOFLET LOZENGES 175+25</td><td>JAR</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>KOFLET SF LINCTUS</td><td>100ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>KOFLET SYP</td><td>100ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>KOFLET-EX LINCTUS</td><td>100ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>LIV 52 SYP</td><td>100ML</td><td>64</td><td></td><td>27</td><td>37</td><td></td><td>70 Days</td><td>2,983.50</td><td>4,146.22</td></tr><tr><td>LIV 52 SYP</td><td>200ML</td><td>33</td><td></td><td>33</td><td></td><td></td><td></td><td>6,040.75</td><td></td></tr><tr><td>LIV 52 TAB</td><td>100&#x27;S</td><td>100</td><td></td><td>2</td><td>98</td><td></td><td>1372 Days</td><td>352.00</td><td>17,258.78</td></tr><tr><td>RUMALAYA FORTE TAB</td><td>30&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>RUMALAYA GEL</td><td>30GM</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>RUMALAYA LINIMENT</td><td>60ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>RUMALAYA TAB</td><td>60&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>TALEKT CAP</td><td>60&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>TALEKT SYP</td><td>120ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>TENTEX FORTE TAB</td><td>10&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>TENTEX ROYAL CAP</td><td>10&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td colspan=\"8\">**Liquidation is based on last three months sales</td><td>10,044.00</td><td>28,241.90</td></tr><tr><td colspan=\"8\">.F.</td><td></td><td></td></tr></table>",
+          "bbox": [
+            57.0,
+            17.0,
+            1165.0,
+            1079.0
+          ],
+          "confidence": null,
+          "page": 1
+        }
+      ],
+      "boxes": [
+        [
+          64.0,
+          8.0,
+          601.0,
+          29.0
+        ],
+        [
+          57.0,
+          17.0,
+          1165.0,
+          1079.0
+        ]
+      ],
+      "confidence": {
+        "mean": null,
+        "count": 0,
+        "available": false
+      },
+      "layout": {
+        "regions": [
+          {
+            "index": 0,
+            "label": "figure_title",
+            "text": "Product wise stock statement from 01/07/2026 to 29/07/2026",
+            "bbox": [
+              64.0,
+              8.0,
+              601.0,
+              29.0
+            ],
+            "order": 0
+          },
+          {
+            "index": 1,
+            "label": "table",
+            "text": "<table><tr><td>Product Name</td><td>Packing</td><td>Opening</td><td>Receipt</td><td>Issues</td><td>Closing</td><td>Sh.Exp</td><td>Liquidation</td><td>Sales Amount</td><td>Closing Amount</td></tr><tr><td>THE HIMALAYA DRUG(ZIL)</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>CLARINA ANTI ACNE FACE WA</td><td>60ML</td><td>25</td><td></td><td></td><td>25</td><td></td><td>440 Days</td><td></td><td>2,828.00</td></tr><tr><td>CLARINA ANTI ACNE KIT [CM</td><td>1KIT</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>CLARINA ANTI-ACNE CREAM</td><td>30GM</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>FLORASANTE CAP</td><td>20&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>GASEX SYP</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>GASEX SYP[GINGER-LEMON]</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>GASEX SYRUP (ELAICHI FLA)</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>GASEX TAB</td><td>100&#x27;S</td><td>35</td><td></td><td>5</td><td>30</td><td></td><td>236 Days</td><td>667.75</td><td>4,008.90</td></tr><tr><td>GUDUCHI CAP</td><td>60&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HAIR ZONE LOTION</td><td>60ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HERBOLAX CAPS</td><td>10&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIMCOCID SUSP [BANANA FL]</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIMCOCID SUSP [MINT FLAV]</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIMCOCID SUSP [SNF FLAV]</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIMCOCID-SF SYP (MINT)</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIMCOCID-SF SYP [BANANA]</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIMCOCID-SF SYP [SAUNF]</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIOWNA CHOCOLATE FLAVOUR</td><td>200GM</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIOWNA CHOCOLATE FLAVOUR</td><td>400GM</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIOWNA JR CHOCOLATE FLAV</td><td>200GM</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIOWNA JR STRABERRY FLAV</td><td>200GM</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>KOFLET LOZENGES 175+25</td><td>JAR</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>KOFLET SF LINCTUS</td><td>100ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>KOFLET SYP</td><td>100ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>KOFLET-EX LINCTUS</td><td>100ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>LIV 52 SYP</td><td>100ML</td><td>64</td><td></td><td>27</td><td>37</td><td></td><td>70 Days</td><td>2,983.50</td><td>4,146.22</td></tr><tr><td>LIV 52 SYP</td><td>200ML</td><td>33</td><td></td><td>33</td><td></td><td></td><td></td><td>6,040.75</td><td></td></tr><tr><td>LIV 52 TAB</td><td>100&#x27;S</td><td>100</td><td></td><td>2</td><td>98</td><td></td><td>1372 Days</td><td>352.00</td><td>17,258.78</td></tr><tr><td>RUMALAYA FORTE TAB</td><td>30&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>RUMALAYA GEL</td><td>30GM</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>RUMALAYA LINIMENT</td><td>60ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>RUMALAYA TAB</td><td>60&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>TALEKT CAP</td><td>60&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>TALEKT SYP</td><td>120ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>TENTEX FORTE TAB</td><td>10&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>TENTEX ROYAL CAP</td><td>10&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td colspan=\"8\">**Liquidation is based on last three months sales</td><td>10,044.00</td><td>28,241.90</td></tr><tr><td colspan=\"8\">.F.</td><td></td><td></td></tr></table>",
+            "bbox": [
+              57.0,
+              17.0,
+              1165.0,
+              1079.0
+            ],
+            "order": 1
+          }
+        ],
+        "available": true
+      },
+      "tables": {
+        "items": [
+          {
+            "index": 1,
+            "label": "table",
+            "text": "<table><tr><td>Product Name</td><td>Packing</td><td>Opening</td><td>Receipt</td><td>Issues</td><td>Closing</td><td>Sh.Exp</td><td>Liquidation</td><td>Sales Amount</td><td>Closing Amount</td></tr><tr><td>THE HIMALAYA DRUG(ZIL)</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>CLARINA ANTI ACNE FACE WA</td><td>60ML</td><td>25</td><td></td><td></td><td>25</td><td></td><td>440 Days</td><td></td><td>2,828.00</td></tr><tr><td>CLARINA ANTI ACNE KIT [CM</td><td>1KIT</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>CLARINA ANTI-ACNE CREAM</td><td>30GM</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>FLORASANTE CAP</td><td>20&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>GASEX SYP</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>GASEX SYP[GINGER-LEMON]</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>GASEX SYRUP (ELAICHI FLA)</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>GASEX TAB</td><td>100&#x27;S</td><td>35</td><td></td><td>5</td><td>30</td><td></td><td>236 Days</td><td>667.75</td><td>4,008.90</td></tr><tr><td>GUDUCHI CAP</td><td>60&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HAIR ZONE LOTION</td><td>60ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HERBOLAX CAPS</td><td>10&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIMCOCID SUSP [BANANA FL]</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIMCOCID SUSP [MINT FLAV]</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIMCOCID SUSP [SNF FLAV]</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIMCOCID-SF SYP (MINT)</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIMCOCID-SF SYP [BANANA]</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIMCOCID-SF SYP [SAUNF]</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIOWNA CHOCOLATE FLAVOUR</td><td>200GM</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIOWNA CHOCOLATE FLAVOUR</td><td>400GM</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIOWNA JR CHOCOLATE FLAV</td><td>200GM</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIOWNA JR STRABERRY FLAV</td><td>200GM</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>KOFLET LOZENGES 175+25</td><td>JAR</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>KOFLET SF LINCTUS</td><td>100ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>KOFLET SYP</td><td>100ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>KOFLET-EX LINCTUS</td><td>100ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>LIV 52 SYP</td><td>100ML</td><td>64</td><td></td><td>27</td><td>37</td><td></td><td>70 Days</td><td>2,983.50</td><td>4,146.22</td></tr><tr><td>LIV 52 SYP</td><td>200ML</td><td>33</td><td></td><td>33</td><td></td><td></td><td></td><td>6,040.75</td><td></td></tr><tr><td>LIV 52 TAB</td><td>100&#x27;S</td><td>100</td><td></td><td>2</td><td>98</td><td></td><td>1372 Days</td><td>352.00</td><td>17,258.78</td></tr><tr><td>RUMALAYA FORTE TAB</td><td>30&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>RUMALAYA GEL</td><td>30GM</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>RUMALAYA LINIMENT</td><td>60ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>RUMALAYA TAB</td><td>60&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>TALEKT CAP</td><td>60&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>TALEKT SYP</td><td>120ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>TENTEX FORTE TAB</td><td>10&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>TENTEX ROYAL CAP</td><td>10&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td colspan=\"8\">**Liquidation is based on last three months sales</td><td>10,044.00</td><td>28,241.90</td></tr><tr><td colspan=\"8\">.F.</td><td></td><td></td></tr></table>",
+            "bbox": [
+              57.0,
+              17.0,
+              1165.0,
+              1079.0
+            ],
+            "html": null,
+            "cells": null
+          }
+        ],
+        "available": true,
+        "count": 1
+      },
+      "latency_ms": 94764.88749999953,
+      "image_width": 1220,
+      "image_height": 1079,
+      "device": "gpu:0",
+      "metadata": {
+        "document_id": "0000700206_2026_08_ZL_18_377_04092026042611.png",
+        "source_path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700206_2026_08_ZL_18_377_04092026042611.png",
+        "original_width": 1220,
+        "original_height": 1079,
+        "processed_width": 1220,
+        "processed_height": 1079,
+        "orientation": null,
+        "preprocessing": [
+          "exif_transpose",
+          "rgb"
+        ],
+        "engine": "paddleocr-vl-1.6",
+        "model": "PaddleOCR-VL-1.6",
+        "model_version": "v1.6",
+        "pipeline_version": "v1.6",
+        "device": "gpu:0",
+        "init_latency_ms": 12079.41050000045,
+        "model_loaded": true,
+        "init_error": null,
+        "available": true,
+        "status": "success",
+        "latency_ms": 94764.88749999953,
+        "image_width": 1220,
+        "image_height": 1079,
+        "word_count": 96,
+        "block_count": 2,
+        "line_count": 2,
+        "lines": [
+          {
+            "text": "Product wise stock statement from 01/07/2026 to 29/07/2026",
+            "bbox": [
+              64.0,
+              8.0,
+              601.0,
+              29.0
+            ],
+            "label": "figure_title",
+            "order": 0
+          },
+          {
+            "text": "<table><tr><td>Product Name</td><td>Packing</td><td>Opening</td><td>Receipt</td><td>Issues</td><td>Closing</td><td>Sh.Exp</td><td>Liquidation</td><td>Sales Amount</td><td>Closing Amount</td></tr><tr><td>THE HIMALAYA DRUG(ZIL)</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>CLARINA ANTI ACNE FACE WA</td><td>60ML</td><td>25</td><td></td><td></td><td>25</td><td></td><td>440 Days</td><td></td><td>2,828.00</td></tr><tr><td>CLARINA ANTI ACNE KIT [CM</td><td>1KIT</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>CLARINA ANTI-ACNE CREAM</td><td>30GM</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>FLORASANTE CAP</td><td>20&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>GASEX SYP</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>GASEX SYP[GINGER-LEMON]</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>GASEX SYRUP (ELAICHI FLA)</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>GASEX TAB</td><td>100&#x27;S</td><td>35</td><td></td><td>5</td><td>30</td><td></td><td>236 Days</td><td>667.75</td><td>4,008.90</td></tr><tr><td>GUDUCHI CAP</td><td>60&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HAIR ZONE LOTION</td><td>60ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HERBOLAX CAPS</td><td>10&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIMCOCID SUSP [BANANA FL]</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIMCOCID SUSP [MINT FLAV]</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIMCOCID SUSP [SNF FLAV]</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIMCOCID-SF SYP (MINT)</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIMCOCID-SF SYP [BANANA]</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIMCOCID-SF SYP [SAUNF]</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIOWNA CHOCOLATE FLAVOUR</td><td>200GM</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIOWNA CHOCOLATE FLAVOUR</td><td>400GM</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIOWNA JR CHOCOLATE FLAV</td><td>200GM</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIOWNA JR STRABERRY FLAV</td><td>200GM</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>KOFLET LOZENGES 175+25</td><td>JAR</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>KOFLET SF LINCTUS</td><td>100ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>KOFLET SYP</td><td>100ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>KOFLET-EX LINCTUS</td><td>100ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>LIV 52 SYP</td><td>100ML</td><td>64</td><td></td><td>27</td><td>37</td><td></td><td>70 Days</td><td>2,983.50</td><td>4,146.22</td></tr><tr><td>LIV 52 SYP</td><td>200ML</td><td>33</td><td></td><td>33</td><td></td><td></td><td></td><td>6,040.75</td><td></td></tr><tr><td>LIV 52 TAB</td><td>100&#x27;S</td><td>100</td><td></td><td>2</td><td>98</td><td></td><td>1372 Days</td><td>352.00</td><td>17,258.78</td></tr><tr><td>RUMALAYA FORTE TAB</td><td>30&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>RUMALAYA GEL</td><td>30GM</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>RUMALAYA LINIMENT</td><td>60ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>RUMALAYA TAB</td><td>60&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>TALEKT CAP</td><td>60&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>TALEKT SYP</td><td>120ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>TENTEX FORTE TAB</td><td>10&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>TENTEX ROYAL CAP</td><td>10&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td colspan=\"8\">**Liquidation is based on last three months sales</td><td>10,044.00</td><td>28,241.90</td></tr><tr><td colspan=\"8\">.F.</td><td></td><td></td></tr></table>",
+            "bbox": [
+              57.0,
+              17.0,
+              1165.0,
+              1079.0
+            ],
+            "label": "table",
+            "order": 1
+          }
+        ],
+        "reading_order": [
+          0,
+          1
+        ],
+        "bbox_stats": {
+          "valid": 2,
+          "invalid": 0,
+          "total": 2
+        }
+      },
+      "error": null,
+      "error_type": null,
+      "page": 1,
+      "native_text": false,
+      "ocr_required": true,
+      "paddle_vl_status": "success",
+      "image_meta": {
+        "original_width": 1220,
+        "original_height": 1079,
+        "processed_width": 1220,
+        "processed_height": 1079,
+        "orientation": null,
+        "preprocessing": [
+          "exif_transpose",
+          "rgb"
+        ]
+      },
+      "resources": {
+        "cpu_percent": 0.0,
+        "ram_used_gb": 10.9,
+        "ram_total_gb": 15.31,
+        "gpu": "NVIDIA GeForce RTX 3050 6GB Laptop GPU",
+        "vram_used_gb": 7.974,
+        "vram_total_gb": 6.0
+      }
+    }
+  ],
+  "status": "success",
+  "errors": [],
+  "latency_ms": 94929.62259999968,
+  "finished_at": "2026-10-08T13:18:00.650382+00:00",
+  "resources": {
+    "cpu_percent": 1.2,
+    "ram_used_gb": 10.9,
+    "ram_total_gb": 15.31,
+    "gpu": "NVIDIA GeForce RTX 3050 6GB Laptop GPU",
+    "vram_used_gb": 7.974,
+    "vram_total_gb": 6.0
+  }
+}

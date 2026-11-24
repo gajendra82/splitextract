@@ -1,0 +1,421 @@
+{
+  "source_file": "0000700633_2026_08_ZL_10_382_04092026114220.jpg",
+  "source_format": "jpg",
+  "stockist_name": null,
+  "stockist_address": null,
+  "company_name": "5 THE HIMALAYA DRUG COMPANY(ZEAL) STOCK & SALES STATEMENT 01-08-2026 - 31-08-2026",
+  "period_from": null,
+  "period_to": null,
+  "report_title": "STOCK VALUATION",
+  "line_items": [
+    {
+      "product_code": null,
+      "product_name": "AACTARILSOAP 75GM 12 932.16 0",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 1043.55,
+      "extra": {
+        "unit_rate": 12.0,
+        "layout": "stock_valuation_stock_rate",
+        "sno": 8,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ABANATAB6OS 99 147114 Qo 0 1 167.62",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 98.0,
+      "closing_value": 0.0,
+      "extra": {
+        "unit_rate": 14562.0,
+        "layout": "stock_valuation_stock_rate",
+        "sno": 9,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ALTHEA LOTION 100ML 0 0 0 o",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 9.0,
+      "closing_value": 0.0,
+      "extra": {
+        "unit_rate": 0.0,
+        "layout": "stock_valuation_stock_rate",
+        "sno": 11,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "DIABECONTAB60S 0 0 0 o",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 9.0,
+      "closing_value": 0.0,
+      "extra": {
+        "unit_rate": 0.0,
+        "layout": "stock_valuation_stock_rate",
+        "sno": 19,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "DIAREX TAB30S 0 0 0 0",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "unit_rate": 0.0,
+        "layout": "stock_valuation_stock_rate",
+        "sno": 22,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "HEALUPIOGM 0 0 0 0",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "unit_rate": 0.0,
+        "layout": "stock_valuation_stock_rate",
+        "sno": 24,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "HERBOLAXCAP10S 0 0 Qo 0",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "unit_rate": 0.0,
+        "layout": "stock_valuation_stock_rate",
+        "sno": 25,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "HERBOLAXTAB100S 8 828.88 0 0 0",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 828.1,
+      "extra": {
+        "unit_rate": 8.0,
+        "layout": "stock_valuation_stock_rate",
+        "sno": 26,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "HIOWNA KIDZ CHOCOLATE 200GM 0 0 Qo 0",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "unit_rate": 0.0,
+        "layout": "stock_valuation_stock_rate",
+        "sno": 29,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "UV-52SYP100ML 102 9644.1 Qo 0 48 4991.68",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 4.0,
+      "closing_value": 0.0,
+      "extra": {
+        "unit_rate": 5105.0,
+        "layout": "stock_valuation_stock_rate",
+        "sno": 33,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ORO-T ORAL RINSE LIQ 200ML 0 0 0 0",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "unit_rate": 0.0,
+        "layout": "stock_valuation_stock_rate",
+        "sno": 38,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "OXITARD CAP 10S 0 0 0 o",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 9.0,
+      "closing_value": 0.0,
+      "extra": {
+        "unit_rate": 0.0,
+        "layout": "stock_valuation_stock_rate",
+        "sno": 39,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PURE HANDS ADVANCED PINK 7S0ML 0 0 Qo 0",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "unit_rate": 0.0,
+        "layout": "stock_valuation_stock_rate",
+        "sno": 45,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PURE HANDS LEMON T00ML 0 0 0 o",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 9.0,
+      "closing_value": 0.0,
+      "extra": {
+        "unit_rate": 0.0,
+        "layout": "stock_valuation_stock_rate",
+        "sno": 47,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PURE HANDS LITCHI SOOML 0 0 Qo 0",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "unit_rate": 0.0,
+        "layout": "stock_valuation_stock_rate",
+        "sno": 49,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PURIMTAB60S 0 0 0 0",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "unit_rate": 0.0,
+        "layout": "stock_valuation_stock_rate",
+        "sno": 54,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "QUISTA DN MILK MASALA POWDER 200GM 0 0 Qo 0",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "unit_rate": 0.0,
+        "layout": "stock_valuation_stock_rate",
+        "sno": 57,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "TALEKT CAP 60S 0 0 0 o",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 9.0,
+      "closing_value": 0.0,
+      "extra": {
+        "unit_rate": 0.0,
+        "layout": "stock_valuation_stock_rate",
+        "sno": 63,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "VRIKSHAMALA TAB60S 0 0 Qo 0",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "unit_rate": 0.0,
+        "layout": "stock_valuation_stock_rate",
+        "sno": 69,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "YASHTIMADHU TAB 60S 0 0 0 0",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "unit_rate": 0.0,
+        "layout": "stock_valuation_stock_rate",
+        "sno": 70,
+        "stock_identity_ok": true
+      }
+    }
+  ],
+  "totals": {
+    "sales_value": null,
+    "closing_value": 1871.65,
+    "extra": {
+      "extraction_method": "stock_valuation_stock_rate",
+      "layout": "stock_valuation_stock_rate",
+      "qty_only": false,
+      "closing_qty": 147.0,
+      "printed_total_stock": 7.0,
+      "line_sales_value_sum": 0.0,
+      "line_closing_value_sum": 1871.65,
+      "sales_qty": 0.0,
+      "stock_identity_kind": "stock_valuation_stock_rate",
+      "stock_identity_formula": "closing_qty=Stock; closing_value=Value; no opening/receipts/sales",
+      "stock_identity_fail_count": 0,
+      "stock_validation": {
+        "extracted_closing": 147.0,
+        "extracted_closing_value": 1871.65,
+        "is_valid": true
+      },
+      "extraction_quality": {
+        "quality": "good",
+        "score": 100,
+        "reasons": [],
+        "threshold": 75.0
+      },
+      "gemini_fallback": "not_called"
+    }
+  }
+}

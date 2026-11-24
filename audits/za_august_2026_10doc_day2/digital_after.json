@@ -1,0 +1,276 @@
+[
+  {
+    "file": "0000734513_2026_08_ZA_13_704_06092026081229.pdf",
+    "seconds": 0.871,
+    "rows": 49,
+    "method": "medivision_op_scm_pdf",
+    "decision": "UNRESOLVED",
+    "reason": "stock_identity_failure",
+    "verified": false,
+    "fail_count": 9,
+    "grounding": {
+      "status": "checked",
+      "reader": "pdf_header_positions",
+      "compared_rows": 49,
+      "discrepancy_count": 0,
+      "blank_read_as_zero": 0,
+      "blocks_verification": false,
+      "reason": null
+    },
+    "fails": [
+      {
+        "product": "FLORASANTE CAP",
+        "op": 9.0,
+        "rcpt": 0.0,
+        "sale": 0.0,
+        "close": 0.0,
+        "scheme_out": 0.0,
+        "credit": null,
+        "debit": null,
+        "expected": null
+      },
+      {
+        "product": "HARIDRA TAB",
+        "op": 5.0,
+        "rcpt": 0.0,
+        "sale": 0.0,
+        "close": 0.0,
+        "scheme_out": 0.0,
+        "credit": null,
+        "debit": null,
+        "expected": null
+      },
+      {
+        "product": "52 100ML LIV DS SUGER FREE",
+        "op": 22.0,
+        "rcpt": 0.0,
+        "sale": 0.0,
+        "close": 0.0,
+        "scheme_out": 0.0,
+        "credit": null,
+        "debit": null,
+        "expected": null
+      },
+      {
+        "product": "LUKOL SYP",
+        "op": 22.0,
+        "rcpt": 0.0,
+        "sale": 0.0,
+        "close": 0.0,
+        "scheme_out": 0.0,
+        "credit": null,
+        "debit": null,
+        "expected": null
+      },
+      {
+        "product": "MENTAT GUMMIES",
+        "op": 9.0,
+        "rcpt": 0.0,
+        "sale": 0.0,
+        "close": 0.0,
+        "scheme_out": 0.0,
+        "credit": null,
+        "debit": null,
+        "expected": null
+      },
+      {
+        "product": "100ML PLATENZA SYR",
+        "op": 35.0,
+        "rcpt": 0.0,
+        "sale": 0.0,
+        "close": 0.0,
+        "scheme_out": 0.0,
+        "credit": null,
+        "debit": null,
+        "expected": null
+      },
+      {
+        "product": "SEPTILIN GUMMIES",
+        "op": 7.0,
+        "rcpt": 0.0,
+        "sale": 0.0,
+        "close": 0.0,
+        "scheme_out": 0.0,
+        "credit": null,
+        "debit": null,
+        "expected": null
+      },
+      {
+        "product": "SHUDDHA GUGGULU TAB",
+        "op": 5.0,
+        "rcpt": 0.0,
+        "sale": 0.0,
+        "close": 0.0,
+        "scheme_out": 0.0,
+        "credit": null,
+        "debit": null,
+        "expected": null
+      },
+      {
+        "product": "STYPLON TAB",
+        "op": 9.0,
+        "rcpt": 0.0,
+        "sale": 0.0,
+        "close": 0.0,
+        "scheme_out": 0.0,
+        "credit": null,
+        "debit": null,
+        "expected": null
+      }
+    ]
+  },
+  {
+    "file": "0000711172_2026_08_ZA_30_313_04092026034007.xlsx",
+    "seconds": 0.911,
+    "rows": 16,
+    "method": "item_pack_sreturn_others",
+    "decision": "VERIFIED",
+    "reason": "schema_evidence_business_ok",
+    "verified": true,
+    "fail_count": 0,
+    "grounding": {
+      "status": "checked",
+      "reader": "spreadsheet_cells",
+      "compared_rows": 16,
+      "discrepancy_count": 0,
+      "blank_read_as_zero": 0,
+      "blocks_verification": false,
+      "reason": null
+    },
+    "fails": []
+  },
+  {
+    "file": "0000700848_2026_08_ZA_30_578_05092026144147.XLS",
+    "seconds": 0.187,
+    "rows": 20,
+    "method": null,
+    "decision": "VERIFIED",
+    "reason": "schema_evidence_business_ok",
+    "verified": true,
+    "fail_count": 0,
+    "grounding": {
+      "status": "checked",
+      "reader": "spreadsheet_cells",
+      "compared_rows": 20,
+      "discrepancy_count": 0,
+      "blank_read_as_zero": 0,
+      "blocks_verification": false,
+      "reason": null
+    },
+    "fails": []
+  },
+  {
+    "file": "0000732705_2026_08_ZA_24_270_04092026051409.TXT",
+    "seconds": 0.011,
+    "rows": 20,
+    "method": "pro_age_opening_pur_sale_closing",
+    "decision": "VERIFIED",
+    "reason": "schema_evidence_business_ok",
+    "verified": true,
+    "fail_count": 0,
+    "grounding": {
+      "status": "checked",
+      "reader": "delimited_text",
+      "compared_rows": 20,
+      "discrepancy_count": 0,
+      "blank_read_as_zero": 0,
+      "blocks_verification": false,
+      "reason": null
+    },
+    "fails": []
+  },
+  {
+    "file": "0000734246_2026_08_ZA_13_249_06092026162117.html",
+    "seconds": 0.21,
+    "rows": 44,
+    "method": "medivision_op_wsale_html",
+    "decision": "UNRESOLVED",
+    "reason": "stock_identity_failure",
+    "verified": false,
+    "fail_count": 3,
+    "grounding": {
+      "status": "checked",
+      "reader": "html_table",
+      "compared_rows": 44,
+      "discrepancy_count": 0,
+      "blank_read_as_zero": 0,
+      "blocks_verification": false,
+      "reason": null
+    },
+    "fails": [
+      {
+        "product": "EVECARE FORTE LIQ 200ML",
+        "op": 18.0,
+        "rcpt": null,
+        "sale": null,
+        "close": null,
+        "scheme_out": null,
+        "credit": null,
+        "debit": null,
+        "expected": 18.0
+      },
+      {
+        "product": "LIV.52 DS SUGAR FREE SYP 100ML",
+        "op": 36.0,
+        "rcpt": null,
+        "sale": null,
+        "close": null,
+        "scheme_out": null,
+        "credit": null,
+        "debit": null,
+        "expected": 36.0
+      },
+      {
+        "product": "LUKOL SYP 200ML",
+        "op": 16.0,
+        "rcpt": null,
+        "sale": null,
+        "close": null,
+        "scheme_out": null,
+        "credit": null,
+        "debit": null,
+        "expected": 16.0
+      }
+    ]
+  },
+  {
+    "file": "0000713511_2026_08_ZA_24_255_07092026171904.docx",
+    "seconds": 0.306,
+    "rows": 55,
+    "method": "sale_closing_analysis_docx",
+    "decision": "VERIFIED",
+    "reason": "schema_evidence_business_ok",
+    "verified": true,
+    "fail_count": 0,
+    "grounding": {
+      "status": "checked",
+      "reader": "docx_paragraphs",
+      "compared_rows": 55,
+      "discrepancy_count": 0,
+      "blank_read_as_zero": 0,
+      "blocks_verification": false,
+      "reason": null
+    },
+    "fails": []
+  },
+  {
+    "file": "0000736672_2026_08_ZA_37_215_05092026161500.doc",
+    "seconds": 0.072,
+    "rows": 58,
+    "method": "legacy_doc_text",
+    "decision": "VERIFIED",
+    "reason": "schema_evidence_business_ok",
+    "verified": true,
+    "fail_count": 0,
+    "grounding": {
+      "status": "checked",
+      "reader": "legacy_doc_text",
+      "compared_rows": 58,
+      "discrepancy_count": 0,
+      "blank_read_as_zero": 0,
+      "blocks_verification": false,
+      "reason": null
+    },
+    "fails": []
+  }
+]

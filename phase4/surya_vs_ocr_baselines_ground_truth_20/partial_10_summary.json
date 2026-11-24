@@ -1,0 +1,350 @@
+{
+  "status": "PARTIAL_10_OF_20",
+  "scope": {
+    "intended_documents": 20,
+    "scored_documents": 10,
+    "verified_fields_scored": 187,
+    "ground_truth": "SOURCE_VERIFIED",
+    "document_ids": [
+      "0000700084_2026_08_ZL_06_8236_03092026155136.pdf",
+      "0000700124_2026_08_ZL_06_521_02092026204703.pdf",
+      "0000700209_2026_08_ZL_18_374_04092026060313.pdf",
+      "0000700275_2026_08_ZL_18_374_04092026171615.pdf",
+      "0000700308_2026_08_ZL_18_8175_03092026072320.jpg",
+      "0000700317_2026_08_ZL_18_374_02092026171443.pdf",
+      "0000700346_2026_08_ZL_18_8189_05092026025159.pdf",
+      "0000700358_2026_08_ZL_18_8173_05092026185826.pdf",
+      "0000700364_2026_08_ZL_18_8173_05092026190156.pdf",
+      "0000700406_2026_08_ZL_10_384_05092026140711.jpg"
+    ],
+    "note": "Stopped early at user request; only docs with completed Surya OCR scored."
+  },
+  "engines": {
+    "tesseract": {
+      "metrics_shared_fields": {
+        "verified_fields": 187,
+        "correct_fields": 118,
+        "field_accuracy": 0.6310160427807486,
+        "numeric_accuracy": 0.6486486486486487,
+        "quantity_accuracy": 0.6923076923076923,
+        "price_accuracy": 0.375,
+        "date_accuracy": 0.0,
+        "batch_accuracy": null,
+        "header_accuracy": 0.5172413793103449,
+        "table_column_accuracy": 0.6575342465753424,
+        "text_accuracy": 0.5641025641025641,
+        "precision": 1.0,
+        "recall": 0.6310160427807486,
+        "f1": 0.7737704918032787,
+        "silent_wrong_rate": 0.0,
+        "critical_error_rate": 0.2994652406417112,
+        "by_type_prf": {
+          "numeric": {
+            "precision": 1.0,
+            "recall": 0.6486486486486487,
+            "f1": 0.7868852459016393,
+            "n": 148
+          },
+          "text": {
+            "precision": 1.0,
+            "recall": 0.5641025641025641,
+            "f1": 0.7213114754098361,
+            "n": 39
+          },
+          "table": {
+            "precision": 1.0,
+            "recall": 0.6575342465753424,
+            "f1": 0.7933884297520661,
+            "n": 146
+          }
+        },
+        "error_type_counts": {
+          "MISSING": 69
+        }
+      },
+      "fully_correct_documents": 2,
+      "document_status_counts": {
+        "FULLY_CORRECT": 2,
+        "OCR_UNAVAILABLE": 1,
+        "PARTIALLY_CORRECT": 7
+      }
+    },
+    "paddleocr-vl-1.6": {
+      "metrics_shared_fields": {
+        "verified_fields": 187,
+        "correct_fields": 167,
+        "field_accuracy": 0.893048128342246,
+        "numeric_accuracy": 0.8851351351351351,
+        "quantity_accuracy": 0.8769230769230769,
+        "price_accuracy": 1.0,
+        "date_accuracy": 0.5,
+        "batch_accuracy": null,
+        "header_accuracy": 0.896551724137931,
+        "table_column_accuracy": 0.8904109589041096,
+        "text_accuracy": 0.9230769230769231,
+        "precision": 0.912568306010929,
+        "recall": 0.893048128342246,
+        "f1": 0.9027027027027028,
+        "silent_wrong_rate": 0.0855614973262032,
+        "critical_error_rate": 0.09090909090909091,
+        "by_type_prf": {
+          "numeric": {
+            "precision": 0.891156462585034,
+            "recall": 0.8851351351351351,
+            "f1": 0.888135593220339,
+            "n": 148
+          },
+          "text": {
+            "precision": 1.0,
+            "recall": 0.9230769230769231,
+            "f1": 0.9600000000000001,
+            "n": 39
+          },
+          "table": {
+            "precision": 0.8904109589041096,
+            "recall": 0.8904109589041096,
+            "f1": 0.8904109589041096,
+            "n": 146
+          }
+        },
+        "error_type_counts": {
+          "MISSING": 4,
+          "COLUMN_CONFUSION": 16
+        }
+      },
+      "fully_correct_documents": 4,
+      "document_status_counts": {
+        "FULLY_CORRECT": 4,
+        "PARTIALLY_CORRECT": 6
+      }
+    },
+    "surya-2": {
+      "metrics_shared_fields": {
+        "verified_fields": 187,
+        "correct_fields": 154,
+        "field_accuracy": 0.8235294117647058,
+        "numeric_accuracy": 0.831081081081081,
+        "quantity_accuracy": 0.8307692307692308,
+        "price_accuracy": 0.9375,
+        "date_accuracy": 0.0,
+        "batch_accuracy": null,
+        "header_accuracy": 0.7586206896551724,
+        "table_column_accuracy": 0.8424657534246576,
+        "text_accuracy": 0.7948717948717948,
+        "precision": 0.875,
+        "recall": 0.8235294117647058,
+        "f1": 0.8484848484848485,
+        "silent_wrong_rate": 0.11764705882352941,
+        "critical_error_rate": 0.13368983957219252,
+        "by_type_prf": {
+          "numeric": {
+            "precision": 0.8482758620689655,
+            "recall": 0.831081081081081,
+            "f1": 0.8395904436860068,
+            "n": 148
+          },
+          "text": {
+            "precision": 1.0,
+            "recall": 0.7948717948717948,
+            "f1": 0.8857142857142858,
+            "n": 39
+          },
+          "table": {
+            "precision": 0.8482758620689655,
+            "recall": 0.8424657534246576,
+            "f1": 0.845360824742268,
+            "n": 146
+          }
+        },
+        "error_type_counts": {
+          "MISSING": 11,
+          "COLUMN_CONFUSION": 22
+        }
+      },
+      "fully_correct_documents": 4,
+      "document_status_counts": {
+        "FULLY_CORRECT": 4,
+        "PARTIALLY_CORRECT": 6
+      }
+    }
+  },
+  "pairwise_shared_fields": {
+    "tesseract_vs_paddleocr-vl-1.6": {
+      "both_correct": 115,
+      "tesseract_only_correct": 3,
+      "paddleocr-vl-1.6_only_correct": 52,
+      "both_wrong": 17
+    },
+    "tesseract_vs_surya-2": {
+      "both_correct": 111,
+      "tesseract_only_correct": 7,
+      "surya-2_only_correct": 43,
+      "both_wrong": 26
+    },
+    "paddleocr-vl-1.6_vs_surya-2": {
+      "both_correct": 152,
+      "paddleocr-vl-1.6_only_correct": 15,
+      "surya-2_only_correct": 2,
+      "both_wrong": 18
+    }
+  },
+  "error_categories": {
+    "tesseract": {
+      "CORRECT": 118,
+      "MISSING": 69
+    },
+    "paddleocr-vl-1.6": {
+      "CORRECT": 167,
+      "MISSING": 4,
+      "COLUMN_CONFUSION": 16
+    },
+    "surya-2": {
+      "CORRECT": 154,
+      "MISSING": 11,
+      "COLUMN_CONFUSION": 22
+    }
+  },
+  "per_document": [
+    {
+      "document_id": "0000700084_2026_08_ZL_06_8236_03092026155136.pdf",
+      "verified_fields": 15,
+      "statuses": {
+        "tesseract": "PARTIALLY_CORRECT",
+        "paddleocr-vl-1.6": "PARTIALLY_CORRECT",
+        "surya-2": "PARTIALLY_CORRECT"
+      },
+      "correct_fields": {
+        "tesseract": 10,
+        "paddleocr-vl-1.6": 14,
+        "surya-2": 14
+      }
+    },
+    {
+      "document_id": "0000700124_2026_08_ZL_06_521_02092026204703.pdf",
+      "verified_fields": 12,
+      "statuses": {
+        "tesseract": "PARTIALLY_CORRECT",
+        "paddleocr-vl-1.6": "PARTIALLY_CORRECT",
+        "surya-2": "PARTIALLY_CORRECT"
+      },
+      "correct_fields": {
+        "tesseract": 4,
+        "paddleocr-vl-1.6": 10,
+        "surya-2": 10
+      }
+    },
+    {
+      "document_id": "0000700209_2026_08_ZL_18_374_04092026060313.pdf",
+      "verified_fields": 16,
+      "statuses": {
+        "tesseract": "PARTIALLY_CORRECT",
+        "paddleocr-vl-1.6": "PARTIALLY_CORRECT",
+        "surya-2": "PARTIALLY_CORRECT"
+      },
+      "correct_fields": {
+        "tesseract": 1,
+        "paddleocr-vl-1.6": 5,
+        "surya-2": 5
+      }
+    },
+    {
+      "document_id": "0000700275_2026_08_ZL_18_374_04092026171615.pdf",
+      "verified_fields": 21,
+      "statuses": {
+        "tesseract": "PARTIALLY_CORRECT",
+        "paddleocr-vl-1.6": "PARTIALLY_CORRECT",
+        "surya-2": "PARTIALLY_CORRECT"
+      },
+      "correct_fields": {
+        "tesseract": 18,
+        "paddleocr-vl-1.6": 18,
+        "surya-2": 13
+      }
+    },
+    {
+      "document_id": "0000700308_2026_08_ZL_18_8175_03092026072320.jpg",
+      "verified_fields": 9,
+      "statuses": {
+        "tesseract": "FULLY_CORRECT",
+        "paddleocr-vl-1.6": "PARTIALLY_CORRECT",
+        "surya-2": "FULLY_CORRECT"
+      },
+      "correct_fields": {
+        "tesseract": 9,
+        "paddleocr-vl-1.6": 8,
+        "surya-2": 9
+      }
+    },
+    {
+      "document_id": "0000700317_2026_08_ZL_18_374_02092026171443.pdf",
+      "verified_fields": 20,
+      "statuses": {
+        "tesseract": "OCR_UNAVAILABLE",
+        "paddleocr-vl-1.6": "PARTIALLY_CORRECT",
+        "surya-2": "PARTIALLY_CORRECT"
+      },
+      "correct_fields": {
+        "tesseract": 0,
+        "paddleocr-vl-1.6": 18,
+        "surya-2": 15
+      }
+    },
+    {
+      "document_id": "0000700346_2026_08_ZL_18_8189_05092026025159.pdf",
+      "verified_fields": 18,
+      "statuses": {
+        "tesseract": "FULLY_CORRECT",
+        "paddleocr-vl-1.6": "FULLY_CORRECT",
+        "surya-2": "FULLY_CORRECT"
+      },
+      "correct_fields": {
+        "tesseract": 18,
+        "paddleocr-vl-1.6": 18,
+        "surya-2": 18
+      }
+    },
+    {
+      "document_id": "0000700358_2026_08_ZL_18_8173_05092026185826.pdf",
+      "verified_fields": 21,
+      "statuses": {
+        "tesseract": "PARTIALLY_CORRECT",
+        "paddleocr-vl-1.6": "FULLY_CORRECT",
+        "surya-2": "FULLY_CORRECT"
+      },
+      "correct_fields": {
+        "tesseract": 19,
+        "paddleocr-vl-1.6": 21,
+        "surya-2": 21
+      }
+    },
+    {
+      "document_id": "0000700364_2026_08_ZL_18_8173_05092026190156.pdf",
+      "verified_fields": 20,
+      "statuses": {
+        "tesseract": "PARTIALLY_CORRECT",
+        "paddleocr-vl-1.6": "FULLY_CORRECT",
+        "surya-2": "FULLY_CORRECT"
+      },
+      "correct_fields": {
+        "tesseract": 15,
+        "paddleocr-vl-1.6": 20,
+        "surya-2": 20
+      }
+    },
+    {
+      "document_id": "0000700406_2026_08_ZL_10_384_05092026140711.jpg",
+      "verified_fields": 35,
+      "statuses": {
+        "tesseract": "PARTIALLY_CORRECT",
+        "paddleocr-vl-1.6": "FULLY_CORRECT",
+        "surya-2": "PARTIALLY_CORRECT"
+      },
+      "correct_fields": {
+        "tesseract": 24,
+        "paddleocr-vl-1.6": 35,
+        "surya-2": 29
+      }
+    }
+  ],
+  "recommendation": "On this partial sample (10 of 20 SOURCE_VERIFIED docs / 187 fields with completed Surya OCR), paddleocr-vl-1.6 has the highest measured field accuracy (89.3%). Silent-wrong: tesseract=0.0%, paddleocr-vl-1.6=8.6%, surya-2=11.8%. FULLY_CORRECT: tesseract=2, paddleocr-vl-1.6=4, surya-2=4. This is not a full 20-doc result and not an automatic production winner; the run was stopped after 10 documents."
+}

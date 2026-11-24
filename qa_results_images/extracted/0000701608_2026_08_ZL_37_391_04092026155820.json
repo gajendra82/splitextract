@@ -1,0 +1,364 @@
+{
+  "source_file": "0000701608_2026_08_ZL_37_391_04092026155820.jpg",
+  "source_format": "jpg",
+  "stockist_name": "SHIVA SAI AGENCIES",
+  "stockist_address": null,
+  "company_name": "THE HIMALAYA DRUG CO",
+  "period_from": "2026-08-01",
+  "period_to": "2026-08-31",
+  "report_title": "Stock & Sales Statement",
+  "line_items": [
+    {
+      "product_code": null,
+      "product_name": "BONNISAN SYRUP",
+      "packing": "100ML",
+      "opening_qty": 32.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 33.0,
+      "sales_value": 0.0,
+      "closing_qty": -1.0,
+      "closing_value": 0.0,
+      "extra": {
+        "age": 53,
+        "expected_total": 32.0,
+        "expected_closing": -1.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "CONFIDO TAB",
+      "packing": "60's",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "age": 765,
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "CYSTONE TAB",
+      "packing": "60`s",
+      "opening_qty": 72.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 22.0,
+      "sales_value": 0.0,
+      "closing_qty": 50.0,
+      "closing_value": 9720.0,
+      "extra": {
+        "age": 53,
+        "expected_total": 72.0,
+        "expected_closing": 50.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "EVECARE CAP",
+      "packing": "30CAP",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "age": 581,
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "EVECARE SYRUP",
+      "packing": "200ML",
+      "opening_qty": 3.0,
+      "opening_value": null,
+      "receipts_qty": 28.0,
+      "receipts_value": null,
+      "sales_qty": 22.0,
+      "sales_value": 0.0,
+      "closing_qty": 9.0,
+      "closing_value": 1549.8,
+      "extra": {
+        "age": 25,
+        "expected_total": 31.0,
+        "expected_closing": 9.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV 52 SYP 200ML",
+      "packing": "200ML",
+      "opening_qty": 33.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 33.0,
+      "closing_value": 6177.27,
+      "extra": {
+        "age": 53,
+        "expected_total": 33.0,
+        "expected_closing": 33.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV-52 DROPS",
+      "packing": "60ML",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "age": 947,
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV-52 DS TAB",
+      "packing": "60's",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "age": 2939,
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV-52 SYRUP",
+      "packing": "100ML",
+      "opening_qty": 27.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 14.0,
+      "sales_value": 0.0,
+      "closing_qty": 13.0,
+      "closing_value": 1455.87,
+      "extra": {
+        "age": 110,
+        "expected_total": 27.0,
+        "expected_closing": 13.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV-52 TAB",
+      "packing": "100`s",
+      "opening_qty": 93.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 20.0,
+      "sales_value": 0.0,
+      "closing_qty": 73.0,
+      "closing_value": 12848.0,
+      "extra": {
+        "age": 53,
+        "expected_total": 93.0,
+        "expected_closing": 73.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "MENTAT TAB",
+      "packing": "60 'S",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "age": 6418,
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PILEX FORTE OINT",
+      "packing": "30GR",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "age": 217,
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PILEX TAB",
+      "packing": "60TAB",
+      "opening_qty": 8.0,
+      "opening_value": null,
+      "receipts_qty": 100.0,
+      "receipts_value": null,
+      "sales_qty": 32.0,
+      "sales_value": 0.0,
+      "closing_qty": 76.0,
+      "closing_value": 14250.7,
+      "extra": {
+        "age": 25,
+        "expected_total": 108.0,
+        "expected_closing": 76.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "SEPTILIN SYRUP",
+      "packing": "200ML",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "age": 1133,
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "SPEMAN TAB",
+      "packing": "60`s",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "age": 492,
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "TENTEX FORTE TAB",
+      "packing": "10`s",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "age": 217,
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "TENTEX ROYAL CAP",
+      "packing": "10CAP",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "age": 809,
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    }
+  ],
+  "totals": {
+    "sales_value": null,
+    "closing_value": 45940.8,
+    "extra": {
+      "extraction_method": "gemini_extraction_fallback",
+      "line_sales_value_sum": 0.0,
+      "line_closing_value_sum": 46001.64,
+      "sales_qty": 143.0,
+      "closing_qty": 253.0,
+      "stock_identity_kind": "opening_receipts_sales_closing",
+      "stock_identity_formula": "closing=opening+receipts-sales",
+      "stock_identity_fail_count": 0,
+      "stock_validation": {
+        "opening_plus_purchase": 396.0,
+        "expected_total": 396.0,
+        "calculated_closing": 253.0,
+        "extracted_closing": 253.0,
+        "is_valid": true
+      },
+      "extraction_quality": {
+        "quality": "good",
+        "score": 100,
+        "reasons": [],
+        "threshold": 75.0
+      },
+      "gemini_fallback": "not_called",
+      "early_vision_reason": "low_ocr_quality_score"
+    }
+  }
+}

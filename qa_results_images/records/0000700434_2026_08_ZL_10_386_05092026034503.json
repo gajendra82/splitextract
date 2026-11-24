@@ -1,0 +1,622 @@
+{
+  "file": "0000700434_2026_08_ZL_10_386_05092026034503.jpg",
+  "path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700434_2026_08_ZL_10_386_05092026034503.jpg",
+  "format": "Stock and Sale Report",
+  "api_method": "gemini_extraction_fallback",
+  "status": "FAIL",
+  "expected_rows": 20,
+  "extracted_rows": 52,
+  "matched_rows": 7,
+  "missing_rows": [
+    {
+      "product": "Manufacturer AACTARILSOAP75GM ABANA TAB * ALTHEA LOTION AMALAKI TAB BLEMINORANTIBLEMIS CLARINAANTIACNE CF CLARINAANTIACNE FA CLARINAANTIACNE FA COLD BALM CONFIDOTABS*",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 4,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "DIABECONDSTAB DIABECONTAB* DIAREX SYRUP DIAREX TABS * GASEXSYPGINGERLE",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 4,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "GASEX SYRUP (ELACHI GASEX TABS *",
+      "opening_qty": 13,
+      "receipts_qty": null,
+      "sales_qty": 6,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "HERBOLAXCAPS HERBOLAXTAB\" HIMCOCID SUSP [SAUN HIMCOCID SUSP SUGAI HIMCOCID SYRUP [BAN HIMCOLIN GEL *",
+      "opening_qty": 39,
+      "receipts_qty": null,
+      "sales_qty": 5,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "HIOWNA CHOCOLATE F HIOWNAVANILLAFLAV{ KOFLET JAR (60*15LC KOFLET JAR“(160*401",
+      "opening_qty": 2,
+      "receipts_qty": 8,
+      "sales_qty": 6,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "KOFLETLOZENGES* Liv 82 SYRUP *",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 16,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "Liv.62 HB CAPS\" MUSCLE & JOINTRUB OPHTHACAREEYEDRC10ML",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 4,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "ORO-TORALRINSE LIQ OXITARO CAPS PAINBALM STRONG",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 0,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "PURIM TABS * Q-DEE (IMMUNITY) TAB",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 0,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "QUISTAKIDZ POWDER. QUISTAKIDZ POWDER RUMALAYAGEL*",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 1,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "SHALLAKI TAB STRESS RELIEF MASS/ TAGARA TAB TALEKT CAPS TALEKT SYRUP Report Date : O1-Aug-26 DK PHARMA 480/1, , 16TH CROSS,",
+      "opening_qty": null,
+      "receipts_qty": 9945220732.73,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "Manufacturer TENTEXFORTE TABS’ TRIPHALA TAB, For Manufacturer : THE pening Val:",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 8644.82,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "Closing Val: Sales",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 15001.4,
+      "closing_qty": null,
+      "kind": "missing_product"
+    }
+  ],
+  "extra_rows": [
+    {
+      "product": "AACTARIL SOAP",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "ABANA TAB",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "ALTHEA LOTION",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "AMALAKI TAB",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "BLEMINOR ANTI BLEMIS",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "CLARINA ANTI ACNE CF",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "CLARINA ANTI ACNE FA",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "CLARINA ANTI ACNE FA",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "COLD BALM",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "CONFIDO TABS",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 98,
+      "kind": "extra_product"
+    },
+    {
+      "product": "DIABECON DS TAB",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "DIABECON TAB",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "DIAREX SYRUP",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "DIAREX TABS",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "GASEX SYP GINGER LE",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 4,
+      "kind": "extra_product"
+    },
+    {
+      "product": "GASEX SYRUP (ELACHI",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 4,
+      "kind": "extra_product"
+    },
+    {
+      "product": "GASEX SYRUP",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 13,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HADJOD TAB",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HERBOLAX CAPS",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HERBOLAX CAPS",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HIMCOID SUSP [SAUN",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HIMCOID SUSP SUGAI",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HIMCOID SYRUP [BAN",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HIMCOLIN GEL",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 39,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HIOWNA CHOCOLATE F",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HIOWNA VANILLA FLAVC",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "KOFLET JAR",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 8,
+      "kind": "extra_product"
+    },
+    {
+      "product": "LIV 52 SYRUP",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 70,
+      "kind": "extra_product"
+    },
+    {
+      "product": "LIV 52 HB CAPS",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "MUSCLE & JOINT RUB",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "OPHTHACARE EYE DR",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 4,
+      "kind": "extra_product"
+    },
+    {
+      "product": "OXITARD CAPS",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "PAIN BALM STRONG",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "PURIM TABS",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "Q-DEE (IMMUNITY)",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "QUISTA KIDZ POWDER.",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "QUISTA KIDZ POWDER.",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "RUMALAYA GEL",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 48,
+      "kind": "extra_product"
+    },
+    {
+      "product": "SHALLAKI TAB",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "STRESS RELIEF MASSA",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "TAGARA TAB",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "TALEKT CAPS",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "TALEKT SYRUP",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "TENTEX FORTE TABS",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "TRIPHALA TAB",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    }
+  ],
+  "duplicates": [
+    {
+      "side": "extracted",
+      "product": "CLARINA ANTI ACNE FA",
+      "count": 2
+    }
+  ],
+  "mismatches": [
+    {
+      "product": "Liv 52 SYRUP *",
+      "field": "sales_qty",
+      "expected": 7,
+      "actual": 0,
+      "kind": "wrong_sales_qty"
+    },
+    {
+      "product": "Liv 2 TABS *",
+      "field": "sales_qty",
+      "expected": 19,
+      "actual": 0,
+      "kind": "wrong_sales_qty"
+    },
+    {
+      "product": "PILEXFORETTAB =",
+      "field": "sales_qty",
+      "expected": 2,
+      "actual": 0,
+      "kind": "wrong_sales_qty"
+    },
+    {
+      "product": "PILEX TABS *",
+      "field": "opening_qty",
+      "expected": 49,
+      "actual": 0,
+      "kind": "wrong_opening_qty"
+    },
+    {
+      "product": "PILEX TABS *",
+      "field": "sales_qty",
+      "expected": 18,
+      "actual": 0,
+      "kind": "wrong_sales_qty"
+    },
+    {
+      "product": "PILEX FORTE OINTMEN",
+      "field": "opening_qty",
+      "expected": 26,
+      "actual": 0,
+      "kind": "wrong_opening_qty"
+    },
+    {
+      "product": "PILEX FORTE OINTMEN",
+      "field": "sales_qty",
+      "expected": 20,
+      "actual": 0,
+      "kind": "wrong_sales_qty"
+    },
+    {
+      "product": "7 rows",
+      "field": "sales_value",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 7,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    },
+    {
+      "product": "7 rows",
+      "field": "closing_value",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 7,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    },
+    {
+      "product": "7 rows",
+      "field": "closing_qty",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 7,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    }
+  ],
+  "ocr_review": [
+    {
+      "product": "PAIN RELIF OIL",
+      "field": "opening_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "PAIN RELIF OIL",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "HADJOD TAB HAIR ZONE SOLUTION",
+      "api_product": "HAIR ZONE SOLUTION",
+      "similarity": 0.766,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "HADJOD TAB HAIR ZONE SOLUTION",
+      "field": "opening_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "HADJOD TAB HAIR ZONE SOLUTION",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "Liv 52 SYRUP *",
+      "field": "opening_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "Liv 52 SYRUP *",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 11,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "Liv 2 TABS *",
+      "field": "opening_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "Liv 2 TABS *",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 11,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "PILEXFORETTAB =",
+      "field": "opening_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "PILEXFORETTAB =",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 1,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "PILEX TABS *",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 23,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "PILEX FORTE OINTMEN",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 18,
+      "note": "Ground truth did not read this cell confidently."
+    }
+  ],
+  "accounting": [],
+  "confidence": "medium",
+  "notes": [
+    "OCR used tesseract psm 6."
+  ],
+  "result_key": "0000700434_2026_08_ZL_10_386_05092026034503",
+  "unavailable_fields": {
+    "sales_value": 7,
+    "closing_value": 7,
+    "closing_qty": 7
+  },
+  "formula_checked": "none"
+}

@@ -1,0 +1,143 @@
+{
+  "file": "0000713511_2026_08_ZA_24_255_07092026171904.docx",
+  "error": null,
+  "seconds": 0.2884,
+  "rows": 55,
+  "method": "sale_closing_analysis_docx",
+  "decision": {
+    "status": "VERIFIED",
+    "reason": "schema_evidence_business_ok",
+    "verified": true
+  },
+  "phase2": {
+    "status": "not_needed",
+    "failure_type": null,
+    "strategy": null,
+    "attempts": 0,
+    "applied": false,
+    "accepted": false,
+    "recovery_log": [],
+    "original_values": [],
+    "manual_review": null
+  },
+  "validation_status": "pass",
+  "source_evidence": true,
+  "source_agreement": true,
+  "stock_identity_fail_count": 0,
+  "grounding": {
+    "status": "checked",
+    "reader": "docx_paragraphs",
+    "compared_rows": 55,
+    "discrepancy_count": 0,
+    "blank_read_as_zero": 0,
+    "blocks_verification": false,
+    "discrepancies": []
+  },
+  "ocr_calls": 0,
+  "watched_rows": [
+    {
+      "product_name": "ARJUNA TAB",
+      "packing": "1*60TAB",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 15.0,
+      "closing_qty": 1.0,
+      "sales_value": 3496.0,
+      "closing_value": 208.0,
+      "qty_cell_state": null,
+      "total_stock": null,
+      "scheme_out_qty": null
+    },
+    {
+      "product_name": "BONNISAN 200ML",
+      "packing": "200ML",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 17.0,
+      "closing_qty": 11.0,
+      "sales_value": 1774.0,
+      "closing_value": 1112.0,
+      "qty_cell_state": null,
+      "total_stock": null,
+      "scheme_out_qty": null
+    },
+    {
+      "product_name": "BONNISAN DROP",
+      "packing": "30ML",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 9.0,
+      "closing_qty": 87.0,
+      "sales_value": 627.0,
+      "closing_value": 5744.0,
+      "qty_cell_state": null,
+      "total_stock": null,
+      "scheme_out_qty": null
+    },
+    {
+      "product_name": "BONNISAN SYP",
+      "packing": "120ML",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 0.0,
+      "closing_qty": 1.0,
+      "sales_value": 0.0,
+      "closing_value": 60.0,
+      "qty_cell_state": null,
+      "total_stock": null,
+      "scheme_out_qty": null
+    },
+    {
+      "product_name": "CYSTONE SYRUP",
+      "packing": "200ML",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 17.0,
+      "closing_qty": 1.0,
+      "sales_value": 3194.0,
+      "closing_value": 179.0,
+      "qty_cell_state": null,
+      "total_stock": null,
+      "scheme_out_qty": null
+    },
+    {
+      "product_name": "CYSTONE TAB",
+      "packing": "1*60TAB",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 15.0,
+      "closing_qty": 61.0,
+      "sales_value": 2572.0,
+      "closing_value": 10197.0,
+      "qty_cell_state": null,
+      "total_stock": null,
+      "scheme_out_qty": null
+    },
+    {
+      "product_name": "EVECARE CAP",
+      "packing": "1*30CAPS",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 8.0,
+      "closing_qty": 8.0,
+      "sales_value": 1400.0,
+      "closing_value": 1282.0,
+      "qty_cell_state": null,
+      "total_stock": null,
+      "scheme_out_qty": null
+    },
+    {
+      "product_name": "EVECARE FORTE SYP",
+      "packing": "200ML",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 18.0,
+      "closing_qty": 24.0,
+      "sales_value": 3211.0,
+      "closing_value": 4156.0,
+      "qty_cell_state": null,
+      "total_stock": null,
+      "scheme_out_qty": null
+    }
+  ]
+}

@@ -550,10 +550,22 @@ def try_gemini_vision_extract(
     started = time.time()
     parsed = None
     try:
+        # Block early Vision when DI already has VL table HTML in override.
+        guard_gemini_when_vl_table_present(
+            {"totals": {"extra": {}}},
+            filename=filename,
+        )
         for _ in range(_max_attempts()):
             parsed = _call_gemini(file_bytes, ext, document_parts)
             if parsed and parsed.get("line_items"):
                 break
+    except RuntimeError as exc:
+        if "table_html" in str(exc):
+            logger.warning(
+                "[SalesStatement] file=%s early Vision blocked: %s", filename, exc
+            )
+            return None
+        raise
     except Exception as exc:
         logger.warning(
             "[SalesStatement] file=%s early Vision unavailable: %s", filename, exc
@@ -587,6 +599,58 @@ def try_gemini_vision_extract(
     return gemini_result
 
 
+def _vl_table_html_guard_state(result: Dict[str, Any]) -> Tuple[bool, str]:
+    """Return (table_available, table_html) from extract extras / OCR override."""
+    extra = ((result.get("totals") or {}).get("extra") or {})
+    html = str(
+        extra.get("ocr_table_html")
+        or extra.get("vl_table_html_content")
+        or ""
+    ).strip()
+    available = bool(extra.get("table_available")) or (
+        bool(html) and "<table" in html.lower()
+    )
+    if str(extra.get("extraction_method") or "") == "vl_html_table_parse":
+        available = True
+        if not html:
+            html = "<table></table>"  # method stamp alone is enough to block Gemini
+    if available and html:
+        return True, html
+    try:
+        from services.ocr.ocr_text_override import get_ocr_text_override
+        from services.vl_html_table import extract_vl_table_html, table_html_available
+
+        override = get_ocr_text_override()
+        if override and table_html_available(override):
+            return True, extract_vl_table_html(override) or str(override)
+    except Exception:
+        pass
+    return False, html
+
+
+def guard_gemini_when_vl_table_present(
+    result: Dict[str, Any],
+    *,
+    filename: str = "",
+) -> None:
+    """Hard guard: never call Gemini when VL table HTML is available.
+
+    Logs a warning and raises if the fallback path is about to run despite
+    ``table_available=True`` and non-empty ``table_html``.
+    """
+    available, html = _vl_table_html_guard_state(result)
+    if available and str(html or "").strip():
+        logger.warning(
+            "[SalesStatement] file=%s GEMINI_FALLBACK blocked: table_available=True "
+            "and table_html is non-empty; refusing gemini_extraction_fallback",
+            filename or "?",
+        )
+        raise RuntimeError(
+            "gemini_extraction_fallback must not run when table_available=True "
+            "and table_html is non-empty"
+        )
+
+
 def maybe_apply_gemini_fallback(
     result: Dict[str, Any],
     file_bytes: bytes,
@@ -596,6 +660,26 @@ def maybe_apply_gemini_fallback(
     """Keep a good existing extract. One Gemini read only when quality fails."""
     if not _enabled():
         return result
+    # DI already exhausted Tess → Gemini transcription with no usable text.
+    # Do not invent quantities via full-page vision — stay UNRESOLVED.
+    try:
+        from services.ocr.ocr_text_override import get_ocr_recovery_state
+
+        recovery = get_ocr_recovery_state() or {}
+        if recovery.get("block_ungrounded_vision"):
+            logger.warning(
+                "[SalesStatement] file=%s GEMINI_FALLBACK blocked: OCR recovery "
+                "exhausted without grounded text",
+                filename,
+            )
+            _stamp(result, {"quality": "poor", "reasons": ["empty_ocr_text"]}, "not_called")
+            extra = result.setdefault("totals", {}).setdefault("extra", {})
+            if isinstance(extra, dict):
+                extra["gemini_fallback"] = "blocked_ungrounded_ocr"
+                extra["ocr_recovery"] = recovery.get("pages") or extra.get("ocr_recovery")
+            return result
+    except Exception:
+        pass
     meta = _source_metadata(file_bytes, ext)
     quality = evaluate_extraction_quality(result, meta)
     _log_gate(quality, used_gemini=bool(quality.get("should_fallback")), filename=filename)
@@ -608,6 +692,22 @@ def maybe_apply_gemini_fallback(
     # Marg PRODUCT DESCRIPTION / OPENING / RECEIVE / ISSUE photos: Gemini shifts
     # neighboring rows. Keep the format-specific OCR/column reader.
     extra = ((result.get("totals") or {}).get("extra") or {})
+    if str(extra.get("extraction_method") or "") == "vl_html_table_parse":
+        logger.info(
+            "[SalesStatement] file=%s GEMINI_FALLBACK skipped reason=%s",
+            filename,
+            extra.get("extraction_method"),
+        )
+        _stamp(result, quality, "not_called")
+        return result
+    table_available, table_html = _vl_table_html_guard_state(result)
+    if table_available and str(table_html or "").strip():
+        logger.warning(
+            "[SalesStatement] file=%s GEMINI_FALLBACK skipped reason=vl_table_html_present",
+            filename,
+        )
+        _stamp(result, quality, "not_called")
+        return result
     if (
         str(extra.get("extraction_method") or "") == "main_stock_sales_statement"
         or str(extra.get("layout") or "") == "opening_receive_issue_closing"
@@ -733,10 +833,27 @@ def maybe_apply_gemini_fallback(
     started = time.time()
     parsed = None
     try:
+        # Final hard guard immediately before any paid Gemini call.
+        guard_gemini_when_vl_table_present(result, filename=filename)
         for _ in range(_max_attempts()):
             parsed = _call_gemini(file_bytes, ext, document_parts)
             if parsed and parsed.get("line_items"):
                 break
+    except RuntimeError as exc:
+        if "table_html" in str(exc):
+            _stamp(result, quality, "not_called")
+            return result
+        logger.info(
+            "[SalesStatement] file=%s GEMINI_FALLBACK status=failed reason=unavailable",
+            filename,
+        )
+        logger.warning("Gemini extraction fallback unavailable: %s", exc)
+        _stamp(result, quality, "unavailable")
+        if _result_is_weak(result, quality):
+            return _controlled_failure(
+                filename, ext, quality, "unavailable", source=result
+            )
+        return result
     except Exception as exc:
         logger.info(
             "[SalesStatement] file=%s GEMINI_FALLBACK status=failed reason=unavailable",

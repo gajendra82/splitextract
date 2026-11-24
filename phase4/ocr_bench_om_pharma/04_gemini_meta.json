@@ -1,0 +1,11 @@
+{
+  "engine": "gemini",
+  "confidence": null,
+  "metadata": {
+    "status": "success",
+    "model": "gemini-2.5-flash-lite",
+    "source": "gemini_ocr_fallback"
+  },
+  "text_len": 789,
+  "seconds": 7.24
+}

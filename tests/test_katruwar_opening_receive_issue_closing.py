@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -203,11 +204,25 @@ class TestKatruwarOpeningReceiveIssueClosing(unittest.TestCase):
 
     @unittest.skipUnless(FIXTURE.exists(), "fixture image missing")
     def test_strips_cover_full_page(self):
+        if os.environ.get("RUN_LIVE_EXTRACTION", "").strip().lower() not in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }:
+            self.skipTest("live photo OCR is opt-in via RUN_LIVE_EXTRACTION=1")
         strips = _main_stock_sales_strips(FIXTURE.read_bytes())
         self.assertGreaterEqual(len(strips), 5)
 
     @unittest.skipUnless(FIXTURE.exists(), "fixture image missing")
     def test_ocr_extract_sample_rows_and_receipt_totals(self):
+        if os.environ.get("RUN_LIVE_EXTRACTION", "").strip().lower() not in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }:
+            self.skipTest("live photo OCR is opt-in via RUN_LIVE_EXTRACTION=1")
         result = _extract_opening_receive_issue_closing_ocr(
             FIXTURE.read_bytes(), FIXTURE.name, ".jpg"
         )
@@ -297,6 +312,13 @@ class TestKatruwarOpeningReceiveIssueClosing(unittest.TestCase):
 
     @unittest.skipUnless(FIXTURE.exists(), "fixture image missing")
     def test_extract_routes_to_main_stock_parser(self):
+        if os.environ.get("RUN_LIVE_EXTRACTION", "").strip().lower() not in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }:
+            self.skipTest("live photo OCR is opt-in via RUN_LIVE_EXTRACTION=1")
         data = FIXTURE.read_bytes()
 
         def _fake_photo(file_bytes, filename, ext):

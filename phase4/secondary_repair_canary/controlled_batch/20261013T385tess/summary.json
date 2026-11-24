@@ -1,0 +1,39 @@
+{
+  "run_id": "20261013T385tess",
+  "decision": "PASS",
+  "gt20": {
+    "decision": "PASS",
+    "totals": {
+      "fields": 331,
+      "off_correct": 142,
+      "on_correct": 147,
+      "verified_corrections": 5,
+      "regressions": 0,
+      "incorrect_on": 0,
+      "unresolved_missing_on": 0
+    },
+    "stop_reasons": [],
+    "loaded_from_cache": true
+  },
+  "processed": 385,
+  "remaining": 0,
+  "errors": 0,
+  "repair_triggered": 0,
+  "docs_with_deltas": 0,
+  "delta_fields_total": 0,
+  "latency_ms_sum_off": 2885.2849999675527,
+  "latency_ms_sum_on": 1637348.7698997636,
+  "latency_ms_sum_primary": 3299082.02469998,
+  "cohort_counts": {
+    "ordinary": 284,
+    "compatible_ssa": 44,
+    "negative_unresolved": 46,
+    "ambiguous_poor_quality": 10,
+    "compatible_himalaya_qty": 1
+  },
+  "stop_reasons": [],
+  "interrupted": false,
+  "source_verified": {
+    "note": "GT accuracy is scored only in gt20_reconfirm; 385-image set has no source GT \u2014 no accuracy claim."
+  }
+}

@@ -9,6 +9,8 @@ def build_validation_stack(
     result: Dict[str, Any],
     *,
     phase1_validation: Optional[Dict[str, Any]] = None,
+    ocr_disagreement: bool = False,
+    unverified_ocr_fallback: bool = False,
 ) -> Dict[str, Any]:
     """Organize validation signals without weakening base_validator."""
     phase1_validation = phase1_validation or {}
@@ -18,6 +20,12 @@ def build_validation_stack(
     failures = list(phase1_validation.get("failures") or [])
     primary = phase1_validation.get("primary_failure") or phase1_validation.get(
         "failure_type"
+    )
+    reasons = {str(r) for r in (phase1_validation.get("reasons") or [])}
+    checks = (
+        phase1_validation.get("checks")
+        if isinstance(phase1_validation.get("checks"), dict)
+        else {}
     )
 
     layers.append(
@@ -89,11 +97,18 @@ def build_validation_stack(
             "detail": "cross-field consistency via identity/business rules",
         }
     )
+    ocr_ok = not (
+        ocr_disagreement
+        or unverified_ocr_fallback
+        or checks.get("ocr_verified") is False
+        or "unverified_ocr_fallback" in reasons
+        or "empty_ocr_page" in reasons
+    )
     layers.append(
         {
             "name": "ocr_evidence_consistency",
-            "passed": True,  # filled by pipeline when OCR bundle present
-            "detail": "cross-engine OCR consistency",
+            "passed": ocr_ok,
+            "detail": "cross-engine OCR consistency / verified evidence",
         }
     )
 

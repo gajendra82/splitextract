@@ -1,0 +1,210 @@
+{
+  "cleanup_id": "repository_cleanup_2026-11-03",
+  "baseline_commit": "cc0bd73",
+  "day5_baseline": {
+    "passed": 1268,
+    "skipped": 159,
+    "failed": 0,
+    "duration_s": 153.269
+  },
+  "changes": [
+    {
+      "old_path": "_probe_0209_0124.py",
+      "new_path": "scripts/diagnostics/_probe_0209_0124.py",
+      "action": "MOVE",
+      "reason": "Root diagnostic probe; not part of production API"
+    },
+    {
+      "old_path": "_probe_0275_close.py",
+      "new_path": "scripts/diagnostics/_probe_0275_close.py",
+      "action": "MOVE",
+      "reason": "Root diagnostic probe; not part of production API"
+    },
+    {
+      "old_path": "_probe_1078_line.py",
+      "new_path": "scripts/diagnostics/_probe_1078_line.py",
+      "action": "MOVE",
+      "reason": "Root diagnostic probe; not part of production API"
+    },
+    {
+      "old_path": "_probe_line_locate.py",
+      "new_path": "scripts/diagnostics/_probe_line_locate.py",
+      "action": "MOVE",
+      "reason": "Root diagnostic probe; not part of production API"
+    },
+    {
+      "old_path": "_probe_residual_ocr.py",
+      "new_path": "scripts/diagnostics/_probe_residual_ocr.py",
+      "action": "MOVE",
+      "reason": "Root diagnostic probe; not part of production API"
+    },
+    {
+      "old_path": "_probe_secondary_repair.py",
+      "new_path": "scripts/diagnostics/_probe_secondary_repair.py",
+      "action": "MOVE",
+      "reason": "Root diagnostic probe; not part of production API"
+    },
+    {
+      "old_path": "_verify_secondary_gt20.py",
+      "new_path": "scripts/diagnostics/_verify_secondary_gt20.py",
+      "action": "MOVE",
+      "reason": "Root verification diagnostic; not part of production API"
+    },
+    {
+      "old_path": "LOCAL_OCR_BENCHMARK.md",
+      "new_path": "docs/reports/LOCAL_OCR_BENCHMARK.md",
+      "action": "MOVE",
+      "reason": "Historical report; belongs under docs"
+    },
+    {
+      "old_path": "OCR_ACCURACY_IMPROVEMENT_REPORT.md",
+      "new_path": "docs/reports/OCR_ACCURACY_IMPROVEMENT_REPORT.md",
+      "action": "MOVE",
+      "reason": "Historical report; belongs under docs"
+    },
+    {
+      "old_path": "PADDLE_VL_PRODUCTION_READINESS_REPORT.md",
+      "new_path": "docs/reports/PADDLE_VL_PRODUCTION_READINESS_REPORT.md",
+      "action": "MOVE",
+      "reason": "Historical report; belongs under docs"
+    },
+    {
+      "old_path": "scratch/",
+      "new_path": "audits/archive/scratch/",
+      "action": "ARCHIVE",
+      "reason": "Ad-hoc experiment scripts; retain evidence outside active root"
+    },
+    {
+      "old_path": "0000700082_2026_08_ZA_06_467_04092026082339 (1).png",
+      "new_path": "samples/invoices/0000700082_2026_08_ZA_06_467_04092026082339 (1).png",
+      "action": "MOVE",
+      "reason": "Loose sample file cluttering root"
+    },
+    {
+      "old_path": "0000719779_2026_08_ZA_06_332_01092026110551.jpg",
+      "new_path": "samples/invoices/0000719779_2026_08_ZA_06_332_01092026110551.jpg",
+      "action": "MOVE",
+      "reason": "Loose sample file cluttering root"
+    },
+    {
+      "old_path": "0000721532_2026_08_ZL_24_416_05092026081542 (1).docx",
+      "new_path": "samples/invoices/0000721532_2026_08_ZL_24_416_05092026081542 (1).docx",
+      "action": "MOVE",
+      "reason": "Loose sample file cluttering root; test_item_description_stock_sales_docx.py updated to new path"
+    },
+    {
+      "old_path": "tests/test_item_description_stock_sales_docx.py",
+      "new_path": "tests/test_item_description_stock_sales_docx.py",
+      "action": "KEEP_UPDATED",
+      "reason": "FIXTURE path updated to samples/invoices after root sample move"
+    },
+    {
+      "old_path": "0000722943_2026_08_ZA_19_326_04092026180035.jpg",
+      "new_path": "samples/invoices/0000722943_2026_08_ZA_19_326_04092026180035.jpg",
+      "action": "MOVE",
+      "reason": "Loose sample file cluttering root"
+    },
+    {
+      "old_path": "invoice_RC_390.pdf",
+      "new_path": "samples/invoices/invoice_RC_390.pdf",
+      "action": "MOVE",
+      "reason": "Loose sample file cluttering root"
+    },
+    {
+      "old_path": "WhatsApp Image 2026-09-29 at 12.37.07 PM.jpeg",
+      "new_path": "samples/invoices/WhatsApp Image 2026-09-29 at 12.37.07 PM.jpeg",
+      "action": "MOVE",
+      "reason": "Loose sample file cluttering root"
+    },
+    {
+      "old_path": "_tmp_Invoices_invoice_AE006701.pdf",
+      "new_path": "samples/tmp/_tmp_Invoices_invoice_AE006701.pdf",
+      "action": "MOVE",
+      "reason": "Temporary invoice copy; keep under samples/tmp"
+    },
+    {
+      "old_path": "_tmp_Splitted_invoice_AE006701.pdf",
+      "new_path": "samples/tmp/_tmp_Splitted_invoice_AE006701.pdf",
+      "action": "MOVE",
+      "reason": "Temporary invoice copy; keep under samples/tmp"
+    },
+    {
+      "old_path": "deploy-tmux.sh",
+      "new_path": "deploy/deploy-tmux.sh",
+      "action": "MOVE",
+      "reason": "Deployment helper belongs under deploy/"
+    },
+    {
+      "old_path": "start-tmux.sh",
+      "new_path": "deploy/start-tmux.sh",
+      "action": "MOVE",
+      "reason": "Deployment helper belongs under deploy/"
+    },
+    {
+      "old_path": "__pycache__/",
+      "new_path": null,
+      "action": "DELETE",
+      "reason": "Generated bytecode cache at repository root"
+    },
+    {
+      "old_path": "Dockerfile",
+      "new_path": "Dockerfile",
+      "action": "KEEP_FIXED",
+      "reason": "Referenced missing app5.py; updated to app.py + runner.py"
+    },
+    {
+      "old_path": ".gitignore",
+      "new_path": ".gitignore",
+      "action": "KEEP_UPDATED",
+      "reason": "Ignore .venvs/, .paddleocr/, .tools/, samples/tmp/"
+    },
+    {
+      "old_path": "services/",
+      "new_path": "services/",
+      "action": "KEEP",
+      "reason": "Active production engine; deep package split deferred"
+    },
+    {
+      "old_path": "app.py",
+      "new_path": "app.py",
+      "action": "KEEP",
+      "reason": "FastAPI entry; relocation to api/ deferred"
+    },
+    {
+      "old_path": "phase3/",
+      "new_path": "phase3/",
+      "action": "KEEP",
+      "reason": "Coupled to scripts/tests; move deferred"
+    },
+    {
+      "old_path": "phase3_eval/",
+      "new_path": "phase3_eval/",
+      "action": "KEEP",
+      "reason": "Coupled to scripts/tests; move deferred"
+    },
+    {
+      "old_path": "phase4/",
+      "new_path": "phase4/",
+      "action": "KEEP",
+      "reason": "Coupled to scripts/tests and paddle_vl_engine log path; move deferred"
+    },
+    {
+      "old_path": "cloud_ocr/",
+      "new_path": "cloud_ocr/",
+      "action": "KEEP",
+      "reason": "Active sidecar + tests/test_cloud_ocr_api.py"
+    },
+    {
+      "old_path": "qa_results_images/",
+      "new_path": "qa_results_images/",
+      "action": "KEEP",
+      "reason": "Referenced by tests/test_column_mapping.py"
+    },
+    {
+      "old_path": "audits/day5_final/",
+      "new_path": "audits/day5_final/",
+      "action": "KEEP",
+      "reason": "Historical Day 5 audit evidence"
+    }
+  ]
+}

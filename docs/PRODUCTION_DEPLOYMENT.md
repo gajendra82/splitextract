@@ -3,7 +3,7 @@
 **Architecture:** Laravel → split-pdf (8000) → split-extract (8001) → Vertex AI / GPT / OCR → Laravel
 
 **Recommended runtime:** systemd (both services)  
-**Alternative:** tmux (`start-tmux.sh` for split-extract only — legacy)
+**Alternative:** tmux (`deploy/start-tmux.sh` for split-extract only — legacy)
 
 ---
 

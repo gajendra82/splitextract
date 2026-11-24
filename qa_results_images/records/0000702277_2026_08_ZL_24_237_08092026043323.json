@@ -1,0 +1,272 @@
+{
+  "file": "0000702277_2026_08_ZL_24_237_08092026043323.jpg",
+  "path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000702277_2026_08_ZL_24_237_08092026043323.jpg",
+  "format": "STOCK & SALES ANALYSIS",
+  "api_method": "gemini_extraction_fallback",
+  "status": "FAIL",
+  "expected_rows": 29,
+  "extracted_rows": 0,
+  "matched_rows": 0,
+  "missing_rows": [
+    {
+      "product": "ma",
+      "opening_qty": 25,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "[| CREAM",
+      "opening_qty": 31,
+      "receipts_qty": null,
+      "sales_qty": 1801,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "30'ML",
+      "opening_qty": 55,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "‘200ML",
+      "opening_qty": 25,
+      "receipts_qty": null,
+      "sales_qty": 3475,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "1s ML",
+      "opening_qty": 16,
+      "receipts_qty": null,
+      "sales_qty": 474,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "10'ML",
+      "opening_qty": 43,
+      "receipts_qty": null,
+      "sales_qty": 1371,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": ": WASH NE",
+      "opening_qty": 57,
+      "receipts_qty": null,
+      "sales_qty": 225,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "30'GM",
+      "opening_qty": 30,
+      "receipts_qty": null,
+      "sales_qty": 1222,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "gore team",
+      "opening_qty": 31,
+      "receipts_qty": null,
+      "sales_qty": 647,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "‘200ML",
+      "opening_qty": 16,
+      "receipts_qty": null,
+      "sales_qty": 849,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "‘200ML",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 304,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "voor 200xz 3o'on ‘ABETICS",
+      "opening_qty": 44,
+      "receipts_qty": null,
+      "sales_qty": 470,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "1sML",
+      "opening_qty": 30,
+      "receipts_qty": null,
+      "sales_qty": 510,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "Ww 1SOML",
+      "opening_qty": 29,
+      "receipts_qty": null,
+      "sales_qty": 789,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "room",
+      "opening_qty": 9,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "soar",
+      "opening_qty": 30,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "IGER )",
+      "opening_qty": 226,
+      "receipts_qty": null,
+      "sales_qty": 790,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "; ‘250 TA",
+      "opening_qty": 8,
+      "receipts_qty": null,
+      "sales_qty": 1848,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "1 wz",
+      "opening_qty": 1950,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "NGER",
+      "opening_qty": 21,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "‘100ML",
+      "opening_qty": 36,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "‘200'ML",
+      "opening_qty": 32,
+      "receipts_qty": null,
+      "sales_qty": 1809,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "so's.",
+      "opening_qty": 90,
+      "receipts_qty": null,
+      "sales_qty": 3198,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "10'ML",
+      "opening_qty": 45,
+      "receipts_qty": null,
+      "sales_qty": 579,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "(30GM",
+      "opening_qty": 90,
+      "receipts_qty": null,
+      "sales_qty": 4539,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "core",
+      "opening_qty": 96,
+      "receipts_qty": null,
+      "sales_qty": 808,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "Seve",
+      "opening_qty": 10,
+      "receipts_qty": null,
+      "sales_qty": 249,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": ": 200GM.",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 313,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "‘200'ML",
+      "opening_qty": 29,
+      "receipts_qty": null,
+      "sales_qty": 1580,
+      "closing_qty": null,
+      "kind": "missing_product"
+    }
+  ],
+  "extra_rows": [],
+  "duplicates": [
+    {
+      "side": "ground_truth",
+      "product": "‘200ML",
+      "count": 3
+    },
+    {
+      "side": "ground_truth",
+      "product": "10'ML",
+      "count": 2
+    },
+    {
+      "side": "ground_truth",
+      "product": "‘200'ML",
+      "count": 2
+    }
+  ],
+  "mismatches": [],
+  "ocr_review": [],
+  "accounting": [],
+  "confidence": "medium",
+  "notes": [
+    "OCR used tesseract psm 6."
+  ],
+  "result_key": "0000702277_2026_08_ZL_24_237_08092026043323",
+  "unavailable_fields": {},
+  "formula_checked": "none"
+}

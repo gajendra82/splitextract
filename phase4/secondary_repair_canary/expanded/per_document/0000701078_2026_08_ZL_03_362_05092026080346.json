@@ -1,0 +1,374 @@
+{
+  "document_id": "0000701078_2026_08_ZL_03_362_05092026080346.jpeg",
+  "role": "repair_himalaya",
+  "source_path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000701078_2026_08_ZL_03_362_05092026080346.jpeg",
+  "off": {
+    "correct_count": 16,
+    "field_count": 18,
+    "silent_wrong_count": 2,
+    "missing_count": 0,
+    "secondary_ocr_ms": 11.4,
+    "pipeline_helper_ms": 12.6,
+    "text_sha": "b66a0969b871524a",
+    "repair_report": {
+      "document_id": "0000701078_2026_08_ZL_03_362_05092026080346.jpeg",
+      "repairs": [],
+      "unresolved": [
+        {
+          "reason": "secondary_repair_disabled"
+        }
+      ]
+    }
+  },
+  "on": {
+    "correct_count": 18,
+    "field_count": 18,
+    "silent_wrong_count": 0,
+    "missing_count": 0,
+    "secondary_ocr_ms": 10163.7,
+    "pipeline_helper_ms": 9991.0,
+    "text_sha": "b66a0969b871524a",
+    "repair_report": {
+      "document_id": "0000701078_2026_08_ZL_03_362_05092026080346.jpeg",
+      "repairs": [
+        {
+          "type": "himalaya_row_anchor_ocr",
+          "corrected": true,
+          "product_key": "AACTARIL SOAP",
+          "header": "Closing Balance",
+          "from": "89",
+          "to": "69",
+          "line": "1 AACTARILSOAP 76GM 82 0 0 62 13 0 0 69 -60 v\nABANATAB 60S 0 100 0 100 27 0 0 73 -33 a\ndina M Y 4 XX A n oO\n"
+        },
+        {
+          "type": "himalaya_row_anchor_ocr",
+          "corrected": true,
+          "product_key": "TALEKT CAPS.",
+          "header": "Expiry Breakage",
+          "from": "0",
+          "to": "12",
+          "line": "TALEKT CAPS. 60'S 12 0 0 12 0 ty} 12 0 i) 0"
+        }
+      ],
+      "unresolved": []
+    },
+    "pipeline_text_matches": true
+  },
+  "deltas": [
+    {
+      "field_id": "aact_close",
+      "expected": "69",
+      "off_pred": "89",
+      "on_pred": "69",
+      "off_correct": false,
+      "on_correct": true,
+      "off_error": "WRONG_VALUE",
+      "on_error": null
+    },
+    {
+      "field_id": "talekt_exp",
+      "expected": "12",
+      "off_pred": "0",
+      "on_pred": "12",
+      "off_correct": false,
+      "on_correct": true,
+      "off_error": "WRONG_VALUE",
+      "on_error": null
+    }
+  ],
+  "repair_types_on": [
+    "himalaya_row_anchor_ocr"
+  ],
+  "matches_off": [
+    {
+      "field_id": "vendor",
+      "expected_raw": "ALEX PHARMA",
+      "predicted_raw": "ALEX PHARMA",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_op",
+      "expected_raw": "Op.Bal. Qty.",
+      "predicted_raw": "Op.Bal. Qty.",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_issue",
+      "expected_raw": "Issue Qty.",
+      "predicted_raw": "Issue Qty.",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "aact_op",
+      "expected_raw": "82",
+      "predicted_raw": "82",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "aact_issue",
+      "expected_raw": "13",
+      "predicted_raw": "13",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "aact_close",
+      "expected_raw": "69",
+      "predicted_raw": "89",
+      "correct": false,
+      "error_type": "WRONG_VALUE",
+      "silent_wrong": true
+    },
+    {
+      "field_id": "abana_op",
+      "expected_raw": "0",
+      "predicted_raw": "0",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "abana_rec",
+      "expected_raw": "100",
+      "predicted_raw": "100",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "abana_issue",
+      "expected_raw": "27",
+      "predicted_raw": "27",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "abana_close",
+      "expected_raw": "73",
+      "predicted_raw": "73",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv200_op",
+      "expected_raw": "2713",
+      "predicted_raw": "2713",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv200_issue",
+      "expected_raw": "1872",
+      "predicted_raw": "1872",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv200_close",
+      "expected_raw": "841",
+      "predicted_raw": "841",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv100_op",
+      "expected_raw": "3523",
+      "predicted_raw": "3523",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv100_issue",
+      "expected_raw": "1816",
+      "predicted_raw": "1816",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv100_close",
+      "expected_raw": "1707",
+      "predicted_raw": "1707",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "talekt_exp",
+      "expected_raw": "12",
+      "predicted_raw": "0",
+      "correct": false,
+      "error_type": "WRONG_VALUE",
+      "silent_wrong": true
+    },
+    {
+      "field_id": "talekt_close",
+      "expected_raw": "0",
+      "predicted_raw": "0",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    }
+  ],
+  "matches_on": [
+    {
+      "field_id": "vendor",
+      "expected_raw": "ALEX PHARMA",
+      "predicted_raw": "ALEX PHARMA",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_op",
+      "expected_raw": "Op.Bal. Qty.",
+      "predicted_raw": "Op.Bal. Qty.",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_issue",
+      "expected_raw": "Issue Qty.",
+      "predicted_raw": "Issue Qty.",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "aact_op",
+      "expected_raw": "82",
+      "predicted_raw": "82",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "aact_issue",
+      "expected_raw": "13",
+      "predicted_raw": "13",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "aact_close",
+      "expected_raw": "69",
+      "predicted_raw": "69",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "abana_op",
+      "expected_raw": "0",
+      "predicted_raw": "0",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "abana_rec",
+      "expected_raw": "100",
+      "predicted_raw": "100",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "abana_issue",
+      "expected_raw": "27",
+      "predicted_raw": "27",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "abana_close",
+      "expected_raw": "73",
+      "predicted_raw": "73",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv200_op",
+      "expected_raw": "2713",
+      "predicted_raw": "2713",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv200_issue",
+      "expected_raw": "1872",
+      "predicted_raw": "1872",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv200_close",
+      "expected_raw": "841",
+      "predicted_raw": "841",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv100_op",
+      "expected_raw": "3523",
+      "predicted_raw": "3523",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv100_issue",
+      "expected_raw": "1816",
+      "predicted_raw": "1816",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv100_close",
+      "expected_raw": "1707",
+      "predicted_raw": "1707",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "talekt_exp",
+      "expected_raw": "12",
+      "predicted_raw": "12",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "talekt_close",
+      "expected_raw": "0",
+      "predicted_raw": "0",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    }
+  ]
+}

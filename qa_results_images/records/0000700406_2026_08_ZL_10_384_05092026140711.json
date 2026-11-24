@@ -1,0 +1,236 @@
+{
+  "file": "0000700406_2026_08_ZL_10_384_05092026140711.jpg",
+  "path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700406_2026_08_ZL_10_384_05092026140711.jpg",
+  "format": "Stock & Sales Statement",
+  "api_method": "gemini_extraction_fallback",
+  "status": "FAIL",
+  "expected_rows": 19,
+  "extracted_rows": 19,
+  "matched_rows": 15,
+  "missing_rows": [
+    {
+      "product": "LIVS2SYP",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 28,
+      "closing_qty": 82,
+      "kind": "missing_product"
+    },
+    {
+      "product": "LIVS2SYP",
+      "opening_qty": 43,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": 42,
+      "kind": "missing_product"
+    },
+    {
+      "product": "20. LIV52TAB 100°S",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 2,
+      "closing_qty": 111164946,
+      "kind": "missing_product"
+    },
+    {
+      "product": "PURIMTAB",
+      "opening_qty": 49,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": 48,
+      "kind": "missing_product"
+    }
+  ],
+  "extra_rows": [
+    {
+      "product": "LIV 52 SYP 100ML",
+      "opening_qty": 40,
+      "sales_qty": 28,
+      "closing_qty": 82,
+      "kind": "extra_product"
+    },
+    {
+      "product": "LIV 52 SYP 200ML",
+      "opening_qty": 48,
+      "sales_qty": 6,
+      "closing_qty": 42,
+      "kind": "extra_product"
+    },
+    {
+      "product": "LIV 52 TAB 100'S",
+      "opening_qty": 32,
+      "sales_qty": 21,
+      "closing_qty": 111,
+      "kind": "extra_product"
+    },
+    {
+      "product": "PURIM TAB 60'S",
+      "opening_qty": 49,
+      "sales_qty": 1,
+      "closing_qty": 48,
+      "kind": "extra_product"
+    }
+  ],
+  "duplicates": [],
+  "mismatches": [
+    {
+      "product": "23. PILEX FORTE TABLETS 2X30 S(IN1",
+      "field": "closing_qty",
+      "expected": 7,
+      "actual": 77,
+      "kind": "wrong_closing_qty"
+    },
+    {
+      "product": "15 rows",
+      "field": "sales_value",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 15,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    },
+    {
+      "product": "15 rows",
+      "field": "closing_value",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 15,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    },
+    {
+      "product": "15 rows",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 15,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    }
+  ],
+  "ocr_review": [
+    {
+      "product": "HERBOLAX TAB",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "HARIDRATAB 60",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "HIORAD TOOTHPASTE DIABETIC 1006M",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "CLARINAANTI ACNE CREAM 306M",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "TENTEX FORTE TABS",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 6,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "PILEX TAB",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 7,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "OPHTHACARE EYE DROPS",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "HIMCOLIN GEL",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 1,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "CONFIDO TAB",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 1,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "AACTARIL SOAP",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 3,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "HIORADIABETICS TOOTHPASTE 106M",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "1.2 DIABECON-DS60's",
+      "api_product": "DIABECON-DS 60'S",
+      "similarity": 0.857,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "1.2 DIABECON-DS60's",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "CLARINA ANTI ACNE FACE WASH GE",
+      "field": "opening_qty",
+      "expected": null,
+      "actual": 50,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "CLARINA ANTI ACNE FACE WASH GE",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "23. PILEX FORTE TABLETS 2X30 S(IN1",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 3,
+      "note": "Ground truth did not read this cell confidently."
+    }
+  ],
+  "accounting": [],
+  "confidence": "medium",
+  "notes": [
+    "OCR used tesseract psm 6."
+  ],
+  "result_key": "0000700406_2026_08_ZL_10_384_05092026140711",
+  "unavailable_fields": {
+    "sales_value": 15,
+    "closing_value": 15,
+    "receipts_qty": 15
+  },
+  "formula_checked": "none"
+}

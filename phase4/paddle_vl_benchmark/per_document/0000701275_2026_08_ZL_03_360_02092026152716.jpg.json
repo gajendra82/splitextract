@@ -1,0 +1,494 @@
+{
+  "document_id": "0000701275_2026_08_ZL_03_360_02092026152716.jpg",
+  "relative_path": "0000701275_2026_08_ZL_03_360_02092026152716.jpg",
+  "source_path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000701275_2026_08_ZL_03_360_02092026152716.jpg",
+  "file_type": "image",
+  "pdf_kind": null,
+  "manifest_ocr_required": true,
+  "engine": "paddleocr-vl-1.6",
+  "model": "PaddleOCR-VL-1.6",
+  "model_version": "v1.6",
+  "started_at": "2026-10-08T13:10:18.971803+00:00",
+  "pages": [
+    {
+      "engine": "paddleocr-vl-1.6",
+      "status": "success",
+      "model": "PaddleOCR-VL-1.6",
+      "model_version": "v1.6",
+      "text": "TIRTHAMOYEE DRUGS (INDIA)\nDESHAPRIYA ROAD RANGIRKHARI-788005 ASSAM\nPhone: 9954073662, 03842359514 E-Mail: samrat.smart77@gmail.com\nGSTIN : 18AABFT3042J1Z8 TIN. NO. : 18530003103\nSTOCK & SALES ANALYSIS (HIMALAYA HERBAL HEALTHCARE (ZEAL)) 01-08-2026 - 29-08-2026\n<table><tr><td colspan=\"2\">ITEM DESCRIPTION</td><td>OPENING</td><td>RECEIPT</td><td>ISSUE</td><td>CLOSING</td><td>M.EXP</td></tr><tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td colspan=\"7\">HIMALAYA HERBAL HEALTHCARE (ZEAL)</td></tr><tr><td>AACTARIL SOAP</td><td>75GM</td><td>PKT</td><td>72</td><td>-</td><td>-</td><td>72 12/27</td></tr><tr><td>ABANA TABLET</td><td>60 NOS</td><td>Bot</td><td>100</td><td>-</td><td>3</td><td>97 4/28</td></tr><tr><td>CLARINA CREAM</td><td>30 GM</td><td>Tub</td><td>79</td><td>-</td><td>2</td><td>77 2/28</td></tr><tr><td>CLARINA FACE WASH</td><td>60ML</td><td>GEL</td><td>48</td><td>-</td><td>-</td><td>48 8/26</td></tr><tr><td>CONFIDO TAB</td><td>60 NOS</td><td>Pot</td><td>272</td><td>-</td><td>10</td><td>262 12/27</td></tr><tr><td>DIABECON DS TAB</td><td>60NOS</td><td>POT</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>DIABECON TAB</td><td>60 NOS</td><td>Bot</td><td>89</td><td>-</td><td>-</td><td>89 8/28</td></tr><tr><td>DIAREX SYP</td><td>100</td><td>BOL</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>HAIR ZONE SOLUTION</td><td>60 ML</td><td>Bot</td><td>84</td><td>-</td><td>4</td><td>80 3/27</td></tr><tr><td>HEAL LIP</td><td>10 GM</td><td>TUB</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>HERBOLAX CAP</td><td>10 NOS</td><td>Str</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>HIMCOLIN OINTMENT</td><td>30 GM</td><td>Tub</td><td>36</td><td>50</td><td>5</td><td>81 9/26</td></tr><tr><td>HIOWNA (CHOCOLATE)</td><td>200 GM</td><td>Bot</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>LIV 52 100 ML SUGA</td><td>100 ML</td><td>PCS</td><td>267</td><td>-</td><td>139</td><td>128 2/28</td></tr><tr><td>LIV 52 H B CAP</td><td>10 NOS</td><td>Str</td><td>84</td><td>84</td><td>6</td><td>162 1/28</td></tr><tr><td>LIV 52 SUGAR FREE</td><td>200 ML</td><td>PCS</td><td>577</td><td>-</td><td>315</td><td>262 2/28</td></tr><tr><td>LIV 52 SYP</td><td>100 ML</td><td>Bot</td><td>57</td><td>1400</td><td>140</td><td>1317 6/27</td></tr><tr><td>LIV 52 SYP</td><td>200 ML</td><td>Bot</td><td>113</td><td>350</td><td>-</td><td>463 12/26</td></tr><tr><td>LIV 52 TAB</td><td>100 NO</td><td>Bot</td><td>278</td><td>200</td><td>46</td><td>432 4/27</td></tr><tr><td>OPHTHACARE EYE DRO</td><td>10 ML</td><td>Bot</td><td>41</td><td>-</td><td>-</td><td>41 8/26</td></tr><tr><td>ORO-T ORAL RINSE</td><td>100ML</td><td>BOL</td><td>39</td><td>-</td><td>5</td><td>34 11/27</td></tr><tr><td>ORO-T ORAL RINSE L</td><td>200ML</td><td>BOL</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>OXITRAD CAP</td><td>10 NOS</td><td>STR</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>PILEX FORTE OINT</td><td>30 GM</td><td>TUB</td><td>269</td><td>-</td><td>22</td><td>247 4/27</td></tr><tr><td>PILEX FORTE TAB</td><td>30 NOS</td><td>STR</td><td>86</td><td>56</td><td>5</td><td>137 1/27</td></tr><tr><td>PILEX OINTMENT</td><td>30 GM</td><td>Tub</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>PILEX TAB</td><td>60 NOS</td><td>Bot</td><td>145</td><td>-</td><td>13</td><td>132 9/26</td></tr><tr><td>PURE HANDS</td><td>500 ML</td><td>BOL</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>PURE HANDS 50ML LI</td><td>50 ML</td><td>Bot</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>PURIM</td><td>60 NOS</td><td>Bot</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>Q-DEE TABS</td><td>20 NOS</td><td>STR</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>QUISTA ACTIVE</td><td>200 GM</td><td>JAR</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>QUISTA DN VANILA F</td><td>400 GM</td><td>TIN</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>QUISTA KIDZ CHOCLA</td><td>200 GM</td><td>POT</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>SHALLAKI TAB</td><td>60NOS</td><td>POT</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>SHIGRU TAB</td><td>60NOS</td><td>POT</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>TALEKT</td><td>120 ML</td><td>Bot</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>TENTEX FORTE TAB</td><td>1000 ML</td><td>Str</td><td>352</td><td>-</td><td>-</td><td>352 4/27</td></tr><tr><td>TRIKATU SYP</td><td>200 ML</td><td>BOT</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>TRIPHALA TAB</td><td>60NS</td><td>STR</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>VEGECORT CREAM</td><td>30 GM</td><td>TUB</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>YASHTIMADHU TAB</td><td>60NS</td><td>STR</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>ZZZZZZ 3238</td><td></td><td></td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>TOTAL</td><td></td><td>503184</td><td>277797</td><td>110666</td><td>670315</td><td></td></tr></table>",
+      "normalized_text": "TIRTHAMOYEE DRUGS (INDIA) DESHAPRIYA ROAD RANGIRKHARI-788005 ASSAM Phone: 9954073662, 03842359514 E-Mail: samrat.smart77@gmail.com GSTIN : 18AABFT3042J1Z8 TIN. NO. : 18530003103 STOCK & SALES ANALYSIS (HIMALAYA HERBAL HEALTHCARE (ZEAL)) 01-08-2026 - 29-08-2026 <table><tr><td colspan=\"2\">ITEM DESCRIPTION</td><td>OPENING</td><td>RECEIPT</td><td>ISSUE</td><td>CLOSING</td><td>M.EXP</td></tr><tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td colspan=\"7\">HIMALAYA HERBAL HEALTHCARE (ZEAL)</td></tr><tr><td>AACTARIL SOAP</td><td>75GM</td><td>PKT</td><td>72</td><td>-</td><td>-</td><td>72 12/27</td></tr><tr><td>ABANA TABLET</td><td>60 NOS</td><td>Bot</td><td>100</td><td>-</td><td>3</td><td>97 4/28</td></tr><tr><td>CLARINA CREAM</td><td>30 GM</td><td>Tub</td><td>79</td><td>-</td><td>2</td><td>77 2/28</td></tr><tr><td>CLARINA FACE WASH</td><td>60ML</td><td>GEL</td><td>48</td><td>-</td><td>-</td><td>48 8/26</td></tr><tr><td>CONFIDO TAB</td><td>60 NOS</td><td>Pot</td><td>272</td><td>-</td><td>10</td><td>262 12/27</td></tr><tr><td>DIABECON DS TAB</td><td>60NOS</td><td>POT</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>DIABECON TAB</td><td>60 NOS</td><td>Bot</td><td>89</td><td>-</td><td>-</td><td>89 8/28</td></tr><tr><td>DIAREX SYP</td><td>100</td><td>BOL</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>HAIR ZONE SOLUTION</td><td>60 ML</td><td>Bot</td><td>84</td><td>-</td><td>4</td><td>80 3/27</td></tr><tr><td>HEAL LIP</td><td>10 GM</td><td>TUB</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>HERBOLAX CAP</td><td>10 NOS</td><td>Str</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>HIMCOLIN OINTMENT</td><td>30 GM</td><td>Tub</td><td>36</td><td>50</td><td>5</td><td>81 9/26</td></tr><tr><td>HIOWNA (CHOCOLATE)</td><td>200 GM</td><td>Bot</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>LIV 52 100 ML SUGA</td><td>100 ML</td><td>PCS</td><td>267</td><td>-</td><td>139</td><td>128 2/28</td></tr><tr><td>LIV 52 H B CAP</td><td>10 NOS</td><td>Str</td><td>84</td><td>84</td><td>6</td><td>162 1/28</td></tr><tr><td>LIV 52 SUGAR FREE</td><td>200 ML</td><td>PCS</td><td>577</td><td>-</td><td>315</td><td>262 2/28</td></tr><tr><td>LIV 52 SYP</td><td>100 ML</td><td>Bot</td><td>57</td><td>1400</td><td>140</td><td>1317 6/27</td></tr><tr><td>LIV 52 SYP</td><td>200 ML</td><td>Bot</td><td>113</td><td>350</td><td>-</td><td>463 12/26</td></tr><tr><td>LIV 52 TAB</td><td>100 NO</td><td>Bot</td><td>278</td><td>200</td><td>46</td><td>432 4/27</td></tr><tr><td>OPHTHACARE EYE DRO</td><td>10 ML</td><td>Bot</td><td>41</td><td>-</td><td>-</td><td>41 8/26</td></tr><tr><td>ORO-T ORAL RINSE</td><td>100ML</td><td>BOL</td><td>39</td><td>-</td><td>5</td><td>34 11/27</td></tr><tr><td>ORO-T ORAL RINSE L</td><td>200ML</td><td>BOL</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>OXITRAD CAP</td><td>10 NOS</td><td>STR</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>PILEX FORTE OINT</td><td>30 GM</td><td>TUB</td><td>269</td><td>-</td><td>22</td><td>247 4/27</td></tr><tr><td>PILEX FORTE TAB</td><td>30 NOS</td><td>STR</td><td>86</td><td>56</td><td>5</td><td>137 1/27</td></tr><tr><td>PILEX OINTMENT</td><td>30 GM</td><td>Tub</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>PILEX TAB</td><td>60 NOS</td><td>Bot</td><td>145</td><td>-</td><td>13</td><td>132 9/26</td></tr><tr><td>PURE HANDS</td><td>500 ML</td><td>BOL</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>PURE HANDS 50ML LI</td><td>50 ML</td><td>Bot</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>PURIM</td><td>60 NOS</td><td>Bot</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>Q-DEE TABS</td><td>20 NOS</td><td>STR</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>QUISTA ACTIVE</td><td>200 GM</td><td>JAR</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>QUISTA DN VANILA F</td><td>400 GM</td><td>TIN</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>QUISTA KIDZ CHOCLA</td><td>200 GM</td><td>POT</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>SHALLAKI TAB</td><td>60NOS</td><td>POT</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>SHIGRU TAB</td><td>60NOS</td><td>POT</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>TALEKT</td><td>120 ML</td><td>Bot</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>TENTEX FORTE TAB</td><td>1000 ML</td><td>Str</td><td>352</td><td>-</td><td>-</td><td>352 4/27</td></tr><tr><td>TRIKATU SYP</td><td>200 ML</td><td>BOT</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>TRIPHALA TAB</td><td>60NS</td><td>STR</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>VEGECORT CREAM</td><td>30 GM</td><td>TUB</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>YASHTIMADHU TAB</td><td>60NS</td><td>STR</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>ZZZZZZ 3238</td><td></td><td></td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>TOTAL</td><td></td><td>503184</td><td>277797</td><td>110666</td><td>670315</td><td></td></tr></table>",
+      "word_count": 156,
+      "line_count": 6,
+      "numeric_tokens": [
+        "9954073662",
+        "03842359514",
+        "18530003103",
+        "2",
+        "7",
+        "72",
+        "72",
+        "60",
+        "100",
+        "3",
+        "97",
+        "30",
+        "79",
+        "2",
+        "77",
+        "48",
+        "48",
+        "60",
+        "272",
+        "10",
+        "262",
+        "60",
+        "89",
+        "89",
+        "100",
+        "60",
+        "84",
+        "4",
+        "80",
+        "10",
+        "10",
+        "30",
+        "36",
+        "50",
+        "5",
+        "81",
+        "200",
+        "52",
+        "100",
+        "100",
+        "267",
+        "139",
+        "128",
+        "52",
+        "10",
+        "84",
+        "84",
+        "6",
+        "162",
+        "52",
+        "200",
+        "577",
+        "315",
+        "262",
+        "52",
+        "100",
+        "57",
+        "1400",
+        "140",
+        "1317",
+        "52",
+        "200",
+        "113",
+        "350",
+        "463",
+        "52",
+        "100",
+        "278",
+        "200",
+        "46",
+        "432",
+        "10",
+        "41",
+        "41",
+        "39",
+        "5",
+        "34",
+        "10",
+        "30",
+        "269",
+        "22",
+        "247",
+        "30",
+        "86",
+        "56",
+        "5",
+        "137",
+        "30",
+        "60",
+        "145",
+        "13",
+        "132",
+        "500",
+        "50",
+        "60",
+        "20",
+        "200",
+        "400",
+        "200",
+        "120",
+        "1000",
+        "352",
+        "352",
+        "200",
+        "30",
+        "3238",
+        "503184",
+        "277797",
+        "110666",
+        "670315"
+      ],
+      "words": [
+        {
+          "text": "TIRTHAMOYEE DRUGS (INDIA)",
+          "bbox": [
+            361.0,
+            60.0,
+            657.0,
+            81.0
+          ],
+          "confidence": null,
+          "page": 1
+        },
+        {
+          "text": "DESHAPRIYA ROAD RANGIRKHARI-788005 ASSAM",
+          "bbox": [
+            268.0,
+            83.0,
+            743.0,
+            103.0
+          ],
+          "confidence": null,
+          "page": 1
+        },
+        {
+          "text": "Phone: 9954073662, 03842359514 E-Mail: samrat.smart77@gmail.com",
+          "bbox": [
+            129.0,
+            104.0,
+            883.0,
+            126.0
+          ],
+          "confidence": null,
+          "page": 1
+        },
+        {
+          "text": "GSTIN : 18AABFT3042J1Z8 TIN. NO. : 18530003103",
+          "bbox": [
+            230.0,
+            128.0,
+            790.0,
+            149.0
+          ],
+          "confidence": null,
+          "page": 1
+        },
+        {
+          "text": "STOCK & SALES ANALYSIS (HIMALAYA HERBAL HEALTHCARE (ZEAL)) 01-08-2026 - 29-08-2026",
+          "bbox": [
+            39.0,
+            171.0,
+            1006.0,
+            193.0
+          ],
+          "confidence": null,
+          "page": 1
+        },
+        {
+          "text": "<table><tr><td colspan=\"2\">ITEM DESCRIPTION</td><td>OPENING</td><td>RECEIPT</td><td>ISSUE</td><td>CLOSING</td><td>M.EXP</td></tr><tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td colspan=\"7\">HIMALAYA HERBAL HEALTHCARE (ZEAL)</td></tr><tr><td>AACTARIL SOAP</td><td>75GM</td><td>PKT</td><td>72</td><td>-</td><td>-</td><td>72 12/27</td></tr><tr><td>ABANA TABLET</td><td>60 NOS</td><td>Bot</td><td>100</td><td>-</td><td>3</td><td>97 4/28</td></tr><tr><td>CLARINA CREAM</td><td>30 GM</td><td>Tub</td><td>79</td><td>-</td><td>2</td><td>77 2/28</td></tr><tr><td>CLARINA FACE WASH</td><td>60ML</td><td>GEL</td><td>48</td><td>-</td><td>-</td><td>48 8/26</td></tr><tr><td>CONFIDO TAB</td><td>60 NOS</td><td>Pot</td><td>272</td><td>-</td><td>10</td><td>262 12/27</td></tr><tr><td>DIABECON DS TAB</td><td>60NOS</td><td>POT</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>DIABECON TAB</td><td>60 NOS</td><td>Bot</td><td>89</td><td>-</td><td>-</td><td>89 8/28</td></tr><tr><td>DIAREX SYP</td><td>100</td><td>BOL</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>HAIR ZONE SOLUTION</td><td>60 ML</td><td>Bot</td><td>84</td><td>-</td><td>4</td><td>80 3/27</td></tr><tr><td>HEAL LIP</td><td>10 GM</td><td>TUB</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>HERBOLAX CAP</td><td>10 NOS</td><td>Str</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>HIMCOLIN OINTMENT</td><td>30 GM</td><td>Tub</td><td>36</td><td>50</td><td>5</td><td>81 9/26</td></tr><tr><td>HIOWNA (CHOCOLATE)</td><td>200 GM</td><td>Bot</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>LIV 52 100 ML SUGA</td><td>100 ML</td><td>PCS</td><td>267</td><td>-</td><td>139</td><td>128 2/28</td></tr><tr><td>LIV 52 H B CAP</td><td>10 NOS</td><td>Str</td><td>84</td><td>84</td><td>6</td><td>162 1/28</td></tr><tr><td>LIV 52 SUGAR FREE</td><td>200 ML</td><td>PCS</td><td>577</td><td>-</td><td>315</td><td>262 2/28</td></tr><tr><td>LIV 52 SYP</td><td>100 ML</td><td>Bot</td><td>57</td><td>1400</td><td>140</td><td>1317 6/27</td></tr><tr><td>LIV 52 SYP</td><td>200 ML</td><td>Bot</td><td>113</td><td>350</td><td>-</td><td>463 12/26</td></tr><tr><td>LIV 52 TAB</td><td>100 NO</td><td>Bot</td><td>278</td><td>200</td><td>46</td><td>432 4/27</td></tr><tr><td>OPHTHACARE EYE DRO</td><td>10 ML</td><td>Bot</td><td>41</td><td>-</td><td>-</td><td>41 8/26</td></tr><tr><td>ORO-T ORAL RINSE</td><td>100ML</td><td>BOL</td><td>39</td><td>-</td><td>5</td><td>34 11/27</td></tr><tr><td>ORO-T ORAL RINSE L</td><td>200ML</td><td>BOL</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>OXITRAD CAP</td><td>10 NOS</td><td>STR</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>PILEX FORTE OINT</td><td>30 GM</td><td>TUB</td><td>269</td><td>-</td><td>22</td><td>247 4/27</td></tr><tr><td>PILEX FORTE TAB</td><td>30 NOS</td><td>STR</td><td>86</td><td>56</td><td>5</td><td>137 1/27</td></tr><tr><td>PILEX OINTMENT</td><td>30 GM</td><td>Tub</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>PILEX TAB</td><td>60 NOS</td><td>Bot</td><td>145</td><td>-</td><td>13</td><td>132 9/26</td></tr><tr><td>PURE HANDS</td><td>500 ML</td><td>BOL</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>PURE HANDS 50ML LI</td><td>50 ML</td><td>Bot</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>PURIM</td><td>60 NOS</td><td>Bot</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>Q-DEE TABS</td><td>20 NOS</td><td>STR</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>QUISTA ACTIVE</td><td>200 GM</td><td>JAR</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>QUISTA DN VANILA F</td><td>400 GM</td><td>TIN</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>QUISTA KIDZ CHOCLA</td><td>200 GM</td><td>POT</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>SHALLAKI TAB</td><td>60NOS</td><td>POT</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>SHIGRU TAB</td><td>60NOS</td><td>POT</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>TALEKT</td><td>120 ML</td><td>Bot</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>TENTEX FORTE TAB</td><td>1000 ML</td><td>Str</td><td>352</td><td>-</td><td>-</td><td>352 4/27</td></tr><tr><td>TRIKATU SYP</td><td>200 ML</td><td>BOT</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>TRIPHALA TAB</td><td>60NS</td><td>STR</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>VEGECORT CREAM</td><td>30 GM</td><td>TUB</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>YASHTIMADHU TAB</td><td>60NS</td><td>STR</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>ZZZZZZ 3238</td><td></td><td></td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>TOTAL</td><td></td><td>503184</td><td>277797</td><td>110666</td><td>670315</td><td></td></tr></table>",
+          "bbox": [
+            38.0,
+            237.0,
+            951.0,
+            1381.0
+          ],
+          "confidence": null,
+          "page": 1
+        }
+      ],
+      "boxes": [
+        [
+          361.0,
+          60.0,
+          657.0,
+          81.0
+        ],
+        [
+          268.0,
+          83.0,
+          743.0,
+          103.0
+        ],
+        [
+          129.0,
+          104.0,
+          883.0,
+          126.0
+        ],
+        [
+          230.0,
+          128.0,
+          790.0,
+          149.0
+        ],
+        [
+          39.0,
+          171.0,
+          1006.0,
+          193.0
+        ],
+        [
+          38.0,
+          237.0,
+          951.0,
+          1381.0
+        ]
+      ],
+      "confidence": {
+        "mean": null,
+        "count": 0,
+        "available": false
+      },
+      "layout": {
+        "regions": [
+          {
+            "index": 0,
+            "label": "doc_title",
+            "text": "TIRTHAMOYEE DRUGS (INDIA)",
+            "bbox": [
+              361.0,
+              60.0,
+              657.0,
+              81.0
+            ],
+            "order": 0
+          },
+          {
+            "index": 1,
+            "label": "text",
+            "text": "DESHAPRIYA ROAD RANGIRKHARI-788005 ASSAM",
+            "bbox": [
+              268.0,
+              83.0,
+              743.0,
+              103.0
+            ],
+            "order": 1
+          },
+          {
+            "index": 2,
+            "label": "text",
+            "text": "Phone: 9954073662, 03842359514 E-Mail: samrat.smart77@gmail.com",
+            "bbox": [
+              129.0,
+              104.0,
+              883.0,
+              126.0
+            ],
+            "order": 2
+          },
+          {
+            "index": 3,
+            "label": "text",
+            "text": "GSTIN : 18AABFT3042J1Z8 TIN. NO. : 18530003103",
+            "bbox": [
+              230.0,
+              128.0,
+              790.0,
+              149.0
+            ],
+            "order": 3
+          },
+          {
+            "index": 4,
+            "label": "text",
+            "text": "STOCK & SALES ANALYSIS (HIMALAYA HERBAL HEALTHCARE (ZEAL)) 01-08-2026 - 29-08-2026",
+            "bbox": [
+              39.0,
+              171.0,
+              1006.0,
+              193.0
+            ],
+            "order": 4
+          },
+          {
+            "index": 5,
+            "label": "table",
+            "text": "<table><tr><td colspan=\"2\">ITEM DESCRIPTION</td><td>OPENING</td><td>RECEIPT</td><td>ISSUE</td><td>CLOSING</td><td>M.EXP</td></tr><tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td colspan=\"7\">HIMALAYA HERBAL HEALTHCARE (ZEAL)</td></tr><tr><td>AACTARIL SOAP</td><td>75GM</td><td>PKT</td><td>72</td><td>-</td><td>-</td><td>72 12/27</td></tr><tr><td>ABANA TABLET</td><td>60 NOS</td><td>Bot</td><td>100</td><td>-</td><td>3</td><td>97 4/28</td></tr><tr><td>CLARINA CREAM</td><td>30 GM</td><td>Tub</td><td>79</td><td>-</td><td>2</td><td>77 2/28</td></tr><tr><td>CLARINA FACE WASH</td><td>60ML</td><td>GEL</td><td>48</td><td>-</td><td>-</td><td>48 8/26</td></tr><tr><td>CONFIDO TAB</td><td>60 NOS</td><td>Pot</td><td>272</td><td>-</td><td>10</td><td>262 12/27</td></tr><tr><td>DIABECON DS TAB</td><td>60NOS</td><td>POT</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>DIABECON TAB</td><td>60 NOS</td><td>Bot</td><td>89</td><td>-</td><td>-</td><td>89 8/28</td></tr><tr><td>DIAREX SYP</td><td>100</td><td>BOL</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>HAIR ZONE SOLUTION</td><td>60 ML</td><td>Bot</td><td>84</td><td>-</td><td>4</td><td>80 3/27</td></tr><tr><td>HEAL LIP</td><td>10 GM</td><td>TUB</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>HERBOLAX CAP</td><td>10 NOS</td><td>Str</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>HIMCOLIN OINTMENT</td><td>30 GM</td><td>Tub</td><td>36</td><td>50</td><td>5</td><td>81 9/26</td></tr><tr><td>HIOWNA (CHOCOLATE)</td><td>200 GM</td><td>Bot</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>LIV 52 100 ML SUGA</td><td>100 ML</td><td>PCS</td><td>267</td><td>-</td><td>139</td><td>128 2/28</td></tr><tr><td>LIV 52 H B CAP</td><td>10 NOS</td><td>Str</td><td>84</td><td>84</td><td>6</td><td>162 1/28</td></tr><tr><td>LIV 52 SUGAR FREE</td><td>200 ML</td><td>PCS</td><td>577</td><td>-</td><td>315</td><td>262 2/28</td></tr><tr><td>LIV 52 SYP</td><td>100 ML</td><td>Bot</td><td>57</td><td>1400</td><td>140</td><td>1317 6/27</td></tr><tr><td>LIV 52 SYP</td><td>200 ML</td><td>Bot</td><td>113</td><td>350</td><td>-</td><td>463 12/26</td></tr><tr><td>LIV 52 TAB</td><td>100 NO</td><td>Bot</td><td>278</td><td>200</td><td>46</td><td>432 4/27</td></tr><tr><td>OPHTHACARE EYE DRO</td><td>10 ML</td><td>Bot</td><td>41</td><td>-</td><td>-</td><td>41 8/26</td></tr><tr><td>ORO-T ORAL RINSE</td><td>100ML</td><td>BOL</td><td>39</td><td>-</td><td>5</td><td>34 11/27</td></tr><tr><td>ORO-T ORAL RINSE L</td><td>200ML</td><td>BOL</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>OXITRAD CAP</td><td>10 NOS</td><td>STR</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>PILEX FORTE OINT</td><td>30 GM</td><td>TUB</td><td>269</td><td>-</td><td>22</td><td>247 4/27</td></tr><tr><td>PILEX FORTE TAB</td><td>30 NOS</td><td>STR</td><td>86</td><td>56</td><td>5</td><td>137 1/27</td></tr><tr><td>PILEX OINTMENT</td><td>30 GM</td><td>Tub</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>PILEX TAB</td><td>60 NOS</td><td>Bot</td><td>145</td><td>-</td><td>13</td><td>132 9/26</td></tr><tr><td>PURE HANDS</td><td>500 ML</td><td>BOL</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>PURE HANDS 50ML LI</td><td>50 ML</td><td>Bot</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>PURIM</td><td>60 NOS</td><td>Bot</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>Q-DEE TABS</td><td>20 NOS</td><td>STR</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>QUISTA ACTIVE</td><td>200 GM</td><td>JAR</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>QUISTA DN VANILA F</td><td>400 GM</td><td>TIN</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>QUISTA KIDZ CHOCLA</td><td>200 GM</td><td>POT</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>SHALLAKI TAB</td><td>60NOS</td><td>POT</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>SHIGRU TAB</td><td>60NOS</td><td>POT</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>TALEKT</td><td>120 ML</td><td>Bot</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>TENTEX FORTE TAB</td><td>1000 ML</td><td>Str</td><td>352</td><td>-</td><td>-</td><td>352 4/27</td></tr><tr><td>TRIKATU SYP</td><td>200 ML</td><td>BOT</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>TRIPHALA TAB</td><td>60NS</td><td>STR</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>VEGECORT CREAM</td><td>30 GM</td><td>TUB</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>YASHTIMADHU TAB</td><td>60NS</td><td>STR</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>ZZZZZZ 3238</td><td></td><td></td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>TOTAL</td><td></td><td>503184</td><td>277797</td><td>110666</td><td>670315</td><td></td></tr></table>",
+            "bbox": [
+              38.0,
+              237.0,
+              951.0,
+              1381.0
+            ],
+            "order": 5
+          }
+        ],
+        "available": true
+      },
+      "tables": {
+        "items": [
+          {
+            "index": 5,
+            "label": "table",
+            "text": "<table><tr><td colspan=\"2\">ITEM DESCRIPTION</td><td>OPENING</td><td>RECEIPT</td><td>ISSUE</td><td>CLOSING</td><td>M.EXP</td></tr><tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td colspan=\"7\">HIMALAYA HERBAL HEALTHCARE (ZEAL)</td></tr><tr><td>AACTARIL SOAP</td><td>75GM</td><td>PKT</td><td>72</td><td>-</td><td>-</td><td>72 12/27</td></tr><tr><td>ABANA TABLET</td><td>60 NOS</td><td>Bot</td><td>100</td><td>-</td><td>3</td><td>97 4/28</td></tr><tr><td>CLARINA CREAM</td><td>30 GM</td><td>Tub</td><td>79</td><td>-</td><td>2</td><td>77 2/28</td></tr><tr><td>CLARINA FACE WASH</td><td>60ML</td><td>GEL</td><td>48</td><td>-</td><td>-</td><td>48 8/26</td></tr><tr><td>CONFIDO TAB</td><td>60 NOS</td><td>Pot</td><td>272</td><td>-</td><td>10</td><td>262 12/27</td></tr><tr><td>DIABECON DS TAB</td><td>60NOS</td><td>POT</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>DIABECON TAB</td><td>60 NOS</td><td>Bot</td><td>89</td><td>-</td><td>-</td><td>89 8/28</td></tr><tr><td>DIAREX SYP</td><td>100</td><td>BOL</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>HAIR ZONE SOLUTION</td><td>60 ML</td><td>Bot</td><td>84</td><td>-</td><td>4</td><td>80 3/27</td></tr><tr><td>HEAL LIP</td><td>10 GM</td><td>TUB</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>HERBOLAX CAP</td><td>10 NOS</td><td>Str</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>HIMCOLIN OINTMENT</td><td>30 GM</td><td>Tub</td><td>36</td><td>50</td><td>5</td><td>81 9/26</td></tr><tr><td>HIOWNA (CHOCOLATE)</td><td>200 GM</td><td>Bot</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>LIV 52 100 ML SUGA</td><td>100 ML</td><td>PCS</td><td>267</td><td>-</td><td>139</td><td>128 2/28</td></tr><tr><td>LIV 52 H B CAP</td><td>10 NOS</td><td>Str</td><td>84</td><td>84</td><td>6</td><td>162 1/28</td></tr><tr><td>LIV 52 SUGAR FREE</td><td>200 ML</td><td>PCS</td><td>577</td><td>-</td><td>315</td><td>262 2/28</td></tr><tr><td>LIV 52 SYP</td><td>100 ML</td><td>Bot</td><td>57</td><td>1400</td><td>140</td><td>1317 6/27</td></tr><tr><td>LIV 52 SYP</td><td>200 ML</td><td>Bot</td><td>113</td><td>350</td><td>-</td><td>463 12/26</td></tr><tr><td>LIV 52 TAB</td><td>100 NO</td><td>Bot</td><td>278</td><td>200</td><td>46</td><td>432 4/27</td></tr><tr><td>OPHTHACARE EYE DRO</td><td>10 ML</td><td>Bot</td><td>41</td><td>-</td><td>-</td><td>41 8/26</td></tr><tr><td>ORO-T ORAL RINSE</td><td>100ML</td><td>BOL</td><td>39</td><td>-</td><td>5</td><td>34 11/27</td></tr><tr><td>ORO-T ORAL RINSE L</td><td>200ML</td><td>BOL</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>OXITRAD CAP</td><td>10 NOS</td><td>STR</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>PILEX FORTE OINT</td><td>30 GM</td><td>TUB</td><td>269</td><td>-</td><td>22</td><td>247 4/27</td></tr><tr><td>PILEX FORTE TAB</td><td>30 NOS</td><td>STR</td><td>86</td><td>56</td><td>5</td><td>137 1/27</td></tr><tr><td>PILEX OINTMENT</td><td>30 GM</td><td>Tub</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>PILEX TAB</td><td>60 NOS</td><td>Bot</td><td>145</td><td>-</td><td>13</td><td>132 9/26</td></tr><tr><td>PURE HANDS</td><td>500 ML</td><td>BOL</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>PURE HANDS 50ML LI</td><td>50 ML</td><td>Bot</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>PURIM</td><td>60 NOS</td><td>Bot</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>Q-DEE TABS</td><td>20 NOS</td><td>STR</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>QUISTA ACTIVE</td><td>200 GM</td><td>JAR</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>QUISTA DN VANILA F</td><td>400 GM</td><td>TIN</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>QUISTA KIDZ CHOCLA</td><td>200 GM</td><td>POT</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>SHALLAKI TAB</td><td>60NOS</td><td>POT</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>SHIGRU TAB</td><td>60NOS</td><td>POT</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>TALEKT</td><td>120 ML</td><td>Bot</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>TENTEX FORTE TAB</td><td>1000 ML</td><td>Str</td><td>352</td><td>-</td><td>-</td><td>352 4/27</td></tr><tr><td>TRIKATU SYP</td><td>200 ML</td><td>BOT</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>TRIPHALA TAB</td><td>60NS</td><td>STR</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>VEGECORT CREAM</td><td>30 GM</td><td>TUB</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>YASHTIMADHU TAB</td><td>60NS</td><td>STR</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>ZZZZZZ 3238</td><td></td><td></td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>TOTAL</td><td></td><td>503184</td><td>277797</td><td>110666</td><td>670315</td><td></td></tr></table>",
+            "bbox": [
+              38.0,
+              237.0,
+              951.0,
+              1381.0
+            ],
+            "html": null,
+            "cells": null
+          }
+        ],
+        "available": true,
+        "count": 1
+      },
+      "latency_ms": 123356.7364999999,
+      "image_width": 1271,
+      "image_height": 1385,
+      "device": "gpu:0",
+      "metadata": {
+        "document_id": "0000701275_2026_08_ZL_03_360_02092026152716.jpg",
+        "source_path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000701275_2026_08_ZL_03_360_02092026152716.jpg",
+        "original_width": 1271,
+        "original_height": 1385,
+        "processed_width": 1271,
+        "processed_height": 1385,
+        "orientation": null,
+        "preprocessing": [
+          "exif_transpose",
+          "rgb"
+        ],
+        "engine": "paddleocr-vl-1.6",
+        "model": "PaddleOCR-VL-1.6",
+        "model_version": "v1.6",
+        "pipeline_version": "v1.6",
+        "device": "gpu:0",
+        "init_latency_ms": 12079.41050000045,
+        "model_loaded": true,
+        "init_error": null,
+        "available": true,
+        "status": "success",
+        "latency_ms": 123356.7364999999,
+        "image_width": 1271,
+        "image_height": 1385,
+        "word_count": 156,
+        "block_count": 6,
+        "line_count": 6,
+        "lines": [
+          {
+            "text": "TIRTHAMOYEE DRUGS (INDIA)",
+            "bbox": [
+              361.0,
+              60.0,
+              657.0,
+              81.0
+            ],
+            "label": "doc_title",
+            "order": 0
+          },
+          {
+            "text": "DESHAPRIYA ROAD RANGIRKHARI-788005 ASSAM",
+            "bbox": [
+              268.0,
+              83.0,
+              743.0,
+              103.0
+            ],
+            "label": "text",
+            "order": 1
+          },
+          {
+            "text": "Phone: 9954073662, 03842359514 E-Mail: samrat.smart77@gmail.com",
+            "bbox": [
+              129.0,
+              104.0,
+              883.0,
+              126.0
+            ],
+            "label": "text",
+            "order": 2
+          },
+          {
+            "text": "GSTIN : 18AABFT3042J1Z8 TIN. NO. : 18530003103",
+            "bbox": [
+              230.0,
+              128.0,
+              790.0,
+              149.0
+            ],
+            "label": "text",
+            "order": 3
+          },
+          {
+            "text": "STOCK & SALES ANALYSIS (HIMALAYA HERBAL HEALTHCARE (ZEAL)) 01-08-2026 - 29-08-2026",
+            "bbox": [
+              39.0,
+              171.0,
+              1006.0,
+              193.0
+            ],
+            "label": "text",
+            "order": 4
+          },
+          {
+            "text": "<table><tr><td colspan=\"2\">ITEM DESCRIPTION</td><td>OPENING</td><td>RECEIPT</td><td>ISSUE</td><td>CLOSING</td><td>M.EXP</td></tr><tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td colspan=\"7\">HIMALAYA HERBAL HEALTHCARE (ZEAL)</td></tr><tr><td>AACTARIL SOAP</td><td>75GM</td><td>PKT</td><td>72</td><td>-</td><td>-</td><td>72 12/27</td></tr><tr><td>ABANA TABLET</td><td>60 NOS</td><td>Bot</td><td>100</td><td>-</td><td>3</td><td>97 4/28</td></tr><tr><td>CLARINA CREAM</td><td>30 GM</td><td>Tub</td><td>79</td><td>-</td><td>2</td><td>77 2/28</td></tr><tr><td>CLARINA FACE WASH</td><td>60ML</td><td>GEL</td><td>48</td><td>-</td><td>-</td><td>48 8/26</td></tr><tr><td>CONFIDO TAB</td><td>60 NOS</td><td>Pot</td><td>272</td><td>-</td><td>10</td><td>262 12/27</td></tr><tr><td>DIABECON DS TAB</td><td>60NOS</td><td>POT</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>DIABECON TAB</td><td>60 NOS</td><td>Bot</td><td>89</td><td>-</td><td>-</td><td>89 8/28</td></tr><tr><td>DIAREX SYP</td><td>100</td><td>BOL</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>HAIR ZONE SOLUTION</td><td>60 ML</td><td>Bot</td><td>84</td><td>-</td><td>4</td><td>80 3/27</td></tr><tr><td>HEAL LIP</td><td>10 GM</td><td>TUB</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>HERBOLAX CAP</td><td>10 NOS</td><td>Str</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>HIMCOLIN OINTMENT</td><td>30 GM</td><td>Tub</td><td>36</td><td>50</td><td>5</td><td>81 9/26</td></tr><tr><td>HIOWNA (CHOCOLATE)</td><td>200 GM</td><td>Bot</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>LIV 52 100 ML SUGA</td><td>100 ML</td><td>PCS</td><td>267</td><td>-</td><td>139</td><td>128 2/28</td></tr><tr><td>LIV 52 H B CAP</td><td>10 NOS</td><td>Str</td><td>84</td><td>84</td><td>6</td><td>162 1/28</td></tr><tr><td>LIV 52 SUGAR FREE</td><td>200 ML</td><td>PCS</td><td>577</td><td>-</td><td>315</td><td>262 2/28</td></tr><tr><td>LIV 52 SYP</td><td>100 ML</td><td>Bot</td><td>57</td><td>1400</td><td>140</td><td>1317 6/27</td></tr><tr><td>LIV 52 SYP</td><td>200 ML</td><td>Bot</td><td>113</td><td>350</td><td>-</td><td>463 12/26</td></tr><tr><td>LIV 52 TAB</td><td>100 NO</td><td>Bot</td><td>278</td><td>200</td><td>46</td><td>432 4/27</td></tr><tr><td>OPHTHACARE EYE DRO</td><td>10 ML</td><td>Bot</td><td>41</td><td>-</td><td>-</td><td>41 8/26</td></tr><tr><td>ORO-T ORAL RINSE</td><td>100ML</td><td>BOL</td><td>39</td><td>-</td><td>5</td><td>34 11/27</td></tr><tr><td>ORO-T ORAL RINSE L</td><td>200ML</td><td>BOL</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>OXITRAD CAP</td><td>10 NOS</td><td>STR</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>PILEX FORTE OINT</td><td>30 GM</td><td>TUB</td><td>269</td><td>-</td><td>22</td><td>247 4/27</td></tr><tr><td>PILEX FORTE TAB</td><td>30 NOS</td><td>STR</td><td>86</td><td>56</td><td>5</td><td>137 1/27</td></tr><tr><td>PILEX OINTMENT</td><td>30 GM</td><td>Tub</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>PILEX TAB</td><td>60 NOS</td><td>Bot</td><td>145</td><td>-</td><td>13</td><td>132 9/26</td></tr><tr><td>PURE HANDS</td><td>500 ML</td><td>BOL</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>PURE HANDS 50ML LI</td><td>50 ML</td><td>Bot</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>PURIM</td><td>60 NOS</td><td>Bot</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>Q-DEE TABS</td><td>20 NOS</td><td>STR</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>QUISTA ACTIVE</td><td>200 GM</td><td>JAR</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>QUISTA DN VANILA F</td><td>400 GM</td><td>TIN</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>QUISTA KIDZ CHOCLA</td><td>200 GM</td><td>POT</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>SHALLAKI TAB</td><td>60NOS</td><td>POT</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>SHIGRU TAB</td><td>60NOS</td><td>POT</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>TALEKT</td><td>120 ML</td><td>Bot</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>TENTEX FORTE TAB</td><td>1000 ML</td><td>Str</td><td>352</td><td>-</td><td>-</td><td>352 4/27</td></tr><tr><td>TRIKATU SYP</td><td>200 ML</td><td>BOT</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>TRIPHALA TAB</td><td>60NS</td><td>STR</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>VEGECORT CREAM</td><td>30 GM</td><td>TUB</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>YASHTIMADHU TAB</td><td>60NS</td><td>STR</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>ZZZZZZ 3238</td><td></td><td></td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>TOTAL</td><td></td><td>503184</td><td>277797</td><td>110666</td><td>670315</td><td></td></tr></table>",
+            "bbox": [
+              38.0,
+              237.0,
+              951.0,
+              1381.0
+            ],
+            "label": "table",
+            "order": 5
+          }
+        ],
+        "reading_order": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "bbox_stats": {
+          "valid": 6,
+          "invalid": 0,
+          "total": 6
+        }
+      },
+      "error": null,
+      "error_type": null,
+      "page": 1,
+      "native_text": false,
+      "ocr_required": true,
+      "paddle_vl_status": "success",
+      "image_meta": {
+        "original_width": 1271,
+        "original_height": 1385,
+        "processed_width": 1271,
+        "processed_height": 1385,
+        "orientation": null,
+        "preprocessing": [
+          "exif_transpose",
+          "rgb"
+        ]
+      },
+      "resources": {
+        "cpu_percent": 2.2,
+        "ram_used_gb": 14.21,
+        "ram_total_gb": 15.31,
+        "gpu": "NVIDIA GeForce RTX 3050 6GB Laptop GPU",
+        "vram_used_gb": 10.626,
+        "vram_total_gb": 6.0
+      }
+    }
+  ],
+  "status": "success",
+  "errors": [],
+  "latency_ms": 123549.94859999989,
+  "finished_at": "2026-10-08T13:12:22.521398+00:00",
+  "resources": {
+    "cpu_percent": 1.7,
+    "ram_used_gb": 14.21,
+    "ram_total_gb": 15.31,
+    "gpu": "NVIDIA GeForce RTX 3050 6GB Laptop GPU",
+    "vram_used_gb": 10.626,
+    "vram_total_gb": 6.0
+  }
+}

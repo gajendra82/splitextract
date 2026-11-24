@@ -1,0 +1,2219 @@
+{
+  "document_id": "0000700087_2026_08_ZA_06_333_04092026081228.png",
+  "source_file": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000700087_2026_08_ZA_06_333_04092026081228.png",
+  "source_file_exists": true,
+  "verification_status": "unverified",
+  "annotation_origin": "AI_PROPOSED",
+  "ai_generated": true,
+  "human_verified": false,
+  "rows": [
+    {
+      "row_id": "r01",
+      "row_index": 1,
+      "product_name": {
+        "raw": "ARJUNA TAB 60S",
+        "normalized": "ARJUNA TAB 60S",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60S",
+        "normalized": "60S",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opening",
+          "semantic": "opening_qty",
+          "raw": "20.0",
+          "normalized": 20.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Receipt",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Issue",
+          "semantic": "sales_qty",
+          "raw": "12.0",
+          "normalized": 12.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "V/Free",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 5,
+          "printed_header": "Sales Amount",
+          "semantic": "not_quantity",
+          "raw": "2971.44",
+          "normalized": 2971.44,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Closing",
+          "semantic": "closing_qty",
+          "raw": "8.0",
+          "normalized": 8.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Closing Amount",
+          "semantic": "not_quantity",
+          "raw": "1765.04",
+          "normalized": 1765.04,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "Division",
+          "semantic": "unknown",
+          "raw": "HIMALAYA (ZANDRA)",
+          "normalized": null,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r02",
+      "row_index": 2,
+      "product_name": {
+        "raw": "BONNISAN DROP 30ml",
+        "normalized": "BONNISAN DROP 30ml",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "30ml",
+        "normalized": "30ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opening",
+          "semantic": "opening_qty",
+          "raw": "50.0",
+          "normalized": 50.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Receipt",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Issue",
+          "semantic": "sales_qty",
+          "raw": "18.0",
+          "normalized": 18.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "V/Free",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 5,
+          "printed_header": "Sales Amount",
+          "semantic": "not_quantity",
+          "raw": "1343.88",
+          "normalized": 1343.88,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Closing",
+          "semantic": "closing_qty",
+          "raw": "32.0",
+          "normalized": 32.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Closing Amount",
+          "semantic": "not_quantity",
+          "raw": "2184.27",
+          "normalized": 2184.27,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "Division",
+          "semantic": "unknown",
+          "raw": "HIMALAYA (ZANDRA)",
+          "normalized": null,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r03",
+      "row_index": 3,
+      "product_name": {
+        "raw": "BONNISAN LIQ.100ML 100ml",
+        "normalized": "BONNISAN LIQ.100ML 100ml",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "100ml",
+        "normalized": "100ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opening",
+          "semantic": "opening_qty",
+          "raw": "42.0",
+          "normalized": 42.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Receipt",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Issue",
+          "semantic": "sales_qty",
+          "raw": "18.0",
+          "normalized": 18.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "V/Free",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 5,
+          "printed_header": "Sales Amount",
+          "semantic": "not_quantity",
+          "raw": "1220.40",
+          "normalized": 1220.4,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Closing",
+          "semantic": "closing_qty",
+          "raw": "24.0",
+          "normalized": 24.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Closing Amount",
+          "semantic": "not_quantity",
+          "raw": "1442.40",
+          "normalized": 1442.4,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "Division",
+          "semantic": "unknown",
+          "raw": "HIMALAYA (ZANDRA)",
+          "normalized": null,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r04",
+      "row_index": 4,
+      "product_name": {
+        "raw": "BONNISAN LIQ.200ML 200ML",
+        "normalized": "BONNISAN LIQ.200ML 200ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200ML",
+        "normalized": "200ML",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opening",
+          "semantic": "opening_qty",
+          "raw": "47.0",
+          "normalized": 47.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Receipt",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Issue",
+          "semantic": "sales_qty",
+          "raw": "13.0",
+          "normalized": 13.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "V/Free",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 5,
+          "printed_header": "Sales Amount",
+          "semantic": "not_quantity",
+          "raw": "1485.64",
+          "normalized": 1485.64,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Closing",
+          "semantic": "closing_qty",
+          "raw": "34.0",
+          "normalized": 34.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Closing Amount",
+          "semantic": "not_quantity",
+          "raw": "3444.54",
+          "normalized": 3444.54,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "Division",
+          "semantic": "unknown",
+          "raw": "HIMALAYA (ZANDRA)",
+          "normalized": null,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r05",
+      "row_index": 5,
+      "product_name": {
+        "raw": "BONNISPA Z DROPS 15ML",
+        "normalized": "BONNISPA Z DROPS 15ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "15ML",
+        "normalized": "15ML",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opening",
+          "semantic": "opening_qty",
+          "raw": "38.0",
+          "normalized": 38.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Receipt",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Issue",
+          "semantic": "sales_qty",
+          "raw": "24.0",
+          "normalized": 24.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "V/Free",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 5,
+          "printed_header": "Sales Amount",
+          "semantic": "not_quantity",
+          "raw": "1536.00",
+          "normalized": 1536.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Closing",
+          "semantic": "closing_qty",
+          "raw": "14.0",
+          "normalized": 14.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Closing Amount",
+          "semantic": "not_quantity",
+          "raw": "794.36",
+          "normalized": 794.36,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "Division",
+          "semantic": "unknown",
+          "raw": "HIMALAYA (ZANDRA)",
+          "normalized": null,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r06",
+      "row_index": 6,
+      "product_name": {
+        "raw": "BRESOL NASAL DROP 10ML",
+        "normalized": "BRESOL NASAL DROP 10ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "10ML",
+        "normalized": "10ML",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opening",
+          "semantic": "opening_qty",
+          "raw": "35.0",
+          "normalized": 35.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Receipt",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Issue",
+          "semantic": "sales_qty",
+          "raw": "2.0",
+          "normalized": 2.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "V/Free",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 5,
+          "printed_header": "Sales Amount",
+          "semantic": "not_quantity",
+          "raw": "114.28",
+          "normalized": 114.28,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Closing",
+          "semantic": "closing_qty",
+          "raw": "33.0",
+          "normalized": 33.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Closing Amount",
+          "semantic": "not_quantity",
+          "raw": "1671.49",
+          "normalized": 1671.49,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "Division",
+          "semantic": "unknown",
+          "raw": "HIMALAYA (ZANDRA)",
+          "normalized": null,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r07",
+      "row_index": 7,
+      "product_name": {
+        "raw": "BRESOL SYRUP (200ML) 200ML",
+        "normalized": "BRESOL SYRUP (200ML) 200ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200ML",
+        "normalized": "200ML",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opening",
+          "semantic": "opening_qty",
+          "raw": "7.0",
+          "normalized": 7.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Receipt",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Issue",
+          "semantic": "sales_qty",
+          "raw": "2.0",
+          "normalized": 2.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "V/Free",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 5,
+          "printed_header": "Sales Amount",
+          "semantic": "not_quantity",
+          "raw": "327.60",
+          "normalized": 327.6,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Closing",
+          "semantic": "closing_qty",
+          "raw": "5.0",
+          "normalized": 5.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Closing Amount",
+          "semantic": "not_quantity",
+          "raw": "726.05",
+          "normalized": 726.05,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "Division",
+          "semantic": "unknown",
+          "raw": "HIMALAYA (ZANDRA)",
+          "normalized": null,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r08",
+      "row_index": 8,
+      "product_name": {
+        "raw": "BRESOL SYRUP 100ML",
+        "normalized": "BRESOL SYRUP 100ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "100ML",
+        "normalized": "100ML",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opening",
+          "semantic": "opening_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 2,
+          "printed_header": "Receipt",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Issue",
+          "semantic": "sales_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 4,
+          "printed_header": "V/Free",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 5,
+          "printed_header": "Sales Amount",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Closing",
+          "semantic": "closing_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 7,
+          "printed_header": "Closing Amount",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "Division",
+          "semantic": "unknown",
+          "raw": "HIMALAYA (ZANDRA)",
+          "normalized": null,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r09",
+      "row_index": 9,
+      "product_name": {
+        "raw": "BRESOL TAB 60T",
+        "normalized": "BRESOL TAB 60T",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60T",
+        "normalized": "60T",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opening",
+          "semantic": "opening_qty",
+          "raw": "21.0",
+          "normalized": 21.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Receipt",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Issue",
+          "semantic": "sales_qty",
+          "raw": "10.0",
+          "normalized": 10.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "V/Free",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 5,
+          "printed_header": "Sales Amount",
+          "semantic": "not_quantity",
+          "raw": "1889.60",
+          "normalized": 1889.6,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Closing",
+          "semantic": "closing_qty",
+          "raw": "11.0",
+          "normalized": 11.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Closing Amount",
+          "semantic": "not_quantity",
+          "raw": "1842.61",
+          "normalized": 1842.61,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "Division",
+          "semantic": "unknown",
+          "raw": "HIMALAYA (ZANDRA)",
+          "normalized": null,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r10",
+      "row_index": 10,
+      "product_name": {
+        "raw": "CYSTONE FORTE TAB 60T",
+        "normalized": "CYSTONE FORTE TAB 60T",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60T",
+        "normalized": "60T",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opening",
+          "semantic": "opening_qty",
+          "raw": "113.0",
+          "normalized": 113.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Receipt",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Issue",
+          "semantic": "sales_qty",
+          "raw": "5.0",
+          "normalized": 5.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "V/Free",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 5,
+          "printed_header": "Sales Amount",
+          "semantic": "not_quantity",
+          "raw": "605.70",
+          "normalized": 605.7,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Closing",
+          "semantic": "closing_qty",
+          "raw": "108.0",
+          "normalized": 108.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Closing Amount",
+          "semantic": "not_quantity",
+          "raw": "11636.82",
+          "normalized": 11636.82,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "Division",
+          "semantic": "unknown",
+          "raw": "HIMALAYA (ZANDRA)",
+          "normalized": null,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r11",
+      "row_index": 11,
+      "product_name": {
+        "raw": "CYSTONE SYRUP 200ML",
+        "normalized": "CYSTONE SYRUP 200ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200ML",
+        "normalized": "200ML",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opening",
+          "semantic": "opening_qty",
+          "raw": "17.0",
+          "normalized": 17.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Receipt",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Issue",
+          "semantic": "sales_qty",
+          "raw": "10.0",
+          "normalized": 10.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "V/Free",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 5,
+          "printed_header": "Sales Amount",
+          "semantic": "not_quantity",
+          "raw": "1650.00",
+          "normalized": 1650.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Closing",
+          "semantic": "closing_qty",
+          "raw": "7.0",
+          "normalized": 7.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Closing Amount",
+          "semantic": "not_quantity",
+          "raw": "1023.89",
+          "normalized": 1023.89,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "Division",
+          "semantic": "unknown",
+          "raw": "HIMALAYA (ZANDRA)",
+          "normalized": null,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r12",
+      "row_index": 12,
+      "product_name": {
+        "raw": "CYSTONE SYRUP (200ML) 200ML",
+        "normalized": "CYSTONE SYRUP (200ML) 200ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200ML",
+        "normalized": "200ML",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opening",
+          "semantic": "opening_qty",
+          "raw": "25.0",
+          "normalized": 25.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Receipt",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Issue",
+          "semantic": "sales_qty",
+          "raw": "9.0",
+          "normalized": 9.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "V/Free",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 5,
+          "printed_header": "Sales Amount",
+          "semantic": "not_quantity",
+          "raw": "1858.32",
+          "normalized": 1858.32,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Closing",
+          "semantic": "closing_qty",
+          "raw": "16.0",
+          "normalized": 16.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Closing Amount",
+          "semantic": "not_quantity",
+          "raw": "2928.64",
+          "normalized": 2928.64,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "Division",
+          "semantic": "unknown",
+          "raw": "HIMALAYA (ZANDRA)",
+          "normalized": null,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r13",
+      "row_index": 13,
+      "product_name": {
+        "raw": "CYSTONE TAB 60T",
+        "normalized": "CYSTONE TAB 60T",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60T",
+        "normalized": "60T",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opening",
+          "semantic": "opening_qty",
+          "raw": "242.0",
+          "normalized": 242.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Receipt",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Issue",
+          "semantic": "sales_qty",
+          "raw": "85.0",
+          "normalized": 85.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "V/Free",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 5,
+          "printed_header": "Sales Amount",
+          "semantic": "not_quantity",
+          "raw": "15736.90",
+          "normalized": 15736.9,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Closing",
+          "semantic": "closing_qty",
+          "raw": "157.0",
+          "normalized": 157.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Closing Amount",
+          "semantic": "not_quantity",
+          "raw": "25768.41",
+          "normalized": 25768.41,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "Division",
+          "semantic": "unknown",
+          "raw": "HIMALAYA (ZANDRA)",
+          "normalized": null,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r14",
+      "row_index": 14,
+      "product_name": {
+        "raw": "EVECARE CAP 30C",
+        "normalized": "EVECARE CAP 30C",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "30C",
+        "normalized": "30C",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opening",
+          "semantic": "opening_qty",
+          "raw": "114.0",
+          "normalized": 114.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Receipt",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Issue",
+          "semantic": "sales_qty",
+          "raw": "3.0",
+          "normalized": 3.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "V/Free",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 5,
+          "printed_header": "Sales Amount",
+          "semantic": "not_quantity",
+          "raw": "503.58",
+          "normalized": 503.58,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Closing",
+          "semantic": "closing_qty",
+          "raw": "111.0",
+          "normalized": 111.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Closing Amount",
+          "semantic": "not_quantity",
+          "raw": "18198.72",
+          "normalized": 18198.72,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "Division",
+          "semantic": "unknown",
+          "raw": "HIMALAYA (ZANDRA)",
+          "normalized": null,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r15",
+      "row_index": 15,
+      "product_name": {
+        "raw": "EVECARE FORTE LIQUID 200ML",
+        "normalized": "EVECARE FORTE LIQUID 200ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200ML",
+        "normalized": "200ML",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opening",
+          "semantic": "opening_qty",
+          "raw": "30.0",
+          "normalized": 30.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Receipt",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Issue",
+          "semantic": "sales_qty",
+          "raw": "16.0",
+          "normalized": 16.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "V/Free",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 5,
+          "printed_header": "Sales Amount",
+          "semantic": "not_quantity",
+          "raw": "3034.90",
+          "normalized": 3034.9,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Closing",
+          "semantic": "closing_qty",
+          "raw": "14.0",
+          "normalized": 14.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Closing Amount",
+          "semantic": "not_quantity",
+          "raw": "2430.12",
+          "normalized": 2430.12,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "Division",
+          "semantic": "unknown",
+          "raw": "HIMALAYA (ZANDRA)",
+          "normalized": null,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r16",
+      "row_index": 16,
+      "product_name": {
+        "raw": "EVECARE FORTE TAB 10T",
+        "normalized": "EVECARE FORTE TAB 10T",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "10T",
+        "normalized": "10T",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opening",
+          "semantic": "opening_qty",
+          "raw": "103.0",
+          "normalized": 103.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Receipt",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Issue",
+          "semantic": "sales_qty",
+          "raw": "14.0",
+          "normalized": 14.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "V/Free",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 5,
+          "printed_header": "Sales Amount",
+          "semantic": "not_quantity",
+          "raw": "1023.96",
+          "normalized": 1023.96,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Closing",
+          "semantic": "closing_qty",
+          "raw": "88.0",
+          "normalized": 88.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Closing Amount",
+          "semantic": "not_quantity",
+          "raw": "6057.92",
+          "normalized": 6057.92,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "Division",
+          "semantic": "unknown",
+          "raw": "HIMALAYA (ZANDRA)",
+          "normalized": null,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r17",
+      "row_index": 17,
+      "product_name": {
+        "raw": "EVECARE SYRUP (200ML) 200ML",
+        "normalized": "EVECARE SYRUP (200ML) 200ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200ML",
+        "normalized": "200ML",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opening",
+          "semantic": "opening_qty",
+          "raw": "74.0",
+          "normalized": 74.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Receipt",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Issue",
+          "semantic": "sales_qty",
+          "raw": "42.0",
+          "normalized": 42.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "V/Free",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 5,
+          "printed_header": "Sales Amount",
+          "semantic": "not_quantity",
+          "raw": "6726.72",
+          "normalized": 6726.72,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Closing",
+          "semantic": "closing_qty",
+          "raw": "31.0",
+          "normalized": 31.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Closing Amount",
+          "semantic": "not_quantity",
+          "raw": "4501.51",
+          "normalized": 4501.51,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "Division",
+          "semantic": "unknown",
+          "raw": "HIMALAYA (ZANDRA)",
+          "normalized": null,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r18",
+      "row_index": 18,
+      "product_name": {
+        "raw": "EVECARE SYRUP (400ML) 400ML",
+        "normalized": "EVECARE SYRUP (400ML) 400ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "400ML",
+        "normalized": "400ML",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opening",
+          "semantic": "opening_qty",
+          "raw": "16.0",
+          "normalized": 16.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Receipt",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Issue",
+          "semantic": "sales_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 4,
+          "printed_header": "V/Free",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 5,
+          "printed_header": "Sales Amount",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Closing",
+          "semantic": "closing_qty",
+          "raw": "16.0",
+          "normalized": 16.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Closing Amount",
+          "semantic": "not_quantity",
+          "raw": "3544.64",
+          "normalized": 3544.64,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "Division",
+          "semantic": "unknown",
+          "raw": "HIMALAYA (ZANDRA)",
+          "normalized": null,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r19",
+      "row_index": 19,
+      "product_name": {
+        "raw": "FLORASA NTE CAP 20C",
+        "normalized": "FLORASA NTE CAP 20C",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "20C",
+        "normalized": "20C",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opening",
+          "semantic": "opening_qty",
+          "raw": "24.0",
+          "normalized": 24.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Receipt",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Issue",
+          "semantic": "sales_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 4,
+          "printed_header": "V/Free",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 5,
+          "printed_header": "Sales Amount",
+          "semantic": "not_quantity",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Closing",
+          "semantic": "closing_qty",
+          "raw": "24.0",
+          "normalized": 24.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Closing Amount",
+          "semantic": "not_quantity",
+          "raw": "4311.84",
+          "normalized": 4311.84,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "Division",
+          "semantic": "unknown",
+          "raw": "HIMALAYA (ZANDRA)",
+          "normalized": null,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r20",
+      "row_index": 20,
+      "product_name": {
+        "raw": "GALACTO SURE GRANULES (ELAICHI FLAVOUR) 200GM",
+        "normalized": "GALACTO SURE GRANULES (ELAICHI FLAVOUR) 200GM",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200GM",
+        "normalized": "200GM",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opening",
+          "semantic": "opening_qty",
+          "raw": "15.0",
+          "normalized": 15.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Receipt",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Issue",
+          "semantic": "sales_qty",
+          "raw": "2.0",
+          "normalized": 2.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "V/Free",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 5,
+          "printed_header": "Sales Amount",
+          "semantic": "not_quantity",
+          "raw": "600.40",
+          "normalized": 600.4,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Closing",
+          "semantic": "closing_qty",
+          "raw": "13.0",
+          "normalized": 13.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Closing Amount",
+          "semantic": "not_quantity",
+          "raw": "3459.69",
+          "normalized": 3459.69,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "Division",
+          "semantic": "unknown",
+          "raw": "HIMALAYA (ZANDRA)",
+          "normalized": null,
+          "status": "uncertain"
+        }
+      ]
+    }
+  ],
+  "headers": [],
+  "notes": [
+    "AI_PROPOSED from the original image only. Not verified. Named quantities are set only when a printed header was copied. Blank cells were not stored as zero."
+  ],
+  "failure": null,
+  "vision_model": "gemini-2.5-flash",
+  "vision_input": "original",
+  "ocr_used_as_label": false
+}

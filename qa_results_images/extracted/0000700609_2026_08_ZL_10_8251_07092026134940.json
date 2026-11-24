@@ -1,0 +1,174 @@
+{
+  "source_file": "0000700609_2026_08_ZL_10_8251_07092026134940.jpg",
+  "source_format": "jpg",
+  "stockist_name": null,
+  "stockist_address": null,
+  "company_name": "5 HIMALAYA ZEAL STOCK & SALES STATEMENT 01-08-2026 - 31-08-2026",
+  "period_from": null,
+  "period_to": null,
+  "report_title": "STOCK VALUATION",
+  "line_items": [
+    {
+      "product_code": null,
+      "product_name": "CONFIDO TAB 60S 14 2182.86 100 15591.84 18 2806.53 96 14968.17",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "unit_rate": 0.0,
+        "layout": "stock_valuation_stock_rate",
+        "sno": 8,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV-S2 SYP 200 ML 40 6138.96 0 0 8 1227.79 32. 4911.17",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "unit_rate": 0.0,
+        "layout": "stock_valuation_stock_rate",
+        "sno": 11,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV-52 TAB 100 S 76 10954.8 0 0 29 4468.41 47 6774.68",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "unit_rate": 0.0,
+        "layout": "stock_valuation_stock_rate",
+        "sno": 12,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "OPHTHACARE EYE DROPS 10 ML 62 3954.04 0 0 25 1594.37 37 2359.67",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "unit_rate": 0.0,
+        "layout": "stock_valuation_stock_rate",
+        "sno": 13,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PILEX FORTE OINTMENT 30GM 21 2127.51 10010131 33 3343.23 88 8915.28",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "unit_rate": 0.0,
+        "layout": "stock_valuation_stock_rate",
+        "sno": 14,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "TENTEX FORTE TAB 10 S 0 0 21 1962.54 1-93.45 20 1869.09",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "unit_rate": 0.0,
+        "layout": "stock_valuation_stock_rate",
+        "sno": 17,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "TENTEX-ROYAL TAB 10S 0 0 0 0 0 0 0",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "unit_rate": 0.0,
+        "layout": "stock_valuation_stock_rate",
+        "sno": 18,
+        "stock_identity_ok": true
+      }
+    }
+  ],
+  "totals": {
+    "sales_value": null,
+    "closing_value": null,
+    "extra": {
+      "extraction_method": "stock_valuation_stock_rate",
+      "layout": "stock_valuation_stock_rate",
+      "qty_only": true,
+      "closing_qty": 0.0,
+      "printed_total_stock": 350.0,
+      "line_sales_value_sum": 0.0,
+      "line_closing_value_sum": 0.0,
+      "sales_qty": 0.0,
+      "stock_identity_kind": "stock_valuation_stock_rate",
+      "stock_identity_formula": "closing_qty=Stock; closing_value=Value; no opening/receipts/sales",
+      "stock_identity_fail_count": 0,
+      "stock_validation": {
+        "extracted_closing": 0.0,
+        "extracted_closing_value": 0.0,
+        "is_valid": true
+      },
+      "extraction_quality": {
+        "quality": "good",
+        "score": 100,
+        "reasons": [],
+        "threshold": 75.0
+      },
+      "gemini_fallback": "not_called"
+    }
+  }
+}

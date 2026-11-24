@@ -1,0 +1,223 @@
+{
+  "source_file": "0000702446_2026_08_ZL_24_8272_05092026170206.jpg",
+  "source_format": "jpg",
+  "stockist_name": "SYAM MEDICAL AGENCY",
+  "stockist_address": null,
+  "company_name": null,
+  "period_from": null,
+  "period_to": null,
+  "report_title": "Stock Statement",
+  "line_items": [
+    {
+      "product_code": null,
+      "product_name": "Aactoril Soap",
+      "packing": null,
+      "opening_qty": 18.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 10.0,
+      "sales_value": 8.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 18.0,
+        "expected_closing": 8.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "Confido tab",
+      "packing": null,
+      "opening_qty": 15.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 10.0,
+      "sales_value": 5.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 15.0,
+        "expected_closing": 5.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "Herbolge Cap",
+      "packing": null,
+      "opening_qty": 9.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 9.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 9.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "CivS2 HB",
+      "packing": null,
+      "opening_qty": 50.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 30.0,
+      "sales_value": 20.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 50.0,
+        "expected_closing": 20.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "100 ml",
+      "packing": null,
+      "opening_qty": 200.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 120.0,
+      "sales_value": 80.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 200.0,
+        "expected_closing": 80.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "200 ml",
+      "packing": null,
+      "opening_qty": 110.0,
+      "opening_value": null,
+      "receipts_qty": 1400.0,
+      "receipts_value": null,
+      "sales_qty": 900.0,
+      "sales_value": 610.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 1510.0,
+        "expected_closing": 610.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "Livs Tab",
+      "packing": null,
+      "opening_qty": 280.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 100.0,
+      "sales_value": 150.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 280.0,
+        "expected_closing": 180.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "Pilst ointmatt",
+      "packing": null,
+      "opening_qty": 80.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 70.0,
+      "sales_value": 10.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 80.0,
+        "expected_closing": 10.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "Pily tab",
+      "packing": null,
+      "opening_qty": 80.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 70.0,
+      "sales_value": 10.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 80.0,
+        "expected_closing": 10.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "Penalka 200ml",
+      "packing": null,
+      "opening_qty": 18.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 10.0,
+      "sales_value": 8.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 18.0,
+        "expected_closing": 8.0,
+        "stock_identity_ok": false
+      }
+    }
+  ],
+  "totals": {
+    "sales_value": null,
+    "closing_value": null,
+    "extra": {
+      "extraction_method": "gemini_extraction_fallback",
+      "line_sales_value_sum": 901.0,
+      "line_closing_value_sum": 0.0,
+      "sales_qty": 1329.0,
+      "closing_qty": 0.0,
+      "stock_identity_kind": "opening_receipts_sales_closing",
+      "stock_identity_formula": "closing=opening+receipts-sales",
+      "stock_identity_fail_count": 9,
+      "stock_validation": {
+        "opening_plus_purchase": 2260.0,
+        "expected_total": 2260.0,
+        "calculated_closing": 931.0,
+        "extracted_closing": 0.0,
+        "is_valid": false
+      },
+      "extraction_quality": {
+        "quality": "poor",
+        "score": 75,
+        "reasons": [
+          "stock_identity_failure"
+        ],
+        "threshold": 75.0
+      },
+      "gemini_fallback": "validation_failed",
+      "early_vision_reason": "missing_stock_headers,low_ocr_quality_score"
+    }
+  }
+}

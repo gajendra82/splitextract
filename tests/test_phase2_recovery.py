@@ -22,7 +22,7 @@ from services.hybrid_schema import (
     ensure_json_value,
     sales_recovery_json_schema,
 )
-from services.recovery_policy import recovery_policy
+from services.recovery_policy import recovery_policy, recovery_policy_for_result
 from services.recovery_runner import (
     RecoveryProviderError,
     apply_phase2_recovery,
@@ -192,6 +192,20 @@ class GeminiSchemaTests(unittest.TestCase):
         self.assertIn("additionalProperties", encoded)
         self.assertIn("opening_qty", encoded)
 
+    def test_recovery_schema_is_vertex_compatible_shallow_dynamic(self):
+        """Regression: deep anyOf under dynamic caused Vertex 400 INVALID_ARGUMENT."""
+        schema = sales_recovery_json_schema()
+        encoded = json.dumps(schema)
+        self.assertLess(len(encoded), 8000)
+        self.assertLess(encoded.count("anyOf"), 40)
+        for path in (
+            schema["properties"]["dynamic"],
+            schema["$defs"]["SalesLineOutput"]["properties"]["dynamic"],
+        ):
+            self.assertEqual(path.get("type"), "object")
+            self.assertIs(path.get("additionalProperties"), True)
+            self.assertNotIn("anyOf", json.dumps(path))
+
     def test_phase2_payload_sets_structured_output_only(self):
         payload = build_recovery_payload(
             _bad_stock(),
@@ -214,6 +228,41 @@ class GeminiSchemaTests(unittest.TestCase):
         self.assertEqual(config.max_output_tokens, 8192)
         self.assertIsNone(config.response_mime_type)
         self.assertIsNone(config.response_json_schema)
+        self.assertFalse(getattr(config, "response_schema", None))
+
+    def test_real_recovery_request_structure_includes_ocr_and_failing_rows(self):
+        """Mirror the GT-20 stored-OCR Phase 2 request shape (no network)."""
+        statement = _bad_stock()
+        statement["totals"]["extra"]["di_ocr_override"] = True
+        statement["totals"]["extra"]["ocr_text"] = (
+            "PRODUCT A  Opening 100  Purchase 50  Sales 20  Closing 130\n"
+            "Keep failing-row context visible in OCR evidence."
+        )
+        statement["phase1"]["validation"] = validate_sales_result(statement)
+        payload = build_recovery_payload(
+            statement,
+            strategy="targeted_stock_extraction",
+            file_bytes=b"",
+            filename="0000700084_demo.pdf",
+            use_row_crops=False,
+        )
+        parts = payload["contents"][0]["parts"]
+        self.assertGreaterEqual(len(parts), 2)
+        self.assertTrue(all("text" in part for part in parts))
+        joined = "\n".join(part["text"] for part in parts)
+        self.assertIn("PRODUCT A", joined)
+        self.assertIn("Original OCR evidence", joined)
+        self.assertIn("Opening 100", joined)
+        gen = payload["generationConfig"]
+        self.assertEqual(gen["responseMimeType"], "application/json")
+        self.assertEqual(gen["temperature"], 0)
+        self.assertEqual(gen["maxOutputTokens"], 8192)
+        schema = gen["responseJsonSchema"]
+        self.assertEqual(schema.get("title"), "SalesExtractionOutput")
+        self.assertIs(schema["properties"]["dynamic"]["additionalProperties"], True)
+        config = payload_to_generate_config(payload)
+        self.assertEqual(config.response_mime_type, "application/json")
+        self.assertIs(config.response_json_schema["properties"]["dynamic"]["additionalProperties"], True)
         self.assertFalse(getattr(config, "response_schema", None))
 
 
@@ -310,7 +359,9 @@ class RecoveryPolicyTests(unittest.TestCase):
             FailureType.STOCK_IDENTITY_FAILURE: ("targeted_stock_extraction", 2, True, False),
             FailureType.DUPLICATE_ROWS: ("structured_reread", 1, True, False),
             FailureType.LOW_TEXT_EVIDENCE: ("image_evidence", 1, False, False),
-            FailureType.OCR_REQUIRED: ("ocr_path", 1, False, False),
+            # OCR recovery (Tess→Gemini transcription) runs upstream; Phase 2
+            # may still call Gemini once for image evidence when OCR is empty.
+            FailureType.OCR_REQUIRED: ("ocr_path", 1, True, False),
             FailureType.GENERIC_PARSER_FAILURE: ("existing_gemini_fallback", 1, False, False),
             FailureType.LLM_EXTRACTION_FAILURE: ("targeted_recovery", 2, True, False),
         }
@@ -320,6 +371,25 @@ class RecoveryPolicyTests(unittest.TestCase):
             self.assertEqual(policy.max_attempts, attempts)
             self.assertEqual(policy.call_gemini, call_gemini)
             self.assertEqual(policy.provider_retry, provider_retry)
+
+    def test_generic_parser_with_di_ocr_upgrades_to_targeted_fields(self):
+        bare = recovery_policy_for_result(FailureType.GENERIC_PARSER_FAILURE, {})
+        self.assertEqual(bare.strategy, "existing_gemini_fallback")
+        self.assertFalse(bare.call_gemini)
+        with_ocr = recovery_policy_for_result(
+            FailureType.GENERIC_PARSER_FAILURE,
+            {
+                "totals": {
+                    "extra": {
+                        "di_ocr_override": True,
+                        "ocr_table_html": "<table><tr><td>A</td></tr></table>",
+                    }
+                }
+            },
+        )
+        self.assertEqual(with_ocr.strategy, "targeted_fields")
+        self.assertTrue(with_ocr.call_gemini)
+        self.assertEqual(with_ocr.max_attempts, 2)
 
 
 class RecoveryRunnerTests(unittest.TestCase):
@@ -354,7 +424,9 @@ class RecoveryRunnerTests(unittest.TestCase):
         self.assertNotIn("PRODUCT B", text)
         self.assertIn("Do not calculate a missing quantity.", text)
         self.assertIn("Do not use a stock identity equation", text)
-        self.assertIn("No column mapping was supplied.", text)
+        self.assertIn("Fill opening_qty, receipts_qty, sales_qty, and closing_qty", text)
+        self.assertIn("ONLY for the product rows listed below", text)
+        self.assertNotIn("Leave canonical quantity fields null", text)
         self.assertNotIn("Op -> opening_qty", text)
         self.assertNotIn("Bal -> closing_qty", text)
 
@@ -529,6 +601,7 @@ class RecoveryRunnerTests(unittest.TestCase):
             gemini_caller=caller,
             filename="statement.xlsx",
         )
+        # Without a printed-header mapping, bare canonicals are not promoted.
         self.assertEqual(statement, before)
         self.assertEqual(statement["line_items"][0]["closing_qty"], 150)
         self.assertEqual(recovered["line_items"][0]["closing_qty"], 150)
@@ -604,7 +677,6 @@ class RecoveryRunnerTests(unittest.TestCase):
     def test_non_gemini_policies_do_not_call(self):
         for reasons, route, method in (
             (["low_ocr_quality_score"], {"requires_ocr": False, "pdf_kind": "scanned"}, "swil_erp"),
-            (["needs_ocr"], {"requires_ocr": True}, "swil_erp"),
             (["high_ocr_noise"], {"requires_ocr": False}, ""),
         ):
             statement = _good_stock()
@@ -632,6 +704,32 @@ class RecoveryRunnerTests(unittest.TestCase):
             self.assertEqual(recovered["phase2"]["status"], "unresolved")
             self.assertEqual(recovered["phase2"]["attempts"], 0)
             self.assertEqual(recovered["line_items"][0]["closing_qty"], 130)
+
+    def test_ocr_required_policy_allows_one_attempt(self):
+        statement = _good_stock()
+        statement["phase1"]["route"] = {"requires_ocr": True}
+        statement["phase1"]["validation"] = {
+            "accepted": False,
+            "reasons": ["needs_ocr", "empty_ocr_page"],
+            "checks": {
+                "schema": True,
+                "quality": False,
+                "stock_identity": True,
+                "rows": True,
+                "duplicates": True,
+            },
+            "parser": "swil_erp",
+        }
+        statement["totals"]["extra"]["extraction_method"] = "swil_erp"
+        calls = []
+        recovered = apply_phase2_recovery(
+            statement,
+            gemini_caller=lambda _payload: calls.append(1) or "{}",
+            filename="scan.jpg",
+        )
+        self.assertEqual(recovered["phase2"]["failure_type"], "OCR_REQUIRED")
+        self.assertGreaterEqual(recovered["phase2"]["attempts"], 1)
+        self.assertEqual(len(calls), recovered["phase2"]["attempts"])
 
     def test_flag_defaults_false_and_extractor_skips_recovery(self):
         with patch.dict(os.environ, {}, clear=False):
@@ -840,6 +938,218 @@ class RecoveryRunnerTests(unittest.TestCase):
         self.assertEqual(row["extra"]["stock_out_qty"], 1)
         self.assertEqual(row["closing_qty"], 74.0)
         self.assertTrue(row["extra"]["stock_identity_ok"])
+
+    def test_merge_stamps_field_sources_for_corrected_quantities(self):
+        original = _bad_stock()
+        parsed = SalesExtractionOutput.model_validate_json(
+            _recovery_json(product_name="PRODUCT A", closing_qty=130)
+        )
+        merged = merge_stock_recovery(original, parsed)
+        row = merged["line_items"][0]
+        sources = row["extra"]["field_sources"]
+        self.assertEqual(sources["closing_qty"], "gemini_phase2")
+        self.assertEqual(sources["opening_qty"], "python")
+        self.assertEqual(sources["sales_qty"], "python")
+        self.assertEqual(row["extra"]["recovery_original"]["closing_qty"], 150)
+        self.assertEqual(row["closing_qty"], 130.0)
+        self.assertEqual(row["opening_qty"], 100)
+
+    def test_ocr_success_parser_empty_uses_ocr_evidence_not_full_document(self):
+        """OCR returned table HTML; Python produced no rows → targeted Phase 2."""
+        html = (
+            "<table><tr><th>Product</th><th>Open</th><th>Sale</th><th>Close</th></tr>"
+            "<tr><td>PRODUCT A</td><td>100</td><td>20</td><td>80</td></tr></table>"
+        )
+        statement = {
+            "source_file": "scan.jpg",
+            "line_items": [],
+            "totals": {
+                "extra": {
+                    "extraction_method": "vl_html_table_parse",
+                    "di_ocr_override": True,
+                    "ocr_table_html": html,
+                    "ocr_source": "paddleocr-vl",
+                }
+            },
+            "phase1": {
+                "route": {"requires_ocr": True, "pdf_kind": "scanned", "file_kind": "image"},
+                "validation": {
+                    "accepted": False,
+                    "reasons": ["empty_line_items"],
+                    "checks": {
+                        "schema": True,
+                        "quality": False,
+                        "stock_identity": True,
+                        "rows": False,
+                        "duplicates": True,
+                        "cell_validation": True,
+                        "column_mapping": True,
+                        "ocr_verified": True,
+                    },
+                    "parser": "vl_html_table_parse",
+                },
+            },
+        }
+        seen = []
+
+        def caller(payload):
+            seen.append(payload)
+            # Only fields visible in the OCR HTML. Do not invent receipts=0.
+            return _recovery_json(
+                product_name="PRODUCT A",
+                opening_qty=100,
+                receipts_qty=None,
+                sales_qty=20,
+                closing_qty=80,
+            )
+
+        with patch(
+            "services.gemini_extraction_fallback._document_parts",
+        ) as full_doc:
+            recovered = apply_phase2_recovery(
+                statement,
+                gemini_caller=caller,
+                file_bytes=b"jpeg-bytes",
+                filename="scan.jpg",
+            )
+        full_doc.assert_not_called()
+        self.assertTrue(seen)
+        parts = seen[0]["contents"][0]["parts"]
+        joined = "\n".join(
+            str(part.get("text") or "") for part in parts if isinstance(part, dict)
+        )
+        self.assertIn("Original OCR evidence", joined)
+        self.assertIn(html, joined)
+        self.assertIn("empty_line_items", joined)
+        self.assertFalse(
+            any(isinstance(part, dict) and "inline_data" in part for part in parts)
+        )
+        self.assertEqual(recovered["phase2"]["status"], "recovered")
+        self.assertEqual(recovered["phase2"]["failure_type"], "EMPTY_OUTPUT")
+        self.assertEqual(len(recovered["line_items"]), 1)
+        row = recovered["line_items"][0]
+        self.assertEqual(row["product_name"], "PRODUCT A")
+        self.assertEqual(row["closing_qty"], 80.0)
+        self.assertEqual(row["extra"]["field_sources"]["closing_qty"], "gemini_phase2")
+        self.assertTrue(recovered["totals"]["extra"]["di_ocr_override"])
+        self.assertEqual(recovered["totals"]["extra"]["ocr_table_html"], html)
+
+    def test_ocr_success_generic_parser_failure_triggers_targeted_gemini(self):
+        """DI OCR present + weak parse → Phase 2 targeted_fields, not full vision skip."""
+        good = _item("PRODUCT B", 10, 0, 4, 6)
+        bad = _item("PRODUCT A", 100, 50, 20, 150)
+        statement = _statement([good, bad], method="generic_ocr", fail_count=1, valid=False)
+        statement["totals"]["extra"]["di_ocr_override"] = True
+        statement["totals"]["extra"]["ocr_table_html"] = (
+            "<table><tr><td>PRODUCT A</td><td>100</td><td>50</td><td>20</td><td>130</td></tr></table>"
+        )
+        # Force generic parser failure classification path when identity is also wrong:
+        # stock identity still wins in classify_failure. Use quality-only failure.
+        weak = _statement(
+            [_item("PRODUCT A", 100, 50, 20, 130)],
+            method="",
+            fail_count=0,
+            valid=True,
+        )
+        weak["totals"]["extra"]["di_ocr_override"] = True
+        weak["totals"]["extra"]["ocr_table_html"] = "<table><tr><td>PRODUCT A</td></tr></table>"
+        weak["phase1"]["validation"] = {
+            "accepted": False,
+            "reasons": ["high_ocr_noise"],
+            "checks": {
+                "schema": True,
+                "quality": False,
+                "stock_identity": True,
+                "rows": True,
+                "duplicates": True,
+                "cell_validation": True,
+                "column_mapping": True,
+                "ocr_verified": True,
+            },
+            "parser": "",
+        }
+        calls = []
+
+        def caller(payload):
+            calls.append(payload)
+            return _recovery_json(closing_qty=130)
+
+        with patch(
+            "services.gemini_extraction_fallback._document_parts",
+        ) as full_doc:
+            recovered = apply_phase2_recovery(
+                weak,
+                gemini_caller=caller,
+                file_bytes=b"jpeg-bytes",
+                filename="scan.jpg",
+            )
+        full_doc.assert_not_called()
+        self.assertGreaterEqual(len(calls), 1)
+        self.assertEqual(recovered["phase2"]["strategy"], "targeted_fields")
+        self.assertEqual(recovered["phase2"]["failure_type"], "GENERIC_PARSER_FAILURE")
+        prompt = calls[0]["contents"][0]["parts"][0]["text"]
+        self.assertIn("high_ocr_noise", prompt)
+        self.assertIn("Validation faults to focus on", prompt)
+
+    def test_stock_equation_recovery_preserves_good_row_and_provenance(self):
+        good = _item("PRODUCT B", 10, 0, 4, 6)
+        bad = _item("PRODUCT A", 100, 50, 20, 150)
+        statement = _statement(
+            [good, bad],
+            method="pharma_hub_jun_jul_photo",
+            fail_count=1,
+            valid=False,
+        )
+        from services.stock_row_crops import StockRowCrop
+
+        crops = [
+            StockRowCrop(
+                "PRODUCT A",
+                b"CROP-A",
+                20,
+                10,
+                True,
+                True,
+                header_labels=_PHARMA_HEADERS,
+            )
+        ]
+
+        def caller(payload):
+            return json.dumps(
+                {
+                    "product_name": "PRODUCT A",
+                    "Opening": 100,
+                    "Purchase": 50,
+                    "Sales": 20,
+                    "Stock-Out": 0,
+                    "Closing": 130,
+                }
+            )
+
+        with patch(
+            "services.stock_row_crops.locate_row_crops",
+            return_value=crops,
+        ):
+            recovered = apply_phase2_recovery(
+                statement,
+                gemini_caller=caller,
+                file_bytes=b"jpeg-bytes",
+                filename="photo.jpeg",
+            )
+        self.assertEqual(recovered["phase2"]["status"], "recovered")
+        self.assertEqual(recovered["phase2"]["failure_type"], "STOCK_IDENTITY_FAILURE")
+        by_name = {row["product_name"]: row for row in recovered["line_items"]}
+        self.assertEqual(by_name["PRODUCT B"]["closing_qty"], 6)
+        self.assertNotIn("field_sources", by_name["PRODUCT B"].get("extra") or {})
+        self.assertEqual(by_name["PRODUCT A"]["closing_qty"], 130.0)
+        self.assertEqual(
+            by_name["PRODUCT A"]["extra"]["field_sources"]["closing_qty"],
+            "gemini_phase2",
+        )
+        self.assertEqual(
+            by_name["PRODUCT A"]["extra"]["field_sources"]["opening_qty"],
+            "python",
+        )
 
 
 if __name__ == "__main__":

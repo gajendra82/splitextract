@@ -1,0 +1,418 @@
+{
+  "source_file": "0000702128_2026_08_ZL_24_230_08092026073748.jpg",
+  "source_format": "jpg",
+  "stockist_name": null,
+  "stockist_address": null,
+  "company_name": "ANMOL MEDICINES",
+  "period_from": "2026-08-01",
+  "period_to": "2026-08-31",
+  "report_title": "STOCK & SALES ANALYSIS",
+  "line_items": [
+    {
+      "product_code": null,
+      "product_name": "THE HIMALAYA DRUG CO.",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "AACTARIL",
+      "packing": "75GM",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ABANA TABS",
+      "packing": "1X60",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 60.0,
+      "receipts_value": null,
+      "sales_qty": 19.0,
+      "sales_value": 8503.36,
+      "closing_qty": 41.0,
+      "closing_value": 5810.63,
+      "extra": {
+        "expected_total": 60.0,
+        "expected_closing": 41.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ALOE VERA FACE WASH",
+      "packing": "100ML",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ALOE VERA FACE WASH",
+      "packing": "50ML",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ALTHEA CREAM",
+      "packing": "60GM",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ALTHEA LOTION",
+      "packing": "100ML",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ANTI HAIR LOSS CREAM",
+      "packing": "50ML",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ANTISEPTIC CREAM",
+      "packing": "20GM",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 1.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 22.32,
+      "closing_qty": 1.0,
+      "closing_value": 22.32,
+      "extra": {
+        "expected_total": 1.0,
+        "expected_closing": 1.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "AYURSLIM 1X60",
+      "packing": "1X60",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 3.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 654.16,
+      "closing_qty": 3.0,
+      "closing_value": 654.16,
+      "extra": {
+        "expected_total": 3.0,
+        "expected_closing": 3.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "AYURSLIM 3X60",
+      "packing": "3X60",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "AYURSLIM TEA 2G",
+      "packing": "10'S",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "BABY CREAM",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "BABY CREAM",
+      "packing": "100ML",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 21.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 1993.32,
+      "closing_qty": 19.0,
+      "closing_value": 1803.48,
+      "extra": {
+        "expected_total": 21.0,
+        "expected_closing": 21.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "BABY CREAM",
+      "packing": "200ML",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "BABY CREAM",
+      "packing": "50ML",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 3.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 164.24,
+      "closing_qty": 3.0,
+      "closing_value": 164.24,
+      "extra": {
+        "expected_total": 3.0,
+        "expected_closing": 3.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "BABY HAIR OIL",
+      "packing": "100ML",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "BABY HAIR OIL",
+      "packing": "200ML",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "BABY HAIR OIL",
+      "packing": "50ML",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "BABY LOTION",
+      "packing": "100ML",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 5.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 326.25,
+      "closing_qty": 4.0,
+      "closing_value": 261.0,
+      "extra": {
+        "expected_total": 5.0,
+        "expected_closing": 5.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "BABY LOTION",
+      "packing": "200ML",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 21.0,
+      "closing_value": 2373.21,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": false
+      }
+    }
+  ],
+  "totals": {
+    "sales_value": null,
+    "closing_value": null,
+    "extra": {
+      "extraction_method": "gemini_extraction_fallback",
+      "line_sales_value_sum": 11663.65,
+      "line_closing_value_sum": 11089.04,
+      "sales_qty": 19.0,
+      "closing_qty": 92.0,
+      "stock_identity_kind": "opening_receipts_sales_closing",
+      "stock_identity_formula": "closing=opening+receipts-sales",
+      "stock_identity_fail_count": 3,
+      "stock_validation": {
+        "opening_plus_purchase": 93.0,
+        "expected_total": 93.0,
+        "calculated_closing": 74.0,
+        "extracted_closing": 92.0,
+        "is_valid": false
+      },
+      "extraction_quality": {
+        "quality": "good",
+        "score": 100,
+        "reasons": [],
+        "threshold": 75.0
+      },
+      "gemini_fallback": "not_called"
+    }
+  }
+}

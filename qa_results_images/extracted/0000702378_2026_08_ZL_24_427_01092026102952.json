@@ -1,0 +1,220 @@
+{
+  "source_file": "0000702378_2026_08_ZL_24_427_01092026102952.jpg",
+  "source_format": "jpg",
+  "stockist_name": "RAJAT MEDICAL STORE",
+  "stockist_address": "SHOP NO. 3A-4A GROUND FLOOR BHALLA MARKET LAKHIMPUR-KHERI (U.P.)",
+  "company_name": null,
+  "period_from": "2026-08-01",
+  "period_to": "2026-08-29",
+  "report_title": "STOCK & SALES ANALYSIS",
+  "line_items": [
+    {
+      "product_code": null,
+      "product_name": "ASHVAGANDHA TABLETS 60'S INDIA 60TAB",
+      "packing": null,
+      "opening_qty": 59.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 3.0,
+      "sales_value": 0.0,
+      "closing_qty": 56.0,
+      "closing_value": 155.11,
+      "extra": {
+        "expected_total": 59.0,
+        "expected_closing": 56.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "CONFIDO TAB",
+      "packing": "1*60",
+      "opening_qty": 9.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 9.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 139.08,
+      "extra": {
+        "expected_total": 9.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "GASEX TAB",
+      "packing": "100TAB",
+      "opening_qty": 100.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 100.0,
+      "closing_value": 56.6,
+      "extra": {
+        "expected_total": 100.0,
+        "expected_closing": 100.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "HERBOLAX CAP",
+      "packing": "10CAP",
+      "opening_qty": 2.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 2.0,
+      "closing_value": 100.79,
+      "extra": {
+        "expected_total": 2.0,
+        "expected_closing": 2.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV 52 SYP",
+      "packing": "100ML",
+      "opening_qty": 145.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 39.0,
+      "sales_value": 0.0,
+      "closing_qty": 106.0,
+      "closing_value": 151.35,
+      "extra": {
+        "expected_total": 145.0,
+        "expected_closing": 106.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV 52 TAB",
+      "packing": "100 TAB",
+      "opening_qty": 351.0,
+      "opening_value": null,
+      "receipts_qty": 700.0,
+      "receipts_value": null,
+      "sales_qty": 159.0,
+      "sales_value": 0.0,
+      "closing_qty": 892.0,
+      "closing_value": 160.98,
+      "extra": {
+        "expected_total": 1051.0,
+        "expected_closing": 892.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV 52SYP",
+      "packing": "200ML",
+      "opening_qty": 71.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 71.0,
+      "closing_value": 98.93,
+      "extra": {
+        "expected_total": 71.0,
+        "expected_closing": 71.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PILEX FORTE OINTMENT",
+      "packing": "30GM",
+      "opening_qty": 94.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 37.0,
+      "sales_value": 0.0,
+      "closing_qty": 57.0,
+      "closing_value": 160.97,
+      "extra": {
+        "expected_total": 94.0,
+        "expected_closing": 57.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PILEX TAB",
+      "packing": "1*60",
+      "opening_qty": 287.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 5.0,
+      "sales_value": 0.0,
+      "closing_qty": 282.0,
+      "closing_value": 92.33,
+      "extra": {
+        "expected_total": 287.0,
+        "expected_closing": 282.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "TENTEX FORTE TAB",
+      "packing": "1*10",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    }
+  ],
+  "totals": {
+    "sales_value": null,
+    "closing_value": 216581.0,
+    "extra": {
+      "extraction_method": "gemini_extraction_fallback",
+      "line_sales_value_sum": 0.0,
+      "line_closing_value_sum": 1116.14,
+      "sales_qty": 252.0,
+      "closing_qty": 1566.0,
+      "stock_identity_kind": "opening_receipts_sales_closing",
+      "stock_identity_formula": "closing=opening+receipts-sales",
+      "stock_identity_fail_count": 0,
+      "stock_validation": {
+        "opening_plus_purchase": 1818.0,
+        "expected_total": 1818.0,
+        "calculated_closing": 1566.0,
+        "extracted_closing": 1566.0,
+        "is_valid": true
+      },
+      "extraction_quality": {
+        "quality": "good",
+        "score": 100,
+        "reasons": [],
+        "threshold": 75.0
+      },
+      "gemini_fallback": "not_called"
+    }
+  }
+}

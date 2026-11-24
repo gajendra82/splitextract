@@ -1,0 +1,96 @@
+{
+  "file": "0000700308_2026_08_ZL_18_8175_03092026072320.jpg",
+  "path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700308_2026_08_ZL_18_8175_03092026072320.jpg",
+  "format": "Product wise stock statement",
+  "api_method": "gemini_extraction_fallback",
+  "status": "FAIL",
+  "expected_rows": 9,
+  "extracted_rows": 0,
+  "matched_rows": 0,
+  "missing_rows": [
+    {
+      "product": "(ZEST) BRESOL-TAB CYSTONE-TAB DIABEGON-TAB GASEX-SYP HIMCOGID-SYP LIV-52 DS TAB",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": 64,
+      "kind": "missing_product"
+    },
+    {
+      "product": "LIV-52 SYP",
+      "opening_qty": null,
+      "receipts_qty": 70,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "LiV-52 SYP RUMALAYA-CREAM : RUMALAYA-FORTE TAB TENTEX FORTE TAB TENTEX-ROYAL CAP Total sales in this period :",
+      "opening_qty": 554,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "stock",
+      "opening_qty": 5933,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "‘| is based on last iqudation",
+      "opening_qty": null,
+      "receipts_qty": 2,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "han ff OA” 8 et 6 gn te Gop Sian Asc = 5 29287",
+      "opening_qty": 7,
+      "receipts_qty": 2,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": ".- 42 aa Ratha * saan + :",
+      "opening_qty": null,
+      "receipts_qty": 2,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "FASE A IRE»",
+      "opening_qty": null,
+      "receipts_qty": 2,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "Bee ee? OS 2S ee 6e DiS ee = * % %,. ‘4 > 4 at pe Se",
+      "opening_qty": null,
+      "receipts_qty": 228,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    }
+  ],
+  "extra_rows": [],
+  "duplicates": [],
+  "mismatches": [],
+  "ocr_review": [],
+  "accounting": [],
+  "confidence": "medium",
+  "notes": [
+    "OCR used tesseract psm 6."
+  ],
+  "result_key": "0000700308_2026_08_ZL_18_8175_03092026072320",
+  "unavailable_fields": {},
+  "formula_checked": "none"
+}

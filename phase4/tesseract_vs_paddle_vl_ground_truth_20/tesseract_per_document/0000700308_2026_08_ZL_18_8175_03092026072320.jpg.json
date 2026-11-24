@@ -1,0 +1,2820 @@
+{
+  "document_id": "0000700308_2026_08_ZL_18_8175_03092026072320.jpg",
+  "source_file": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700308_2026_08_ZL_18_8175_03092026072320.jpg",
+  "pages": [
+    {
+      "page": 1,
+      "engine": "tesseract",
+      "status": "success",
+      "text": "BS OT yh Bo a oe eee\nid 6 Ce sale Gt, tee ee ee eee i ee, ea}\n- \u00a9) 1 ee a rr\u2014\u201c(\u201c\u2018\u201cCs*\u2122SCS*SCS\u00aeS OP eg em, Ee\nMOHAN PHARMACEUTICALS, KESINGA\n* Product wise stock statement from 01/07/2024 to 30/07/2024 EE RIED\nGoods Stocks\nProduct Name Packing Opening Receipt \u2014 IssuesRepl. Issue Closing Sh.Exp Liqudation from a = IE\nTHE HIMALAYA (ZEST)\nBRESOL-TAB 60'S\n| CYSTONE-TAB 60'S\n_ DIABEGON-TAB 60'S\nGASEX-SYPR 200ML\nHIMCOGID-SYP 200ME\nLIV-52 DS FAB 60'S\nLIV-52 SYP 100ML 70 6 64 142 Days\nLIV-52:SYP. 200ML ie\nRUMALAYA-CREAM 306M : Se\nRUMALAYA-FORTE TAB 30'S 2\nTENTEX FORTE TAB 10'S\nTENTEX-ROYAL CAP 10'S\nTotal sales in this period : 554.00\nTotal closing stock (Sales value) : 5,933.00\n**| iqudation is based on last three months sales\na ff A ee a pee\nali lp oe \u2014 if A), LE ed\nGee an, fw =F Ge, \u00a9 te ee ee a i,\nCa ass Ge Eau ee Bo ee ee Be pee ee af =\na we, Gs 7H, 38 7 Se Ae ae ee Oe pad ae SS\n\u00a7ee fC ee \u2014 lr eS ee e\u2014=e :\ninne, PE OU Fe Ge PPT OG eee I, Poe 4 jane gy ; aay\nZ OT ee (oe # Teg fie 7a oo 6 ae oor fatal\n2 = eas BG. Ba WP AEG Oe a eo Cad FP ge oe ae eS 8S, ; ad, | # \u00a5\nNc Cen ttt Goi, ited CO Se om, Pe a ned |\n",
+      "normalized_text": "BS OT yh Bo a oe eee id 6 Ce sale Gt, tee ee ee eee i ee, ea} - \u00a9) 1 ee a rr\u2014\u201c(\u201c\u2018\u201cCs*\u2122SCS*SCS\u00aeS OP eg em, Ee MOHAN PHARMACEUTICALS, KESINGA * Product wise stock statement from 01/07/2024 to 30/07/2024 EE RIED Goods Stocks Product Name Packing Opening Receipt \u2014 IssuesRepl. Issue Closing Sh.Exp Liqudation from a = IE THE HIMALAYA (ZEST) BRESOL-TAB 60'S | CYSTONE-TAB 60'S _ DIABEGON-TAB 60'S GASEX-SYPR 200ML HIMCOGID-SYP 200ME LIV-52 DS FAB 60'S LIV-52 SYP 100ML 70 6 64 142 Days LIV-52:SYP. 200ML ie RUMALAYA-CREAM 306M : Se RUMALAYA-FORTE TAB 30'S 2 TENTEX FORTE TAB 10'S TENTEX-ROYAL CAP 10'S Total sales in this period : 554.00 Total closing stock (Sales value) : 5,933.00 **| iqudation is based on last three months sales a ff A ee a pee ali lp oe \u2014 if A), LE ed Gee an, fw =F Ge, \u00a9 te ee ee a i, Ca ass Ge Eau ee Bo ee ee Be pee ee af = a we, Gs 7H, 38 7 Se Ae ae ee Oe pad ae SS \u00a7ee fC ee \u2014 lr eS ee e\u2014=e : inne, PE OU Fe Ge PPT OG eee I, Poe 4 jane gy ; aay Z OT ee (oe # Teg fie 7a oo 6 ae oor fatal 2 = eas BG. Ba WP AEG Oe a eo Cad FP ge oe ae eS 8S, ; ad, | # \u00a5 Nc Cen ttt Goi, ited CO Se om, Pe a ned |",
+      "numeric_tokens": [
+        "6",
+        "1",
+        "60",
+        "60",
+        "60",
+        "60",
+        "70",
+        "6",
+        "64",
+        "142",
+        "30",
+        "2",
+        "10",
+        "10",
+        "554.00",
+        "5,933.00",
+        "38",
+        "7",
+        "4",
+        "6",
+        "2"
+      ],
+      "word_count": 251,
+      "confidence": 0.46362549800796815,
+      "words": [
+        {
+          "text": "BS",
+          "bbox": [
+            0.0,
+            0.0,
+            394.0,
+            57.0
+          ],
+          "confidence": 0.3,
+          "page": 1
+        },
+        {
+          "text": "OT",
+          "bbox": [
+            527.0,
+            0.0,
+            1231.0,
+            30.0
+          ],
+          "confidence": 0.35,
+          "page": 1
+        },
+        {
+          "text": "yh",
+          "bbox": [
+            1777.0,
+            0.0,
+            1816.0,
+            21.0
+          ],
+          "confidence": 0.24,
+          "page": 1
+        },
+        {
+          "text": "Bo",
+          "bbox": [
+            1866.0,
+            0.0,
+            1905.0,
+            35.0
+          ],
+          "confidence": 0.29,
+          "page": 1
+        },
+        {
+          "text": "a",
+          "bbox": [
+            1902.0,
+            3.0,
+            1974.0,
+            30.0
+          ],
+          "confidence": 0.54,
+          "page": 1
+        },
+        {
+          "text": "oe",
+          "bbox": [
+            2007.0,
+            1.0,
+            2054.0,
+            27.0
+          ],
+          "confidence": 0.18,
+          "page": 1
+        },
+        {
+          "text": "eee",
+          "bbox": [
+            2066.0,
+            2.0,
+            2255.0,
+            31.0
+          ],
+          "confidence": 0.4,
+          "page": 1
+        },
+        {
+          "text": "id",
+          "bbox": [
+            58.0,
+            103.0,
+            95.0,
+            137.0
+          ],
+          "confidence": 0.1,
+          "page": 1
+        },
+        {
+          "text": "6",
+          "bbox": [
+            135.0,
+            109.0,
+            386.0,
+            138.0
+          ],
+          "confidence": 0.31,
+          "page": 1
+        },
+        {
+          "text": "Ce",
+          "bbox": [
+            665.0,
+            107.0,
+            1019.0,
+            146.0
+          ],
+          "confidence": 0.34,
+          "page": 1
+        },
+        {
+          "text": "sale",
+          "bbox": [
+            1103.0,
+            110.0,
+            1144.0,
+            137.0
+          ],
+          "confidence": 0.09,
+          "page": 1
+        },
+        {
+          "text": "Gt,",
+          "bbox": [
+            1180.0,
+            110.0,
+            1497.0,
+            137.0
+          ],
+          "confidence": 0.21,
+          "page": 1
+        },
+        {
+          "text": "tee",
+          "bbox": [
+            1550.0,
+            109.0,
+            1664.0,
+            148.0
+          ],
+          "confidence": 0.22,
+          "page": 1
+        },
+        {
+          "text": "ee",
+          "bbox": [
+            1708.0,
+            109.0,
+            1994.0,
+            151.0
+          ],
+          "confidence": 0.35,
+          "page": 1
+        },
+        {
+          "text": "ee",
+          "bbox": [
+            1844.0,
+            105.0,
+            1874.0,
+            155.0
+          ],
+          "confidence": 0.21,
+          "page": 1
+        },
+        {
+          "text": "eee",
+          "bbox": [
+            1899.0,
+            109.0,
+            2083.0,
+            151.0
+          ],
+          "confidence": 0.22,
+          "page": 1
+        },
+        {
+          "text": "i",
+          "bbox": [
+            2125.0,
+            112.0,
+            2162.0,
+            136.0
+          ],
+          "confidence": 0.17,
+          "page": 1
+        },
+        {
+          "text": "ee,",
+          "bbox": [
+            2148.0,
+            104.0,
+            2317.0,
+            139.0
+          ],
+          "confidence": 0.38,
+          "page": 1
+        },
+        {
+          "text": "ea}",
+          "bbox": [
+            2385.0,
+            114.0,
+            2428.0,
+            137.0
+          ],
+          "confidence": 0.08,
+          "page": 1
+        },
+        {
+          "text": "-",
+          "bbox": [
+            0.0,
+            349.0,
+            206.0,
+            405.0
+          ],
+          "confidence": 0.0,
+          "page": 1
+        },
+        {
+          "text": "\u00a9)",
+          "bbox": [
+            241.0,
+            357.0,
+            360.0,
+            399.0
+          ],
+          "confidence": 0.16,
+          "page": 1
+        },
+        {
+          "text": "1",
+          "bbox": [
+            413.0,
+            341.0,
+            558.0,
+            396.0
+          ],
+          "confidence": 0.07,
+          "page": 1
+        },
+        {
+          "text": "ee",
+          "bbox": [
+            570.0,
+            358.0,
+            693.0,
+            395.0
+          ],
+          "confidence": 0.19,
+          "page": 1
+        },
+        {
+          "text": "a",
+          "bbox": [
+            702.0,
+            360.0,
+            819.0,
+            398.0
+          ],
+          "confidence": 0.0,
+          "page": 1
+        },
+        {
+          "text": "rr\u2014\u201c(\u201c\u2018\u201cCs*\u2122SCS*SCS\u00aeS",
+          "bbox": [
+            1094.0,
+            341.0,
+            1670.0,
+            411.0
+          ],
+          "confidence": 0.0,
+          "page": 1
+        },
+        {
+          "text": "OP",
+          "bbox": [
+            1681.0,
+            360.0,
+            1703.0,
+            394.0
+          ],
+          "confidence": 0.15,
+          "page": 1
+        },
+        {
+          "text": "eg",
+          "bbox": [
+            1768.0,
+            353.0,
+            1820.0,
+            404.0
+          ],
+          "confidence": 0.27,
+          "page": 1
+        },
+        {
+          "text": "em,",
+          "bbox": [
+            1818.0,
+            356.0,
+            2238.0,
+            400.0
+          ],
+          "confidence": 0.19,
+          "page": 1
+        },
+        {
+          "text": "Ee",
+          "bbox": [
+            2248.0,
+            356.0,
+            2443.0,
+            406.0
+          ],
+          "confidence": 0.19,
+          "page": 1
+        },
+        {
+          "text": "MOHAN",
+          "bbox": [
+            41.0,
+            593.0,
+            198.0,
+            626.0
+          ],
+          "confidence": 0.95,
+          "page": 1
+        },
+        {
+          "text": "PHARMACEUTICALS,",
+          "bbox": [
+            215.0,
+            594.0,
+            647.0,
+            631.0
+          ],
+          "confidence": 0.93,
+          "page": 1
+        },
+        {
+          "text": "KESINGA",
+          "bbox": [
+            665.0,
+            593.0,
+            850.0,
+            626.0
+          ],
+          "confidence": 0.91,
+          "page": 1
+        },
+        {
+          "text": "*",
+          "bbox": [
+            0.0,
+            656.0,
+            8.0,
+            686.0
+          ],
+          "confidence": 0.0,
+          "page": 1
+        },
+        {
+          "text": "Product",
+          "bbox": [
+            40.0,
+            646.0,
+            202.0,
+            678.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "wise",
+          "bbox": [
+            213.0,
+            649.0,
+            306.0,
+            679.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "stock",
+          "bbox": [
+            320.0,
+            649.0,
+            432.0,
+            679.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "statement",
+          "bbox": [
+            444.0,
+            648.0,
+            644.0,
+            679.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "from",
+          "bbox": [
+            655.0,
+            647.0,
+            748.0,
+            677.0
+          ],
+          "confidence": 0.95,
+          "page": 1
+        },
+        {
+          "text": "01/07/2024",
+          "bbox": [
+            762.0,
+            646.0,
+            972.0,
+            678.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "to",
+          "bbox": [
+            983.0,
+            649.0,
+            1022.0,
+            678.0
+          ],
+          "confidence": 0.95,
+          "page": 1
+        },
+        {
+          "text": "30/07/2024",
+          "bbox": [
+            1036.0,
+            648.0,
+            1245.0,
+            680.0
+          ],
+          "confidence": 0.95,
+          "page": 1
+        },
+        {
+          "text": "EE",
+          "bbox": [
+            1961.0,
+            687.0,
+            2040.0,
+            691.0
+          ],
+          "confidence": 0.1,
+          "page": 1
+        },
+        {
+          "text": "RIED",
+          "bbox": [
+            2043.0,
+            679.0,
+            2380.0,
+            689.0
+          ],
+          "confidence": 0.17,
+          "page": 1
+        },
+        {
+          "text": "Goods",
+          "bbox": [
+            1185.0,
+            696.0,
+            1274.0,
+            734.0
+          ],
+          "confidence": 0.95,
+          "page": 1
+        },
+        {
+          "text": "Stocks",
+          "bbox": [
+            1699.0,
+            701.0,
+            1789.0,
+            729.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "Product",
+          "bbox": [
+            36.0,
+            751.0,
+            147.0,
+            778.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "Name",
+          "bbox": [
+            157.0,
+            752.0,
+            241.0,
+            779.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "Packing",
+          "bbox": [
+            524.0,
+            752.0,
+            633.0,
+            787.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "Opening",
+          "bbox": [
+            664.0,
+            751.0,
+            780.0,
+            786.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "Receipt",
+          "bbox": [
+            810.0,
+            751.0,
+            915.0,
+            786.0
+          ],
+          "confidence": 0.4,
+          "page": 1
+        },
+        {
+          "text": "\u2014",
+          "bbox": [
+            973.0,
+            740.0,
+            983.0,
+            795.0
+          ],
+          "confidence": 0.48,
+          "page": 1
+        },
+        {
+          "text": "IssuesRepl.",
+          "bbox": [
+            1004.0,
+            752.0,
+            1165.0,
+            787.0
+          ],
+          "confidence": 0.89,
+          "page": 1
+        },
+        {
+          "text": "Issue",
+          "bbox": [
+            1184.0,
+            752.0,
+            1254.0,
+            780.0
+          ],
+          "confidence": 0.9,
+          "page": 1
+        },
+        {
+          "text": "Closing",
+          "bbox": [
+            1279.0,
+            752.0,
+            1378.0,
+            786.0
+          ],
+          "confidence": 0.9,
+          "page": 1
+        },
+        {
+          "text": "Sh.Exp",
+          "bbox": [
+            1396.0,
+            749.0,
+            1493.0,
+            784.0
+          ],
+          "confidence": 0.37,
+          "page": 1
+        },
+        {
+          "text": "Liqudation",
+          "bbox": [
+            1521.0,
+            749.0,
+            1660.0,
+            783.0
+          ],
+          "confidence": 0.37,
+          "page": 1
+        },
+        {
+          "text": "from",
+          "bbox": [
+            1713.0,
+            748.0,
+            1773.0,
+            775.0
+          ],
+          "confidence": 0.38,
+          "page": 1
+        },
+        {
+          "text": "a",
+          "bbox": [
+            1989.0,
+            780.0,
+            2386.0,
+            792.0
+          ],
+          "confidence": 0.24,
+          "page": 1
+        },
+        {
+          "text": "=",
+          "bbox": [
+            2247.0,
+            733.0,
+            2258.0,
+            796.0
+          ],
+          "confidence": 0.22,
+          "page": 1
+        },
+        {
+          "text": "IE",
+          "bbox": [
+            2300.0,
+            733.0,
+            2390.0,
+            796.0
+          ],
+          "confidence": 0.27,
+          "page": 1
+        },
+        {
+          "text": "THE",
+          "bbox": [
+            34.0,
+            813.0,
+            111.0,
+            841.0
+          ],
+          "confidence": 0.94,
+          "page": 1
+        },
+        {
+          "text": "HIMALAYA",
+          "bbox": [
+            125.0,
+            813.0,
+            325.0,
+            843.0
+          ],
+          "confidence": 0.89,
+          "page": 1
+        },
+        {
+          "text": "(ZEST)",
+          "bbox": [
+            349.0,
+            815.0,
+            471.0,
+            850.0
+          ],
+          "confidence": 0.89,
+          "page": 1
+        },
+        {
+          "text": "BRESOL-TAB",
+          "bbox": [
+            33.0,
+            865.0,
+            238.0,
+            896.0
+          ],
+          "confidence": 0.49,
+          "page": 1
+        },
+        {
+          "text": "60'S",
+          "bbox": [
+            523.0,
+            867.0,
+            589.0,
+            897.0
+          ],
+          "confidence": 0.73,
+          "page": 1
+        },
+        {
+          "text": "|",
+          "bbox": [
+            0.0,
+            918.0,
+            2.0,
+            961.0
+          ],
+          "confidence": 0.91,
+          "page": 1
+        },
+        {
+          "text": "CYSTONE-TAB",
+          "bbox": [
+            30.0,
+            921.0,
+            262.0,
+            951.0
+          ],
+          "confidence": 0.39,
+          "page": 1
+        },
+        {
+          "text": "60'S",
+          "bbox": [
+            523.0,
+            925.0,
+            585.0,
+            952.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "_",
+          "bbox": [
+            0.0,
+            974.0,
+            1.0,
+            989.0
+          ],
+          "confidence": 0.52,
+          "page": 1
+        },
+        {
+          "text": "DIABEGON-TAB",
+          "bbox": [
+            28.0,
+            976.0,
+            274.0,
+            1007.0
+          ],
+          "confidence": 0.88,
+          "page": 1
+        },
+        {
+          "text": "60'S",
+          "bbox": [
+            523.0,
+            979.0,
+            585.0,
+            1008.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "GASEX-SYPR",
+          "bbox": [
+            26.0,
+            1028.0,
+            216.0,
+            1072.0
+          ],
+          "confidence": 0.49,
+          "page": 1
+        },
+        {
+          "text": "200ML",
+          "bbox": [
+            523.0,
+            1035.0,
+            622.0,
+            1063.0
+          ],
+          "confidence": 0.88,
+          "page": 1
+        },
+        {
+          "text": "HIMCOGID-SYP",
+          "bbox": [
+            23.0,
+            1087.0,
+            267.0,
+            1118.0
+          ],
+          "confidence": 0.84,
+          "page": 1
+        },
+        {
+          "text": "200ME",
+          "bbox": [
+            522.0,
+            1090.0,
+            621.0,
+            1119.0
+          ],
+          "confidence": 0.9,
+          "page": 1
+        },
+        {
+          "text": "LIV-52",
+          "bbox": [
+            21.0,
+            1143.0,
+            118.0,
+            1171.0
+          ],
+          "confidence": 0.9,
+          "page": 1
+        },
+        {
+          "text": "DS",
+          "bbox": [
+            129.0,
+            1144.0,
+            173.0,
+            1172.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "FAB",
+          "bbox": [
+            184.0,
+            1145.0,
+            248.0,
+            1173.0
+          ],
+          "confidence": 0.82,
+          "page": 1
+        },
+        {
+          "text": "60'S",
+          "bbox": [
+            522.0,
+            1146.0,
+            585.0,
+            1174.0
+          ],
+          "confidence": 0.95,
+          "page": 1
+        },
+        {
+          "text": "LIV-52",
+          "bbox": [
+            19.0,
+            1198.0,
+            117.0,
+            1229.0
+          ],
+          "confidence": 0.67,
+          "page": 1
+        },
+        {
+          "text": "SYP",
+          "bbox": [
+            127.0,
+            1200.0,
+            194.0,
+            1230.0
+          ],
+          "confidence": 0.83,
+          "page": 1
+        },
+        {
+          "text": "100ML",
+          "bbox": [
+            524.0,
+            1201.0,
+            622.0,
+            1230.0
+          ],
+          "confidence": 0.89,
+          "page": 1
+        },
+        {
+          "text": "70",
+          "bbox": [
+            885.0,
+            1200.0,
+            920.0,
+            1228.0
+          ],
+          "confidence": 0.77,
+          "page": 1
+        },
+        {
+          "text": "6",
+          "bbox": [
+            1080.0,
+            1199.0,
+            1097.0,
+            1227.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "64",
+          "bbox": [
+            1366.0,
+            1195.0,
+            1400.0,
+            1223.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "142",
+          "bbox": [
+            1569.0,
+            1192.0,
+            1612.0,
+            1218.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "Days",
+          "bbox": [
+            1622.0,
+            1192.0,
+            1677.0,
+            1223.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "LIV-52:SYP.",
+          "bbox": [
+            15.0,
+            1251.0,
+            195.0,
+            1299.0
+          ],
+          "confidence": 0.54,
+          "page": 1
+        },
+        {
+          "text": "200ML",
+          "bbox": [
+            521.0,
+            1258.0,
+            621.0,
+            1286.0
+          ],
+          "confidence": 0.62,
+          "page": 1
+        },
+        {
+          "text": "ie",
+          "bbox": [
+            1607.0,
+            1283.0,
+            1980.0,
+            1298.0
+          ],
+          "confidence": 0.0,
+          "page": 1
+        },
+        {
+          "text": "RUMALAYA-CREAM",
+          "bbox": [
+            13.0,
+            1308.0,
+            331.0,
+            1356.0
+          ],
+          "confidence": 0.76,
+          "page": 1
+        },
+        {
+          "text": "306M",
+          "bbox": [
+            521.0,
+            1308.0,
+            609.0,
+            1355.0
+          ],
+          "confidence": 0.65,
+          "page": 1
+        },
+        {
+          "text": ":",
+          "bbox": [
+            823.0,
+            1324.0,
+            828.0,
+            1325.0
+          ],
+          "confidence": 0.0,
+          "page": 1
+        },
+        {
+          "text": "Se",
+          "bbox": [
+            1296.0,
+            1307.0,
+            1430.0,
+            1316.0
+          ],
+          "confidence": 0.39,
+          "page": 1
+        },
+        {
+          "text": "RUMALAYA-FORTE",
+          "bbox": [
+            10.0,
+            1369.0,
+            324.0,
+            1399.0
+          ],
+          "confidence": 0.92,
+          "page": 1
+        },
+        {
+          "text": "TAB",
+          "bbox": [
+            343.0,
+            1371.0,
+            406.0,
+            1399.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "30'S",
+          "bbox": [
+            520.0,
+            1370.0,
+            584.0,
+            1398.0
+          ],
+          "confidence": 0.87,
+          "page": 1
+        },
+        {
+          "text": "2",
+          "bbox": [
+            1042.0,
+            1369.0,
+            1046.0,
+            1371.0
+          ],
+          "confidence": 0.83,
+          "page": 1
+        },
+        {
+          "text": "TENTEX",
+          "bbox": [
+            7.0,
+            1426.0,
+            143.0,
+            1456.0
+          ],
+          "confidence": 0.91,
+          "page": 1
+        },
+        {
+          "text": "FORTE",
+          "bbox": [
+            155.0,
+            1427.0,
+            269.0,
+            1456.0
+          ],
+          "confidence": 0.94,
+          "page": 1
+        },
+        {
+          "text": "TAB",
+          "bbox": [
+            287.0,
+            1427.0,
+            351.0,
+            1456.0
+          ],
+          "confidence": 0.94,
+          "page": 1
+        },
+        {
+          "text": "10'S",
+          "bbox": [
+            522.0,
+            1425.0,
+            583.0,
+            1455.0
+          ],
+          "confidence": 0.92,
+          "page": 1
+        },
+        {
+          "text": "TENTEX-ROYAL",
+          "bbox": [
+            4.0,
+            1484.0,
+            268.0,
+            1515.0
+          ],
+          "confidence": 0.92,
+          "page": 1
+        },
+        {
+          "text": "CAP",
+          "bbox": [
+            288.0,
+            1484.0,
+            356.0,
+            1514.0
+          ],
+          "confidence": 0.93,
+          "page": 1
+        },
+        {
+          "text": "10'S",
+          "bbox": [
+            521.0,
+            1482.0,
+            583.0,
+            1512.0
+          ],
+          "confidence": 0.9,
+          "page": 1
+        },
+        {
+          "text": "Total",
+          "bbox": [
+            1.0,
+            1544.0,
+            95.0,
+            1573.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "sales",
+          "bbox": [
+            109.0,
+            1545.0,
+            204.0,
+            1573.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "in",
+          "bbox": [
+            219.0,
+            1544.0,
+            248.0,
+            1573.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "this",
+          "bbox": [
+            262.0,
+            1543.0,
+            325.0,
+            1573.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "period",
+          "bbox": [
+            340.0,
+            1543.0,
+            449.0,
+            1580.0
+          ],
+          "confidence": 0.93,
+          "page": 1
+        },
+        {
+          "text": ":",
+          "bbox": [
+            465.0,
+            1550.0,
+            470.0,
+            1571.0
+          ],
+          "confidence": 0.91,
+          "page": 1
+        },
+        {
+          "text": "554.00",
+          "bbox": [
+            749.0,
+            1533.0,
+            866.0,
+            1580.0
+          ],
+          "confidence": 0.93,
+          "page": 1
+        },
+        {
+          "text": "Total",
+          "bbox": [
+            0.0,
+            1604.0,
+            92.0,
+            1633.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "closing",
+          "bbox": [
+            107.0,
+            1603.0,
+            234.0,
+            1640.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "stock",
+          "bbox": [
+            248.0,
+            1602.0,
+            345.0,
+            1631.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "(Sales",
+          "bbox": [
+            358.0,
+            1601.0,
+            471.0,
+            1638.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "value)",
+          "bbox": [
+            484.0,
+            1599.0,
+            591.0,
+            1635.0
+          ],
+          "confidence": 0.92,
+          "page": 1
+        },
+        {
+          "text": ":",
+          "bbox": [
+            606.0,
+            1606.0,
+            612.0,
+            1627.0
+          ],
+          "confidence": 0.69,
+          "page": 1
+        },
+        {
+          "text": "5,933.00",
+          "bbox": [
+            726.0,
+            1595.0,
+            876.0,
+            1631.0
+          ],
+          "confidence": 0.85,
+          "page": 1
+        },
+        {
+          "text": "**|",
+          "bbox": [
+            0.0,
+            1648.0,
+            42.0,
+            1703.0
+          ],
+          "confidence": 0.4,
+          "page": 1
+        },
+        {
+          "text": "iqudation",
+          "bbox": [
+            32.0,
+            1661.0,
+            222.0,
+            1699.0
+          ],
+          "confidence": 0.75,
+          "page": 1
+        },
+        {
+          "text": "is",
+          "bbox": [
+            238.0,
+            1661.0,
+            265.0,
+            1690.0
+          ],
+          "confidence": 0.97,
+          "page": 1
+        },
+        {
+          "text": "based",
+          "bbox": [
+            280.0,
+            1659.0,
+            388.0,
+            1690.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "on",
+          "bbox": [
+            403.0,
+            1665.0,
+            445.0,
+            1688.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "last",
+          "bbox": [
+            461.0,
+            1658.0,
+            522.0,
+            1687.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "three",
+          "bbox": [
+            534.0,
+            1657.0,
+            625.0,
+            1686.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "months",
+          "bbox": [
+            639.0,
+            1653.0,
+            766.0,
+            1685.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "sales",
+          "bbox": [
+            780.0,
+            1652.0,
+            869.0,
+            1682.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "a",
+          "bbox": [
+            635.0,
+            2320.0,
+            990.0,
+            2370.0
+          ],
+          "confidence": 0.12,
+          "page": 1
+        },
+        {
+          "text": "ff",
+          "bbox": [
+            1001.0,
+            2313.0,
+            1080.0,
+            2415.0
+          ],
+          "confidence": 0.26,
+          "page": 1
+        },
+        {
+          "text": "A",
+          "bbox": [
+            1115.0,
+            2272.0,
+            1285.0,
+            2380.0
+          ],
+          "confidence": 0.38,
+          "page": 1
+        },
+        {
+          "text": "ee",
+          "bbox": [
+            1391.0,
+            2284.0,
+            1517.0,
+            2366.0
+          ],
+          "confidence": 0.12,
+          "page": 1
+        },
+        {
+          "text": "a",
+          "bbox": [
+            1633.0,
+            2321.0,
+            1720.0,
+            2379.0
+          ],
+          "confidence": 0.1,
+          "page": 1
+        },
+        {
+          "text": "pee",
+          "bbox": [
+            1768.0,
+            2312.0,
+            1969.0,
+            2368.0
+          ],
+          "confidence": 0.45,
+          "page": 1
+        },
+        {
+          "text": "ali",
+          "bbox": [
+            497.0,
+            2403.0,
+            543.0,
+            2426.0
+          ],
+          "confidence": 0.45,
+          "page": 1
+        },
+        {
+          "text": "lp",
+          "bbox": [
+            565.0,
+            2367.0,
+            696.0,
+            2462.0
+          ],
+          "confidence": 0.07,
+          "page": 1
+        },
+        {
+          "text": "oe",
+          "bbox": [
+            714.0,
+            2376.0,
+            821.0,
+            2467.0
+          ],
+          "confidence": 1.0,
+          "page": 1
+        },
+        {
+          "text": "\u2014",
+          "bbox": [
+            794.0,
+            2363.0,
+            844.0,
+            2424.0
+          ],
+          "confidence": 0.0,
+          "page": 1
+        },
+        {
+          "text": "if",
+          "bbox": [
+            1009.0,
+            2390.0,
+            1122.0,
+            2465.0
+          ],
+          "confidence": 0.16,
+          "page": 1
+        },
+        {
+          "text": "A),",
+          "bbox": [
+            1152.0,
+            2367.0,
+            1240.0,
+            2448.0
+          ],
+          "confidence": 0.24,
+          "page": 1
+        },
+        {
+          "text": "LE",
+          "bbox": [
+            1272.0,
+            2363.0,
+            1380.0,
+            2426.0
+          ],
+          "confidence": 0.09,
+          "page": 1
+        },
+        {
+          "text": "ed",
+          "bbox": [
+            1400.0,
+            2351.0,
+            1708.0,
+            2447.0
+          ],
+          "confidence": 0.33,
+          "page": 1
+        },
+        {
+          "text": "Gee",
+          "bbox": [
+            7.0,
+            2522.0,
+            106.0,
+            2540.0
+          ],
+          "confidence": 0.43,
+          "page": 1
+        },
+        {
+          "text": "an,",
+          "bbox": [
+            141.0,
+            2513.0,
+            251.0,
+            2540.0
+          ],
+          "confidence": 0.38,
+          "page": 1
+        },
+        {
+          "text": "fw",
+          "bbox": [
+            310.0,
+            2512.0,
+            515.0,
+            2558.0
+          ],
+          "confidence": 0.33,
+          "page": 1
+        },
+        {
+          "text": "=F",
+          "bbox": [
+            586.0,
+            2501.0,
+            616.0,
+            2542.0
+          ],
+          "confidence": 0.0,
+          "page": 1
+        },
+        {
+          "text": "Ge,",
+          "bbox": [
+            659.0,
+            2512.0,
+            880.0,
+            2541.0
+          ],
+          "confidence": 0.47,
+          "page": 1
+        },
+        {
+          "text": "\u00a9",
+          "bbox": [
+            840.0,
+            2498.0,
+            855.0,
+            2558.0
+          ],
+          "confidence": 0.23,
+          "page": 1
+        },
+        {
+          "text": "te",
+          "bbox": [
+            890.0,
+            2507.0,
+            1016.0,
+            2552.0
+          ],
+          "confidence": 0.31,
+          "page": 1
+        },
+        {
+          "text": "ee",
+          "bbox": [
+            1010.0,
+            2509.0,
+            1621.0,
+            2544.0
+          ],
+          "confidence": 0.22,
+          "page": 1
+        },
+        {
+          "text": "ee",
+          "bbox": [
+            1642.0,
+            2511.0,
+            1772.0,
+            2539.0
+          ],
+          "confidence": 0.3,
+          "page": 1
+        },
+        {
+          "text": "a",
+          "bbox": [
+            1965.0,
+            2511.0,
+            2007.0,
+            2545.0
+          ],
+          "confidence": 0.16,
+          "page": 1
+        },
+        {
+          "text": "i,",
+          "bbox": [
+            2050.0,
+            2505.0,
+            2110.0,
+            2541.0
+          ],
+          "confidence": 0.05,
+          "page": 1
+        },
+        {
+          "text": "Ca",
+          "bbox": [
+            0.0,
+            2639.0,
+            104.0,
+            2674.0
+          ],
+          "confidence": 0.37,
+          "page": 1
+        },
+        {
+          "text": "ass",
+          "bbox": [
+            202.0,
+            2641.0,
+            333.0,
+            2671.0
+          ],
+          "confidence": 0.31,
+          "page": 1
+        },
+        {
+          "text": "Ge",
+          "bbox": [
+            449.0,
+            2639.0,
+            648.0,
+            2685.0
+          ],
+          "confidence": 0.33,
+          "page": 1
+        },
+        {
+          "text": "Eau",
+          "bbox": [
+            661.0,
+            2638.0,
+            805.0,
+            2671.0
+          ],
+          "confidence": 0.3,
+          "page": 1
+        },
+        {
+          "text": "ee",
+          "bbox": [
+            837.0,
+            2638.0,
+            900.0,
+            2683.0
+          ],
+          "confidence": 0.3,
+          "page": 1
+        },
+        {
+          "text": "Bo",
+          "bbox": [
+            923.0,
+            2637.0,
+            976.0,
+            2681.0
+          ],
+          "confidence": 0.18,
+          "page": 1
+        },
+        {
+          "text": "ee",
+          "bbox": [
+            1070.0,
+            2641.0,
+            1161.0,
+            2673.0
+          ],
+          "confidence": 0.4,
+          "page": 1
+        },
+        {
+          "text": "ee",
+          "bbox": [
+            1217.0,
+            2640.0,
+            1280.0,
+            2672.0
+          ],
+          "confidence": 0.44,
+          "page": 1
+        },
+        {
+          "text": "Be",
+          "bbox": [
+            1303.0,
+            2634.0,
+            1470.0,
+            2680.0
+          ],
+          "confidence": 0.03,
+          "page": 1
+        },
+        {
+          "text": "pee",
+          "bbox": [
+            1687.0,
+            2640.0,
+            1985.0,
+            2685.0
+          ],
+          "confidence": 0.34,
+          "page": 1
+        },
+        {
+          "text": "ee",
+          "bbox": [
+            2001.0,
+            2642.0,
+            2147.0,
+            2672.0
+          ],
+          "confidence": 0.36,
+          "page": 1
+        },
+        {
+          "text": "af",
+          "bbox": [
+            2191.0,
+            2642.0,
+            2301.0,
+            2658.0
+          ],
+          "confidence": 0.17,
+          "page": 1
+        },
+        {
+          "text": "=",
+          "bbox": [
+            2419.0,
+            2642.0,
+            2437.0,
+            2669.0
+          ],
+          "confidence": 0.2,
+          "page": 1
+        },
+        {
+          "text": "a",
+          "bbox": [
+            3.0,
+            2673.0,
+            48.0,
+            2713.0
+          ],
+          "confidence": 0.0,
+          "page": 1
+        },
+        {
+          "text": "we,",
+          "bbox": [
+            59.0,
+            2683.0,
+            122.0,
+            2713.0
+          ],
+          "confidence": 0.41,
+          "page": 1
+        },
+        {
+          "text": "Gs",
+          "bbox": [
+            153.0,
+            2682.0,
+            259.0,
+            2713.0
+          ],
+          "confidence": 0.09,
+          "page": 1
+        },
+        {
+          "text": "7H,",
+          "bbox": [
+            281.0,
+            2685.0,
+            302.0,
+            2713.0
+          ],
+          "confidence": 0.09,
+          "page": 1
+        },
+        {
+          "text": "38",
+          "bbox": [
+            327.0,
+            2683.0,
+            362.0,
+            2712.0
+          ],
+          "confidence": 0.18,
+          "page": 1
+        },
+        {
+          "text": "7",
+          "bbox": [
+            439.0,
+            2681.0,
+            522.0,
+            2713.0
+          ],
+          "confidence": 0.42,
+          "page": 1
+        },
+        {
+          "text": "Se",
+          "bbox": [
+            721.0,
+            2685.0,
+            777.0,
+            2710.0
+          ],
+          "confidence": 0.45,
+          "page": 1
+        },
+        {
+          "text": "Ae",
+          "bbox": [
+            827.0,
+            2683.0,
+            916.0,
+            2713.0
+          ],
+          "confidence": 0.23,
+          "page": 1
+        },
+        {
+          "text": "ae",
+          "bbox": [
+            1052.0,
+            2677.0,
+            1223.0,
+            2718.0
+          ],
+          "confidence": 0.18,
+          "page": 1
+        },
+        {
+          "text": "ee",
+          "bbox": [
+            1264.0,
+            2683.0,
+            1349.0,
+            2720.0
+          ],
+          "confidence": 0.09,
+          "page": 1
+        },
+        {
+          "text": "Oe",
+          "bbox": [
+            1640.0,
+            2685.0,
+            2004.0,
+            2713.0
+          ],
+          "confidence": 0.4,
+          "page": 1
+        },
+        {
+          "text": "pad",
+          "bbox": [
+            2083.0,
+            2682.0,
+            2157.0,
+            2712.0
+          ],
+          "confidence": 0.35,
+          "page": 1
+        },
+        {
+          "text": "ae",
+          "bbox": [
+            2180.0,
+            2685.0,
+            2233.0,
+            2709.0
+          ],
+          "confidence": 0.28,
+          "page": 1
+        },
+        {
+          "text": "SS",
+          "bbox": [
+            2300.0,
+            2687.0,
+            2363.0,
+            2713.0
+          ],
+          "confidence": 0.0,
+          "page": 1
+        },
+        {
+          "text": "\u00a7ee",
+          "bbox": [
+            3.0,
+            2702.0,
+            256.0,
+            2759.0
+          ],
+          "confidence": 0.0,
+          "page": 1
+        },
+        {
+          "text": "fC",
+          "bbox": [
+            269.0,
+            2706.0,
+            662.0,
+            2748.0
+          ],
+          "confidence": 0.2,
+          "page": 1
+        },
+        {
+          "text": "ee",
+          "bbox": [
+            708.0,
+            2704.0,
+            787.0,
+            2745.0
+          ],
+          "confidence": 0.0,
+          "page": 1
+        },
+        {
+          "text": "\u2014",
+          "bbox": [
+            864.0,
+            2710.0,
+            943.0,
+            2753.0
+          ],
+          "confidence": 0.0,
+          "page": 1
+        },
+        {
+          "text": "lr",
+          "bbox": [
+            1033.0,
+            2703.0,
+            1183.0,
+            2767.0
+          ],
+          "confidence": 0.16,
+          "page": 1
+        },
+        {
+          "text": "eS",
+          "bbox": [
+            1315.0,
+            2700.0,
+            1573.0,
+            2759.0
+          ],
+          "confidence": 0.1,
+          "page": 1
+        },
+        {
+          "text": "ee",
+          "bbox": [
+            1594.0,
+            2698.0,
+            1756.0,
+            2747.0
+          ],
+          "confidence": 0.16,
+          "page": 1
+        },
+        {
+          "text": "e\u2014=e",
+          "bbox": [
+            2021.0,
+            2693.0,
+            2067.0,
+            2771.0
+          ],
+          "confidence": 0.0,
+          "page": 1
+        },
+        {
+          "text": ":",
+          "bbox": [
+            2332.0,
+            2711.0,
+            2346.0,
+            2717.0
+          ],
+          "confidence": 0.53,
+          "page": 1
+        },
+        {
+          "text": "inne,",
+          "bbox": [
+            0.0,
+            2857.0,
+            263.0,
+            2890.0
+          ],
+          "confidence": 0.26,
+          "page": 1
+        },
+        {
+          "text": "PE",
+          "bbox": [
+            310.0,
+            2857.0,
+            377.0,
+            2890.0
+          ],
+          "confidence": 0.39,
+          "page": 1
+        },
+        {
+          "text": "OU",
+          "bbox": [
+            418.0,
+            2856.0,
+            513.0,
+            2890.0
+          ],
+          "confidence": 0.29,
+          "page": 1
+        },
+        {
+          "text": "Fe",
+          "bbox": [
+            511.0,
+            2855.0,
+            791.0,
+            2890.0
+          ],
+          "confidence": 0.34,
+          "page": 1
+        },
+        {
+          "text": "Ge",
+          "bbox": [
+            834.0,
+            2854.0,
+            1262.0,
+            2899.0
+          ],
+          "confidence": 0.28,
+          "page": 1
+        },
+        {
+          "text": "PPT",
+          "bbox": [
+            1035.0,
+            2849.0,
+            1134.0,
+            2903.0
+          ],
+          "confidence": 0.36,
+          "page": 1
+        },
+        {
+          "text": "OG",
+          "bbox": [
+            1156.0,
+            2849.0,
+            1274.0,
+            2903.0
+          ],
+          "confidence": 0.26,
+          "page": 1
+        },
+        {
+          "text": "eee",
+          "bbox": [
+            1387.0,
+            2859.0,
+            1393.0,
+            2864.0
+          ],
+          "confidence": 0.33,
+          "page": 1
+        },
+        {
+          "text": "I,",
+          "bbox": [
+            1584.0,
+            2856.0,
+            1800.0,
+            2894.0
+          ],
+          "confidence": 0.13,
+          "page": 1
+        },
+        {
+          "text": "Poe",
+          "bbox": [
+            1875.0,
+            2856.0,
+            2000.0,
+            2889.0
+          ],
+          "confidence": 0.58,
+          "page": 1
+        },
+        {
+          "text": "4",
+          "bbox": [
+            2054.0,
+            2847.0,
+            2077.0,
+            2902.0
+          ],
+          "confidence": 0.71,
+          "page": 1
+        },
+        {
+          "text": "jane",
+          "bbox": [
+            2066.0,
+            2829.0,
+            2212.0,
+            2890.0
+          ],
+          "confidence": 0.2,
+          "page": 1
+        },
+        {
+          "text": "gy",
+          "bbox": [
+            2243.0,
+            2857.0,
+            2264.0,
+            2889.0
+          ],
+          "confidence": 0.2,
+          "page": 1
+        },
+        {
+          "text": ";",
+          "bbox": [
+            2282.0,
+            2886.0,
+            2286.0,
+            2890.0
+          ],
+          "confidence": 0.38,
+          "page": 1
+        },
+        {
+          "text": "aay",
+          "bbox": [
+            2368.0,
+            2856.0,
+            2443.0,
+            2888.0
+          ],
+          "confidence": 0.12,
+          "page": 1
+        },
+        {
+          "text": "Z",
+          "bbox": [
+            4.0,
+            2903.0,
+            28.0,
+            2909.0
+          ],
+          "confidence": 0.14,
+          "page": 1
+        },
+        {
+          "text": "OT",
+          "bbox": [
+            42.0,
+            2909.0,
+            113.0,
+            2932.0
+          ],
+          "confidence": 0.0,
+          "page": 1
+        },
+        {
+          "text": "ee",
+          "bbox": [
+            157.0,
+            2879.0,
+            374.0,
+            2955.0
+          ],
+          "confidence": 0.15,
+          "page": 1
+        },
+        {
+          "text": "(oe",
+          "bbox": [
+            564.0,
+            2894.0,
+            781.0,
+            2933.0
+          ],
+          "confidence": 0.19,
+          "page": 1
+        },
+        {
+          "text": "#",
+          "bbox": [
+            752.0,
+            2890.0,
+            785.0,
+            2945.0
+          ],
+          "confidence": 0.0,
+          "page": 1
+        },
+        {
+          "text": "Teg",
+          "bbox": [
+            796.0,
+            2891.0,
+            945.0,
+            2939.0
+          ],
+          "confidence": 0.14,
+          "page": 1
+        },
+        {
+          "text": "fie",
+          "bbox": [
+            1013.0,
+            2888.0,
+            1138.0,
+            2940.0
+          ],
+          "confidence": 0.48,
+          "page": 1
+        },
+        {
+          "text": "7a",
+          "bbox": [
+            1188.0,
+            2890.0,
+            1315.0,
+            2948.0
+          ],
+          "confidence": 0.08,
+          "page": 1
+        },
+        {
+          "text": "oo",
+          "bbox": [
+            1441.0,
+            2905.0,
+            1494.0,
+            2943.0
+          ],
+          "confidence": 0.32,
+          "page": 1
+        },
+        {
+          "text": "6",
+          "bbox": [
+            1602.0,
+            2903.0,
+            1627.0,
+            2932.0
+          ],
+          "confidence": 0.05,
+          "page": 1
+        },
+        {
+          "text": "ae",
+          "bbox": [
+            1702.0,
+            2904.0,
+            1761.0,
+            2932.0
+          ],
+          "confidence": 0.16,
+          "page": 1
+        },
+        {
+          "text": "oor",
+          "bbox": [
+            1848.0,
+            2884.0,
+            2231.0,
+            2971.0
+          ],
+          "confidence": 0.1,
+          "page": 1
+        },
+        {
+          "text": "fatal",
+          "bbox": [
+            2256.0,
+            2903.0,
+            2446.0,
+            2931.0
+          ],
+          "confidence": 0.14,
+          "page": 1
+        },
+        {
+          "text": "2",
+          "bbox": [
+            60.0,
+            3051.0,
+            90.0,
+            3074.0
+          ],
+          "confidence": 0.37,
+          "page": 1
+        },
+        {
+          "text": "=",
+          "bbox": [
+            111.0,
+            3032.0,
+            154.0,
+            3094.0
+          ],
+          "confidence": 0.42,
+          "page": 1
+        },
+        {
+          "text": "eas",
+          "bbox": [
+            168.0,
+            3051.0,
+            212.0,
+            3078.0
+          ],
+          "confidence": 1.0,
+          "page": 1
+        },
+        {
+          "text": "BG.",
+          "bbox": [
+            227.0,
+            3031.0,
+            315.0,
+            3086.0
+          ],
+          "confidence": 0.32,
+          "page": 1
+        },
+        {
+          "text": "Ba",
+          "bbox": [
+            330.0,
+            3049.0,
+            370.0,
+            3069.0
+          ],
+          "confidence": 0.25,
+          "page": 1
+        },
+        {
+          "text": "WP",
+          "bbox": [
+            393.0,
+            3048.0,
+            644.0,
+            3076.0
+          ],
+          "confidence": 0.33,
+          "page": 1
+        },
+        {
+          "text": "AEG",
+          "bbox": [
+            661.0,
+            3051.0,
+            717.0,
+            3078.0
+          ],
+          "confidence": 0.28,
+          "page": 1
+        },
+        {
+          "text": "Oe",
+          "bbox": [
+            757.0,
+            3047.0,
+            1006.0,
+            3078.0
+          ],
+          "confidence": 0.39,
+          "page": 1
+        },
+        {
+          "text": "a",
+          "bbox": [
+            1021.0,
+            3048.0,
+            1071.0,
+            3077.0
+          ],
+          "confidence": 0.2,
+          "page": 1
+        },
+        {
+          "text": "eo",
+          "bbox": [
+            1281.0,
+            3053.0,
+            1337.0,
+            3078.0
+          ],
+          "confidence": 0.14,
+          "page": 1
+        },
+        {
+          "text": "Cad",
+          "bbox": [
+            1378.0,
+            3051.0,
+            1447.0,
+            3078.0
+          ],
+          "confidence": 0.38,
+          "page": 1
+        },
+        {
+          "text": "FP",
+          "bbox": [
+            1472.0,
+            3043.0,
+            1489.0,
+            3077.0
+          ],
+          "confidence": 0.34,
+          "page": 1
+        },
+        {
+          "text": "ge",
+          "bbox": [
+            1488.0,
+            3052.0,
+            1584.0,
+            3081.0
+          ],
+          "confidence": 0.27,
+          "page": 1
+        },
+        {
+          "text": "oe",
+          "bbox": [
+            1596.0,
+            3033.0,
+            1735.0,
+            3081.0
+          ],
+          "confidence": 0.15,
+          "page": 1
+        },
+        {
+          "text": "ae",
+          "bbox": [
+            1754.0,
+            3053.0,
+            1803.0,
+            3077.0
+          ],
+          "confidence": 0.45,
+          "page": 1
+        },
+        {
+          "text": "eS",
+          "bbox": [
+            1827.0,
+            3056.0,
+            1876.0,
+            3075.0
+          ],
+          "confidence": 0.41,
+          "page": 1
+        },
+        {
+          "text": "8S,",
+          "bbox": [
+            1900.0,
+            3037.0,
+            1961.0,
+            3077.0
+          ],
+          "confidence": 0.15,
+          "page": 1
+        },
+        {
+          "text": ";",
+          "bbox": [
+            2053.0,
+            3054.0,
+            2056.0,
+            3057.0
+          ],
+          "confidence": 0.0,
+          "page": 1
+        },
+        {
+          "text": "ad,",
+          "bbox": [
+            2091.0,
+            3053.0,
+            2172.0,
+            3077.0
+          ],
+          "confidence": 0.52,
+          "page": 1
+        },
+        {
+          "text": "|",
+          "bbox": [
+            2195.0,
+            3012.0,
+            2213.0,
+            3091.0
+          ],
+          "confidence": 0.69,
+          "page": 1
+        },
+        {
+          "text": "#",
+          "bbox": [
+            2260.0,
+            3059.0,
+            2272.0,
+            3072.0
+          ],
+          "confidence": 0.0,
+          "page": 1
+        },
+        {
+          "text": "\u00a5",
+          "bbox": [
+            2345.0,
+            3056.0,
+            2357.0,
+            3064.0
+          ],
+          "confidence": 0.0,
+          "page": 1
+        },
+        {
+          "text": "Nc",
+          "bbox": [
+            46.0,
+            3126.0,
+            178.0,
+            3170.0
+          ],
+          "confidence": 0.39,
+          "page": 1
+        },
+        {
+          "text": "Cen",
+          "bbox": [
+            238.0,
+            3148.0,
+            252.0,
+            3162.0
+          ],
+          "confidence": 0.41,
+          "page": 1
+        },
+        {
+          "text": "ttt",
+          "bbox": [
+            401.0,
+            3127.0,
+            488.0,
+            3175.0
+          ],
+          "confidence": 0.26,
+          "page": 1
+        },
+        {
+          "text": "Goi,",
+          "bbox": [
+            546.0,
+            3124.0,
+            637.0,
+            3186.0
+          ],
+          "confidence": 0.24,
+          "page": 1
+        },
+        {
+          "text": "ited",
+          "bbox": [
+            657.0,
+            3136.0,
+            741.0,
+            3175.0
+          ],
+          "confidence": 0.21,
+          "page": 1
+        },
+        {
+          "text": "CO",
+          "bbox": [
+            775.0,
+            3136.0,
+            831.0,
+            3173.0
+          ],
+          "confidence": 0.49,
+          "page": 1
+        },
+        {
+          "text": "Se",
+          "bbox": [
+            841.0,
+            3135.0,
+            998.0,
+            3174.0
+          ],
+          "confidence": 0.47,
+          "page": 1
+        },
+        {
+          "text": "om,",
+          "bbox": [
+            1064.0,
+            3133.0,
+            1314.0,
+            3173.0
+          ],
+          "confidence": 0.07,
+          "page": 1
+        },
+        {
+          "text": "Pe",
+          "bbox": [
+            1726.0,
+            3136.0,
+            1860.0,
+            3175.0
+          ],
+          "confidence": 0.14,
+          "page": 1
+        },
+        {
+          "text": "a",
+          "bbox": [
+            1912.0,
+            3135.0,
+            2041.0,
+            3180.0
+          ],
+          "confidence": 0.19,
+          "page": 1
+        },
+        {
+          "text": "ned",
+          "bbox": [
+            2104.0,
+            3136.0,
+            2128.0,
+            3158.0
+          ],
+          "confidence": 0.37,
+          "page": 1
+        },
+        {
+          "text": "|",
+          "bbox": [
+            2381.0,
+            3148.0,
+            2385.0,
+            3156.0
+          ],
+          "confidence": 0.42,
+          "page": 1
+        }
+      ],
+      "latency_ms": 13815.730999999687,
+      "image_meta": {
+        "original_width": 3264,
+        "original_height": 2448,
+        "processed_width": 2448,
+        "processed_height": 3264,
+        "orientation": 6,
+        "preprocessing": [
+          "exif_transpose",
+          "rgb"
+        ]
+      },
+      "native_meta": {
+        "native_text": false,
+        "ocr_required": true,
+        "reason": "image"
+      },
+      "source": "fresh_tesseract_run",
+      "error": null
+    }
+  ]
+}

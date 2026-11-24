@@ -1,0 +1,156 @@
+{
+  "file": "0000701116_2026_08_ZL_03_362_05092026080412.jpeg",
+  "path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000701116_2026_08_ZL_03_362_05092026080412.jpeg",
+  "format": "STOCK & SALES ANALYSIS",
+  "api_method": "gemini_extraction_fallback",
+  "status": "FAIL",
+  "expected_rows": 22,
+  "extracted_rows": 24,
+  "matched_rows": 19,
+  "missing_rows": [
+    {
+      "product": "DIAREX.SYP. DIAREX. TAB.",
+      "opening_qty": 34,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "LIV 52 S/F",
+      "opening_qty": 100,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "PAIN BALM. 10 gms PILAX TAB",
+      "opening_qty": 101,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    }
+  ],
+  "extra_rows": [
+    {
+      "product": "DIAREX.SYP.",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "DIAREX.TAB.",
+      "opening_qty": 34,
+      "sales_qty": 0,
+      "closing_qty": 34,
+      "kind": "extra_product"
+    },
+    {
+      "product": "LIV 52 200ML S/F",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 100,
+      "kind": "extra_product"
+    },
+    {
+      "product": "PAIN BALM.",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "PILAX TAB",
+      "opening_qty": 101,
+      "sales_qty": 0,
+      "closing_qty": 54,
+      "kind": "extra_product"
+    }
+  ],
+  "duplicates": [],
+  "mismatches": [
+    {
+      "product": "ABANA.TAB.",
+      "field": "opening_qty",
+      "expected": 69,
+      "actual": 0,
+      "kind": "wrong_opening_qty"
+    },
+    {
+      "product": "19 rows",
+      "field": "sales_value",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 19,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    },
+    {
+      "product": "19 rows",
+      "field": "closing_value",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 19,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    },
+    {
+      "product": "19 rows",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 19,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    },
+    {
+      "product": "19 rows",
+      "field": "closing_qty",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 19,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    },
+    {
+      "product": "19 rows",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 19,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    }
+  ],
+  "ocr_review": [
+    {
+      "product": "gms V-CONFIDO TAB",
+      "api_product": "CONFIDO TAB",
+      "similarity": 0.786,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "HIMCOLIN GEL 30 GMS",
+      "api_product": "HIMCOLIN GEL",
+      "similarity": 0.774,
+      "note": "Product names differ but the row quantities correspond."
+    }
+  ],
+  "accounting": [],
+  "confidence": "medium",
+  "notes": [
+    "OCR used tesseract psm 6."
+  ],
+  "result_key": "0000701116_2026_08_ZL_03_362_05092026080412",
+  "unavailable_fields": {
+    "sales_value": 19,
+    "closing_value": 19,
+    "receipts_qty": 19,
+    "closing_qty": 19,
+    "sales_qty": 19
+  },
+  "formula_checked": "none"
+}

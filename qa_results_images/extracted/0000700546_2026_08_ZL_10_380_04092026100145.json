@@ -1,0 +1,895 @@
+{
+  "source_file": "0000700546_2026_08_ZL_10_380_04092026100145.jpg",
+  "source_format": "jpg",
+  "stockist_name": "RAM AGENCIES",
+  "stockist_address": null,
+  "company_name": "HIMALAYA - ZEAL",
+  "period_from": "2026-08-01",
+  "period_to": "2026-08-31",
+  "report_title": "Stock and Sales Detail Report",
+  "line_items": [
+    {
+      "product_code": null,
+      "product_name": "AACTARIL SOAP 75G",
+      "packing": null,
+      "opening_qty": 62.0,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 16.0,
+      "sales_value": 1401.92,
+      "closing_qty": 46.0,
+      "closing_value": 4030.52,
+      "extra": {
+        "opening_value": 5432.44,
+        "expected_total": 62.0,
+        "expected_closing": 46.0,
+        "stock_identity_ok": true
+      },
+      "opening_value": 5432.44
+    },
+    {
+      "product_code": null,
+      "product_name": "ABANA TABS",
+      "packing": null,
+      "opening_qty": 75.0,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 30.0,
+      "sales_value": 5028.6,
+      "closing_qty": 45.0,
+      "closing_value": 7542.9,
+      "extra": {
+        "opening_value": 12571.5,
+        "expected_total": 75.0,
+        "expected_closing": 45.0,
+        "stock_identity_ok": true
+      },
+      "opening_value": 12571.5
+    },
+    {
+      "product_code": null,
+      "product_name": "ALTHEA LOTION",
+      "packing": null,
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "opening_value": 0.0,
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      },
+      "opening_value": 0.0
+    },
+    {
+      "product_code": null,
+      "product_name": "AMALAKI CAPS",
+      "packing": null,
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "opening_value": 0.0,
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      },
+      "opening_value": 0.0
+    },
+    {
+      "product_code": null,
+      "product_name": "BLEMINOR ANTI BLEMISH CREAM",
+      "packing": null,
+      "opening_qty": 55.0,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 16.0,
+      "sales_value": 3132.8,
+      "closing_qty": 40.0,
+      "closing_value": 7832.0,
+      "extra": {
+        "opening_value": 10769.0,
+        "expected_total": 55.0,
+        "expected_closing": 39.0,
+        "stock_identity_ok": false
+      },
+      "opening_value": 10769.0
+    },
+    {
+      "product_code": null,
+      "product_name": "CLARINA ANTI ACNE CREAM",
+      "packing": null,
+      "opening_qty": 19.0,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 6.0,
+      "sales_value": 877.68,
+      "closing_qty": 13.0,
+      "closing_value": 1901.64,
+      "extra": {
+        "opening_value": 2779.32,
+        "expected_total": 19.0,
+        "expected_closing": 13.0,
+        "stock_identity_ok": true
+      },
+      "opening_value": 2779.32
+    },
+    {
+      "product_code": null,
+      "product_name": "CLARINA ANTI ACNE FACE WASH GEL 60ML",
+      "packing": null,
+      "opening_qty": 18.0,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 5.0,
+      "sales_value": 610.2,
+      "closing_qty": 13.0,
+      "closing_value": 1586.52,
+      "extra": {
+        "opening_value": 2196.72,
+        "expected_total": 18.0,
+        "expected_closing": 13.0,
+        "stock_identity_ok": true
+      },
+      "opening_value": 2196.72
+    },
+    {
+      "product_code": null,
+      "product_name": "CLEARVITAL CREAM",
+      "packing": null,
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "opening_value": 0.0,
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      },
+      "opening_value": 0.0
+    },
+    {
+      "product_code": null,
+      "product_name": "CONFIDO TABS",
+      "packing": null,
+      "opening_qty": 97.0,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 30.0,
+      "sales_value": 5554.2,
+      "closing_qty": 67.0,
+      "closing_value": 12404.38,
+      "extra": {
+        "opening_value": 17958.58,
+        "expected_total": 97.0,
+        "expected_closing": 67.0,
+        "stock_identity_ok": true
+      },
+      "opening_value": 17958.58
+    },
+    {
+      "product_code": null,
+      "product_name": "DIABECON DS TABS",
+      "packing": null,
+      "opening_qty": 66.0,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 18.0,
+      "sales_value": 3908.52,
+      "closing_qty": 48.0,
+      "closing_value": 10422.72,
+      "extra": {
+        "opening_value": 14331.24,
+        "expected_total": 66.0,
+        "expected_closing": 48.0,
+        "stock_identity_ok": true
+      },
+      "opening_value": 14331.24
+    },
+    {
+      "product_code": null,
+      "product_name": "DIABECON TABS",
+      "packing": null,
+      "opening_qty": 86.0,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 9.0,
+      "sales_value": 1344.06,
+      "closing_qty": 78.0,
+      "closing_value": 11648.52,
+      "extra": {
+        "opening_value": 12843.24,
+        "expected_total": 86.0,
+        "expected_closing": 77.0,
+        "stock_identity_ok": false
+      },
+      "opening_value": 12843.24
+    },
+    {
+      "product_code": null,
+      "product_name": "DIAREX SYP",
+      "packing": null,
+      "opening_qty": 49.0,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 49.0,
+      "closing_value": 4517.8,
+      "extra": {
+        "opening_value": 4517.8,
+        "expected_total": 49.0,
+        "expected_closing": 49.0,
+        "stock_identity_ok": true
+      },
+      "opening_value": 4517.8
+    },
+    {
+      "product_code": null,
+      "product_name": "DIAREX TABS",
+      "packing": null,
+      "opening_qty": 35.0,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 35.0,
+      "closing_value": 3493.0,
+      "extra": {
+        "opening_value": 3493.0,
+        "expected_total": 35.0,
+        "expected_closing": 35.0,
+        "stock_identity_ok": true
+      },
+      "opening_value": 3493.0
+    },
+    {
+      "product_code": null,
+      "product_name": "HADJOD CAP",
+      "packing": null,
+      "opening_qty": 8.0,
+      "receipts_qty": 60.0,
+      "receipts_value": null,
+      "sales_qty": 7.0,
+      "sales_value": 1733.34,
+      "closing_qty": 61.0,
+      "closing_value": 15104.82,
+      "extra": {
+        "opening_value": 1980.96,
+        "expected_total": 68.0,
+        "expected_closing": 61.0,
+        "stock_identity_ok": true
+      },
+      "opening_value": 1980.96
+    },
+    {
+      "product_code": null,
+      "product_name": "HAIR ZONE SOLULTION",
+      "packing": null,
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "opening_value": 0.0,
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      },
+      "opening_value": 0.0
+    },
+    {
+      "product_code": null,
+      "product_name": "HERBOLAX CAPS",
+      "packing": null,
+      "opening_qty": 43.0,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 33.0,
+      "sales_value": 2112.0,
+      "closing_qty": 10.0,
+      "closing_value": 640.0,
+      "extra": {
+        "opening_value": 2752.0,
+        "expected_total": 43.0,
+        "expected_closing": 10.0,
+        "stock_identity_ok": true
+      },
+      "opening_value": 2752.0
+    },
+    {
+      "product_code": null,
+      "product_name": "HERBOLAX TABS",
+      "packing": null,
+      "opening_qty": 77.0,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 4.0,
+      "sales_value": 670.48,
+      "closing_qty": 73.0,
+      "closing_value": 12236.26,
+      "extra": {
+        "opening_value": 12906.74,
+        "expected_total": 77.0,
+        "expected_closing": 73.0,
+        "stock_identity_ok": true
+      },
+      "opening_value": 12906.74
+    },
+    {
+      "product_code": null,
+      "product_name": "HIMCOLIN GEL",
+      "packing": null,
+      "opening_qty": 37.0,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 12.0,
+      "sales_value": 2779.44,
+      "closing_qty": 25.0,
+      "closing_value": 5790.5,
+      "extra": {
+        "opening_value": 8569.94,
+        "expected_total": 37.0,
+        "expected_closing": 25.0,
+        "stock_identity_ok": true
+      },
+      "opening_value": 8569.94
+    },
+    {
+      "product_code": null,
+      "product_name": "HIOWNA CHOCOLATE FLAV MOMZ",
+      "packing": null,
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "opening_value": 0.0,
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      },
+      "opening_value": 0.0
+    },
+    {
+      "product_code": null,
+      "product_name": "HIOWNA CHOCOLATE FLAVOUR(ADULT)",
+      "packing": null,
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "opening_value": 0.0,
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      },
+      "opening_value": 0.0
+    },
+    {
+      "product_code": null,
+      "product_name": "HIOWNA VANILLA FLAV MOMZ",
+      "packing": null,
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "opening_value": 0.0,
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      },
+      "opening_value": 0.0
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV.52 HB CAPSULES",
+      "packing": null,
+      "opening_qty": 85.0,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 18.0,
+      "sales_value": 3085.56,
+      "closing_qty": 67.0,
+      "closing_value": 11485.14,
+      "extra": {
+        "opening_value": 14570.7,
+        "expected_total": 85.0,
+        "expected_closing": 67.0,
+        "stock_identity_ok": true
+      },
+      "opening_value": 14570.7
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV.52 SYRUP (BIG)",
+      "packing": null,
+      "opening_qty": 96.0,
+      "receipts_qty": 630.0,
+      "receipts_value": null,
+      "sales_qty": 293.0,
+      "sales_value": 52236.04,
+      "closing_qty": 441.0,
+      "closing_value": 78621.48,
+      "extra": {
+        "opening_value": 17114.88,
+        "expected_total": 726.0,
+        "expected_closing": 433.0,
+        "stock_identity_ok": false
+      },
+      "opening_value": 17114.88
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV.52 SYRUP (SMAL)",
+      "packing": null,
+      "opening_qty": 116.0,
+      "receipts_qty": 280.0,
+      "receipts_value": null,
+      "sales_qty": 252.0,
+      "sales_value": 26878.32,
+      "closing_qty": 144.0,
+      "closing_value": 15359.04,
+      "extra": {
+        "opening_value": 12372.56,
+        "expected_total": 396.0,
+        "expected_closing": 144.0,
+        "stock_identity_ok": true
+      },
+      "opening_value": 12372.56
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV.52 SYRUP [SUGAR FREE]",
+      "packing": null,
+      "opening_qty": 1.0,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 1.0,
+      "closing_value": 103.12,
+      "extra": {
+        "opening_value": 103.12,
+        "expected_total": 1.0,
+        "expected_closing": 1.0,
+        "stock_identity_ok": true
+      },
+      "opening_value": 103.12
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV.52 TABS",
+      "packing": null,
+      "opening_qty": 361.0,
+      "receipts_qty": 100.0,
+      "receipts_value": null,
+      "sales_qty": 273.0,
+      "sales_value": 45760.26,
+      "closing_qty": 189.0,
+      "closing_value": 31680.18,
+      "extra": {
+        "opening_value": 60510.82,
+        "expected_total": 461.0,
+        "expected_closing": 188.0,
+        "stock_identity_ok": false
+      },
+      "opening_value": 60510.82
+    },
+    {
+      "product_code": null,
+      "product_name": "MUSCLE&JOINT RUB",
+      "packing": null,
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "opening_value": 0.0,
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      },
+      "opening_value": 0.0
+    },
+    {
+      "product_code": null,
+      "product_name": "OPHTHACARE EYE DROPS",
+      "packing": null,
+      "opening_qty": 130.0,
+      "receipts_qty": 72.0,
+      "receipts_value": null,
+      "sales_qty": 136.0,
+      "sales_value": 10673.28,
+      "closing_qty": 66.0,
+      "closing_value": 5179.68,
+      "extra": {
+        "opening_value": 10202.4,
+        "expected_total": 202.0,
+        "expected_closing": 66.0,
+        "stock_identity_ok": true
+      },
+      "opening_value": 10202.4
+    },
+    {
+      "product_code": null,
+      "product_name": "ORO T ORAL RINSE LIQ",
+      "packing": null,
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "opening_value": 0.0,
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      },
+      "opening_value": 0.0
+    },
+    {
+      "product_code": null,
+      "product_name": "OXITARD CAPS",
+      "packing": null,
+      "opening_qty": 8.0,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 7.0,
+      "sales_value": 672.0,
+      "closing_qty": 1.0,
+      "closing_value": 96.0,
+      "extra": {
+        "opening_value": 768.0,
+        "expected_total": 8.0,
+        "expected_closing": 1.0,
+        "stock_identity_ok": true
+      },
+      "opening_value": 768.0
+    },
+    {
+      "product_code": null,
+      "product_name": "PILEX FORTE OINT",
+      "packing": null,
+      "opening_qty": 127.0,
+      "receipts_qty": 300.0,
+      "receipts_value": null,
+      "sales_qty": 235.0,
+      "sales_value": 26855.8,
+      "closing_qty": 192.0,
+      "closing_value": 21941.76,
+      "extra": {
+        "opening_value": 14513.56,
+        "expected_total": 427.0,
+        "expected_closing": 192.0,
+        "stock_identity_ok": true
+      },
+      "opening_value": 14513.56
+    },
+    {
+      "product_code": null,
+      "product_name": "PILEX FORTE TABS",
+      "packing": null,
+      "opening_qty": 22.0,
+      "receipts_qty": 56.0,
+      "receipts_value": null,
+      "sales_qty": 33.0,
+      "sales_value": 3872.22,
+      "closing_qty": 46.0,
+      "closing_value": 5397.64,
+      "extra": {
+        "opening_value": 2581.48,
+        "expected_total": 78.0,
+        "expected_closing": 45.0,
+        "stock_identity_ok": false
+      },
+      "opening_value": 2581.48
+    },
+    {
+      "product_code": null,
+      "product_name": "PILEX TABS",
+      "packing": null,
+      "opening_qty": 170.0,
+      "receipts_qty": 200.0,
+      "receipts_value": null,
+      "sales_qty": 227.0,
+      "sales_value": 40469.56,
+      "closing_qty": 146.0,
+      "closing_value": 26866.88,
+      "extra": {
+        "opening_value": 30307.6,
+        "expected_total": 370.0,
+        "expected_closing": 143.0,
+        "stock_identity_ok": false
+      },
+      "opening_value": 30307.6
+    },
+    {
+      "product_code": null,
+      "product_name": "PURIM TABS",
+      "packing": null,
+      "opening_qty": 3.0,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 1.0,
+      "sales_value": 135.62,
+      "closing_qty": 2.0,
+      "closing_value": 271.24,
+      "extra": {
+        "opening_value": 406.86,
+        "expected_total": 3.0,
+        "expected_closing": 2.0,
+        "stock_identity_ok": true
+      },
+      "opening_value": 406.86
+    },
+    {
+      "product_code": null,
+      "product_name": "QUISTA DN MILK MASALA FLAVOUR",
+      "packing": null,
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "opening_value": 0.0,
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      },
+      "opening_value": 0.0
+    },
+    {
+      "product_code": null,
+      "product_name": "QUISTA DN VANILLA FLAVOUR",
+      "packing": null,
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "opening_value": 0.0,
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      },
+      "opening_value": 0.0
+    },
+    {
+      "product_code": null,
+      "product_name": "SHALLAKI CAPS (HIMALAYA)",
+      "packing": null,
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "opening_value": 0.0,
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      },
+      "opening_value": 0.0
+    },
+    {
+      "product_code": null,
+      "product_name": "TAGARA TABS",
+      "packing": null,
+      "opening_qty": 40.0,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 6.0,
+      "sales_value": 1485.72,
+      "closing_qty": 34.0,
+      "closing_value": 8419.08,
+      "extra": {
+        "opening_value": 9904.8,
+        "expected_total": 40.0,
+        "expected_closing": 34.0,
+        "stock_identity_ok": true
+      },
+      "opening_value": 9904.8
+    },
+    {
+      "product_code": null,
+      "product_name": "TALEKT CAPS",
+      "packing": null,
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "opening_value": 0.0,
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      },
+      "opening_value": 0.0
+    },
+    {
+      "product_code": null,
+      "product_name": "TALEKT SYRUP",
+      "packing": null,
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "opening_value": 0.0,
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      },
+      "opening_value": 0.0
+    },
+    {
+      "product_code": null,
+      "product_name": "TRIKATU TAB",
+      "packing": null,
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "opening_value": 0.0,
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      },
+      "opening_value": 0.0
+    },
+    {
+      "product_code": null,
+      "product_name": "TRIKATU SYRUP",
+      "packing": null,
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "opening_value": 0.0,
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      },
+      "opening_value": 0.0
+    },
+    {
+      "product_code": null,
+      "product_name": "TRIPHALA CAPS (HIMALAYA)",
+      "packing": null,
+      "opening_qty": 68.0,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 35.0,
+      "sales_value": 8000.3,
+      "closing_qty": 35.0,
+      "closing_value": 8000.3,
+      "extra": {
+        "opening_value": 15543.44,
+        "expected_total": 68.0,
+        "expected_closing": 33.0,
+        "stock_identity_ok": false
+      },
+      "opening_value": 15543.44
+    },
+    {
+      "product_code": null,
+      "product_name": "TRIPHALA SYRUP (HIMALAYA)",
+      "packing": null,
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "opening_value": 0.0,
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      },
+      "opening_value": 0.0
+    },
+    {
+      "product_code": null,
+      "product_name": "VRIKSHAMLA CAPS",
+      "packing": null,
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "opening_value": 0.0,
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      },
+      "opening_value": 0.0
+    }
+  ],
+  "totals": {
+    "sales_value": null,
+    "closing_value": null,
+    "extra": {
+      "extraction_method": "gemini_vision",
+      "line_sales_value_sum": 249277.92,
+      "line_closing_value_sum": 312573.12,
+      "sales_qty": 1702.0,
+      "closing_qty": 1967.0,
+      "stock_identity_kind": "opening_receipts_sales_closing",
+      "stock_identity_formula": "closing=opening+receipts-sales",
+      "stock_identity_fail_count": 7,
+      "stock_validation": {
+        "opening_plus_purchase": 3652.0,
+        "expected_total": 3652.0,
+        "calculated_closing": 1950.0,
+        "extracted_closing": 1967.0,
+        "is_valid": false
+      },
+      "extraction_quality": {
+        "quality": "good",
+        "score": 100,
+        "reasons": [],
+        "threshold": 75.0
+      },
+      "gemini_fallback": "not_called"
+    }
+  }
+}

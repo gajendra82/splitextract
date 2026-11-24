@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import unittest
 from pathlib import Path
 
@@ -84,7 +85,12 @@ class TestGroupWiseParseFixture(unittest.TestCase):
         self.assertEqual(tent["closing_qty"], 63.0)
 
 
-@unittest.skipUnless(SAMPLE.exists(), "sample Group Wise PDF not on this machine")
+@unittest.skipUnless(
+    SAMPLE.exists()
+    and os.environ.get("RUN_LIVE_EXTRACTION", "").strip().lower()
+    in {"1", "true", "yes", "on"},
+    "live Group Wise PDF is opt-in via RUN_LIVE_EXTRACTION=1",
+)
 class TestGroupWiseSamplePdf(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

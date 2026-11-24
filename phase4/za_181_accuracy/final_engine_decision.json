@@ -1,0 +1,1383 @@
+{
+  "decision": {
+    "selected_engine": "paddleocr-vl",
+    "confidence": "moderate",
+    "points": {
+      "tesseract": 0,
+      "paddleocr-vl": 5
+    },
+    "checks": [
+      {
+        "check": "source-verified product F1",
+        "tesseract": 0.48484848484848486,
+        "paddleocr-vl": 0.7394957983193278,
+        "result": "paddleocr-vl"
+      },
+      {
+        "check": "source-verified quantity accuracy",
+        "tesseract": 0.5432098765432098,
+        "paddleocr-vl": 0.7345679012345679,
+        "result": "paddleocr-vl"
+      },
+      {
+        "check": "AI-proxy product F1",
+        "tesseract": 0.3622047244094488,
+        "paddleocr-vl": 0.5080346106304079,
+        "result": "paddleocr-vl"
+      },
+      {
+        "check": "AI-proxy median image F1",
+        "tesseract": 0.5827439886845827,
+        "paddleocr-vl": 0.8965517241379309,
+        "result": "paddleocr-vl"
+      },
+      {
+        "check": "AI-proxy quantity accuracy",
+        "tesseract": 0.44466359850975234,
+        "paddleocr-vl": 0.47490685952224415,
+        "result": "paddleocr-vl"
+      }
+    ],
+    "rollback_engine": "tesseract",
+    "configuration": {
+      "OCR_ENGINE": "paddleocr-vl",
+      "OCR_FALLBACK_ENGINE": "tesseract",
+      "OCR_ENSEMBLE_ENABLED": false
+    }
+  },
+  "source_verified_images": 2,
+  "source_verified_rows": 51,
+  "human_reviewed_rows": 0,
+  "ai_proxy_images": 51,
+  "source_verified": {
+    "tesseract": {
+      "images": 2,
+      "product_correct": 24,
+      "product_missing": 27,
+      "product_extra": 24,
+      "product_rows": 51,
+      "product_precision": 0.5,
+      "product_recall": 0.47058823529411764,
+      "product_f1": 0.48484848484848486,
+      "median_image_f1": 0.6233766233766233,
+      "median_image_quantity_accuracy": 0.36666666666666664,
+      "quantity_correct": 88,
+      "quantity_incorrect": 8,
+      "quantity_missing": 66,
+      "quantity_scored": 162,
+      "quantity_accuracy": 0.5432098765432098,
+      "quantity_both_present": 96,
+      "silent_wrong": 8,
+      "silent_wrong_rate": 0.08333333333333333,
+      "images_won_f1": 0
+    },
+    "paddleocr-vl": {
+      "images": 2,
+      "product_correct": 44,
+      "product_missing": 7,
+      "product_extra": 24,
+      "product_rows": 51,
+      "product_precision": 0.6470588235294118,
+      "product_recall": 0.8627450980392157,
+      "product_f1": 0.7394957983193278,
+      "median_image_f1": 0.777056277056277,
+      "median_image_quantity_accuracy": 0.6815476190476191,
+      "quantity_correct": 119,
+      "quantity_incorrect": 19,
+      "quantity_missing": 24,
+      "quantity_scored": 162,
+      "quantity_accuracy": 0.7345679012345679,
+      "quantity_both_present": 138,
+      "silent_wrong": 19,
+      "silent_wrong_rate": 0.13768115942028986,
+      "images_won_f1": 0
+    }
+  },
+  "ai_proposal_proxy": {
+    "images": 51,
+    "tesseract": {
+      "images": 51,
+      "product_correct": 529,
+      "product_missing": 1319,
+      "product_extra": 544,
+      "product_rows": 1848,
+      "product_precision": 0.4930102516309413,
+      "product_recall": 0.28625541125541126,
+      "product_f1": 0.3622047244094488,
+      "median_image_f1": 0.5827439886845827,
+      "median_image_quantity_accuracy": 0.3790322580645161,
+      "quantity_correct": 2029,
+      "quantity_incorrect": 187,
+      "quantity_missing": 2347,
+      "quantity_scored": 4563,
+      "quantity_accuracy": 0.44466359850975234,
+      "quantity_both_present": 2216,
+      "silent_wrong": 187,
+      "silent_wrong_rate": 0.08438628158844766,
+      "images_won_f1": 9
+    },
+    "paddleocr-vl": {
+      "images": 51,
+      "product_correct": 822,
+      "product_missing": 1026,
+      "product_extra": 566,
+      "product_rows": 1848,
+      "product_precision": 0.5922190201729106,
+      "product_recall": 0.4448051948051948,
+      "product_f1": 0.5080346106304079,
+      "median_image_f1": 0.8965517241379309,
+      "median_image_quantity_accuracy": 0.6,
+      "quantity_correct": 2167,
+      "quantity_incorrect": 155,
+      "quantity_missing": 2241,
+      "quantity_scored": 4563,
+      "quantity_accuracy": 0.47490685952224415,
+      "quantity_both_present": 2322,
+      "silent_wrong": 155,
+      "silent_wrong_rate": 0.06675279931093885,
+      "images_won_f1": 35
+    },
+    "alignment": {
+      "tesseract": {
+        "exact_normalized": 162,
+        "fuzzy": 36,
+        "missing": 1650,
+        "extra": 739
+      },
+      "paddleocr-vl": {
+        "exact_normalized": 409,
+        "fuzzy": 85,
+        "missing": 1354,
+        "extra": 710
+      }
+    },
+    "column_stats": {
+      "ambiguous_quantity_columns": 225,
+      "non_quantity_columns_ignored": 7050,
+      "blank_quantities_ignored": 384
+    },
+    "per_image": [
+      {
+        "document_id": "0000700026_2026_08_ZA_06_333_04092026081643.png",
+        "proposed_rows": 22,
+        "tesseract": {
+          "product_f1": null,
+          "product_precision": 0.0,
+          "product_recall": 0.0,
+          "quantity_accuracy": 0.0,
+          "silent_wrong": 0,
+          "product_missing": 22,
+          "product_extra": 2
+        },
+        "paddleocr-vl": {
+          "product_f1": null,
+          "product_precision": 0.0,
+          "product_recall": 0.0,
+          "quantity_accuracy": 0.0,
+          "silent_wrong": 0,
+          "product_missing": 22,
+          "product_extra": 22
+        },
+        "f1_winner": "tie"
+      },
+      {
+        "document_id": "0000700060_2026_08_ZA_06_617_04092026082801.png",
+        "proposed_rows": 45,
+        "tesseract": {
+          "product_f1": 0.028169014084507043,
+          "product_precision": 0.038461538461538464,
+          "product_recall": 0.022222222222222223,
+          "quantity_accuracy": 0.011111111111111112,
+          "silent_wrong": 2,
+          "product_missing": 44,
+          "product_extra": 25
+        },
+        "paddleocr-vl": {
+          "product_f1": 0.7912087912087912,
+          "product_precision": 0.782608695652174,
+          "product_recall": 0.8,
+          "quantity_accuracy": 0.7222222222222222,
+          "silent_wrong": 14,
+          "product_missing": 9,
+          "product_extra": 10
+        },
+        "f1_winner": "paddleocr-vl"
+      },
+      {
+        "document_id": "0000700081_2026_08_ZA_06_333_04092026081604.png",
+        "proposed_rows": 22,
+        "tesseract": {
+          "product_f1": 0.1714285714285714,
+          "product_precision": 0.23076923076923078,
+          "product_recall": 0.13636363636363635,
+          "quantity_accuracy": 0.01818181818181818,
+          "silent_wrong": 13,
+          "product_missing": 19,
+          "product_extra": 10
+        },
+        "paddleocr-vl": {
+          "product_f1": 0.711111111111111,
+          "product_precision": 0.6956521739130435,
+          "product_recall": 0.7272727272727273,
+          "quantity_accuracy": 0.5363636363636364,
+          "silent_wrong": 21,
+          "product_missing": 6,
+          "product_extra": 7
+        },
+        "f1_winner": "paddleocr-vl"
+      },
+      {
+        "document_id": "0000700082_2026_08_ZA_06_467_04092026082339.png",
+        "proposed_rows": 64,
+        "tesseract": {
+          "product_f1": 0.6521739130434783,
+          "product_precision": 0.6081081081081081,
+          "product_recall": 0.703125,
+          "quantity_accuracy": 0.62890625,
+          "silent_wrong": 23,
+          "product_missing": 19,
+          "product_extra": 29
+        },
+        "paddleocr-vl": {
+          "product_f1": 0.784,
+          "product_precision": 0.8032786885245902,
+          "product_recall": 0.765625,
+          "quantity_accuracy": 0.77734375,
+          "silent_wrong": 5,
+          "product_missing": 15,
+          "product_extra": 12
+        },
+        "f1_winner": "paddleocr-vl"
+      },
+      {
+        "document_id": "0000700087_2026_08_ZA_06_333_04092026081228.png",
+        "proposed_rows": 20,
+        "tesseract": {
+          "product_f1": null,
+          "product_precision": 0.0,
+          "product_recall": 0.0,
+          "quantity_accuracy": 0.0,
+          "silent_wrong": 0,
+          "product_missing": 20,
+          "product_extra": 6
+        },
+        "paddleocr-vl": {
+          "product_f1": null,
+          "product_precision": 0.0,
+          "product_recall": 0.0,
+          "quantity_accuracy": 0.0,
+          "silent_wrong": 0,
+          "product_missing": 20,
+          "product_extra": 20
+        },
+        "f1_winner": "tie"
+      },
+      {
+        "document_id": "0000700974_2026_08_ZA_11_210_07092026105901.png",
+        "proposed_rows": 19,
+        "tesseract": {
+          "product_f1": 0.6829268292682926,
+          "product_precision": 0.6363636363636364,
+          "product_recall": 0.7368421052631579,
+          "quantity_accuracy": 0.7105263157894737,
+          "silent_wrong": 3,
+          "product_missing": 5,
+          "product_extra": 8
+        },
+        "paddleocr-vl": {
+          "product_f1": 0.9268292682926829,
+          "product_precision": 0.8636363636363636,
+          "product_recall": 1.0,
+          "quantity_accuracy": 0.8947368421052632,
+          "silent_wrong": 4,
+          "product_missing": 0,
+          "product_extra": 3
+        },
+        "f1_winner": "paddleocr-vl"
+      },
+      {
+        "document_id": "0000700989_2026_08_ZA_11_210_07092026105922.png",
+        "proposed_rows": 31,
+        "tesseract": {
+          "product_f1": 0.38095238095238093,
+          "product_precision": 0.375,
+          "product_recall": 0.3870967741935484,
+          "quantity_accuracy": 0.3790322580645161,
+          "silent_wrong": 1,
+          "product_missing": 19,
+          "product_extra": 20
+        },
+        "paddleocr-vl": {
+          "product_f1": 0.9354838709677419,
+          "product_precision": 0.9354838709677419,
+          "product_recall": 0.9354838709677419,
+          "quantity_accuracy": 0.967741935483871,
+          "silent_wrong": 0,
+          "product_missing": 2,
+          "product_extra": 2
+        },
+        "f1_winner": "paddleocr-vl"
+      },
+      {
+        "document_id": "0000701027_2026_08_ZA_11_210_07092026110044.png",
+        "proposed_rows": 19,
+        "tesseract": {
+          "product_f1": 0.6829268292682926,
+          "product_precision": 0.6363636363636364,
+          "product_recall": 0.7368421052631579,
+          "quantity_accuracy": 0.7105263157894737,
+          "silent_wrong": 3,
+          "product_missing": 5,
+          "product_extra": 8
+        },
+        "paddleocr-vl": {
+          "product_f1": 0.9268292682926829,
+          "product_precision": 0.8636363636363636,
+          "product_recall": 1.0,
+          "quantity_accuracy": 0.8947368421052632,
+          "silent_wrong": 4,
+          "product_missing": 0,
+          "product_extra": 3
+        },
+        "f1_winner": "paddleocr-vl"
+      },
+      {
+        "document_id": "0000701385_2026_08_ZA_37_216_01092026072110.png",
+        "proposed_rows": 38,
+        "tesseract": {
+          "product_f1": 0.7894736842105263,
+          "product_precision": 0.7894736842105263,
+          "product_recall": 0.7894736842105263,
+          "quantity_accuracy": 0.8881578947368421,
+          "silent_wrong": 1,
+          "product_missing": 8,
+          "product_extra": 8
+        },
+        "paddleocr-vl": {
+          "product_f1": 0.9210526315789473,
+          "product_precision": 0.9210526315789473,
+          "product_recall": 0.9210526315789473,
+          "quantity_accuracy": 0.9473684210526315,
+          "silent_wrong": 0,
+          "product_missing": 3,
+          "product_extra": 3
+        },
+        "f1_winner": "paddleocr-vl"
+      },
+      {
+        "document_id": "0000701386_2026_08_ZA_37_216_01092026060705.png",
+        "proposed_rows": 47,
+        "tesseract": {
+          "product_f1": 0.5192307692307692,
+          "product_precision": 0.47368421052631576,
+          "product_recall": 0.574468085106383,
+          "quantity_accuracy": 0.648936170212766,
+          "silent_wrong": 3,
+          "product_missing": 20,
+          "product_extra": 30
+        },
+        "paddleocr-vl": {
+          "product_f1": 0.02040816326530612,
+          "product_precision": 0.0196078431372549,
+          "product_recall": 0.02127659574468085,
+          "quantity_accuracy": 0.02127659574468085,
+          "silent_wrong": 0,
+          "product_missing": 46,
+          "product_extra": 50
+        },
+        "f1_winner": "tesseract"
+      },
+      {
+        "document_id": "0000701486_2026_08_ZA_37_216_01092026062328.png",
+        "proposed_rows": 51,
+        "tesseract": {
+          "product_f1": 0.8155339805825242,
+          "product_precision": 0.8076923076923077,
+          "product_recall": 0.8235294117647058,
+          "quantity_accuracy": 0.8823529411764706,
+          "silent_wrong": 0,
+          "product_missing": 9,
+          "product_extra": 10
+        },
+        "paddleocr-vl": {
+          "product_f1": 0.019230769230769232,
+          "product_precision": 0.018867924528301886,
+          "product_recall": 0.0196078431372549,
+          "quantity_accuracy": 0.0196078431372549,
+          "silent_wrong": 0,
+          "product_missing": 50,
+          "product_extra": 52
+        },
+        "f1_winner": "tesseract"
+      },
+      {
+        "document_id": "0000701497_2026_08_ZA_37_216_01092026063625.png",
+        "proposed_rows": 46,
+        "tesseract": {
+          "product_f1": 0.04395604395604395,
+          "product_precision": 0.044444444444444446,
+          "product_recall": 0.043478260869565216,
+          "quantity_accuracy": 0.8097826086956522,
+          "silent_wrong": 3,
+          "product_missing": 44,
+          "product_extra": 43
+        },
+        "paddleocr-vl": {
+          "product_f1": null,
+          "product_precision": 0.0,
+          "product_recall": 0.0,
+          "quantity_accuracy": 0.021739130434782608,
+          "silent_wrong": 0,
+          "product_missing": 46,
+          "product_extra": 46
+        },
+        "f1_winner": "tesseract"
+      },
+      {
+        "document_id": "0000701518_2026_08_ZA_37_216_01092026064642.png",
+        "proposed_rows": 57,
+        "tesseract": {
+          "product_f1": 0.743362831858407,
+          "product_precision": 0.75,
+          "product_recall": 0.7368421052631579,
+          "quantity_accuracy": 0.706140350877193,
+          "silent_wrong": 47,
+          "product_missing": 15,
+          "product_extra": 14
+        },
+        "paddleocr-vl": {
+          "product_f1": null,
+          "product_precision": 0.0,
+          "product_recall": 0.0,
+          "quantity_accuracy": 0.0,
+          "silent_wrong": 0,
+          "product_missing": 57,
+          "product_extra": 57
+        },
+        "f1_winner": "tesseract"
+      },
+      {
+        "document_id": "0000701699_2026_08_ZA_37_216_01092026065925.png",
+        "proposed_rows": 36,
+        "tesseract": {
+          "product_f1": 0.8333333333333334,
+          "product_precision": 0.8333333333333334,
+          "product_recall": 0.8333333333333334,
+          "quantity_accuracy": 0.9722222222222222,
+          "silent_wrong": 0,
+          "product_missing": 6,
+          "product_extra": 6
+        },
+        "paddleocr-vl": {
+          "product_f1": null,
+          "product_precision": 0.0,
+          "product_recall": 0.0,
+          "quantity_accuracy": 0.0,
+          "silent_wrong": 0,
+          "product_missing": 36,
+          "product_extra": 36
+        },
+        "f1_winner": "tesseract"
+      },
+      {
+        "document_id": "0000701765_2026_08_ZA_37_216_01092026071349.png",
+        "proposed_rows": 49,
+        "tesseract": {
+          "product_f1": 0.9494949494949495,
+          "product_precision": 0.94,
+          "product_recall": 0.9591836734693877,
+          "quantity_accuracy": 0.9693877551020408,
+          "silent_wrong": 2,
+          "product_missing": 2,
+          "product_extra": 3
+        },
+        "paddleocr-vl": {
+          "product_f1": 0.92,
+          "product_precision": 0.9019607843137255,
+          "product_recall": 0.9387755102040817,
+          "quantity_accuracy": 0.9591836734693877,
+          "silent_wrong": 0,
+          "product_missing": 3,
+          "product_extra": 5
+        },
+        "f1_winner": "tesseract"
+      },
+      {
+        "document_id": "0000702823_2026_08_ZA_22_235_05092026075405.png",
+        "proposed_rows": 10,
+        "tesseract": {
+          "product_f1": 0.631578947368421,
+          "product_precision": 0.6666666666666666,
+          "product_recall": 0.6,
+          "quantity_accuracy": 0.7,
+          "silent_wrong": 0,
+          "product_missing": 4,
+          "product_extra": 3
+        },
+        "paddleocr-vl": {
+          "product_f1": 1.0,
+          "product_precision": 1.0,
+          "product_recall": 1.0,
+          "quantity_accuracy": 1.0,
+          "silent_wrong": 0,
+          "product_missing": 0,
+          "product_extra": 0
+        },
+        "f1_winner": "paddleocr-vl"
+      },
+      {
+        "document_id": "0000702894_2026_08_ZA_22_235_05092026081637.png",
+        "proposed_rows": 10,
+        "tesseract": {
+          "product_f1": 0.6666666666666665,
+          "product_precision": 0.75,
+          "product_recall": 0.6,
+          "quantity_accuracy": 0.7,
+          "silent_wrong": 0,
+          "product_missing": 4,
+          "product_extra": 2
+        },
+        "paddleocr-vl": {
+          "product_f1": 1.0,
+          "product_precision": 1.0,
+          "product_recall": 1.0,
+          "quantity_accuracy": 1.0,
+          "silent_wrong": 0,
+          "product_missing": 0,
+          "product_extra": 0
+        },
+        "f1_winner": "paddleocr-vl"
+      },
+      {
+        "document_id": "0000702898_2026_08_ZA_22_235_05092026081715.png",
+        "proposed_rows": 10,
+        "tesseract": {
+          "product_f1": 0.7368421052631577,
+          "product_precision": 0.7777777777777778,
+          "product_recall": 0.7,
+          "quantity_accuracy": 0.8,
+          "silent_wrong": 0,
+          "product_missing": 3,
+          "product_extra": 2
+        },
+        "paddleocr-vl": {
+          "product_f1": 1.0,
+          "product_precision": 1.0,
+          "product_recall": 1.0,
+          "quantity_accuracy": 1.0,
+          "silent_wrong": 0,
+          "product_missing": 0,
+          "product_extra": 0
+        },
+        "f1_winner": "paddleocr-vl"
+      },
+      {
+        "document_id": "0000705516_2026_08_ZA_22_235_05092026081504.png",
+        "proposed_rows": 10,
+        "tesseract": {
+          "product_f1": 0.631578947368421,
+          "product_precision": 0.6666666666666666,
+          "product_recall": 0.6,
+          "quantity_accuracy": 0.7,
+          "silent_wrong": 0,
+          "product_missing": 4,
+          "product_extra": 3
+        },
+        "paddleocr-vl": {
+          "product_f1": 1.0,
+          "product_precision": 1.0,
+          "product_recall": 1.0,
+          "quantity_accuracy": 1.0,
+          "silent_wrong": 0,
+          "product_missing": 0,
+          "product_extra": 0
+        },
+        "f1_winner": "paddleocr-vl"
+      },
+      {
+        "document_id": "0000708067_2026_08_ZA_24_536_04092026011934.png",
+        "proposed_rows": 16,
+        "tesseract": {
+          "product_f1": 0.5625,
+          "product_precision": 0.5625,
+          "product_recall": 0.5625,
+          "quantity_accuracy": 0.5227272727272727,
+          "silent_wrong": 0,
+          "product_missing": 7,
+          "product_extra": 7
+        },
+        "paddleocr-vl": {
+          "product_f1": 1.0,
+          "product_precision": 1.0,
+          "product_recall": 1.0,
+          "quantity_accuracy": 1.0,
+          "silent_wrong": 0,
+          "product_missing": 0,
+          "product_extra": 0
+        },
+        "f1_winner": "paddleocr-vl"
+      },
+      {
+        "document_id": "0000708111_2026_08_ZA_37_216_01092026061710.png",
+        "proposed_rows": 49,
+        "tesseract": {
+          "product_f1": 0.5102040816326531,
+          "product_precision": 0.5102040816326531,
+          "product_recall": 0.5102040816326531,
+          "quantity_accuracy": 0.413265306122449,
+          "silent_wrong": 23,
+          "product_missing": 24,
+          "product_extra": 24
+        },
+        "paddleocr-vl": {
+          "product_f1": 1.0,
+          "product_precision": 1.0,
+          "product_recall": 1.0,
+          "quantity_accuracy": 1.0,
+          "silent_wrong": 0,
+          "product_missing": 0,
+          "product_extra": 0
+        },
+        "f1_winner": "paddleocr-vl"
+      },
+      {
+        "document_id": "0000709869_2026_08_ZA_06_8121_04092026080619.png",
+        "proposed_rows": 34,
+        "tesseract": {
+          "product_f1": 0.126984126984127,
+          "product_precision": 0.13793103448275862,
+          "product_recall": 0.11764705882352941,
+          "quantity_accuracy": 0.11764705882352941,
+          "silent_wrong": 0,
+          "product_missing": 30,
+          "product_extra": 25
+        },
+        "paddleocr-vl": {
+          "product_f1": 0.1081081081081081,
+          "product_precision": 0.1,
+          "product_recall": 0.11764705882352941,
+          "quantity_accuracy": 0.11764705882352941,
+          "silent_wrong": 0,
+          "product_missing": 30,
+          "product_extra": 36
+        },
+        "f1_winner": "tesseract"
+      },
+      {
+        "document_id": "0000713377_2026_08_ZA_37_216_01092026065126.png",
+        "proposed_rows": 58,
+        "tesseract": {
+          "product_f1": 0.6837606837606838,
+          "product_precision": 0.6779661016949152,
+          "product_recall": 0.6896551724137931,
+          "quantity_accuracy": 0.7327586206896551,
+          "silent_wrong": 2,
+          "product_missing": 18,
+          "product_extra": 19
+        },
+        "paddleocr-vl": {
+          "product_f1": 0.95,
+          "product_precision": 0.9193548387096774,
+          "product_recall": 0.9827586206896551,
+          "quantity_accuracy": 0.9827586206896551,
+          "silent_wrong": 0,
+          "product_missing": 1,
+          "product_extra": 5
+        },
+        "f1_winner": "paddleocr-vl"
+      },
+      {
+        "document_id": "0000714739_2026_08_ZA_22_235_05092026081605.png",
+        "proposed_rows": 10,
+        "tesseract": {
+          "product_f1": 0.8571428571428572,
+          "product_precision": 0.8181818181818182,
+          "product_recall": 0.9,
+          "quantity_accuracy": 1.0,
+          "silent_wrong": 0,
+          "product_missing": 1,
+          "product_extra": 2
+        },
+        "paddleocr-vl": {
+          "product_f1": 1.0,
+          "product_precision": 1.0,
+          "product_recall": 1.0,
+          "quantity_accuracy": 1.0,
+          "silent_wrong": 0,
+          "product_missing": 0,
+          "product_extra": 0
+        },
+        "f1_winner": "paddleocr-vl"
+      },
+      {
+        "document_id": "0000715087_2026_08_ZA_24_293_04092026174549.png",
+        "proposed_rows": 10,
+        "tesseract": {
+          "product_f1": 0.4210526315789474,
+          "product_precision": 0.4444444444444444,
+          "product_recall": 0.4,
+          "quantity_accuracy": 0.25,
+          "silent_wrong": 6,
+          "product_missing": 6,
+          "product_extra": 5
+        },
+        "paddleocr-vl": {
+          "product_f1": 0.6,
+          "product_precision": 0.6,
+          "product_recall": 0.6,
+          "quantity_accuracy": 0.6,
+          "silent_wrong": 0,
+          "product_missing": 4,
+          "product_extra": 4
+        },
+        "f1_winner": "paddleocr-vl"
+      },
+      {
+        "document_id": "0000715088_2026_08_ZA_24_293_04092026181420.png",
+        "proposed_rows": 10,
+        "tesseract": {
+          "product_f1": null,
+          "product_precision": 0.0,
+          "product_recall": 0.0,
+          "quantity_accuracy": 0.0,
+          "silent_wrong": 0,
+          "product_missing": 10,
+          "product_extra": 11
+        },
+        "paddleocr-vl": {
+          "product_f1": 1.0,
+          "product_precision": 1.0,
+          "product_recall": 1.0,
+          "quantity_accuracy": 1.0,
+          "silent_wrong": 0,
+          "product_missing": 0,
+          "product_extra": 0
+        },
+        "f1_winner": "paddleocr-vl"
+      },
+      {
+        "document_id": "0000715736_2026_08_ZA_24_255_07092026172425.jpg",
+        "proposed_rows": 63,
+        "tesseract": {
+          "product_f1": 0.07792207792207793,
+          "product_precision": 0.21428571428571427,
+          "product_recall": 0.047619047619047616,
+          "quantity_accuracy": 0.0,
+          "silent_wrong": 0,
+          "product_missing": 60,
+          "product_extra": 11
+        },
+        "paddleocr-vl": {
+          "product_f1": null,
+          "product_precision": null,
+          "product_recall": 0.0,
+          "quantity_accuracy": 0.0,
+          "silent_wrong": 0,
+          "product_missing": 63,
+          "product_extra": 0
+        },
+        "f1_winner": "tesseract"
+      },
+      {
+        "document_id": "0000715743_2026_08_ZA_33_701_02092026140448.jpg",
+        "proposed_rows": 31,
+        "tesseract": {
+          "product_f1": 0.7500000000000001,
+          "product_precision": 0.7272727272727273,
+          "product_recall": 0.7741935483870968,
+          "quantity_accuracy": 0.7215189873417721,
+          "silent_wrong": 8,
+          "product_missing": 7,
+          "product_extra": 9
+        },
+        "paddleocr-vl": {
+          "product_f1": 0.967741935483871,
+          "product_precision": 0.967741935483871,
+          "product_recall": 0.967741935483871,
+          "quantity_accuracy": 0.9240506329113924,
+          "silent_wrong": 3,
+          "product_missing": 1,
+          "product_extra": 1
+        },
+        "f1_winner": "paddleocr-vl"
+      },
+      {
+        "document_id": "0000715753_2026_08_ZA_20_9232_01092026041414.jpg",
+        "proposed_rows": 58,
+        "tesseract": {
+          "product_f1": null,
+          "product_precision": null,
+          "product_recall": 0.0,
+          "quantity_accuracy": 0.0,
+          "silent_wrong": 0,
+          "product_missing": 58,
+          "product_extra": 0
+        },
+        "paddleocr-vl": {
+          "product_f1": 0.15126050420168066,
+          "product_precision": 0.14754098360655737,
+          "product_recall": 0.15517241379310345,
+          "quantity_accuracy": 0.14482758620689656,
+          "silent_wrong": 3,
+          "product_missing": 49,
+          "product_extra": 52
+        },
+        "f1_winner": "paddleocr-vl"
+      },
+      {
+        "document_id": "0000715762_2026_08_ZA_24_255_07092026102024.jpg",
+        "proposed_rows": 63,
+        "tesseract": {
+          "product_f1": null,
+          "product_precision": 0.0,
+          "product_recall": 0.0,
+          "quantity_accuracy": 0.0,
+          "silent_wrong": 0,
+          "product_missing": 63,
+          "product_extra": 1
+        },
+        "paddleocr-vl": {
+          "product_f1": null,
+          "product_precision": null,
+          "product_recall": 0.0,
+          "quantity_accuracy": 0.0,
+          "silent_wrong": 0,
+          "product_missing": 63,
+          "product_extra": 0
+        },
+        "f1_winner": "tie"
+      },
+      {
+        "document_id": "0000715763_2026_08_ZA_24_469_05092026085654.jpg",
+        "proposed_rows": 63,
+        "tesseract": {
+          "product_f1": null,
+          "product_precision": 0.0,
+          "product_recall": 0.0,
+          "quantity_accuracy": 0.0,
+          "silent_wrong": 0,
+          "product_missing": 63,
+          "product_extra": 11
+        },
+        "paddleocr-vl": {
+          "product_f1": null,
+          "product_precision": 0.0,
+          "product_recall": 0.0,
+          "quantity_accuracy": 0.0,
+          "silent_wrong": 0,
+          "product_missing": 63,
+          "product_extra": 1
+        },
+        "f1_winner": "tie"
+      },
+      {
+        "document_id": "0000715773_2026_08_ZA_24_255_07092026165557.jpg",
+        "proposed_rows": 63,
+        "tesseract": {
+          "product_f1": 0.07792207792207793,
+          "product_precision": 0.21428571428571427,
+          "product_recall": 0.047619047619047616,
+          "quantity_accuracy": null,
+          "silent_wrong": 0,
+          "product_missing": 60,
+          "product_extra": 11
+        },
+        "paddleocr-vl": {
+          "product_f1": null,
+          "product_precision": null,
+          "product_recall": 0.0,
+          "quantity_accuracy": null,
+          "silent_wrong": 0,
+          "product_missing": 63,
+          "product_extra": 0
+        },
+        "f1_winner": "tesseract"
+      },
+      {
+        "document_id": "0000715787_2026_08_ZA_04_747_03092026110903.jpg",
+        "proposed_rows": 17,
+        "tesseract": {
+          "product_f1": null,
+          "product_precision": 0.0,
+          "product_recall": 0.0,
+          "quantity_accuracy": 0.0,
+          "silent_wrong": 0,
+          "product_missing": 17,
+          "product_extra": 11
+        },
+        "paddleocr-vl": {
+          "product_f1": 1.0,
+          "product_precision": 1.0,
+          "product_recall": 1.0,
+          "quantity_accuracy": 0.390625,
+          "silent_wrong": 35,
+          "product_missing": 0,
+          "product_extra": 0
+        },
+        "f1_winner": "paddleocr-vl"
+      },
+      {
+        "document_id": "0000715797_2026_08_ZA_12_8165_02092026163733.jpg",
+        "proposed_rows": 65,
+        "tesseract": {
+          "product_f1": 0.594059405940594,
+          "product_precision": 0.8333333333333334,
+          "product_recall": 0.46153846153846156,
+          "quantity_accuracy": null,
+          "silent_wrong": 0,
+          "product_missing": 35,
+          "product_extra": 6
+        },
+        "paddleocr-vl": {
+          "product_f1": 0.9843749999999999,
+          "product_precision": 1.0,
+          "product_recall": 0.9692307692307692,
+          "quantity_accuracy": null,
+          "silent_wrong": 0,
+          "product_missing": 2,
+          "product_extra": 0
+        },
+        "f1_winner": "paddleocr-vl"
+      },
+      {
+        "document_id": "0000715818_2026_08_ZA_22_234_05092026065131.jpg",
+        "proposed_rows": 14,
+        "tesseract": {
+          "product_f1": 0.32,
+          "product_precision": 0.36363636363636365,
+          "product_recall": 0.2857142857142857,
+          "quantity_accuracy": 0.2857142857142857,
+          "silent_wrong": 4,
+          "product_missing": 10,
+          "product_extra": 7
+        },
+        "paddleocr-vl": {
+          "product_f1": 0.6153846153846153,
+          "product_precision": 0.6666666666666666,
+          "product_recall": 0.5714285714285714,
+          "quantity_accuracy": 0.34285714285714286,
+          "silent_wrong": 8,
+          "product_missing": 6,
+          "product_extra": 4
+        },
+        "f1_winner": "paddleocr-vl"
+      },
+      {
+        "document_id": "0000715821_2026_08_ZA_33_352_07092026100342.jpg",
+        "proposed_rows": 44,
+        "tesseract": {
+          "product_f1": 0.023255813953488372,
+          "product_precision": 0.023809523809523808,
+          "product_recall": 0.022727272727272728,
+          "quantity_accuracy": 0.017543859649122806,
+          "silent_wrong": 1,
+          "product_missing": 43,
+          "product_extra": 41
+        },
+        "paddleocr-vl": {
+          "product_f1": 0.7954545454545455,
+          "product_precision": 0.7954545454545454,
+          "product_recall": 0.7954545454545454,
+          "quantity_accuracy": 0.847953216374269,
+          "silent_wrong": 6,
+          "product_missing": 9,
+          "product_extra": 9
+        },
+        "f1_winner": "paddleocr-vl"
+      },
+      {
+        "document_id": "0000715871_2026_08_ZA_24_8136_04092026052545.jpg",
+        "proposed_rows": 61,
+        "tesseract": {
+          "product_f1": null,
+          "product_precision": 0.0,
+          "product_recall": 0.0,
+          "quantity_accuracy": null,
+          "silent_wrong": 0,
+          "product_missing": 61,
+          "product_extra": 8
+        },
+        "paddleocr-vl": {
+          "product_f1": null,
+          "product_precision": null,
+          "product_recall": 0.0,
+          "quantity_accuracy": null,
+          "silent_wrong": 0,
+          "product_missing": 61,
+          "product_extra": 0
+        },
+        "f1_winner": "tie"
+      },
+      {
+        "document_id": "0000715888_2026_08_ZA_22_236_08092026031608.jpg",
+        "proposed_rows": 29,
+        "tesseract": {
+          "product_f1": null,
+          "product_precision": 0.0,
+          "product_recall": 0.0,
+          "quantity_accuracy": 0.0,
+          "silent_wrong": 0,
+          "product_missing": 29,
+          "product_extra": 15
+        },
+        "paddleocr-vl": {
+          "product_f1": 0.8620689655172413,
+          "product_precision": 0.8620689655172413,
+          "product_recall": 0.8620689655172413,
+          "quantity_accuracy": 0.7068965517241379,
+          "silent_wrong": 9,
+          "product_missing": 4,
+          "product_extra": 4
+        },
+        "f1_winner": "paddleocr-vl"
+      },
+      {
+        "document_id": "0000716678_2026_08_ZA_24_290_03092026110428.jpg",
+        "proposed_rows": 26,
+        "tesseract": {
+          "product_f1": 0.6909090909090909,
+          "product_precision": 0.6551724137931034,
+          "product_recall": 0.7307692307692307,
+          "quantity_accuracy": 0.49038461538461536,
+          "silent_wrong": 25,
+          "product_missing": 7,
+          "product_extra": 10
+        },
+        "paddleocr-vl": {
+          "product_f1": 1.0,
+          "product_precision": 1.0,
+          "product_recall": 1.0,
+          "quantity_accuracy": 1.0,
+          "silent_wrong": 0,
+          "product_missing": 0,
+          "product_extra": 0
+        },
+        "f1_winner": "paddleocr-vl"
+      },
+      {
+        "document_id": "0000716849_2026_08_ZA_24_256_02092026043001.jpg",
+        "proposed_rows": 56,
+        "tesseract": {
+          "product_f1": null,
+          "product_precision": null,
+          "product_recall": 0.0,
+          "quantity_accuracy": null,
+          "silent_wrong": 0,
+          "product_missing": 50,
+          "product_extra": 0
+        },
+        "paddleocr-vl": {
+          "product_f1": 0.0392156862745098,
+          "product_precision": 1.0,
+          "product_recall": 0.02,
+          "quantity_accuracy": null,
+          "silent_wrong": 0,
+          "product_missing": 49,
+          "product_extra": 0
+        },
+        "f1_winner": "paddleocr-vl"
+      },
+      {
+        "document_id": "0000717464_2026_08_ZA_01_224_03092026021751.jpg",
+        "proposed_rows": 11,
+        "tesseract": {
+          "product_f1": 0.5714285714285713,
+          "product_precision": 0.6,
+          "product_recall": 0.5454545454545454,
+          "quantity_accuracy": 0.7,
+          "silent_wrong": 0,
+          "product_missing": 5,
+          "product_extra": 4
+        },
+        "paddleocr-vl": {
+          "product_f1": 0.7272727272727273,
+          "product_precision": 0.7272727272727273,
+          "product_recall": 0.7272727272727273,
+          "quantity_accuracy": 0.3,
+          "silent_wrong": 1,
+          "product_missing": 3,
+          "product_extra": 3
+        },
+        "f1_winner": "paddleocr-vl"
+      },
+      {
+        "document_id": "0000717569_2026_08_ZA_35_8162_03092026110952.jpg",
+        "proposed_rows": 63,
+        "tesseract": {
+          "product_f1": null,
+          "product_precision": 0.0,
+          "product_recall": 0.0,
+          "quantity_accuracy": null,
+          "silent_wrong": 0,
+          "product_missing": 63,
+          "product_extra": 6
+        },
+        "paddleocr-vl": {
+          "product_f1": 0.8771929824561403,
+          "product_precision": 0.9803921568627451,
+          "product_recall": 0.7936507936507936,
+          "quantity_accuracy": null,
+          "silent_wrong": 0,
+          "product_missing": 13,
+          "product_extra": 1
+        },
+        "f1_winner": "paddleocr-vl"
+      },
+      {
+        "document_id": "0000717878_2026_08_ZA_24_469_06092026021850.jpg",
+        "proposed_rows": 20,
+        "tesseract": {
+          "product_f1": null,
+          "product_precision": 0.0,
+          "product_recall": 0.0,
+          "quantity_accuracy": 0.0,
+          "silent_wrong": 0,
+          "product_missing": 20,
+          "product_extra": 12
+        },
+        "paddleocr-vl": {
+          "product_f1": 0.05000000000000001,
+          "product_precision": 0.05,
+          "product_recall": 0.05,
+          "quantity_accuracy": 0.0,
+          "silent_wrong": 5,
+          "product_missing": 19,
+          "product_extra": 19
+        },
+        "f1_winner": "paddleocr-vl"
+      },
+      {
+        "document_id": "0000718438_2026_08_ZA_01_223_04092026163207.jpg",
+        "proposed_rows": 42,
+        "tesseract": {
+          "product_f1": null,
+          "product_precision": 0.0,
+          "product_recall": 0.0,
+          "quantity_accuracy": 0.0,
+          "silent_wrong": 0,
+          "product_missing": 42,
+          "product_extra": 4
+        },
+        "paddleocr-vl": {
+          "product_f1": 0.07228915662650603,
+          "product_precision": 0.07317073170731707,
+          "product_recall": 0.07142857142857142,
+          "quantity_accuracy": 0.041666666666666664,
+          "silent_wrong": 5,
+          "product_missing": 39,
+          "product_extra": 38
+        },
+        "f1_winner": "paddleocr-vl"
+      },
+      {
+        "document_id": "0000718784_2026_08_ZA_24_293_04092026071150.jpg",
+        "proposed_rows": 10,
+        "tesseract": {
+          "product_f1": 0.32,
+          "product_precision": 0.26666666666666666,
+          "product_recall": 0.4,
+          "quantity_accuracy": 0.3,
+          "silent_wrong": 8,
+          "product_missing": 6,
+          "product_extra": 11
+        },
+        "paddleocr-vl": {
+          "product_f1": 1.0,
+          "product_precision": 1.0,
+          "product_recall": 1.0,
+          "quantity_accuracy": 0.975,
+          "silent_wrong": 1,
+          "product_missing": 0,
+          "product_extra": 0
+        },
+        "f1_winner": "paddleocr-vl"
+      },
+      {
+        "document_id": "0000718796_2026_08_ZA_24_262_03092026135208.jpg",
+        "proposed_rows": 71,
+        "tesseract": {
+          "product_f1": null,
+          "product_precision": null,
+          "product_recall": 0.0,
+          "quantity_accuracy": null,
+          "silent_wrong": 0,
+          "product_missing": 71,
+          "product_extra": 0
+        },
+        "paddleocr-vl": {
+          "product_f1": null,
+          "product_precision": null,
+          "product_recall": 0.0,
+          "quantity_accuracy": null,
+          "silent_wrong": 0,
+          "product_missing": 71,
+          "product_extra": 0
+        },
+        "f1_winner": "tie"
+      },
+      {
+        "document_id": "0000718799_2026_08_ZA_12_390_04092026165053.jpg",
+        "proposed_rows": 63,
+        "tesseract": {
+          "product_f1": null,
+          "product_precision": 0.0,
+          "product_recall": 0.0,
+          "quantity_accuracy": 0.0,
+          "silent_wrong": 0,
+          "product_missing": 63,
+          "product_extra": 11
+        },
+        "paddleocr-vl": {
+          "product_f1": 0.8965517241379309,
+          "product_precision": 0.9811320754716981,
+          "product_recall": 0.8253968253968254,
+          "quantity_accuracy": 0.8253968253968254,
+          "silent_wrong": 2,
+          "product_missing": 11,
+          "product_extra": 1
+        },
+        "f1_winner": "paddleocr-vl"
+      },
+      {
+        "document_id": "0000718881_2026_08_ZA_24_293_04092026074302.jpg",
+        "proposed_rows": 10,
+        "tesseract": {
+          "product_f1": 0.4,
+          "product_precision": 0.3333333333333333,
+          "product_recall": 0.5,
+          "quantity_accuracy": 0.05,
+          "silent_wrong": 9,
+          "product_missing": 5,
+          "product_extra": 10
+        },
+        "paddleocr-vl": {
+          "product_f1": 0.6,
+          "product_precision": 0.6,
+          "product_recall": 0.6,
+          "quantity_accuracy": 0.5,
+          "silent_wrong": 2,
+          "product_missing": 4,
+          "product_extra": 4
+        },
+        "f1_winner": "paddleocr-vl"
+      },
+      {
+        "document_id": "0000718903_2026_08_ZA_24_293_04092026060012.jpg",
+        "proposed_rows": 10,
+        "tesseract": {
+          "product_f1": 0.5263157894736842,
+          "product_precision": 0.5555555555555556,
+          "product_recall": 0.5,
+          "quantity_accuracy": 0.6,
+          "silent_wrong": 0,
+          "product_missing": 5,
+          "product_extra": 4
+        },
+        "paddleocr-vl": {
+          "product_f1": 0.6,
+          "product_precision": 0.6,
+          "product_recall": 0.6,
+          "quantity_accuracy": 0.6,
+          "silent_wrong": 0,
+          "product_missing": 4,
+          "product_extra": 4
+        },
+        "f1_winner": "paddleocr-vl"
+      },
+      {
+        "document_id": "0000718910_2026_08_ZA_11_214_04092026134311.jpg",
+        "proposed_rows": 45,
+        "tesseract": {
+          "product_f1": null,
+          "product_precision": 0.0,
+          "product_recall": 0.0,
+          "quantity_accuracy": 0.0,
+          "silent_wrong": 0,
+          "product_missing": 45,
+          "product_extra": 9
+        },
+        "paddleocr-vl": {
+          "product_f1": 0.651685393258427,
+          "product_precision": 0.6590909090909091,
+          "product_recall": 0.6444444444444445,
+          "quantity_accuracy": 0.34444444444444444,
+          "silent_wrong": 27,
+          "product_missing": 16,
+          "product_extra": 15
+        },
+        "f1_winner": "paddleocr-vl"
+      },
+      {
+        "document_id": "0000718937_2026_08_ZA_04_530_08092026033019.jpg",
+        "proposed_rows": 63,
+        "tesseract": {
+          "product_f1": null,
+          "product_precision": 0.0,
+          "product_recall": 0.0,
+          "quantity_accuracy": 0.0,
+          "silent_wrong": 0,
+          "product_missing": 63,
+          "product_extra": 7
+        },
+        "paddleocr-vl": {
+          "product_f1": null,
+          "product_precision": 0.0,
+          "product_recall": 0.0,
+          "quantity_accuracy": 0.0,
+          "silent_wrong": 0,
+          "product_missing": 63,
+          "product_extra": 37
+        },
+        "f1_winner": "tie"
+      }
+    ]
+  },
+  "unlabeled_cache": {
+    "tesseract": {
+      "caches_present": 128,
+      "caches_missing": 0,
+      "empty_text": 0,
+      "median_text_chars": 1781.5,
+      "median_ms": 6880.627450002066,
+      "mean_ms": 7872.503597655509,
+      "p95_ms": 17120.885900003486,
+      "total_s": 1007.6804604999052,
+      "images_with_timing": 128
+    },
+    "paddleocr-vl": {
+      "caches_present": 128,
+      "caches_missing": 0,
+      "empty_text": 0,
+      "median_text_chars": 6362.0,
+      "median_ms": 157249.39849999966,
+      "mean_ms": 288663.75587968755,
+      "p95_ms": 424268.5219999985,
+      "total_s": 36948.9607526,
+      "images_with_timing": 128
+    }
+  },
+  "all_cache": {
+    "tesseract": {
+      "caches_present": 181,
+      "caches_missing": 0,
+      "empty_text": 0,
+      "median_text_chars": 1945.0,
+      "median_ms": 6405.361700002686,
+      "mean_ms": 7633.357851380544,
+      "p95_ms": 17120.885900003486,
+      "total_s": 1381.6377710998784,
+      "images_with_timing": 181
+    },
+    "paddleocr-vl": {
+      "caches_present": 181,
+      "caches_missing": 0,
+      "empty_text": 0,
+      "median_text_chars": 6332.0,
+      "median_ms": 156155.1421999975,
+      "mean_ms": 271804.7795895027,
+      "p95_ms": 606230.704799993,
+      "total_s": 49196.66510569999,
+      "images_with_timing": 181
+    }
+  }
+}

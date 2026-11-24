@@ -1,0 +1,369 @@
+{
+  "source_file": "0000702626_2026_08_ZL_22_520_03092026001223.jpg",
+  "source_format": "jpg",
+  "stockist_name": "JEEVA MEDICAL STORES-KAVERIPATTINAM.",
+  "stockist_address": null,
+  "company_name": "HIMALAYA ZEAL [162]",
+  "period_from": "2026-08-31",
+  "period_to": "2026-08-31",
+  "report_title": "STOCK & SALES STATEMENT",
+  "line_items": [
+    {
+      "product_code": "01201",
+      "product_name": "ABANA TAB*",
+      "packing": "60S",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "01241",
+      "product_name": "CLARINA ACNE CREAM",
+      "packing": "30gm",
+      "opening_qty": 26.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 1.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 3132.0,
+      "extra": {
+        "expected_total": 26.0,
+        "expected_closing": 25.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": "01239",
+      "product_name": "CONFIDO TAB*",
+      "packing": "60 s",
+      "opening_qty": 2.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 1.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 2.0,
+        "expected_closing": 1.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": "01688",
+      "product_name": "DIABECON DS*",
+      "packing": "60 S",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "01230",
+      "product_name": "DIABECON TAB*",
+      "packing": "60 s",
+      "opening_qty": 5.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 5.0,
+      "closing_value": 596.0,
+      "extra": {
+        "expected_total": 5.0,
+        "expected_closing": 5.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "01233",
+      "product_name": "LIV-52 DS TAB*",
+      "packing": "60 s",
+      "opening_qty": 2.0,
+      "opening_value": null,
+      "receipts_qty": 5.0,
+      "receipts_value": null,
+      "sales_qty": 7.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 7.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "01214",
+      "product_name": "LIV-52 SYR",
+      "packing": "100ML",
+      "opening_qty": 8.0,
+      "opening_value": null,
+      "receipts_qty": 70.0,
+      "receipts_value": null,
+      "sales_qty": 37.0,
+      "sales_value": 0.0,
+      "closing_qty": 33.0,
+      "closing_value": 3276.0,
+      "extra": {
+        "expected_total": 78.0,
+        "expected_closing": 41.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": "01215",
+      "product_name": "LIV-52 SYR",
+      "packing": "200ML",
+      "opening_qty": 32.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 20.0,
+      "sales_value": 0.0,
+      "closing_qty": 14.0,
+      "closing_value": 2323.0,
+      "extra": {
+        "expected_total": 32.0,
+        "expected_closing": 12.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": "01216",
+      "product_name": "LIV-52 TAB",
+      "packing": "100S",
+      "opening_qty": 17.0,
+      "opening_value": null,
+      "receipts_qty": 100.0,
+      "receipts_value": null,
+      "sales_qty": 38.0,
+      "sales_value": 0.0,
+      "closing_qty": 98.0,
+      "closing_value": 15291.0,
+      "extra": {
+        "expected_total": 117.0,
+        "expected_closing": 79.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": "16657",
+      "product_name": "LIV-52(SF) SYP",
+      "packing": "100ML",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "01237",
+      "product_name": "OPHTHACARE EYE DR",
+      "packing": "10ml",
+      "opening_qty": 29.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 12.0,
+      "sales_value": 0.0,
+      "closing_qty": 17.0,
+      "closing_value": 1242.0,
+      "extra": {
+        "expected_total": 29.0,
+        "expected_closing": 17.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "09450",
+      "product_name": "PILEX FORTE OIN",
+      "packing": "30GM",
+      "opening_qty": 53.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 34.0,
+      "sales_value": 0.0,
+      "closing_qty": 21.0,
+      "closing_value": 2234.0,
+      "extra": {
+        "expected_total": 53.0,
+        "expected_closing": 19.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": "01221",
+      "product_name": "PILEX TAB",
+      "packing": "60 s",
+      "opening_qty": 49.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 13.0,
+      "sales_value": 0.0,
+      "closing_qty": 32.0,
+      "closing_value": 5310.0,
+      "extra": {
+        "expected_total": 49.0,
+        "expected_closing": 36.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": "01242",
+      "product_name": "PURIM TAB",
+      "packing": "60 s",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "11176",
+      "product_name": "QUISTA ACTIVE MMF",
+      "packing": "200GM",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "16095",
+      "product_name": "QUISTA DN VANILLA",
+      "packing": "200GM",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "01229",
+      "product_name": "TENTEX FORTE TAB",
+      "packing": "10 S",
+      "opening_qty": 8.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 2.0,
+      "sales_value": 0.0,
+      "closing_qty": 5.0,
+      "closing_value": 560.0,
+      "extra": {
+        "expected_total": 8.0,
+        "expected_closing": 6.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": "01230",
+      "product_name": "DIABECON TAB*",
+      "packing": "60 s",
+      "opening_qty": 5.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expiry_date": "08/04/2027",
+        "batch_no": "372400426",
+        "batch_expiry": "01/04/2027",
+        "expected_total": 5.0,
+        "expected_closing": 5.0,
+        "stock_identity_ok": false
+      }
+    }
+  ],
+  "totals": {
+    "sales_value": null,
+    "closing_value": 33964.0,
+    "extra": {
+      "extraction_method": "gemini_extraction_fallback",
+      "line_sales_value_sum": 0.0,
+      "line_closing_value_sum": 33964.0,
+      "sales_qty": 165.0,
+      "closing_qty": 225.0,
+      "stock_identity_kind": "opening_receipts_sales_closing",
+      "stock_identity_formula": "closing=opening+receipts-sales",
+      "stock_identity_fail_count": 9,
+      "stock_validation": {
+        "opening_plus_purchase": 411.0,
+        "expected_total": 411.0,
+        "calculated_closing": 246.0,
+        "extracted_closing": 225.0,
+        "is_valid": false
+      },
+      "extraction_quality": {
+        "quality": "poor",
+        "score": 75,
+        "reasons": [
+          "stock_identity_failure"
+        ],
+        "threshold": 75.0
+      },
+      "gemini_fallback": "validation_failed"
+    }
+  }
+}

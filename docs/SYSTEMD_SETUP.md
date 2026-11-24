@@ -109,7 +109,7 @@ See [OPERATIONS_RUNBOOK.md](./OPERATIONS_RUNBOOK.md) for filtering and retention
 
 ## tmux (legacy)
 
-`start-tmux.sh` remains for manual split-extract deployment. **Do not run tmux and systemd on the same port.**
+`deploy/start-tmux.sh` remains for manual split-extract deployment. **Do not run tmux and systemd on the same port.**
 
 Before enabling systemd:
 

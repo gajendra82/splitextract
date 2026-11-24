@@ -1,0 +1,39 @@
+{
+  "document_id": "0000700317_2026_08_ZL_18_374_02092026171443.pdf",
+  "source_file": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700317_2026_08_ZL_18_374_02092026171443.pdf",
+  "pages": [
+    {
+      "page": 1,
+      "engine": "tesseract",
+      "status": "error",
+      "text": "",
+      "normalized_text": "",
+      "numeric_tokens": [],
+      "word_count": 0,
+      "confidence": null,
+      "words": [],
+      "latency_ms": 1316.1676999998235,
+      "image_meta": {
+        "original_width": 595.0,
+        "original_height": 842.0,
+        "processed_width": 1190,
+        "processed_height": 1684,
+        "orientation": null,
+        "preprocessing": [
+          "pymupdf_render_zoom_2.0"
+        ],
+        "page_index": 0,
+        "page_count": 1
+      },
+      "native_meta": {
+        "native_text": false,
+        "ocr_required": true,
+        "embedded_text_chars": 0,
+        "reason": "embedded_text_below_threshold",
+        "page_count": 1
+      },
+      "source": "fresh_tesseract_run",
+      "error": null
+    }
+  ]
+}

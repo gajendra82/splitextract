@@ -204,7 +204,8 @@ async def _track_extract_inflight(request: Request, call_next):
 # ============================================================================
 
 
-# Load .env file (only works locally, ignored on Hugging Face)
+# Load .env file (only works locally, ignored on Hugging Face).
+# An already-set process variable wins. This call does not override it.
 load_dotenv()
 
 
@@ -626,6 +627,29 @@ def _tesseract_slot_probe() -> Dict[str, int]:
         }
 
 
+def warmup_ocr() -> None:
+    """Pre-load classic PaddleOCR weights (not PaddleOCR-VL).
+
+    Uses torch-before-paddle import order to avoid WinError 127 on shm.dll.
+    """
+    import logging
+
+    log = logging.getLogger(__name__)
+    try:
+        from services.ocr.paddle_engine import (
+            create_classic_paddleocr,
+            preload_torch_before_paddle,
+        )
+
+        torch_ver = preload_torch_before_paddle()
+        log.info("Classic PaddleOCR warmup starting (torch=%s)", torch_ver)
+        _ocr = create_classic_paddleocr()
+        del _ocr
+        log.info("PaddleOCR model loaded and ready")
+    except Exception as exc:
+        log.error("PaddleOCR warmup failed: %s", exc)
+
+
 @app.on_event("startup")
 async def _reliability_startup():
     install_structured_logging()
@@ -633,6 +657,10 @@ async def _reliability_startup():
     register_tesseract_slot_probe(_tesseract_slot_probe)
     register_request_progress_sync(_sync_request_progress_from_reliability)
     start_watchdog()
+    try:
+        warmup_ocr()
+    except Exception:
+        pass
 
 
 def create_ocr_stats() -> Dict[str, float]:
@@ -27007,6 +27035,130 @@ def _invoice_item_count_for_dedupe(_invoice: dict) -> int:
         return 0
 
 
+_NOT_JSON = object()
+_MAX_DYNAMIC_JSON_DEPTH = 32
+_PREDEFINED_LINE_EXTRA_KEYS = frozenset({
+    "mrp",
+    "tax_rate",
+    "hospital_code",
+    "hospital_name",
+    "manufacturer",
+    "expiry",
+    "invoice_date",
+    "opening_value",
+    "purchase_value",
+    "issue_value",
+    "purchase_scheme",
+    "sales_scheme",
+    "opening_qty",
+    "receipts_qty",
+    "receipts_value",
+    "sales_qty",
+    "closing_qty",
+    "closing_value",
+    "reorder_qty",
+    "others_qty",
+    "purchase_qty",
+    "sales_return_qty",
+    "others_in_qty",
+    "subtotal_qty",
+    "purchase_return_qty",
+    "others_out_qty",
+    "free_qty",
+    "purchase_free_qty",
+    "purchase_return_free_qty",
+    "sale_free_qty",
+    "sales_return_free_qty",
+    "replacement_qty",
+    "source_product_name",
+    "source_packing",
+    "dump_qty",
+    "dump_stock",
+    "near_expiry_qty",
+    "near_expiry",
+    "shortage_qty",
+    "total_stock_qty",
+    "total_qty",
+    "msr_price",
+    "expected_total",
+    "expected_closing",
+    "stock_identity_ok",
+})
+_STATEMENT_META_KEYS = frozenset({
+    "extraction_method",
+    "hospital_count",
+    "invoice_count",
+    "hospital_sales_summary",
+    "stock_statement",
+    "stock_statement_line_count",
+    "stock_opening_qty",
+    "opening_qty",
+    "stock_purchases_qty",
+    "receipts_qty",
+    "stock_sales_qty",
+    "sales_qty",
+    "stock_closing_qty",
+    "closing_qty",
+})
+
+
+def _copy_json_value(value: Any, depth: int = 0) -> Any:
+    """Copy JSON data. Return ``_NOT_JSON`` for values JSONB cannot store."""
+    if depth > _MAX_DYNAMIC_JSON_DEPTH:
+        return _NOT_JSON
+    if value is None or isinstance(value, (str, bool)):
+        return value
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        if value != value or value in {float("inf"), float("-inf")}:
+            return _NOT_JSON
+        return value
+    if isinstance(value, list):
+        copied = []
+        for item in value:
+            child = _copy_json_value(item, depth + 1)
+            if child is _NOT_JSON:
+                return _NOT_JSON
+            copied.append(child)
+        return copied
+    if isinstance(value, dict):
+        copied = {}
+        for key, item in value.items():
+            if not isinstance(key, str):
+                return _NOT_JSON
+            child = _copy_json_value(item, depth + 1)
+            if child is _NOT_JSON:
+                return _NOT_JSON
+            copied[key] = child
+        return copied
+    return _NOT_JSON
+
+
+def _preserve_unknown_extra(extra: Dict[str, Any], additional: Dict[str, Any]) -> None:
+    """Keep LLM and parser keys that are not part of the predefined line schema."""
+    for key, value in extra.items():
+        if not isinstance(key, str) or key in _PREDEFINED_LINE_EXTRA_KEYS or key in additional:
+            continue
+        copied = _copy_json_value(value)
+        if copied is _NOT_JSON:
+            continue
+        additional[key] = copied
+
+
+def _statement_dynamic(totals_extra: Dict[str, Any]) -> Dict[str, Any]:
+    """JSON-safe statement fields that are not already named in the metadata."""
+    dynamic: Dict[str, Any] = {}
+    for key, value in totals_extra.items():
+        if not isinstance(key, str) or key in _STATEMENT_META_KEYS:
+            continue
+        copied = _copy_json_value(value)
+        if copied is _NOT_JSON:
+            continue
+        dynamic[key] = copied
+    return dynamic
+
+
 def _sales_line_to_invoice_item(line: Dict[str, Any]) -> Dict[str, Any]:
     """Map a sales-statement line_item into the Gemini/enforce_schema item shape."""
     extra = line.get("extra") if isinstance(line.get("extra"), dict) else {}
@@ -27190,6 +27342,7 @@ def _sales_line_to_invoice_item(line: Dict[str, Any]) -> Dict[str, Any]:
         additional["layout"] = "zl_opening_primary_closing"
     if paired_value:
         additional["layout"] = "paired_stock_value"
+    _preserve_unknown_extra(extra, additional)
     return {
         "product_description": product,
         "quantity": "" if qty in (None, "") else str(qty),
@@ -27323,6 +27476,58 @@ def _sales_statement_to_flat_invoices(
     }]
 
 
+def _fully_dynamic_api_response(
+    sales_result: Dict[str, Any],
+    *,
+    batch_id: Optional[str],
+    split_id: Optional[str],
+    file_name: Optional[str],
+    start_time: datetime,
+) -> Optional[Dict[str, Any]]:
+    """Return a document that has no predefined fields without inventing rows."""
+    totals = sales_result.get("totals") if isinstance(sales_result.get("totals"), dict) else {}
+    extra = totals.get("extra") if isinstance(totals.get("extra"), dict) else {}
+    if extra.get("schema_class") != "fully_dynamic":
+        return None
+    if any(isinstance(item, dict) for item in (sales_result.get("line_items") or [])):
+        return None
+    document = extra.get("dynamic_document")
+    verification = extra.get("verification") if isinstance(extra.get("verification"), dict) else {}
+    verification = {
+        "status": "UNRESOLVED",
+        "verified": False,
+        "reason": verification.get("reason") or "no_predefined_fields",
+    }
+    evidence = extra.get("source_grounding")
+    elapsed = round((datetime.now() - start_time).total_seconds(), 2)
+    dynamic_meta = document if isinstance(document, dict) else {"document": document}
+    return {
+        "success": True,
+        "batch_id": batch_id,
+        "split_id": split_id,
+        "file_name": file_name,
+        "schema_class": "fully_dynamic",
+        "dynamic": document,
+        "verification": verification,
+        "source_evidence": evidence,
+        "Invoices": [],
+        "invoices": [],
+        "summary": {
+            "total_invoices": 0,
+            "total_pages": 0,
+            "total_time_seconds": elapsed,
+            "source": "dynamic_document",
+            "document_type": "fully_dynamic",
+            "sales_statement_metadata": {
+                "schema_class": "fully_dynamic",
+                "dynamic": dynamic_meta,
+                "verification": verification,
+                "source_evidence": evidence,
+            },
+        },
+    }
+
+
 def build_split_extract_response_from_sales_statement(
     *,
     sales_result: Dict[str, Any],
@@ -27342,6 +27547,15 @@ def build_split_extract_response_from_sales_statement(
     so Laravel POD screens can consume GRN/POD Excel without a second schema.
     """
     started = start_time or datetime.now()
+    dynamic_response = _fully_dynamic_api_response(
+        sales_result,
+        batch_id=batch_id,
+        split_id=split_id,
+        file_name=file_name,
+        start_time=started,
+    )
+    if dynamic_response is not None:
+        return dynamic_response
     flat_invoices = _sales_statement_to_flat_invoices(sales_result)
     if not flat_invoices:
         raise HTTPException(
@@ -27527,6 +27741,9 @@ def build_split_extract_response_from_sales_statement(
                 ),
                 "stock_closing_qty": _meta_stock_qty(
                     "stock_closing_qty", "closing_qty"
+                ),
+                "dynamic": _statement_dynamic(
+                    totals_extra if isinstance(totals_extra, dict) else {}
                 ),
             },
         },
@@ -29941,9 +30158,14 @@ async def root():
 @app.get("/health")
 async def health():
     runtime = get_runtime_health_snapshot()
+    from services.ocr.orchestrator import ocr_readiness
+
+    ocr = ocr_readiness()
 
     return {
         "status": "healthy",
+        "ocr_ready": bool(ocr.get("usable")),
+        "ocr": ocr,
         "pdfplumber": PDFPLUMBER_AVAILABLE,
         "tesseract": TESSERACT_AVAILABLE and os.path.exists(TESSERACT_CMD) if TESSERACT_CMD else False,
         "current_model": get_current_model_config()["name"],
@@ -29953,15 +30175,22 @@ async def health():
 
 @app.get("/live")
 async def live():
-    """Non-blocking liveness probe — process is running."""
+    """Non-blocking liveness probe — process is running. Does not check OCR."""
     return {"alive": True}
 
 
 @app.get("/ready")
 async def ready():
-    """Non-blocking readiness probe (lightweight resource snapshot)."""
+    """Readiness includes whether the configured OCR engine can be used."""
     runtime = get_runtime_health_snapshot()
-    return get_ready_snapshot(runtime)
+    from services.ocr.orchestrator import ocr_readiness
+
+    body = get_ready_snapshot(runtime)
+    ocr = ocr_readiness()
+    body["ocr_ready"] = bool(ocr.get("usable"))
+    body["ocr"] = ocr
+    body["ready"] = bool(body.get("ready")) and bool(ocr.get("usable"))
+    return body
 
 
 @app.get("/extract-sales-statement/status/{request_id}")

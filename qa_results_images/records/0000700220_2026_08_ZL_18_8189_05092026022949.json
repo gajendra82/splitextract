@@ -1,0 +1,288 @@
+{
+  "file": "0000700220_2026_08_ZL_18_8189_05092026022949.jpeg",
+  "path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700220_2026_08_ZL_18_8189_05092026022949.jpeg",
+  "format": "Product wise stock statement",
+  "api_method": "gemini_extraction_fallback",
+  "status": "FAIL",
+  "expected_rows": 31,
+  "extracted_rows": 31,
+  "matched_rows": 31,
+  "missing_rows": [],
+  "extra_rows": [],
+  "duplicates": [],
+  "mismatches": [
+    {
+      "product": "TENTEX FORTE TAB",
+      "field": "sales_value",
+      "expected": 2514.24,
+      "actual": 0,
+      "kind": "wrong_sales_value"
+    },
+    {
+      "product": "‘SHALLAKI TABLET",
+      "field": "sales_value",
+      "expected": 907.24,
+      "actual": 0,
+      "kind": "wrong_sales_value"
+    },
+    {
+      "product": "QUISTA DN 200(MILK.MAS)*",
+      "field": "sales_value",
+      "expected": 1846.82,
+      "actual": 0,
+      "kind": "wrong_sales_value"
+    },
+    {
+      "product": "PILEX FORTE OINTMENT",
+      "field": "sales_value",
+      "expected": 7828.41,
+      "actual": 0,
+      "kind": "wrong_sales_value"
+    },
+    {
+      "product": "LIV-52 HB TAB",
+      "field": "sales_value",
+      "expected": 41544.32,
+      "actual": 0,
+      "kind": "wrong_sales_value"
+    },
+    {
+      "product": "HERBOLAX CAP",
+      "field": "sales_value",
+      "expected": 256.04,
+      "actual": 0,
+      "kind": "wrong_sales_value"
+    },
+    {
+      "product": "DIABECON TAB",
+      "field": "sales_value",
+      "expected": 237.48,
+      "actual": 0,
+      "kind": "wrong_sales_value"
+    },
+    {
+      "product": "CLARINA ANTI ACNE CREAM =",
+      "field": "sales_value",
+      "expected": 1433.05,
+      "actual": 0,
+      "kind": "wrong_sales_value"
+    },
+    {
+      "product": "QUISTA ACTIVE 2006M™",
+      "field": "sales_value",
+      "expected": 628.43,
+      "actual": 0,
+      "kind": "wrong_sales_value"
+    },
+    {
+      "product": "PILEX TABLETS",
+      "field": "sales_value",
+      "expected": 23449.96,
+      "actual": 0,
+      "kind": "wrong_sales_value"
+    },
+    {
+      "product": "ORO-T ORAL RINSE",
+      "field": "sales_value",
+      "expected": 130.36,
+      "actual": 0,
+      "kind": "wrong_sales_value"
+    },
+    {
+      "product": "LIV-52 SYP",
+      "field": "sales_value",
+      "expected": 23963.9,
+      "actual": 0,
+      "kind": "wrong_sales_value"
+    },
+    {
+      "product": "LIV-52 SYP",
+      "field": "sales_value",
+      "expected": 5451.86,
+      "actual": 0,
+      "kind": "wrong_sales_value"
+    },
+    {
+      "product": "LIV-52 DS(SF)SYP",
+      "field": "sales_value",
+      "expected": 2851.02,
+      "actual": 0,
+      "kind": "wrong_sales_value"
+    },
+    {
+      "product": "KAPIKACHHU CAPS",
+      "field": "opening_qty",
+      "expected": 4,
+      "actual": 41,
+      "kind": "wrong_opening_qty"
+    },
+    {
+      "product": "HADJOD TAB",
+      "field": "sales_value",
+      "expected": 1234.99,
+      "actual": 0,
+      "kind": "wrong_sales_value"
+    },
+    {
+      "product": "DIAREX SYRUP",
+      "field": "sales_value",
+      "expected": 2549.99,
+      "actual": 0,
+      "kind": "wrong_sales_value"
+    },
+    {
+      "product": "CLARINA ANTI ACNE FIWGEL",
+      "field": "sales_value",
+      "expected": 2157.23,
+      "actual": 0,
+      "kind": "wrong_sales_value"
+    },
+    {
+      "product": "PURIM TAB",
+      "field": "sales_value",
+      "expected": 4456.77,
+      "actual": 0,
+      "kind": "wrong_sales_value"
+    },
+    {
+      "product": "PILEX FORTE TAB",
+      "field": "sales_value",
+      "expected": 1655.88,
+      "actual": 0,
+      "kind": "wrong_sales_value"
+    },
+    {
+      "product": "OPTHACARE DROP",
+      "field": "sales_value",
+      "expected": 4637.37,
+      "actual": 0,
+      "kind": "wrong_sales_value"
+    },
+    {
+      "product": "LIV-52 TAB",
+      "field": "sales_value",
+      "expected": 4532.05,
+      "actual": 0,
+      "kind": "wrong_sales_value"
+    },
+    {
+      "product": "LIV-52 SYP(SUG.FREE) 200M",
+      "field": "sales_value",
+      "expected": 4102.95,
+      "actual": 0,
+      "kind": "wrong_sales_value"
+    },
+    {
+      "product": "DIABECON DS TAB",
+      "field": "sales_value",
+      "expected": 3014.11,
+      "actual": 0,
+      "kind": "wrong_sales_value"
+    },
+    {
+      "product": "HIMCOLIN GEL 306M",
+      "field": "sales_value",
+      "expected": 2645.92,
+      "actual": 0,
+      "kind": "wrong_sales_value"
+    },
+    {
+      "product": "HAIR ZONE SOLUTION",
+      "field": "sales_value",
+      "expected": 3326.36,
+      "actual": 0,
+      "kind": "wrong_sales_value"
+    },
+    {
+      "product": "CONFIDO TAB",
+      "field": "sales_qty",
+      "expected": 2,
+      "actual": 21,
+      "kind": "wrong_sales_qty"
+    },
+    {
+      "product": "CONFIDO TAB",
+      "field": "sales_value",
+      "expected": 3856.84,
+      "actual": 0,
+      "kind": "wrong_sales_value"
+    },
+    {
+      "product": "31 rows",
+      "field": "closing_value",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 31,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    }
+  ],
+  "ocr_review": [
+    {
+      "product": "PURIM TAB",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 11,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "PILEX FORTE TAB",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "OPTHACARE DROP",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "LIV-52 TAB",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "LIV-52 SYP(SUG.FREE) 200M",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "DIABECON DS TAB",
+      "field": "opening_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "HIMCOLIN GEL 306M",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 11,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "HAIR ZONE SOLUTION",
+      "field": "closing_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    }
+  ],
+  "accounting": [],
+  "confidence": "medium",
+  "notes": [
+    "OCR used tesseract psm 6."
+  ],
+  "result_key": "0000700220_2026_08_ZL_18_8189_05092026022949",
+  "unavailable_fields": {
+    "closing_value": 31
+  },
+  "formula_checked": "simple"
+}

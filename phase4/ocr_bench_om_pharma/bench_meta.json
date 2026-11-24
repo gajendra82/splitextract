@@ -1,0 +1,48 @@
+{
+  "tesseract_pure": {
+    "ok": true,
+    "seconds": 1.08,
+    "text_len": 917
+  },
+  "paddle_classic": {
+    "ok": true,
+    "seconds": 4.92,
+    "text_len": 806,
+    "n_lines": 102
+  },
+  "paddle_vl": {
+    "ok": true,
+    "seconds": 97.52,
+    "text_len": 1957,
+    "engine": "paddleocr-vl-1.6",
+    "status": "success",
+    "error": null
+  },
+  "gemini": {
+    "ok": true,
+    "seconds": 7.24,
+    "text_len": 789,
+    "engine": "gemini",
+    "status": "success",
+    "error": null
+  },
+  "recovery_chain": {
+    "ok": true,
+    "seconds": 48.7,
+    "text_len": 789,
+    "accepted": "gemini",
+    "log": [
+      {
+        "engine": "tesseract",
+        "ok": false,
+        "error": "timeout:45.0"
+      },
+      {
+        "engine": "gemini",
+        "ok": true,
+        "text_length": 789,
+        "error": null
+      }
+    ]
+  }
+}

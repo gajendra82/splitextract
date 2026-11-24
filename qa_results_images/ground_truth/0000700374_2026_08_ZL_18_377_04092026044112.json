@@ -1,0 +1,101 @@
+{
+  "source_file": "0000700374_2026_08_ZL_18_377_04092026044112.png",
+  "format": "Product wise stock statement",
+  "confidence": "medium",
+  "source": "ocr",
+  "formula": "simple",
+  "present_fields": [
+    "product_name",
+    "opening_qty",
+    "receipts_qty",
+    "sales_qty",
+    "sales_value",
+    "closing_qty",
+    "closing_value"
+  ],
+  "absent_fields": [
+    "product_code",
+    "opening_value",
+    "receipts_value"
+  ],
+  "columns": [
+    "product_name",
+    "opening_qty",
+    "receipts_qty",
+    "sales_qty",
+    "closing_qty",
+    "sales_value",
+    "closing_value"
+  ],
+  "line_items": [
+    {
+      "product_code": null,
+      "product_name": "CLARINA ANTI ACNE FACE WA",
+      "packing": "60ML",
+      "opening_qty": 25.0,
+      "opening_value": null,
+      "receipts_qty": null,
+      "receipts_value": null,
+      "sales_qty": null,
+      "sales_value": null,
+      "closing_qty": 25.0,
+      "closing_value": 2828.0
+    },
+    {
+      "product_code": null,
+      "product_name": "CLARINA ANTI ACNE KIT [CM AKIT CLARINA ANTI-ACNE CREAM FLORASANTE CAP GASEX SYP /200ML GASEX SYP[GINGER-LEMON] GASEX SYRUP (ELAICHI FLA) — GASEX TAB",
+      "packing": "100'S",
+      "opening_qty": 35.0,
+      "opening_value": null,
+      "receipts_qty": null,
+      "receipts_value": null,
+      "sales_qty": 5.0,
+      "sales_value": 667.75,
+      "closing_qty": 30.0,
+      "closing_value": 4008.9
+    },
+    {
+      "product_code": null,
+      "product_name": "GUDUCHI CAP HAIR ZONE LOTION HERBOLAX CAPS. HIMCOCID SUSP [BANANA FL] 200ML HIMCOCID SUSP [MINT FLAV] HIMCOCID SUSP [SNF FLAV] /200ML HIMCOCID-SF SYP (MINT) HIMCOCID-SF SYP [BANANA] HIMCOCID-SF SYP [SAUNF] HIOWNA CHOCOLATE FLAVOUR HIOWNA CHOCOLATE FLAVOUR HIOWNA JR CHOCOLATE FLAV HIOWNA JR STRABERRY FLAV KOFLET LOZENGES 175+25 JAR KOFLET SF LINCTUS 100ML KOFLET SYP KOFLET-EX LINCTUS 100ML LIV 52 SYP 100ML",
+      "packing": null,
+      "opening_qty": 64.0,
+      "opening_value": null,
+      "receipts_qty": null,
+      "receipts_value": null,
+      "sales_qty": 27.0,
+      "sales_value": 2983.5,
+      "closing_qty": 37.0,
+      "closing_value": 4146.22
+    },
+    {
+      "product_code": null,
+      "product_name": "Liv 52 SYP",
+      "packing": "200ML",
+      "opening_qty": 33.0,
+      "opening_value": null,
+      "receipts_qty": null,
+      "receipts_value": null,
+      "sales_qty": 33.0,
+      "sales_value": 6040.75,
+      "closing_qty": null,
+      "closing_value": null
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV 52 TAB",
+      "packing": "100'S",
+      "opening_qty": 100.0,
+      "opening_value": null,
+      "receipts_qty": null,
+      "receipts_value": null,
+      "sales_qty": 2.0,
+      "sales_value": 352.0,
+      "closing_qty": 98.0,
+      "closing_value": 17258.78
+    }
+  ],
+  "notes": [
+    "OCR used tesseract psm 6."
+  ],
+  "partial": false
+}

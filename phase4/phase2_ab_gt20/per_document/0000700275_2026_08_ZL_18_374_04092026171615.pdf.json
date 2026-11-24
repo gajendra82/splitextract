@@ -1,0 +1,3442 @@
+{
+  "document_id": "0000700275_2026_08_ZL_18_374_04092026171615.pdf",
+  "source_path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700275_2026_08_ZL_18_374_04092026171615.pdf",
+  "verified_fields": 21,
+  "off": {
+    "error": null,
+    "telemetry": {
+      "gemini_calls": 0,
+      "prompt_tokens": 0,
+      "output_tokens": 0,
+      "latency_ms": 0,
+      "estimated_cost_usd": 0.0,
+      "pricing_note": "estimate using flash-lite ballpark $0.1/1M in + $0.4/1M out",
+      "calls": [],
+      "wall_latency_ms": 13,
+      "phase2_enabled": false,
+      "ocr_mode": "stored_vl_ocr",
+      "phase2_status": null,
+      "phase2_attempts": null,
+      "phase2_failure_type": null,
+      "extraction_method": "vl_html_table_parse"
+    },
+    "score": {
+      "metrics": {
+        "verified_fields": 21,
+        "correct_fields": 13,
+        "field_accuracy": 0.6190476190476191,
+        "numeric_accuracy": 0.5294117647058824,
+        "quantity_accuracy": 0.5294117647058824,
+        "price_accuracy": null,
+        "date_accuracy": null,
+        "batch_accuracy": null,
+        "header_accuracy": 1.0,
+        "table_column_accuracy": 0.5294117647058824,
+        "text_accuracy": 1.0,
+        "precision": 0.6190476190476191,
+        "recall": 0.6190476190476191,
+        "f1": 0.6190476190476191,
+        "silent_wrong_rate": 0.38095238095238093,
+        "silent_wrong_count": 8,
+        "silent_wrong_denominator_verified_fields": 21,
+        "accepted_field_silent_wrong_rate": 0.38095238095238093,
+        "accepted_field_silent_wrong_count": 8,
+        "accepted_field_denominator": 21,
+        "explicit_unresolved_rate": 0.0,
+        "missing_value_rate": 0.0,
+        "critical_error_rate": 0.38095238095238093,
+        "by_type_prf": {
+          "numeric": {
+            "precision": 0.5294117647058824,
+            "recall": 0.5294117647058824,
+            "f1": 0.5294117647058824,
+            "n": 17
+          },
+          "text": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 4
+          },
+          "table": {
+            "precision": 0.5294117647058824,
+            "recall": 0.5294117647058824,
+            "f1": 0.5294117647058824,
+            "n": 17
+          }
+        },
+        "error_type_counts": {
+          "WRONG_VALUE": 8
+        }
+      },
+      "document_status": "PARTIALLY_CORRECT",
+      "quantity_accuracy": 0.5294117647058824,
+      "product_identity": {
+        "gt_products": 6,
+        "found_products": 6,
+        "recall": 1.0
+      },
+      "missing_values": 0,
+      "verified_fields": 21,
+      "correct_fields": 13
+    },
+    "matches": [
+      {
+        "field_id": "vendor",
+        "field_type": "text",
+        "printed_header": "vendor",
+        "product_key": null,
+        "expected_raw": "KALINGA PHARMACEUTICALS",
+        "expected_normalized": null,
+        "predicted_raw": "KALINGA PHARMACEUTICALS",
+        "match_mode": "extraction_text",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": false,
+        "priority": "medium"
+      },
+      {
+        "field_id": "h_open",
+        "field_type": "header",
+        "printed_header": "Opening",
+        "product_key": null,
+        "expected_raw": "Opening",
+        "expected_normalized": null,
+        "predicted_raw": "Opening",
+        "match_mode": "ocr_header_presence",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": false,
+        "priority": "high"
+      },
+      {
+        "field_id": "h_issues",
+        "field_type": "header",
+        "printed_header": "Issues",
+        "product_key": null,
+        "expected_raw": "Issues",
+        "expected_normalized": null,
+        "predicted_raw": "Issues",
+        "match_mode": "ocr_header_presence",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": false,
+        "priority": "high"
+      },
+      {
+        "field_id": "h_close",
+        "field_type": "header",
+        "printed_header": "Closing",
+        "product_key": null,
+        "expected_raw": "Closing",
+        "expected_normalized": null,
+        "predicted_raw": "Closing",
+        "match_mode": "ocr_header_presence",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": false,
+        "priority": "high"
+      },
+      {
+        "field_id": "abana_op",
+        "field_type": "quantity",
+        "printed_header": "Opening",
+        "product_key": "ABANA TAB",
+        "expected_raw": "68",
+        "expected_normalized": 68.0,
+        "predicted_raw": 68,
+        "match_mode": "extraction:opening_qty",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "abana_iss",
+        "field_type": "quantity",
+        "printed_header": "Issues",
+        "product_key": "ABANA TAB",
+        "expected_raw": "10",
+        "expected_normalized": 10.0,
+        "predicted_raw": 0.0,
+        "match_mode": "extraction:sales_qty",
+        "correct": false,
+        "error_type": "WRONG_VALUE",
+        "silent_wrong": true,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "abana_cl",
+        "field_type": "quantity",
+        "printed_header": "Closing",
+        "product_key": "ABANA TAB",
+        "expected_raw": "58",
+        "expected_normalized": 58.0,
+        "predicted_raw": 58,
+        "match_mode": "extraction:closing_qty",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "diab_op",
+        "field_type": "quantity",
+        "printed_header": "Opening",
+        "product_key": "DIABECON TAB",
+        "expected_raw": "76",
+        "expected_normalized": 76.0,
+        "predicted_raw": 0.0,
+        "match_mode": "extraction:opening_qty",
+        "correct": false,
+        "error_type": "WRONG_VALUE",
+        "silent_wrong": true,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "diab_iss",
+        "field_type": "quantity",
+        "printed_header": "Issues",
+        "product_key": "DIABECON TAB",
+        "expected_raw": "1",
+        "expected_normalized": 1.0,
+        "predicted_raw": 0.0,
+        "match_mode": "extraction:sales_qty",
+        "correct": false,
+        "error_type": "WRONG_VALUE",
+        "silent_wrong": true,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "diab_cl",
+        "field_type": "quantity",
+        "printed_header": "Closing",
+        "product_key": "DIABECON TAB",
+        "expected_raw": "75",
+        "expected_normalized": 75.0,
+        "predicted_raw": 0.0,
+        "match_mode": "extraction:closing_qty",
+        "correct": false,
+        "error_type": "WRONG_VALUE",
+        "silent_wrong": true,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "him_op",
+        "field_type": "quantity",
+        "printed_header": "Opening",
+        "product_key": "HIMCOLIN GEL",
+        "expected_raw": "45",
+        "expected_normalized": 45.0,
+        "predicted_raw": 45,
+        "match_mode": "extraction:opening_qty",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "him_iss",
+        "field_type": "quantity",
+        "printed_header": "Issues",
+        "product_key": "HIMCOLIN GEL",
+        "expected_raw": "2",
+        "expected_normalized": 2.0,
+        "predicted_raw": 0.0,
+        "match_mode": "extraction:sales_qty",
+        "correct": false,
+        "error_type": "WRONG_VALUE",
+        "silent_wrong": true,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "him_cl",
+        "field_type": "quantity",
+        "printed_header": "Closing",
+        "product_key": "HIMCOLIN GEL",
+        "expected_raw": "43",
+        "expected_normalized": 43.0,
+        "predicted_raw": 43,
+        "match_mode": "extraction:closing_qty",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "liv100_op",
+        "field_type": "quantity",
+        "printed_header": "Opening",
+        "product_key": "LIV-52 SYRUP",
+        "expected_raw": "72",
+        "expected_normalized": 72.0,
+        "predicted_raw": 72,
+        "match_mode": "extraction:opening_qty",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "liv100_iss",
+        "field_type": "quantity",
+        "printed_header": "Issues",
+        "product_key": "LIV-52 SYRUP",
+        "expected_raw": "35",
+        "expected_normalized": 35.0,
+        "predicted_raw": 0.0,
+        "match_mode": "extraction:sales_qty",
+        "correct": false,
+        "error_type": "WRONG_VALUE",
+        "silent_wrong": true,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "liv100_cl",
+        "field_type": "quantity",
+        "printed_header": "Closing",
+        "product_key": "LIV-52 SYRUP",
+        "expected_raw": "37",
+        "expected_normalized": 37.0,
+        "predicted_raw": 162,
+        "match_mode": "extraction:closing_qty",
+        "correct": false,
+        "error_type": "WRONG_VALUE",
+        "silent_wrong": true,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "talekt_op",
+        "field_type": "quantity",
+        "printed_header": "Opening",
+        "product_key": "TALEKT TABLETS",
+        "expected_raw": "47",
+        "expected_normalized": 47.0,
+        "predicted_raw": 47,
+        "match_mode": "extraction:opening_qty",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "talekt_iss",
+        "field_type": "quantity",
+        "printed_header": "Issues",
+        "product_key": "TALEKT TABLETS",
+        "expected_raw": "3",
+        "expected_normalized": 3.0,
+        "predicted_raw": 0.0,
+        "match_mode": "extraction:sales_qty",
+        "correct": false,
+        "error_type": "WRONG_VALUE",
+        "silent_wrong": true,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "talekt_cl",
+        "field_type": "quantity",
+        "printed_header": "Closing",
+        "product_key": "TALEKT TABLETS",
+        "expected_raw": "44",
+        "expected_normalized": 44.0,
+        "predicted_raw": 44,
+        "match_mode": "extraction:closing_qty",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "tent_op",
+        "field_type": "quantity",
+        "printed_header": "Opening",
+        "product_key": "TENTEX FORTE TAB",
+        "expected_raw": "152",
+        "expected_normalized": 152.0,
+        "predicted_raw": 152,
+        "match_mode": "extraction:opening_qty",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "tent_cl",
+        "field_type": "quantity",
+        "printed_header": "Closing",
+        "product_key": "TENTEX FORTE TAB",
+        "expected_raw": "152",
+        "expected_normalized": 152.0,
+        "predicted_raw": 152,
+        "match_mode": "extraction:closing_qty",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      }
+    ],
+    "stock_equation": {
+      "accepted": false,
+      "fail_count": 15,
+      "is_valid": false,
+      "healthy_rows": 32,
+      "failing_rows": 15,
+      "reasons": [
+        "stock_identity_failure"
+      ]
+    },
+    "result": {
+      "stockist_name": "KALINGA PHARMACEUTICALS, BERHAMPUR",
+      "company_name": null,
+      "line_item_count": 47,
+      "line_items": [
+        {
+          "product_name": "AACTARIL SOAP",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "ABANA TAB",
+          "opening_qty": 68,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 58,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "CHIROPEX CREAM",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "CLARINA ANTI ACNE",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "CLARINA ANTI ACNE FACE WA",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "CONFIDO TAB",
+          "opening_qty": 76,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 75,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "DIABECON TAB",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "DIAREX SYRUP",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "DIAREX TAB",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "DIBECON-DS TABS",
+          "opening_qty": 2,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "HADJOD TABS",
+          "opening_qty": 41,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 41,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "HAIR ZONE SOLUTION",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "HERBOLEX CAP",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "HERBOLEX TABLETS",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "HIMCOLIN GEL",
+          "opening_qty": 45,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 43,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "HIOWNA VANILLA FLAVOUR",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "HIOWNA CHOCOLATE",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "HIOWNA CHOCOLATE",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "HIOWNA VANILLA FLV (ADULT)",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "IMMUSANTE TABLETS",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "KOFLET JAR (LOZ)",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "KOFLET LOZENGES",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "LIV-52 HB CAPSULES",
+          "opening_qty": 162,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "LIV-52 SYRUP",
+          "opening_qty": 72,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 162,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "LIV-52 SYRUP",
+          "opening_qty": 9,
+          "receipts_qty": 700,
+          "sales_qty": 0.0,
+          "closing_qty": 37,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "LIV-52 TAB",
+          "opening_qty": 306,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 142,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "LIV-52 SYRUP(S F )",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 97,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "OPTHACARE EYE DROP",
+          "opening_qty": 168,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "ORO-T ORAL RINSE",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 11,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "OXITARD CAPS",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "PAIN RELIEF OIL",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "PILEX FORTE OINTMENT",
+          "opening_qty": 62,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 29,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "PILEX FORTE TABLETS",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "PILEX TAB",
+          "opening_qty": 314,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 49,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "PURIM TAB",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "QUISTA ACTIVE (CF)",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "QUISTA ACTIVE (MMF)",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "QUISTA DN (MILK MASALA)",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "QUISTA DN (VANILA)",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "QUISTA DN 400G (VANILLA )",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "RENALKA SYRUP",
+          "opening_qty": 21,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 11,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "RENELKA SYRUP",
+          "opening_qty": 33,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 33,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "TALEKT SYRUP",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "TALEKT TABLETS",
+          "opening_qty": 47,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 44,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "TENTEX FORTE TAB",
+          "opening_qty": 152,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 152,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "VEGECORT CREAM",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "*Liquidation is based on last three months sales",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        }
+      ],
+      "extraction_method": "vl_html_table_parse",
+      "di_ocr_override": true,
+      "phase1_validation": {
+        "accepted": false,
+        "status": "unresolved",
+        "reasons": [
+          "stock_identity_failure"
+        ],
+        "checks": {
+          "schema": true,
+          "quality": false,
+          "stock_identity": false,
+          "rows": true,
+          "duplicates": true,
+          "cell_validation": true,
+          "column_mapping": true,
+          "ocr_verified": true
+        },
+        "quality_score": 75,
+        "parser": "vl_html_table_parse",
+        "failure_type": "STOCK_IDENTITY_FAILURE",
+        "business_validation": {
+          "status": "inconsistent",
+          "reason": "stock_identity_failure"
+        },
+        "source_agreement": null,
+        "source_evidence": true,
+        "cell_validation": {
+          "issues": [
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "ABANA TAB",
+              "raw_value": 68,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "ABANA TAB",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "ABANA TAB",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "ABANA TAB",
+              "raw_value": 58,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "CONFIDO TAB",
+              "raw_value": 76,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "CONFIDO TAB",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "CONFIDO TAB",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "CONFIDO TAB",
+              "raw_value": 75,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "DIBECON-DS TABS",
+              "raw_value": 2,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "DIBECON-DS TABS",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "DIBECON-DS TABS",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "DIBECON-DS TABS",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "HIMCOLIN GEL",
+              "raw_value": 45,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "HIMCOLIN GEL",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "HIMCOLIN GEL",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "HIMCOLIN GEL",
+              "raw_value": 43,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "LIV-52 HB CAPSULES",
+              "raw_value": 162,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "LIV-52 HB CAPSULES",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "LIV-52 HB CAPSULES",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "LIV-52 HB CAPSULES",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "LIV-52 SYRUP",
+              "raw_value": 72,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "LIV-52 SYRUP",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "LIV-52 SYRUP",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "LIV-52 SYRUP",
+              "raw_value": 162,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "LIV-52 SYRUP",
+              "raw_value": 9,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "LIV-52 SYRUP",
+              "raw_value": 700,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "LIV-52 SYRUP",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "LIV-52 SYRUP",
+              "raw_value": 37,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "LIV-52 TAB",
+              "raw_value": 306,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "LIV-52 TAB",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "LIV-52 TAB",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "LIV-52 TAB",
+              "raw_value": 142,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "LIV-52 SYRUP(S F )",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "LIV-52 SYRUP(S F )",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "LIV-52 SYRUP(S F )",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "LIV-52 SYRUP(S F )",
+              "raw_value": 97,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "OPTHACARE EYE DROP",
+              "raw_value": 168,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "OPTHACARE EYE DROP",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "OPTHACARE EYE DROP",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "OPTHACARE EYE DROP",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "ORO-T ORAL RINSE",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "ORO-T ORAL RINSE",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "ORO-T ORAL RINSE",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "ORO-T ORAL RINSE",
+              "raw_value": 11,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "PILEX FORTE OINTMENT",
+              "raw_value": 62,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "PILEX FORTE OINTMENT",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "PILEX FORTE OINTMENT",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "PILEX FORTE OINTMENT",
+              "raw_value": 29,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "PILEX TAB",
+              "raw_value": 314,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "PILEX TAB",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "PILEX TAB",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "PILEX TAB",
+              "raw_value": 49,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "RENALKA SYRUP",
+              "raw_value": 21,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "RENALKA SYRUP",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "RENALKA SYRUP",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "RENALKA SYRUP",
+              "raw_value": 11,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "TALEKT TABLETS",
+              "raw_value": 47,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "TALEKT TABLETS",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "TALEKT TABLETS",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "TALEKT TABLETS",
+              "raw_value": 44,
+              "evidence_ref": null
+            }
+          ],
+          "column_report": {
+            "assignments": [],
+            "unresolved_headers": [],
+            "ambiguous_fields": [],
+            "issues": [],
+            "layout_id": "vl_html_table_parse",
+            "mapping_confidence": 1.0,
+            "has_column_confusion": false
+          },
+          "accepted_critical_fields": 128,
+          "unresolved_critical_fields": 60,
+          "has_blocking_issues": true
+        }
+      },
+      "phase2": null
+    }
+  },
+  "on": {
+    "error": null,
+    "telemetry": {
+      "gemini_calls": 2,
+      "prompt_tokens": 6498,
+      "output_tokens": 2282,
+      "latency_ms": 6543,
+      "estimated_cost_usd": 0.001563,
+      "pricing_note": "estimate using flash-lite ballpark $0.1/1M in + $0.4/1M out",
+      "calls": [
+        {
+          "model": "gemini-2.5-flash-lite",
+          "timeout": 60,
+          "latency_ms": 3495,
+          "prompt_tokens": 3249,
+          "output_tokens": 1141,
+          "error": null,
+          "response_mime_type": "application/json",
+          "schema_title": "SalesExtractionOutput",
+          "part_kinds": [
+            "text",
+            "text"
+          ]
+        },
+        {
+          "model": "gemini-2.5-flash-lite",
+          "timeout": 60,
+          "latency_ms": 3048,
+          "prompt_tokens": 3249,
+          "output_tokens": 1141,
+          "error": null,
+          "response_mime_type": "application/json",
+          "schema_title": "SalesExtractionOutput",
+          "part_kinds": [
+            "text",
+            "text"
+          ]
+        }
+      ],
+      "wall_latency_ms": 32544,
+      "phase2_enabled": true,
+      "ocr_mode": "stored_vl_ocr",
+      "phase2_status": "unresolved",
+      "phase2_attempts": 2,
+      "phase2_failure_type": "STOCK_IDENTITY_FAILURE",
+      "extraction_method": "vl_html_table_parse"
+    },
+    "score": {
+      "metrics": {
+        "verified_fields": 21,
+        "correct_fields": 13,
+        "field_accuracy": 0.6190476190476191,
+        "numeric_accuracy": 0.5294117647058824,
+        "quantity_accuracy": 0.5294117647058824,
+        "price_accuracy": null,
+        "date_accuracy": null,
+        "batch_accuracy": null,
+        "header_accuracy": 1.0,
+        "table_column_accuracy": 0.5294117647058824,
+        "text_accuracy": 1.0,
+        "precision": 0.6190476190476191,
+        "recall": 0.6190476190476191,
+        "f1": 0.6190476190476191,
+        "silent_wrong_rate": 0.38095238095238093,
+        "silent_wrong_count": 8,
+        "silent_wrong_denominator_verified_fields": 21,
+        "accepted_field_silent_wrong_rate": 0.38095238095238093,
+        "accepted_field_silent_wrong_count": 8,
+        "accepted_field_denominator": 21,
+        "explicit_unresolved_rate": 0.0,
+        "missing_value_rate": 0.0,
+        "critical_error_rate": 0.38095238095238093,
+        "by_type_prf": {
+          "numeric": {
+            "precision": 0.5294117647058824,
+            "recall": 0.5294117647058824,
+            "f1": 0.5294117647058824,
+            "n": 17
+          },
+          "text": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 4
+          },
+          "table": {
+            "precision": 0.5294117647058824,
+            "recall": 0.5294117647058824,
+            "f1": 0.5294117647058824,
+            "n": 17
+          }
+        },
+        "error_type_counts": {
+          "WRONG_VALUE": 8
+        }
+      },
+      "document_status": "PARTIALLY_CORRECT",
+      "quantity_accuracy": 0.5294117647058824,
+      "product_identity": {
+        "gt_products": 6,
+        "found_products": 6,
+        "recall": 1.0
+      },
+      "missing_values": 0,
+      "verified_fields": 21,
+      "correct_fields": 13
+    },
+    "matches": [
+      {
+        "field_id": "vendor",
+        "field_type": "text",
+        "printed_header": "vendor",
+        "product_key": null,
+        "expected_raw": "KALINGA PHARMACEUTICALS",
+        "expected_normalized": null,
+        "predicted_raw": "KALINGA PHARMACEUTICALS",
+        "match_mode": "extraction_text",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": false,
+        "priority": "medium"
+      },
+      {
+        "field_id": "h_open",
+        "field_type": "header",
+        "printed_header": "Opening",
+        "product_key": null,
+        "expected_raw": "Opening",
+        "expected_normalized": null,
+        "predicted_raw": "Opening",
+        "match_mode": "ocr_header_presence",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": false,
+        "priority": "high"
+      },
+      {
+        "field_id": "h_issues",
+        "field_type": "header",
+        "printed_header": "Issues",
+        "product_key": null,
+        "expected_raw": "Issues",
+        "expected_normalized": null,
+        "predicted_raw": "Issues",
+        "match_mode": "ocr_header_presence",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": false,
+        "priority": "high"
+      },
+      {
+        "field_id": "h_close",
+        "field_type": "header",
+        "printed_header": "Closing",
+        "product_key": null,
+        "expected_raw": "Closing",
+        "expected_normalized": null,
+        "predicted_raw": "Closing",
+        "match_mode": "ocr_header_presence",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": false,
+        "priority": "high"
+      },
+      {
+        "field_id": "abana_op",
+        "field_type": "quantity",
+        "printed_header": "Opening",
+        "product_key": "ABANA TAB",
+        "expected_raw": "68",
+        "expected_normalized": 68.0,
+        "predicted_raw": 68,
+        "match_mode": "extraction:opening_qty",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "abana_iss",
+        "field_type": "quantity",
+        "printed_header": "Issues",
+        "product_key": "ABANA TAB",
+        "expected_raw": "10",
+        "expected_normalized": 10.0,
+        "predicted_raw": 0.0,
+        "match_mode": "extraction:sales_qty",
+        "correct": false,
+        "error_type": "WRONG_VALUE",
+        "silent_wrong": true,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "abana_cl",
+        "field_type": "quantity",
+        "printed_header": "Closing",
+        "product_key": "ABANA TAB",
+        "expected_raw": "58",
+        "expected_normalized": 58.0,
+        "predicted_raw": 58,
+        "match_mode": "extraction:closing_qty",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "diab_op",
+        "field_type": "quantity",
+        "printed_header": "Opening",
+        "product_key": "DIABECON TAB",
+        "expected_raw": "76",
+        "expected_normalized": 76.0,
+        "predicted_raw": 0.0,
+        "match_mode": "extraction:opening_qty",
+        "correct": false,
+        "error_type": "WRONG_VALUE",
+        "silent_wrong": true,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "diab_iss",
+        "field_type": "quantity",
+        "printed_header": "Issues",
+        "product_key": "DIABECON TAB",
+        "expected_raw": "1",
+        "expected_normalized": 1.0,
+        "predicted_raw": 0.0,
+        "match_mode": "extraction:sales_qty",
+        "correct": false,
+        "error_type": "WRONG_VALUE",
+        "silent_wrong": true,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "diab_cl",
+        "field_type": "quantity",
+        "printed_header": "Closing",
+        "product_key": "DIABECON TAB",
+        "expected_raw": "75",
+        "expected_normalized": 75.0,
+        "predicted_raw": 0.0,
+        "match_mode": "extraction:closing_qty",
+        "correct": false,
+        "error_type": "WRONG_VALUE",
+        "silent_wrong": true,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "him_op",
+        "field_type": "quantity",
+        "printed_header": "Opening",
+        "product_key": "HIMCOLIN GEL",
+        "expected_raw": "45",
+        "expected_normalized": 45.0,
+        "predicted_raw": 45,
+        "match_mode": "extraction:opening_qty",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "him_iss",
+        "field_type": "quantity",
+        "printed_header": "Issues",
+        "product_key": "HIMCOLIN GEL",
+        "expected_raw": "2",
+        "expected_normalized": 2.0,
+        "predicted_raw": 0.0,
+        "match_mode": "extraction:sales_qty",
+        "correct": false,
+        "error_type": "WRONG_VALUE",
+        "silent_wrong": true,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "him_cl",
+        "field_type": "quantity",
+        "printed_header": "Closing",
+        "product_key": "HIMCOLIN GEL",
+        "expected_raw": "43",
+        "expected_normalized": 43.0,
+        "predicted_raw": 43,
+        "match_mode": "extraction:closing_qty",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "liv100_op",
+        "field_type": "quantity",
+        "printed_header": "Opening",
+        "product_key": "LIV-52 SYRUP",
+        "expected_raw": "72",
+        "expected_normalized": 72.0,
+        "predicted_raw": 72,
+        "match_mode": "extraction:opening_qty",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "liv100_iss",
+        "field_type": "quantity",
+        "printed_header": "Issues",
+        "product_key": "LIV-52 SYRUP",
+        "expected_raw": "35",
+        "expected_normalized": 35.0,
+        "predicted_raw": 0.0,
+        "match_mode": "extraction:sales_qty",
+        "correct": false,
+        "error_type": "WRONG_VALUE",
+        "silent_wrong": true,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "liv100_cl",
+        "field_type": "quantity",
+        "printed_header": "Closing",
+        "product_key": "LIV-52 SYRUP",
+        "expected_raw": "37",
+        "expected_normalized": 37.0,
+        "predicted_raw": 162,
+        "match_mode": "extraction:closing_qty",
+        "correct": false,
+        "error_type": "WRONG_VALUE",
+        "silent_wrong": true,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "talekt_op",
+        "field_type": "quantity",
+        "printed_header": "Opening",
+        "product_key": "TALEKT TABLETS",
+        "expected_raw": "47",
+        "expected_normalized": 47.0,
+        "predicted_raw": 47,
+        "match_mode": "extraction:opening_qty",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "talekt_iss",
+        "field_type": "quantity",
+        "printed_header": "Issues",
+        "product_key": "TALEKT TABLETS",
+        "expected_raw": "3",
+        "expected_normalized": 3.0,
+        "predicted_raw": 0.0,
+        "match_mode": "extraction:sales_qty",
+        "correct": false,
+        "error_type": "WRONG_VALUE",
+        "silent_wrong": true,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "talekt_cl",
+        "field_type": "quantity",
+        "printed_header": "Closing",
+        "product_key": "TALEKT TABLETS",
+        "expected_raw": "44",
+        "expected_normalized": 44.0,
+        "predicted_raw": 44,
+        "match_mode": "extraction:closing_qty",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "tent_op",
+        "field_type": "quantity",
+        "printed_header": "Opening",
+        "product_key": "TENTEX FORTE TAB",
+        "expected_raw": "152",
+        "expected_normalized": 152.0,
+        "predicted_raw": 152,
+        "match_mode": "extraction:opening_qty",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "tent_cl",
+        "field_type": "quantity",
+        "printed_header": "Closing",
+        "product_key": "TENTEX FORTE TAB",
+        "expected_raw": "152",
+        "expected_normalized": 152.0,
+        "predicted_raw": 152,
+        "match_mode": "extraction:closing_qty",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      }
+    ],
+    "stock_equation": {
+      "accepted": false,
+      "fail_count": 15,
+      "is_valid": false,
+      "healthy_rows": 32,
+      "failing_rows": 15,
+      "reasons": [
+        "stock_identity_failure"
+      ]
+    },
+    "result": {
+      "stockist_name": "KALINGA PHARMACEUTICALS, BERHAMPUR",
+      "company_name": null,
+      "line_item_count": 47,
+      "line_items": [
+        {
+          "product_name": "AACTARIL SOAP",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "ABANA TAB",
+          "opening_qty": 68,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 58,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "CHIROPEX CREAM",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "CLARINA ANTI ACNE",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "CLARINA ANTI ACNE FACE WA",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "CONFIDO TAB",
+          "opening_qty": 76,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 75,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "DIABECON TAB",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "DIAREX SYRUP",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "DIAREX TAB",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "DIBECON-DS TABS",
+          "opening_qty": 2,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "HADJOD TABS",
+          "opening_qty": 41,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 41,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "HAIR ZONE SOLUTION",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "HERBOLEX CAP",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "HERBOLEX TABLETS",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "HIMCOLIN GEL",
+          "opening_qty": 45,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 43,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "HIOWNA VANILLA FLAVOUR",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "HIOWNA CHOCOLATE",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "HIOWNA CHOCOLATE",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "HIOWNA VANILLA FLV (ADULT)",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "IMMUSANTE TABLETS",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "KOFLET JAR (LOZ)",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "KOFLET LOZENGES",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "LIV-52 HB CAPSULES",
+          "opening_qty": 162,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "LIV-52 SYRUP",
+          "opening_qty": 72,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 162,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "LIV-52 SYRUP",
+          "opening_qty": 9,
+          "receipts_qty": 700,
+          "sales_qty": 0.0,
+          "closing_qty": 37,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "LIV-52 TAB",
+          "opening_qty": 306,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 142,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "LIV-52 SYRUP(S F )",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 97,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "OPTHACARE EYE DROP",
+          "opening_qty": 168,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "ORO-T ORAL RINSE",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 11,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "OXITARD CAPS",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "PAIN RELIEF OIL",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "PILEX FORTE OINTMENT",
+          "opening_qty": 62,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 29,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "PILEX FORTE TABLETS",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "PILEX TAB",
+          "opening_qty": 314,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 49,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "PURIM TAB",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "QUISTA ACTIVE (CF)",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "QUISTA ACTIVE (MMF)",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "QUISTA DN (MILK MASALA)",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "QUISTA DN (VANILA)",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "QUISTA DN 400G (VANILLA )",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "RENALKA SYRUP",
+          "opening_qty": 21,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 11,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "RENELKA SYRUP",
+          "opening_qty": 33,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 33,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "TALEKT SYRUP",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "TALEKT TABLETS",
+          "opening_qty": 47,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 44,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "TENTEX FORTE TAB",
+          "opening_qty": 152,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 152,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "VEGECORT CREAM",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "*Liquidation is based on last three months sales",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        }
+      ],
+      "extraction_method": "vl_html_table_parse",
+      "di_ocr_override": true,
+      "phase1_validation": {
+        "accepted": false,
+        "status": "unresolved",
+        "reasons": [
+          "stock_identity_failure"
+        ],
+        "checks": {
+          "schema": true,
+          "quality": false,
+          "stock_identity": false,
+          "rows": true,
+          "duplicates": true,
+          "cell_validation": true,
+          "column_mapping": true,
+          "ocr_verified": true
+        },
+        "quality_score": 75,
+        "parser": "vl_html_table_parse",
+        "failure_type": "STOCK_IDENTITY_FAILURE",
+        "business_validation": {
+          "status": "inconsistent",
+          "reason": "stock_identity_failure"
+        },
+        "source_agreement": null,
+        "source_evidence": true,
+        "cell_validation": {
+          "issues": [
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "ABANA TAB",
+              "raw_value": 68,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "ABANA TAB",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "ABANA TAB",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "ABANA TAB",
+              "raw_value": 58,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "CONFIDO TAB",
+              "raw_value": 76,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "CONFIDO TAB",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "CONFIDO TAB",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "CONFIDO TAB",
+              "raw_value": 75,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "DIBECON-DS TABS",
+              "raw_value": 2,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "DIBECON-DS TABS",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "DIBECON-DS TABS",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "DIBECON-DS TABS",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "HIMCOLIN GEL",
+              "raw_value": 45,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "HIMCOLIN GEL",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "HIMCOLIN GEL",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "HIMCOLIN GEL",
+              "raw_value": 43,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "LIV-52 HB CAPSULES",
+              "raw_value": 162,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "LIV-52 HB CAPSULES",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "LIV-52 HB CAPSULES",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "LIV-52 HB CAPSULES",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "LIV-52 SYRUP",
+              "raw_value": 72,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "LIV-52 SYRUP",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "LIV-52 SYRUP",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "LIV-52 SYRUP",
+              "raw_value": 162,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "LIV-52 SYRUP",
+              "raw_value": 9,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "LIV-52 SYRUP",
+              "raw_value": 700,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "LIV-52 SYRUP",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "LIV-52 SYRUP",
+              "raw_value": 37,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "LIV-52 TAB",
+              "raw_value": 306,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "LIV-52 TAB",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "LIV-52 TAB",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "LIV-52 TAB",
+              "raw_value": 142,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "LIV-52 SYRUP(S F )",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "LIV-52 SYRUP(S F )",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "LIV-52 SYRUP(S F )",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "LIV-52 SYRUP(S F )",
+              "raw_value": 97,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "OPTHACARE EYE DROP",
+              "raw_value": 168,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "OPTHACARE EYE DROP",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "OPTHACARE EYE DROP",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "OPTHACARE EYE DROP",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "ORO-T ORAL RINSE",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "ORO-T ORAL RINSE",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "ORO-T ORAL RINSE",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "ORO-T ORAL RINSE",
+              "raw_value": 11,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "PILEX FORTE OINTMENT",
+              "raw_value": 62,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "PILEX FORTE OINTMENT",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "PILEX FORTE OINTMENT",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "PILEX FORTE OINTMENT",
+              "raw_value": 29,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "PILEX TAB",
+              "raw_value": 314,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "PILEX TAB",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "PILEX TAB",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "PILEX TAB",
+              "raw_value": 49,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "RENALKA SYRUP",
+              "raw_value": 21,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "RENALKA SYRUP",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "RENALKA SYRUP",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "RENALKA SYRUP",
+              "raw_value": 11,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "TALEKT TABLETS",
+              "raw_value": 47,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "TALEKT TABLETS",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "TALEKT TABLETS",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "TALEKT TABLETS",
+              "raw_value": 44,
+              "evidence_ref": null
+            }
+          ],
+          "column_report": {
+            "assignments": [],
+            "unresolved_headers": [],
+            "ambiguous_fields": [],
+            "issues": [],
+            "layout_id": "vl_html_table_parse",
+            "mapping_confidence": 1.0,
+            "has_column_confusion": false
+          },
+          "accepted_critical_fields": 128,
+          "unresolved_critical_fields": 60,
+          "has_blocking_issues": true
+        }
+      },
+      "phase2": {
+        "status": "unresolved",
+        "failure_type": "STOCK_IDENTITY_FAILURE",
+        "strategy": "targeted_stock_extraction",
+        "attempts": 2,
+        "applied": false,
+        "accepted": false,
+        "recovery_log": [
+          {
+            "attempt": 1,
+            "accepted": false,
+            "parsed": true,
+            "returned": [
+              "ABANA TAB opening=None receipts=0.0 sales=None stock_out=None closing=None",
+              "CONFIDO TAB opening=None receipts=0.0 sales=None stock_out=None closing=None",
+              "DIBECON-DS TABS opening=None receipts=0.0 sales=None stock_out=None closing=None",
+              "HIMCOLIN GEL opening=None receipts=0.0 sales=None stock_out=None closing=None",
+              "LIV-52 HB CAPSULES opening=None receipts=0.0 sales=None stock_out=None closing=None",
+              "LIV-52 SYRUP opening=None receipts=0.0 sales=None stock_out=None closing=None",
+              "LIV-52 SYRUP opening=None receipts=700.0 sales=None stock_out=None closing=None",
+              "LIV-52 TAB opening=None receipts=0.0 sales=None stock_out=None closing=None",
+              "LIV-52 SYRUP(S F ) opening=None receipts=0.0 sales=None stock_out=None closing=None",
+              "OPTHACARE EYE DROP opening=None receipts=0.0 sales=None stock_out=None closing=None",
+              "ORO-T ORAL RINSE opening=None receipts=0.0 sales=None stock_out=None closing=None",
+              "PILEX FORTE OINTMENT opening=None receipts=0.0 sales=None stock_out=None closing=None",
+              "PILEX TAB opening=None receipts=0.0 sales=None stock_out=None closing=None",
+              "RENALKA SYRUP opening=None receipts=0.0 sales=None stock_out=None closing=None",
+              "TALEKT TABLETS opening=None receipts=0.0 sales=None stock_out=None closing=None"
+            ]
+          },
+          {
+            "attempt": 2,
+            "accepted": false,
+            "parsed": true,
+            "returned": [
+              "ABANA TAB opening=None receipts=0.0 sales=None stock_out=None closing=None",
+              "CONFIDO TAB opening=None receipts=0.0 sales=None stock_out=None closing=None",
+              "DIBECON-DS TABS opening=None receipts=0.0 sales=None stock_out=None closing=None",
+              "HIMCOLIN GEL opening=None receipts=0.0 sales=None stock_out=None closing=None",
+              "LIV-52 HB CAPSULES opening=None receipts=0.0 sales=None stock_out=None closing=None",
+              "LIV-52 SYRUP opening=None receipts=0.0 sales=None stock_out=None closing=None",
+              "LIV-52 SYRUP opening=None receipts=700.0 sales=None stock_out=None closing=None",
+              "LIV-52 TAB opening=None receipts=0.0 sales=None stock_out=None closing=None",
+              "LIV-52 SYRUP(S F ) opening=None receipts=0.0 sales=None stock_out=None closing=None",
+              "OPTHACARE EYE DROP opening=None receipts=0.0 sales=None stock_out=None closing=None",
+              "ORO-T ORAL RINSE opening=None receipts=0.0 sales=None stock_out=None closing=None",
+              "PILEX FORTE OINTMENT opening=None receipts=0.0 sales=None stock_out=None closing=None",
+              "PILEX TAB opening=None receipts=0.0 sales=None stock_out=None closing=None",
+              "RENALKA SYRUP opening=None receipts=0.0 sales=None stock_out=None closing=None",
+              "TALEKT TABLETS opening=None receipts=0.0 sales=None stock_out=None closing=None"
+            ]
+          }
+        ],
+        "original_values": [
+          {
+            "product_name": "AACTARIL SOAP",
+            "opening_qty": 0.0,
+            "receipts_qty": 0.0,
+            "sales_qty": 0.0,
+            "closing_qty": 0.0,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "ABANA TAB",
+            "opening_qty": 68,
+            "receipts_qty": 0.0,
+            "sales_qty": 0.0,
+            "closing_qty": 58,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "CHIROPEX CREAM",
+            "opening_qty": 0.0,
+            "receipts_qty": 0.0,
+            "sales_qty": 0.0,
+            "closing_qty": 0.0,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "CLARINA ANTI ACNE",
+            "opening_qty": 0.0,
+            "receipts_qty": 0.0,
+            "sales_qty": 0.0,
+            "closing_qty": 0.0,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "CLARINA ANTI ACNE FACE WA",
+            "opening_qty": 0.0,
+            "receipts_qty": 0.0,
+            "sales_qty": 0.0,
+            "closing_qty": 0.0,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "CONFIDO TAB",
+            "opening_qty": 76,
+            "receipts_qty": 0.0,
+            "sales_qty": 0.0,
+            "closing_qty": 75,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "DIABECON TAB",
+            "opening_qty": 0.0,
+            "receipts_qty": 0.0,
+            "sales_qty": 0.0,
+            "closing_qty": 0.0,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "DIAREX SYRUP",
+            "opening_qty": 0.0,
+            "receipts_qty": 0.0,
+            "sales_qty": 0.0,
+            "closing_qty": 0.0,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "DIAREX TAB",
+            "opening_qty": 0.0,
+            "receipts_qty": 0.0,
+            "sales_qty": 0.0,
+            "closing_qty": 0.0,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "DIBECON-DS TABS",
+            "opening_qty": 2,
+            "receipts_qty": 0.0,
+            "sales_qty": 0.0,
+            "closing_qty": 0.0,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "HADJOD TABS",
+            "opening_qty": 41,
+            "receipts_qty": 0.0,
+            "sales_qty": 0.0,
+            "closing_qty": 41,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "HAIR ZONE SOLUTION",
+            "opening_qty": 0.0,
+            "receipts_qty": 0.0,
+            "sales_qty": 0.0,
+            "closing_qty": 0.0,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "HERBOLEX CAP",
+            "opening_qty": 0.0,
+            "receipts_qty": 0.0,
+            "sales_qty": 0.0,
+            "closing_qty": 0.0,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "HERBOLEX TABLETS",
+            "opening_qty": 0.0,
+            "receipts_qty": 0.0,
+            "sales_qty": 0.0,
+            "closing_qty": 0.0,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "HIMCOLIN GEL",
+            "opening_qty": 45,
+            "receipts_qty": 0.0,
+            "sales_qty": 0.0,
+            "closing_qty": 43,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "HIOWNA VANILLA FLAVOUR",
+            "opening_qty": 0.0,
+            "receipts_qty": 0.0,
+            "sales_qty": 0.0,
+            "closing_qty": 0.0,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "HIOWNA CHOCOLATE",
+            "opening_qty": 0.0,
+            "receipts_qty": 0.0,
+            "sales_qty": 0.0,
+            "closing_qty": 0.0,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "HIOWNA CHOCOLATE",
+            "opening_qty": 0.0,
+            "receipts_qty": 0.0,
+            "sales_qty": 0.0,
+            "closing_qty": 0.0,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "HIOWNA VANILLA FLV (ADULT)",
+            "opening_qty": 0.0,
+            "receipts_qty": 0.0,
+            "sales_qty": 0.0,
+            "closing_qty": 0.0,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "IMMUSANTE TABLETS",
+            "opening_qty": 0.0,
+            "receipts_qty": 0.0,
+            "sales_qty": 0.0,
+            "closing_qty": 0.0,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "KOFLET JAR (LOZ)",
+            "opening_qty": 0.0,
+            "receipts_qty": 0.0,
+            "sales_qty": 0.0,
+            "closing_qty": 0.0,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "KOFLET LOZENGES",
+            "opening_qty": 0.0,
+            "receipts_qty": 0.0,
+            "sales_qty": 0.0,
+            "closing_qty": 0.0,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "LIV-52 HB CAPSULES",
+            "opening_qty": 162,
+            "receipts_qty": 0.0,
+            "sales_qty": 0.0,
+            "closing_qty": 0.0,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "LIV-52 SYRUP",
+            "opening_qty": 72,
+            "receipts_qty": 0.0,
+            "sales_qty": 0.0,
+            "closing_qty": 162,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "LIV-52 SYRUP",
+            "opening_qty": 9,
+            "receipts_qty": 700,
+            "sales_qty": 0.0,
+            "closing_qty": 37,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "LIV-52 TAB",
+            "opening_qty": 306,
+            "receipts_qty": 0.0,
+            "sales_qty": 0.0,
+            "closing_qty": 142,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "LIV-52 SYRUP(S F )",
+            "opening_qty": 0.0,
+            "receipts_qty": 0.0,
+            "sales_qty": 0.0,
+            "closing_qty": 97,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "OPTHACARE EYE DROP",
+            "opening_qty": 168,
+            "receipts_qty": 0.0,
+            "sales_qty": 0.0,
+            "closing_qty": 0.0,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "ORO-T ORAL RINSE",
+            "opening_qty": 0.0,
+            "receipts_qty": 0.0,
+            "sales_qty": 0.0,
+            "closing_qty": 11,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "OXITARD CAPS",
+            "opening_qty": 0.0,
+            "receipts_qty": 0.0,
+            "sales_qty": 0.0,
+            "closing_qty": 0.0,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "PAIN RELIEF OIL",
+            "opening_qty": 0.0,
+            "receipts_qty": 0.0,
+            "sales_qty": 0.0,
+            "closing_qty": 0.0,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "PILEX FORTE OINTMENT",
+            "opening_qty": 62,
+            "receipts_qty": 0.0,
+            "sales_qty": 0.0,
+            "closing_qty": 29,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "PILEX FORTE TABLETS",
+            "opening_qty": 0.0,
+            "receipts_qty": 0.0,
+            "sales_qty": 0.0,
+            "closing_qty": 0.0,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "PILEX TAB",
+            "opening_qty": 314,
+            "receipts_qty": 0.0,
+            "sales_qty": 0.0,
+            "closing_qty": 49,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "PURIM TAB",
+            "opening_qty": 0.0,
+            "receipts_qty": 0.0,
+            "sales_qty": 0.0,
+            "closing_qty": 0.0,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "QUISTA ACTIVE (CF)",
+            "opening_qty": 0.0,
+            "receipts_qty": 0.0,
+            "sales_qty": 0.0,
+            "closing_qty": 0.0,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "QUISTA ACTIVE (MMF)",
+            "opening_qty": 0.0,
+            "receipts_qty": 0.0,
+            "sales_qty": 0.0,
+            "closing_qty": 0.0,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "QUISTA DN (MILK MASALA)",
+            "opening_qty": 0.0,
+            "receipts_qty": 0.0,
+            "sales_qty": 0.0,
+            "closing_qty": 0.0,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "QUISTA DN (VANILA)",
+            "opening_qty": 0.0,
+            "receipts_qty": 0.0,
+            "sales_qty": 0.0,
+            "closing_qty": 0.0,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "QUISTA DN 400G (VANILLA )",
+            "opening_qty": 0.0,
+            "receipts_qty": 0.0,
+            "sales_qty": 0.0,
+            "closing_qty": 0.0,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "RENALKA SYRUP",
+            "opening_qty": 21,
+            "receipts_qty": 0.0,
+            "sales_qty": 0.0,
+            "closing_qty": 11,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "RENELKA SYRUP",
+            "opening_qty": 33,
+            "receipts_qty": 0.0,
+            "sales_qty": 0.0,
+            "closing_qty": 33,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "TALEKT SYRUP",
+            "opening_qty": 0.0,
+            "receipts_qty": 0.0,
+            "sales_qty": 0.0,
+            "closing_qty": 0.0,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "TALEKT TABLETS",
+            "opening_qty": 47,
+            "receipts_qty": 0.0,
+            "sales_qty": 0.0,
+            "closing_qty": 44,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "TENTEX FORTE TAB",
+            "opening_qty": 152,
+            "receipts_qty": 0.0,
+            "sales_qty": 0.0,
+            "closing_qty": 152,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "VEGECORT CREAM",
+            "opening_qty": 0.0,
+            "receipts_qty": 0.0,
+            "sales_qty": 0.0,
+            "closing_qty": 0.0,
+            "total_stock": null,
+            "validation_error": null
+          },
+          {
+            "product_name": "*Liquidation is based on last three months sales",
+            "opening_qty": 0.0,
+            "receipts_qty": 0.0,
+            "sales_qty": 0.0,
+            "closing_qty": 0.0,
+            "total_stock": null,
+            "validation_error": null
+          }
+        ],
+        "manual_review": "UNRESOLVED"
+      }
+    }
+  },
+  "comparison": {
+    "field_accuracy_off": 0.6190476190476191,
+    "field_accuracy_on": 0.6190476190476191,
+    "field_accuracy_delta": 0.0,
+    "quantity_accuracy_off": 0.5294117647058824,
+    "quantity_accuracy_on": 0.5294117647058824,
+    "quantity_accuracy_delta": 0.0,
+    "product_identity_recall_off": 1.0,
+    "product_identity_recall_on": 1.0,
+    "missing_values_off": 0,
+    "missing_values_on": 0,
+    "missing_values_delta": 0
+  },
+  "healthy_row_check": {
+    "healthy_rows_checked": 31,
+    "healthy_rows_changed": 0,
+    "unchanged": true,
+    "changes": []
+  }
+}

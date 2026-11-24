@@ -1,0 +1,143 @@
+{
+  "file": "0000736672_2026_08_ZA_37_215_05092026161500.doc",
+  "error": null,
+  "seconds": 0.0711,
+  "rows": 58,
+  "method": "legacy_doc_text",
+  "decision": {
+    "status": "VERIFIED",
+    "reason": "schema_evidence_business_ok",
+    "verified": true
+  },
+  "phase2": {
+    "status": "not_needed",
+    "failure_type": null,
+    "strategy": null,
+    "attempts": 0,
+    "applied": false,
+    "accepted": false,
+    "recovery_log": [],
+    "original_values": [],
+    "manual_review": null
+  },
+  "validation_status": "pass",
+  "source_evidence": true,
+  "source_agreement": true,
+  "stock_identity_fail_count": 0,
+  "grounding": {
+    "status": "checked",
+    "reader": "legacy_doc_text",
+    "compared_rows": 58,
+    "discrepancy_count": 0,
+    "blank_read_as_zero": 0,
+    "blocks_verification": false,
+    "discrepancies": []
+  },
+  "ocr_calls": 0,
+  "watched_rows": [
+    {
+      "product_name": "ARJUNA CAP.",
+      "packing": "60`S",
+      "opening_qty": 44.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 9.0,
+      "closing_qty": 35.0,
+      "sales_value": 0.0,
+      "closing_value": 8189.23,
+      "qty_cell_state": null,
+      "total_stock": 44.0,
+      "scheme_out_qty": null
+    },
+    {
+      "product_name": "BONNISAN DROPS",
+      "packing": "30ML",
+      "opening_qty": 0.0,
+      "receipts_qty": 40.0,
+      "sales_qty": 2.0,
+      "closing_qty": 38.0,
+      "sales_value": 0.0,
+      "closing_value": 2680.6,
+      "qty_cell_state": null,
+      "total_stock": 40.0,
+      "scheme_out_qty": null
+    },
+    {
+      "product_name": "BONNISAN SYP.<B>",
+      "packing": "200ml",
+      "opening_qty": 59.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 3.0,
+      "closing_qty": 56.0,
+      "sales_value": 0.0,
+      "closing_value": 5764.89,
+      "qty_cell_state": null,
+      "total_stock": 59.0,
+      "scheme_out_qty": null
+    },
+    {
+      "product_name": "BONNISAN SYP.<S>",
+      "packing": "100ML",
+      "opening_qty": 121.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 10.0,
+      "closing_qty": 111.0,
+      "sales_value": 0.0,
+      "closing_value": 7096.49,
+      "qty_cell_state": null,
+      "total_stock": 121.0,
+      "scheme_out_qty": null
+    },
+    {
+      "product_name": "CYSTONE FORTE TAB.<STRIP>",
+      "packing": "30`S",
+      "opening_qty": 12.0,
+      "receipts_qty": 15.0,
+      "sales_qty": 12.0,
+      "closing_qty": 15.0,
+      "sales_value": 0.0,
+      "closing_value": 1717.16,
+      "qty_cell_state": null,
+      "total_stock": 27.0,
+      "scheme_out_qty": null
+    },
+    {
+      "product_name": "CYSTONE SYP.",
+      "packing": "200ML",
+      "opening_qty": 29.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 1.0,
+      "closing_qty": 28.0,
+      "sales_value": 0.0,
+      "closing_value": 5463.17,
+      "qty_cell_state": null,
+      "total_stock": 29.0,
+      "scheme_out_qty": null
+    },
+    {
+      "product_name": "CYSTONE TAB.",
+      "packing": "60`S",
+      "opening_qty": 22.0,
+      "receipts_qty": 40.0,
+      "sales_qty": 34.0,
+      "closing_qty": 28.0,
+      "sales_value": 0.0,
+      "closing_value": 4898.8,
+      "qty_cell_state": null,
+      "total_stock": 62.0,
+      "scheme_out_qty": null
+    },
+    {
+      "product_name": "CYSTONE-SF SYP.",
+      "packing": "200ml",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "qty_cell_state": null,
+      "total_stock": 0.0,
+      "scheme_out_qty": null
+    }
+  ]
+}

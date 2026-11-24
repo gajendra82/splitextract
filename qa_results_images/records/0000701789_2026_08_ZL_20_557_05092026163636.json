@@ -1,0 +1,234 @@
+{
+  "file": "0000701789_2026_08_ZL_20_557_05092026163636.jpg",
+  "path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000701789_2026_08_ZL_20_557_05092026163636.jpg",
+  "format": "Sales & Stock Statement",
+  "api_method": "zandra_two_column_order_form",
+  "status": "FAIL",
+  "expected_rows": 14,
+  "extracted_rows": 13,
+  "matched_rows": 9,
+  "missing_rows": [
+    {
+      "product": "LIViS2asy P 1*100ML 1*200ML",
+      "opening_qty": 40,
+      "receipts_qty": 0,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "EYE DR1*10ML",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "OPTHACARE",
+      "opening_qty": null,
+      "receipts_qty": 10,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "TENTEX FORTE TAB 1*10T A MM aa",
+      "opening_qty": null,
+      "receipts_qty": 7560,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "ee —",
+      "opening_qty": 23824,
+      "receipts_qty": 7560,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    }
+  ],
+  "extra_rows": [
+    {
+      "product": "LIV 52 SYP",
+      "opening_qty": 0,
+      "sales_qty": 54,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "OPTHACARE EYE DR",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "OPTHACARE EYE DR1*10ML",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "TENTEX FORTE TAB",
+      "opening_qty": 0,
+      "sales_qty": 10,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    }
+  ],
+  "duplicates": [],
+  "mismatches": [
+    {
+      "product": "HIMCOLIN GEL 1*30GM",
+      "field": "opening_qty",
+      "expected": 54,
+      "actual": 0,
+      "kind": "wrong_opening_qty"
+    },
+    {
+      "product": "AACTARIL SOAP 1 *75GM",
+      "field": "opening_qty",
+      "expected": 10,
+      "actual": 0,
+      "kind": "wrong_opening_qty"
+    },
+    {
+      "product": "PILEX FORTE OINT",
+      "field": "opening_qty",
+      "expected": 15,
+      "actual": 0,
+      "kind": "wrong_opening_qty"
+    },
+    {
+      "product": "LIV 52 SYP",
+      "field": "receipts_qty",
+      "expected": 21,
+      "actual": 0,
+      "kind": "wrong_receipt_qty"
+    },
+    {
+      "product": "PURIM TAB 1*60T",
+      "field": "opening_qty",
+      "expected": 5,
+      "actual": 0,
+      "kind": "wrong_opening_qty"
+    },
+    {
+      "product": "PILEX TAB 1*60T",
+      "field": "opening_qty",
+      "expected": 17,
+      "actual": 0,
+      "kind": "wrong_opening_qty"
+    },
+    {
+      "product": "LIV 52 TAB 1*100T",
+      "field": "opening_qty",
+      "expected": 8,
+      "actual": 0,
+      "kind": "wrong_opening_qty"
+    },
+    {
+      "product": "CONFIDO TAB 1*60T",
+      "field": "opening_qty",
+      "expected": 9,
+      "actual": 0,
+      "kind": "wrong_opening_qty"
+    },
+    {
+      "product": "CONFIDO TAB 1*60T",
+      "field": "receipts_qty",
+      "expected": 10,
+      "actual": 0,
+      "kind": "wrong_receipt_qty"
+    },
+    {
+      "product": "9 rows",
+      "field": "sales_value",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 9,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    },
+    {
+      "product": "9 rows",
+      "field": "closing_value",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 9,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    },
+    {
+      "product": "9 rows",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 9,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    },
+    {
+      "product": "9 rows",
+      "field": "closing_qty",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 9,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    }
+  ],
+  "ocr_review": [
+    {
+      "product": "PILEX FORTE OINT",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "LIV 52 SYP",
+      "field": "opening_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "PURIM TAB 1*60T",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "PILEX TAB 1*60T",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "LIV 52 TAB 1*100T",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    }
+  ],
+  "accounting": [],
+  "confidence": "medium",
+  "notes": [
+    "OCR used tesseract psm 6."
+  ],
+  "result_key": "0000701789_2026_08_ZL_20_557_05092026163636",
+  "unavailable_fields": {
+    "sales_value": 9,
+    "closing_value": 9,
+    "sales_qty": 9,
+    "closing_qty": 9
+  },
+  "formula_checked": "none"
+}

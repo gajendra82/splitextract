@@ -1089,10 +1089,17 @@ def sales_sleep_respecting_deadline(seconds: float, stage: str = "gemini_retry")
     """Sleep for backoff but never past the extraction deadline."""
     check_sales_deadline(stage)
     remaining = sales_deadline_remaining_seconds()
-    sleep_for = max(0.0, float(seconds or 0.0))
+    requested = max(0.0, float(seconds or 0.0))
+    sleep_for = requested
     if remaining is not None:
         # Leave a tiny margin so the next check fails cleanly.
         sleep_for = min(sleep_for, max(0.0, remaining - 0.25))
+    if requested > 0 and sleep_for <= 0:
+        raise SalesExtractionDeadlineExceeded(
+            getattr(_deadline_local, "request_id", "unknown"),
+            stage,
+            float(getattr(_deadline_local, "limit_seconds", 0) or 0),
+        )
     if sleep_for <= 0:
         check_sales_deadline(stage)
         return
@@ -1686,12 +1693,18 @@ def sales_generate_content_via_vertex(
 
 @contextmanager
 def sales_tesseract_slot(task_label: str = "sales_tesseract"):
+    """Acquire the shared Tesseract slot when ``app`` is importable.
+
+    Import failure falls back to an ungated yield. Exceptions raised by the
+    caller's body (deadlines, cancellation, OCR errors) must propagate; they
+    must not be swallowed into a second yield (that breaks cleanup).
+    """
     try:
         from app import tesseract_ocr_slot
-
-        with tesseract_ocr_slot(task_label):
-            yield
     except Exception:
+        yield
+        return
+    with tesseract_ocr_slot(task_label):
         yield
 
 

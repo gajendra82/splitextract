@@ -1,0 +1,8 @@
+{
+  "document_id": "0000723059_2026_08_ZA_20_338_07092026054617.jpg",
+  "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000723059_2026_08_ZA_20_338_07092026054617.jpg",
+  "status": "error",
+  "sha256": "b43776c8e6b07e9bfe3f37502c984aa2c7642013fbdae27ed5ce5f7fd8af8a55",
+  "error": "0000723059_2026_08_ZA_20_338_07092026054617.jpg flag=true exceeded 180s",
+  "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\scripts\\run_secondary_repair_controlled_batch.py\", line 404, in _run_di\n    return fut.result(timeout=timeout_sec)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Python312\\Lib\\concurrent\\futures\\_base.py\", line 458, in result\n    raise TimeoutError()\nTimeoutError\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File \"C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\scripts\\run_secondary_repair_controlled_batch.py\", line 790, in run_batch\n    on_res = _run_di(doc_id, file_bytes, text, \"true\")\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\scripts\\run_secondary_repair_controlled_batch.py\", line 406, in _run_di\n    raise TimeoutError(\nTimeoutError: 0000723059_2026_08_ZA_20_338_07092026054617.jpg flag=true exceeded 180s\n"
+}

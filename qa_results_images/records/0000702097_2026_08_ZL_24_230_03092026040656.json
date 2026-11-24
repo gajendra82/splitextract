@@ -1,0 +1,1104 @@
+{
+  "file": "0000702097_2026_08_ZL_24_230_03092026040656.jpg",
+  "path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000702097_2026_08_ZL_24_230_03092026040656.jpg",
+  "format": "STOCK & SALES ANALYSIS",
+  "api_method": "pharma_hub_jun_jul_photo",
+  "status": "FAIL",
+  "expected_rows": 68,
+  "extracted_rows": 65,
+  "matched_rows": 19,
+  "missing_rows": [
+    {
+      "product": "QTY. ARCTARIL SOAP-75@1 iPc PC 80",
+      "opening_qty": 6524.72,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 6524.72,
+      "kind": "missing_product"
+    },
+    {
+      "product": "ABANA TABS 1DIBBI Pas 90",
+      "opening_qty": 14042.24,
+      "receipts_qty": 0,
+      "sales_qty": 1,
+      "closing_qty": 89,
+      "kind": "missing_product"
+    },
+    {
+      "product": "AMALAKI TAB 60TAB Pcs 78",
+      "opening_qty": 16804.69,
+      "receipts_qty": 0,
+      "sales_qty": 5,
+      "closing_qty": 73,
+      "kind": "missing_product"
+    },
+    {
+      "product": "BAEL TAB 1X60TAB Pcs",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "306M Pcs 37",
+      "opening_qty": 6743.45,
+      "receipts_qty": 0,
+      "sales_qty": 12,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "CLARINA CREAM 1x30G4 Pos 55",
+      "opening_qty": 7488.87,
+      "receipts_qty": 0,
+      "sales_qty": 16,
+      "closing_qty": 39,
+      "kind": "missing_product"
+    },
+    {
+      "product": "1x60ML Pcs 60",
+      "opening_qty": 7276.76,
+      "receipts_qty": 0,
+      "sales_qty": 610.2,
+      "closing_qty": 55,
+      "kind": "missing_product"
+    },
+    {
+      "product": "CONFIDO TABS 6OTARS Pcs 75",
+      "opening_qty": 12020.21,
+      "receipts_qty": 0,
+      "sales_qty": 6,
+      "closing_qty": 69,
+      "kind": "missing_product"
+    },
+    {
+      "product": "DIABECON DS TABS 60TABS Pcs 81",
+      "opening_qty": 16069.15,
+      "receipts_qty": 50,
+      "sales_qty": 25,
+      "closing_qty": 106,
+      "kind": "missing_product"
+    },
+    {
+      "product": "Pos 79",
+      "opening_qty": 9883.57,
+      "receipts_qty": 0,
+      "sales_qty": 597.36,
+      "closing_qty": 75,
+      "kind": "missing_product"
+    },
+    {
+      "product": "DIAREX 100ML SYP 1x1 00ML PCs 57",
+      "opening_qty": 4891.86,
+      "receipts_qty": 0,
+      "sales_qty": 25,
+      "closing_qty": 32,
+      "kind": "missing_product"
+    },
+    {
+      "product": "DIAREX TABS 30TARS Pos 22",
+      "opening_qty": 2043.72,
+      "receipts_qty": 0,
+      "sales_qty": 14,
+      "closing_qty": 8,
+      "kind": "missing_product"
+    },
+    {
+      "product": "HADJOD TAB 1Pc PCs a1",
+      "opening_qty": 4436.8,
+      "receipts_qty": 0,
+      "sales_qty": 21,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "HAIRZONE 60ML 60ML PCS 65",
+      "opening_qty": 18862.97,
+      "receipts_qty": 0,
+      "sales_qty": 10,
+      "closing_qty": 55,
+      "kind": "missing_product"
+    },
+    {
+      "product": "HERBOLAX CAPSULES 1x10CAPS Pos 81",
+      "opening_qty": 4487.62,
+      "receipts_qty": 0,
+      "sales_qty": 2,
+      "closing_qty": 79,
+      "kind": "missing_product"
+    },
+    {
+      "product": "HERBOLAX TABS 1X100TABS Pcs 58",
+      "opening_qty": 8415.97,
+      "receipts_qty": 0,
+      "sales_qty": 9,
+      "closing_qty": 49,
+      "kind": "missing_product"
+    },
+    {
+      "product": "HIMCOLIN GEL 1X30GMS Pos 47",
+      "opening_qty": 9423.78,
+      "receipts_qty": 0,
+      "sales_qty": 1,
+      "closing_qty": 46,
+      "kind": "missing_product"
+    },
+    {
+      "product": "KAPIKACHCHU CAPS 60CAPS Pcs 44",
+      "opening_qty": 8750.65,
+      "receipts_qty": 0,
+      "sales_qty": 12,
+      "closing_qty": 32,
+      "kind": "missing_product"
+    },
+    {
+      "product": "LIV 52 SUGAR FREE SYP 200 200M. Pcs 19",
+      "opening_qty": 3045.12,
+      "receipts_qty": 0,
+      "sales_qty": 19,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "LIV-52 100ML SYRUP 1X100ML Pos 12",
+      "opening_qty": 1155.64,
+      "receipts_qty": 0,
+      "sales_qty": 15,
+      "closing_qty": -3,
+      "kind": "missing_product"
+    },
+    {
+      "product": "LIV-52 200ML SYRUP 1X200ML Pos -4",
+      "opening_qty": -666.4,
+      "receipts_qty": 5,
+      "sales_qty": 1,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "LIV-52 HB CAPS 1X10CAPS PCs 53",
+      "opening_qty": 8033.95,
+      "receipts_qty": 0,
+      "sales_qty": 6,
+      "closing_qty": 47,
+      "kind": "missing_product"
+    },
+    {
+      "product": "LIv-52 TABS 100TAB Pos 40",
+      "opening_qty": 5941.8,
+      "receipts_qty": 20,
+      "sales_qty": 107,
+      "closing_qty": 133,
+      "kind": "missing_product"
+    },
+    {
+      "product": "MANJISHTHA TAB 1X60 CAPS Pcs 33",
+      "opening_qty": 6351.29,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 33,
+      "kind": "missing_product"
+    },
+    {
+      "product": "OPTHACARE EYE DROPS 1X10ML Pos 48",
+      "opening_qty": 3214.25,
+      "receipts_qty": 0,
+      "sales_qty": 21,
+      "closing_qty": 27,
+      "kind": "missing_product"
+    },
+    {
+      "product": "ORO-T 100 ML 1X100ML Pcs 61",
+      "opening_qty": 6904.49,
+      "receipts_qty": 0,
+      "sales_qty": 6,
+      "closing_qty": 55,
+      "kind": "missing_product"
+    },
+    {
+      "product": "OXITARD CAPS 1x10cPs Pcs 34",
+      "opening_qty": 3038.22,
+      "receipts_qty": 0,
+      "sales_qty": 1,
+      "closing_qty": 33,
+      "kind": "missing_product"
+    },
+    {
+      "product": "PILEX FORTE TABS 1X30TABS Pcs 52",
+      "opening_qty": 5111.65,
+      "receipts_qty": 0,
+      "sales_qty": 11,
+      "closing_qty": 41,
+      "kind": "missing_product"
+    },
+    {
+      "product": "PILEX TABS 1X60TABS Pcs 85",
+      "opening_qty": 13541.32,
+      "receipts_qty": 0,
+      "sales_qty": 24,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "PILEX-FORTE OINT 30GMs Pos 92",
+      "opening_qty": 9101.41,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 92,
+      "kind": "missing_product"
+    },
+    {
+      "product": "PURIM TABS 1X60TABS Pcs 61",
+      "opening_qty": 7700.54,
+      "receipts_qty": 0,
+      "sales_qty": 8,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "RENALKA SYP 100ML 100ML Pos 22",
+      "opening_qty": 1572.84,
+      "receipts_qty": 0,
+      "sales_qty": 13,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "RENALKA SYP 200ML 1X200ML PCs 22",
+      "opening_qty": 3276.51,
+      "receipts_qty": 0,
+      "sales_qty": 9,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "SHALLAKI TAB 1X60TAB Pcs 23",
+      "opening_qty": 4485.56,
+      "receipts_qty": 0,
+      "sales_qty": 16,
+      "closing_qty": 7,
+      "kind": "missing_product"
+    },
+    {
+      "product": "SHIGRU TAB 1X60TAB PCs 78",
+      "opening_qty": 15178.94,
+      "receipts_qty": 0,
+      "sales_qty": 5,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "TAGARA TAB 60TAB PCS 49",
+      "opening_qty": 11351.38,
+      "receipts_qty": 0,
+      "sales_qty": 19,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "TALEKT SYP 120ML PCS 65",
+      "opening_qty": 12659.22,
+      "receipts_qty": 0,
+      "sales_qty": 3,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "TALEKT TAB SOTAB Pcs 44",
+      "opening_qty": 6553.01,
+      "receipts_qty": 0,
+      "sales_qty": 7,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "TENTEX FORTE TABS 1X10TAB Pcs 293",
+      "opening_qty": 27053.28,
+      "receipts_qty": 0,
+      "sales_qty": 63,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "TRIKATU SYP-200ML 1X200ML cs as",
+      "opening_qty": 3655.65,
+      "receipts_qty": 0,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "TRIKATU TAB 1X60TAB pcs 26",
+      "opening_qty": 4448.08,
+      "receipts_qty": 0,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "TRIPHALA 200ML SYP 200ML PCs",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "TRIPHALA TAB 60TAB Pcs 166",
+      "opening_qty": 33723.61,
+      "receipts_qty": 0,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "VASAKA CAPS PC PCS 34",
+      "opening_qty": 5596.44,
+      "receipts_qty": 0,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "VRIKSHAMLA TABS 1X60TABS Pcs a5",
+      "opening_qty": 5791.52,
+      "receipts_qty": 0,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "YASHTIMADHU CAPS 60CAPS pcs 65",
+      "opening_qty": 13900.13,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "Z-ALTHEA LOTION-100ML 1X100ML Pcs",
+      "opening_qty": 0,
+      "receipts_qty": 5,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "Z-CLARINA KIT 1 KIT Pcs",
+      "opening_qty": 0,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "Z-HIOWNA-200GM(CHOC) SR 1X200GMS PCS",
+      "opening_qty": 0,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    }
+  ],
+  "extra_rows": [
+    {
+      "product": "ANCTARIL SOAP-75GM",
+      "opening_qty": 80,
+      "sales_qty": 0,
+      "closing_qty": 80,
+      "kind": "extra_product"
+    },
+    {
+      "product": "ABANA TABS",
+      "opening_qty": 90,
+      "sales_qty": 1,
+      "closing_qty": 89,
+      "kind": "extra_product"
+    },
+    {
+      "product": "AMALAKI TAB",
+      "opening_qty": 78,
+      "sales_qty": 5,
+      "closing_qty": 73,
+      "kind": "extra_product"
+    },
+    {
+      "product": "BAEL TAB",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "CLARINA CREAM",
+      "opening_qty": 55,
+      "sales_qty": 16,
+      "closing_qty": 39,
+      "kind": "extra_product"
+    },
+    {
+      "product": "CONFIDO TAB",
+      "opening_qty": 75,
+      "sales_qty": 6,
+      "closing_qty": 69,
+      "kind": "extra_product"
+    },
+    {
+      "product": "DIABECON DS TABS",
+      "opening_qty": 81,
+      "sales_qty": 25,
+      "closing_qty": 106,
+      "kind": "extra_product"
+    },
+    {
+      "product": "DIAREX 100ML SYP",
+      "opening_qty": 57,
+      "sales_qty": 25,
+      "closing_qty": 32,
+      "kind": "extra_product"
+    },
+    {
+      "product": "DIAREX TABS",
+      "opening_qty": 22,
+      "sales_qty": 14,
+      "closing_qty": 8,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HADJOD TAB",
+      "opening_qty": 21,
+      "sales_qty": 21,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HAIRZONE 60ML",
+      "opening_qty": 65,
+      "sales_qty": 10,
+      "closing_qty": 55,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HERBOLAX CAPSULES",
+      "opening_qty": 81,
+      "sales_qty": 0,
+      "closing_qty": 81,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HERBOLAX TABS",
+      "opening_qty": 58,
+      "sales_qty": 9,
+      "closing_qty": 49,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HIMCOLIN GEL",
+      "opening_qty": 47,
+      "sales_qty": 1,
+      "closing_qty": 46,
+      "kind": "extra_product"
+    },
+    {
+      "product": "KAPIKACHCHU CAPS",
+      "opening_qty": 44,
+      "sales_qty": 12,
+      "closing_qty": 32,
+      "kind": "extra_product"
+    },
+    {
+      "product": "LIV-52 SUGAR FREE SYP 200",
+      "opening_qty": 19,
+      "sales_qty": 0,
+      "closing_qty": 19,
+      "kind": "extra_product"
+    },
+    {
+      "product": "LIV-52 100ML SYRUP",
+      "opening_qty": 12,
+      "sales_qty": 15,
+      "closing_qty": -3,
+      "kind": "extra_product"
+    },
+    {
+      "product": "LIV-52 200ML SYRUP",
+      "opening_qty": 5,
+      "sales_qty": 1,
+      "closing_qty": 1,
+      "kind": "extra_product"
+    },
+    {
+      "product": "LIV-52 HB CAPS",
+      "opening_qty": 53,
+      "sales_qty": 6,
+      "closing_qty": 47,
+      "kind": "extra_product"
+    },
+    {
+      "product": "LIV-52 TABS",
+      "opening_qty": 40,
+      "sales_qty": 107,
+      "closing_qty": 133,
+      "kind": "extra_product"
+    },
+    {
+      "product": "MANJISHTHA TAB",
+      "opening_qty": 33,
+      "sales_qty": 0,
+      "closing_qty": 33,
+      "kind": "extra_product"
+    },
+    {
+      "product": "OPTHACARE EYE DROPS",
+      "opening_qty": 48,
+      "sales_qty": 27,
+      "closing_qty": 27,
+      "kind": "extra_product"
+    },
+    {
+      "product": "ORO-T 100 ML",
+      "opening_qty": 61,
+      "sales_qty": 6,
+      "closing_qty": 55,
+      "kind": "extra_product"
+    },
+    {
+      "product": "OXITARD CAPS",
+      "opening_qty": 34,
+      "sales_qty": 1,
+      "closing_qty": 33,
+      "kind": "extra_product"
+    },
+    {
+      "product": "PILEXX FORTE TABS",
+      "opening_qty": 52,
+      "sales_qty": 11,
+      "closing_qty": 41,
+      "kind": "extra_product"
+    },
+    {
+      "product": "PILEXX TABS",
+      "opening_qty": 85,
+      "sales_qty": 24,
+      "closing_qty": 61,
+      "kind": "extra_product"
+    },
+    {
+      "product": "PILEXX-FORTE OINT",
+      "opening_qty": 92,
+      "sales_qty": 0,
+      "closing_qty": 92,
+      "kind": "extra_product"
+    },
+    {
+      "product": "PURIM TABS",
+      "opening_qty": 61,
+      "sales_qty": 8,
+      "closing_qty": 53,
+      "kind": "extra_product"
+    },
+    {
+      "product": "RENALKA SYP 100ML",
+      "opening_qty": 22,
+      "sales_qty": 13,
+      "closing_qty": 9,
+      "kind": "extra_product"
+    },
+    {
+      "product": "RENALKA SYP 200ML",
+      "opening_qty": 22,
+      "sales_qty": 9,
+      "closing_qty": 13,
+      "kind": "extra_product"
+    },
+    {
+      "product": "SHALLAKI TAB",
+      "opening_qty": 23,
+      "sales_qty": 16,
+      "closing_qty": 7,
+      "kind": "extra_product"
+    },
+    {
+      "product": "SHIGRU TAB",
+      "opening_qty": 78,
+      "sales_qty": 5,
+      "closing_qty": 73,
+      "kind": "extra_product"
+    },
+    {
+      "product": "TAGARA TAB",
+      "opening_qty": 49,
+      "sales_qty": 19,
+      "closing_qty": 30,
+      "kind": "extra_product"
+    },
+    {
+      "product": "TALEKT SYP",
+      "opening_qty": 85,
+      "sales_qty": 3,
+      "closing_qty": 82,
+      "kind": "extra_product"
+    },
+    {
+      "product": "TALENT TAB",
+      "opening_qty": 44,
+      "sales_qty": 7,
+      "closing_qty": 37,
+      "kind": "extra_product"
+    },
+    {
+      "product": "TENTEX FORTE TABS",
+      "opening_qty": 293,
+      "sales_qty": 63,
+      "closing_qty": 230,
+      "kind": "extra_product"
+    },
+    {
+      "product": "TRIKATU SYP-200ML",
+      "opening_qty": 25,
+      "sales_qty": 25,
+      "closing_qty": 25,
+      "kind": "extra_product"
+    },
+    {
+      "product": "TRIKATU TAB",
+      "opening_qty": 26,
+      "sales_qty": 1,
+      "closing_qty": 25,
+      "kind": "extra_product"
+    },
+    {
+      "product": "TRIPHALA TAB",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "TRIPHALA TAB",
+      "opening_qty": 166,
+      "sales_qty": 37,
+      "closing_qty": 129,
+      "kind": "extra_product"
+    },
+    {
+      "product": "VASAKA CAPS",
+      "opening_qty": 34,
+      "sales_qty": 2,
+      "closing_qty": 32,
+      "kind": "extra_product"
+    },
+    {
+      "product": "VRKSHAMLA TABS",
+      "opening_qty": 25,
+      "sales_qty": 15,
+      "closing_qty": 10,
+      "kind": "extra_product"
+    },
+    {
+      "product": "YASHTIMADHU CAPS",
+      "opening_qty": 65,
+      "sales_qty": 50,
+      "closing_qty": 50,
+      "kind": "extra_product"
+    },
+    {
+      "product": "Z-ALTHEA LOTION-100ML",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "Z-CLARINA KIT",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "Z-HIOWNA(A)CHOCOLATE",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    }
+  ],
+  "duplicates": [],
+  "mismatches": [
+    {
+      "product": "H STRESS RELIEF MASSAGE 0 200ML PCs 24",
+      "field": "opening_qty",
+      "expected": 2795.43,
+      "actual": 24,
+      "kind": "wrong_opening_qty"
+    },
+    {
+      "product": "H PAIN RELIEF OIL-100ML 1Xx100m. PCs 31",
+      "field": "opening_qty",
+      "expected": 2975.72,
+      "actual": 31,
+      "kind": "wrong_opening_qty"
+    },
+    {
+      "product": "BLEMINOR CREAM",
+      "field": "closing_qty",
+      "expected": 4556.39,
+      "actual": 25,
+      "kind": "wrong_closing_qty"
+    },
+    {
+      "product": "DIABECON TABS 1x60's",
+      "field": "closing_qty",
+      "expected": 9383.14,
+      "actual": 75,
+      "kind": "wrong_closing_qty"
+    },
+    {
+      "product": "CLARINA F/W GEL",
+      "field": "closing_qty",
+      "expected": 6670.37,
+      "actual": 55,
+      "kind": "wrong_closing_qty"
+    },
+    {
+      "product": "19 rows",
+      "field": "sales_value",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 19,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    },
+    {
+      "product": "19 rows",
+      "field": "closing_value",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 19,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    }
+  ],
+  "ocr_review": [
+    {
+      "product": "H ANTI HAIR LOSS CREAM SM SOML PCS",
+      "api_product": "H ANTI HAIR LOSS CREAM SM",
+      "similarity": 0.847,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "H ANTI HAIR LOSS CREAM LA 100ML Pcs",
+      "api_product": "H ANTI HAIR LOSS CREAM LA",
+      "similarity": 0.833,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "HW ANTISEPTIC CREAM-20GM 1X20GM PCs",
+      "api_product": "H ANTTISEPTIC CREAM-20GM",
+      "similarity": 0.78,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "H PAIN BALM 10GMS 10GMS PCS",
+      "api_product": "H PAIN BALM 10GMS",
+      "similarity": 0.773,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "ORO-T ORAL RINSE LIQUID 200ML Pcs",
+      "api_product": "ORO-T ORAL RINSE LIQUID",
+      "similarity": 0.821,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "ORO-T ORAL RINSE LIQUID 200ML Pcs",
+      "field": "closing_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "Z-PUREHANDS-500ML LEMON Pos",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "Z-PUREHANDS-500ML LEMON Pos",
+      "field": "closing_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "QUISTA DN POWDER 400GM Pcs",
+      "api_product": "QUISTA DN POWDER",
+      "similarity": 0.762,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "QUISTA DN POWDER 400GM Pcs",
+      "field": "closing_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "QUISTA ACTIVE POWDER ZEA 200GM PCs",
+      "api_product": "QUISTA ACTIVE POWDER",
+      "similarity": 0.741,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "QUISTA ACTIVE POWDER ZEA 200GM PCs",
+      "field": "closing_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "H STRESS RELIEF MASSAGE 0 200ML PCs 24",
+      "api_product": "H STRESS RELIEF MASSAGE O",
+      "similarity": 0.762,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "H PAIN RELIEF OIL-100ML 1Xx100m. PCs 31",
+      "api_product": "H PAIN RELIEF OIL-100ML",
+      "similarity": 0.754,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "ZORO-T 300ML M/W 300ML Pc",
+      "api_product": "ZORO-T 300ML M/W",
+      "similarity": 0.78,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "ZORO-T 300ML M/W 300ML Pc",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "ZORO-T 300ML M/W 300ML Pc",
+      "field": "closing_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "Z-H COLD BALM 10GMs PC PCs",
+      "api_product": "Z-H COLD BALM 10GMS",
+      "similarity": 0.844,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "Z-H COLD BALM 10GMs PC PCs",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "Z-H COLD BALM 10GMs PC PCs",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "Z-H COLD BALM 10GMs PC PCs",
+      "field": "closing_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "Z-HIOWNA (A) CHOCOLATE 200GM PCS",
+      "api_product": "Z-HIOWNA-200GM(CHOC) SR",
+      "similarity": 0.808,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "Z-HIOWNA (A) CHOCOLATE 200GM PCS",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "Z-HIOWNA (A) CHOCOLATE 200GM PCS",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "Z-HIOWNA (A) CHOCOLATE 200GM PCS",
+      "field": "closing_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "Z-CLEARVITAL GEL 1Pc PCs",
+      "api_product": "Z-CLEARVITAL GEL",
+      "similarity": 0.8,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "Z-CLEARVITAL GEL 1Pc PCs",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "Z-CLEARVITAL GEL 1Pc PCs",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "Z-CLEARVITAL GEL 1Pc PCs",
+      "field": "closing_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "ZHIOWNA(A)400GM BIG 400GM PCs .",
+      "api_product": "ZHIOWNA(A)400GM BIG",
+      "similarity": 0.792,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "ZHIOWNA(A)400GM BIG 400GM PCs .",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "ZHIOWNA(A)400GM BIG 400GM PCs .",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "ZHIOWNA(A)400GM BIG 400GM PCs .",
+      "field": "closing_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "Z-HIOWNA(A) VANILLA 200GM Pcs",
+      "api_product": "Z-HIOWNA(A)VANILLA",
+      "similarity": 0.783,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "Z-HIOWNA(A) VANILLA 200GM Pcs",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "Z-HIOWNA(A) VANILLA 200GM Pcs",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "Z-HIOWNA(A) VANILLA 200GM Pcs",
+      "field": "closing_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "BLEMINOR CREAM",
+      "field": "opening_qty",
+      "expected": null,
+      "actual": 37,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "BLEMINOR CREAM",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "BLEMINOR CREAM",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 12,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "DIABECON TABS 1x60's",
+      "field": "opening_qty",
+      "expected": null,
+      "actual": 79,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "DIABECON TABS 1x60's",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "DIABECON TABS 1x60's",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 4,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "CLARINA F/W GEL",
+      "field": "opening_qty",
+      "expected": null,
+      "actual": 60,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "CLARINA F/W GEL",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "CLARINA F/W GEL",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 5,
+      "note": "Ground truth did not read this cell confidently."
+    }
+  ],
+  "accounting": [],
+  "confidence": "medium",
+  "notes": [
+    "OCR used tesseract psm 6."
+  ],
+  "result_key": "0000702097_2026_08_ZL_24_230_03092026040656",
+  "unavailable_fields": {
+    "sales_value": 19,
+    "closing_value": 19
+  },
+  "formula_checked": "none"
+}

@@ -1,0 +1,1616 @@
+{
+  "document_id": "0000701012_2026_08_ZL_11_423_03092026183736.jpg",
+  "verified_fields": 14,
+  "stored": {
+    "label": "stored",
+    "error": null,
+    "wall_latency_ms": 22,
+    "mode": "stored_vl",
+    "ocr": {
+      "pages": 0,
+      "timeout_pages": 0,
+      "empty_pages": 0,
+      "cache_hits": 0,
+      "engines": [],
+      "recovery_engines": [],
+      "page_timing": [],
+      "ocr_timed_out": false,
+      "has_table_html": true,
+      "di_ocr_override": true,
+      "ocr_source": "paddleocr-vl-stored",
+      "text_length": 5462
+    },
+    "field_accuracy": 0.7142857142857143,
+    "quantity_accuracy": 1.0,
+    "missing_values": null,
+    "table_structure_ok": true,
+    "score": {
+      "metrics": {
+        "verified_fields": 14,
+        "correct_fields": 10,
+        "field_accuracy": 0.7142857142857143,
+        "numeric_accuracy": 0.7272727272727273,
+        "quantity_accuracy": 1.0,
+        "price_accuracy": 0.0,
+        "date_accuracy": null,
+        "batch_accuracy": null,
+        "header_accuracy": 1.0,
+        "table_column_accuracy": 0.7272727272727273,
+        "text_accuracy": 0.6666666666666666,
+        "precision": 1.0,
+        "recall": 0.7142857142857143,
+        "f1": 0.8333333333333333,
+        "silent_wrong_rate": 0.0,
+        "silent_wrong_count": 0,
+        "silent_wrong_denominator_verified_fields": 14,
+        "accepted_field_silent_wrong_rate": 0.0,
+        "accepted_field_silent_wrong_count": 0,
+        "accepted_field_denominator": 10,
+        "explicit_unresolved_rate": 0.0,
+        "missing_value_rate": 0.07142857142857142,
+        "critical_error_rate": 0.0,
+        "by_type_prf": {
+          "numeric": {
+            "precision": 1.0,
+            "recall": 0.7272727272727273,
+            "f1": 0.8421052631578948,
+            "n": 11
+          },
+          "text": {
+            "precision": 1.0,
+            "recall": 0.6666666666666666,
+            "f1": 0.8,
+            "n": 3
+          },
+          "table": {
+            "precision": 1.0,
+            "recall": 0.7272727272727273,
+            "f1": 0.8421052631578948,
+            "n": 11
+          }
+        },
+        "error_type_counts": {
+          "MISSING": 1,
+          "UNMAPPED_HEADER": 1,
+          "MISSING_PRODUCT": 2
+        }
+      },
+      "document_status": "PARTIALLY_CORRECT",
+      "quantity_accuracy": 1.0,
+      "product_identity": {
+        "gt_products": 4,
+        "found_products": 4,
+        "recall": 1.0
+      },
+      "missing_values": 4,
+      "verified_fields": 14,
+      "correct_fields": 10
+    },
+    "result": {
+      "stockist_name": "\u2190 ZEAL.TXT",
+      "company_name": "HIMALAYA WELLNESS 701012",
+      "line_item_count": 38,
+      "line_items": [
+        {
+          "product_name": "AACTARIL SOAP 75G",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 8,
+          "closing_qty": 88,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "ABANA TABLETS",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 3,
+          "closing_qty": 79,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "BLEMINOR CREAM",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 12,
+          "closing_qty": 33,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "CLARINA CREAM",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 6,
+          "closing_qty": 51,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "CLARINA FACE WASH GEL#",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 8,
+          "closing_qty": 41,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "CONFIDO",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 15,
+          "closing_qty": 6,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "DIABECON DS TAB",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 32,
+          "closing_qty": 30,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "DIABECON TAB",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 5,
+          "closing_qty": 108,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "HADJOD CAP",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 6,
+          "closing_qty": 36,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "HAIR ZONE SOLUTION 60ML",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 13,
+          "closing_qty": 15,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "HERBOLAX CAP",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 46,
+          "closing_qty": 106,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "HIMCOLIN GEL",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 6,
+          "closing_qty": 64,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "KAPIKACHHU CAP",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 6,
+          "closing_qty": 19,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "LIV 52 HB CAPS",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 2,
+          "closing_qty": 65,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "LIV 52 SYRUP 100ML",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 34,
+          "closing_qty": 54,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "LIV 52 SYRUP 100ML SUG FR",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0,
+          "closing_qty": 70,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "LIV 52 SYRUP 200ML",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 54,
+          "closing_qty": 20,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "LIV 52 TAB",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 179,
+          "closing_qty": 848,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "MANJISHTHA TAB",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 2,
+          "closing_qty": 14,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "OPHTHACARE EYE DROP",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 118,
+          "closing_qty": 309,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "OXITARD CAP 10 S",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 5,
+          "closing_qty": 41,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "PILEX FORTE OINTMENT",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 187,
+          "closing_qty": 37,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "PILEX FORTE TAB 60 S",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 4,
+          "closing_qty": 38,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "PILEX TAB",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 451,
+          "closing_qty": 832,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "PURIM TAB",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "QUISTA DN 200G VANILA",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "QUISTA DN 400G VANILA",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "RENALKA SYRUP 100ML",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 4,
+          "closing_qty": 40,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "RENALKA SYRUP 200ML",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 12,
+          "closing_qty": 22,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "SHALLAKI TAB",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0,
+          "closing_qty": 49,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "SHIGRU TAB 60 S",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0,
+          "closing_qty": 0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "TAGARA CAP",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0,
+          "closing_qty": 15,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "TENTEX FORTE",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 100,
+          "closing_qty": 189,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "TRIPHALA TAB",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 34,
+          "closing_qty": 47,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "VASAKA TAB",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0,
+          "closing_qty": 37,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "VRIKSHAMLA TAB",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 3,
+          "closing_qty": 36,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "YASHTI-MADHU CAP",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 3,
+          "closing_qty": 33,
+          "stock_out_qty": null,
+          "stock_identity_ok": false,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "549791.98",
+          "opening_qty": 0.0,
+          "receipts_qty": 0.0,
+          "sales_qty": 0.0,
+          "closing_qty": 0.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": true,
+          "field_sources": null,
+          "recovery_original": null
+        }
+      ],
+      "extraction_method": "vl_html_table_parse",
+      "di_ocr_override": true,
+      "phase1_validation": {
+        "accepted": false,
+        "status": "unresolved",
+        "reasons": [
+          "stock_identity_failure"
+        ],
+        "checks": {
+          "schema": true,
+          "quality": false,
+          "stock_identity": false,
+          "rows": true,
+          "duplicates": true,
+          "cell_validation": true,
+          "column_mapping": true,
+          "ocr_verified": true
+        },
+        "quality_score": 75,
+        "parser": "vl_html_table_parse",
+        "failure_type": "STOCK_IDENTITY_FAILURE",
+        "business_validation": {
+          "status": "inconsistent",
+          "reason": "stock_identity_failure"
+        },
+        "source_agreement": null,
+        "source_evidence": true,
+        "cell_validation": {
+          "issues": [
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "AACTARIL SOAP 75G",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "AACTARIL SOAP 75G",
+              "raw_value": 88,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "AACTARIL SOAP 75G",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "AACTARIL SOAP 75G",
+              "raw_value": 8,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "ABANA TABLETS",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "ABANA TABLETS",
+              "raw_value": 79,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "ABANA TABLETS",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "ABANA TABLETS",
+              "raw_value": 3,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "BLEMINOR CREAM",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "BLEMINOR CREAM",
+              "raw_value": 33,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "BLEMINOR CREAM",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "BLEMINOR CREAM",
+              "raw_value": 12,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "CLARINA CREAM",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "CLARINA CREAM",
+              "raw_value": 51,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "CLARINA CREAM",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "CLARINA CREAM",
+              "raw_value": 6,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "CLARINA FACE WASH GEL#",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "CLARINA FACE WASH GEL#",
+              "raw_value": 41,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "CLARINA FACE WASH GEL#",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "CLARINA FACE WASH GEL#",
+              "raw_value": 8,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "CONFIDO",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "CONFIDO",
+              "raw_value": 6,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "CONFIDO",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "CONFIDO",
+              "raw_value": 15,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "DIABECON DS TAB",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "DIABECON DS TAB",
+              "raw_value": 30,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "DIABECON DS TAB",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "DIABECON DS TAB",
+              "raw_value": 32,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "DIABECON TAB",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "DIABECON TAB",
+              "raw_value": 108,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "DIABECON TAB",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "DIABECON TAB",
+              "raw_value": 5,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "HADJOD CAP",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "HADJOD CAP",
+              "raw_value": 36,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "HADJOD CAP",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "HADJOD CAP",
+              "raw_value": 6,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "HAIR ZONE SOLUTION 60ML",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "HAIR ZONE SOLUTION 60ML",
+              "raw_value": 15,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "HAIR ZONE SOLUTION 60ML",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "HAIR ZONE SOLUTION 60ML",
+              "raw_value": 13,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "HERBOLAX CAP",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "HERBOLAX CAP",
+              "raw_value": 106,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "HERBOLAX CAP",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "HERBOLAX CAP",
+              "raw_value": 46,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "HIMCOLIN GEL",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "HIMCOLIN GEL",
+              "raw_value": 64,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "HIMCOLIN GEL",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "HIMCOLIN GEL",
+              "raw_value": 6,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "KAPIKACHHU CAP",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "KAPIKACHHU CAP",
+              "raw_value": 19,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "KAPIKACHHU CAP",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "KAPIKACHHU CAP",
+              "raw_value": 6,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "LIV 52 HB CAPS",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "LIV 52 HB CAPS",
+              "raw_value": 65,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "LIV 52 HB CAPS",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "LIV 52 HB CAPS",
+              "raw_value": 2,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "LIV 52 SYRUP 100ML",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "LIV 52 SYRUP 100ML",
+              "raw_value": 54,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "LIV 52 SYRUP 100ML",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "LIV 52 SYRUP 100ML",
+              "raw_value": 34,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "LIV 52 SYRUP 100ML SUG FR",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "LIV 52 SYRUP 100ML SUG FR",
+              "raw_value": 70,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "LIV 52 SYRUP 100ML SUG FR",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "LIV 52 SYRUP 100ML SUG FR",
+              "raw_value": 0,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "LIV 52 SYRUP 200ML",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "LIV 52 SYRUP 200ML",
+              "raw_value": 20,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "LIV 52 SYRUP 200ML",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "LIV 52 SYRUP 200ML",
+              "raw_value": 54,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "LIV 52 TAB",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "LIV 52 TAB",
+              "raw_value": 848,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "LIV 52 TAB",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "LIV 52 TAB",
+              "raw_value": 179,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "MANJISHTHA TAB",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "MANJISHTHA TAB",
+              "raw_value": 14,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "MANJISHTHA TAB",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "MANJISHTHA TAB",
+              "raw_value": 2,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "OPHTHACARE EYE DROP",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "OPHTHACARE EYE DROP",
+              "raw_value": 309,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "OPHTHACARE EYE DROP",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "OPHTHACARE EYE DROP",
+              "raw_value": 118,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "OXITARD CAP 10 S",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "OXITARD CAP 10 S",
+              "raw_value": 41,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "OXITARD CAP 10 S",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "OXITARD CAP 10 S",
+              "raw_value": 5,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "PILEX FORTE OINTMENT",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "PILEX FORTE OINTMENT",
+              "raw_value": 37,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "PILEX FORTE OINTMENT",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "PILEX FORTE OINTMENT",
+              "raw_value": 187,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "PILEX FORTE TAB 60 S",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "PILEX FORTE TAB 60 S",
+              "raw_value": 38,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "PILEX FORTE TAB 60 S",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "PILEX FORTE TAB 60 S",
+              "raw_value": 4,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "PILEX TAB",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "PILEX TAB",
+              "raw_value": 832,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "PILEX TAB",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "PILEX TAB",
+              "raw_value": 451,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "RENALKA SYRUP 100ML",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "RENALKA SYRUP 100ML",
+              "raw_value": 40,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "RENALKA SYRUP 100ML",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "RENALKA SYRUP 100ML",
+              "raw_value": 4,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "RENALKA SYRUP 200ML",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "RENALKA SYRUP 200ML",
+              "raw_value": 22,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "RENALKA SYRUP 200ML",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "RENALKA SYRUP 200ML",
+              "raw_value": 12,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "SHALLAKI TAB",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "SHALLAKI TAB",
+              "raw_value": 49,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "SHALLAKI TAB",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "SHALLAKI TAB",
+              "raw_value": 0,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "TAGARA CAP",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "TAGARA CAP",
+              "raw_value": 15,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "TAGARA CAP",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "TAGARA CAP",
+              "raw_value": 0,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "TENTEX FORTE",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "TENTEX FORTE",
+              "raw_value": 189,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "TENTEX FORTE",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "TENTEX FORTE",
+              "raw_value": 100,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "TRIPHALA TAB",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "TRIPHALA TAB",
+              "raw_value": 47,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "TRIPHALA TAB",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "TRIPHALA TAB",
+              "raw_value": 34,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "VASAKA TAB",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "VASAKA TAB",
+              "raw_value": 37,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "VASAKA TAB",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "VASAKA TAB",
+              "raw_value": 0,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "VRIKSHAMLA TAB",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "VRIKSHAMLA TAB",
+              "raw_value": 36,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "VRIKSHAMLA TAB",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "VRIKSHAMLA TAB",
+              "raw_value": 3,
+              "evidence_ref": null
+            },
+            {
+              "field": "receipts_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "YASHTI-MADHU CAP",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "closing_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "YASHTI-MADHU CAP",
+              "raw_value": 33,
+              "evidence_ref": null
+            },
+            {
+              "field": "opening_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "YASHTI-MADHU CAP",
+              "raw_value": 0.0,
+              "evidence_ref": null
+            },
+            {
+              "field": "sales_qty",
+              "category": "STOCK_IDENTITY_MISMATCH",
+              "message": "row stock identity failed; critical qty unresolved",
+              "product_name": "YASHTI-MADHU CAP",
+              "raw_value": 3,
+              "evidence_ref": null
+            }
+          ],
+          "column_report": {
+            "assignments": [],
+            "unresolved_headers": [],
+            "ambiguous_fields": [],
+            "issues": [],
+            "layout_id": "vl_html_table_parse",
+            "mapping_confidence": 1.0,
+            "has_column_confusion": false
+          },
+          "accepted_critical_fields": 20,
+          "unresolved_critical_fields": 132,
+          "has_blocking_issues": true
+        }
+      },
+      "phase2": null
+    }
+  }
+}

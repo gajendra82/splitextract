@@ -1,0 +1,384 @@
+{
+  "file": "0000701851_2026_08_ZL_20_302_03092026134940.jpg",
+  "path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000701851_2026_08_ZL_20_302_03092026134940.jpg",
+  "format": "Sales & Stock Statement",
+  "api_method": "gemini_extraction_fallback",
+  "status": "FAIL",
+  "expected_rows": 29,
+  "extracted_rows": 29,
+  "matched_rows": 28,
+  "missing_rows": [
+    {
+      "product": "RENALKA",
+      "opening_qty": 31,
+      "receipts_qty": 0,
+      "sales_qty": 15,
+      "closing_qty": 16,
+      "kind": "missing_product"
+    }
+  ],
+  "extra_rows": [
+    {
+      "product": "RENALKA 200ML",
+      "opening_qty": 31,
+      "sales_qty": 0,
+      "closing_qty": 16,
+      "kind": "extra_product"
+    }
+  ],
+  "duplicates": [],
+  "mismatches": [
+    {
+      "product": "TRIPHALA TAB",
+      "field": "sales_qty",
+      "expected": 4,
+      "actual": 0,
+      "kind": "wrong_sales_qty"
+    },
+    {
+      "product": "RENALKA SYP.",
+      "field": "sales_qty",
+      "expected": 10,
+      "actual": 0,
+      "kind": "wrong_sales_qty"
+    },
+    {
+      "product": "QUISTA-ACTIVE",
+      "field": "sales_qty",
+      "expected": 7,
+      "actual": 0,
+      "kind": "wrong_sales_qty"
+    },
+    {
+      "product": "PILEX TAB",
+      "field": "sales_qty",
+      "expected": 8,
+      "actual": 0,
+      "kind": "wrong_sales_qty"
+    },
+    {
+      "product": "PILEX FORTE OINT",
+      "field": "sales_qty",
+      "expected": 75,
+      "actual": 0,
+      "kind": "wrong_sales_qty"
+    },
+    {
+      "product": "LIV-52 TAB",
+      "field": "sales_qty",
+      "expected": 226,
+      "actual": 0,
+      "kind": "wrong_sales_qty"
+    },
+    {
+      "product": "LIV-52 SYP.",
+      "field": "sales_qty",
+      "expected": 4,
+      "actual": 0,
+      "kind": "wrong_sales_qty"
+    },
+    {
+      "product": "LIV-52 SYP",
+      "field": "sales_qty",
+      "expected": 441,
+      "actual": 0,
+      "kind": "wrong_sales_qty"
+    },
+    {
+      "product": "LIV-52 HB CAP",
+      "field": "sales_qty",
+      "expected": 75,
+      "actual": 0,
+      "kind": "wrong_sales_qty"
+    },
+    {
+      "product": "HAIRZONE SOLU. —",
+      "field": "sales_qty",
+      "expected": 4,
+      "actual": 0,
+      "kind": "wrong_sales_qty"
+    },
+    {
+      "product": "HADJOD TAB",
+      "field": "sales_qty",
+      "expected": 14,
+      "actual": 0,
+      "kind": "wrong_sales_qty"
+    },
+    {
+      "product": "DIABECON-DS TAB",
+      "field": "sales_qty",
+      "expected": 17,
+      "actual": 0,
+      "kind": "wrong_sales_qty"
+    },
+    {
+      "product": "CONFIDO TAB",
+      "field": "sales_qty",
+      "expected": 2,
+      "actual": 0,
+      "kind": "wrong_sales_qty"
+    },
+    {
+      "product": "CLARINA CREAM",
+      "field": "sales_qty",
+      "expected": 3,
+      "actual": 0,
+      "kind": "wrong_sales_qty"
+    },
+    {
+      "product": "BLEMINOR CREAM",
+      "field": "sales_qty",
+      "expected": 1,
+      "actual": 0,
+      "kind": "wrong_sales_qty"
+    },
+    {
+      "product": "PILEX FORTETAB",
+      "field": "sales_qty",
+      "expected": 10,
+      "actual": 0,
+      "kind": "wrong_sales_qty"
+    },
+    {
+      "product": "ORO-T",
+      "field": "sales_qty",
+      "expected": 55,
+      "actual": 0,
+      "kind": "wrong_sales_qty"
+    },
+    {
+      "product": "QUISTA-DN MILK",
+      "field": "sales_qty",
+      "expected": 2,
+      "actual": 0,
+      "kind": "wrong_sales_qty"
+    },
+    {
+      "product": "TENTEX FORTE",
+      "field": "sales_qty",
+      "expected": 65,
+      "actual": 0,
+      "kind": "wrong_sales_qty"
+    },
+    {
+      "product": "CLARINA FACE",
+      "field": "sales_qty",
+      "expected": 15,
+      "actual": 0,
+      "kind": "wrong_sales_qty"
+    },
+    {
+      "product": "ABANA TAB",
+      "field": "opening_qty",
+      "expected": 1,
+      "actual": 71,
+      "kind": "wrong_opening_qty"
+    },
+    {
+      "product": "ABANA TAB",
+      "field": "sales_qty",
+      "expected": 4,
+      "actual": 0,
+      "kind": "wrong_sales_qty"
+    },
+    {
+      "product": "AACTARILSOAP",
+      "field": "receipts_qty",
+      "expected": 2,
+      "actual": 72,
+      "kind": "wrong_receipt_qty"
+    },
+    {
+      "product": "AACTARILSOAP",
+      "field": "closing_qty",
+      "expected": 7,
+      "actual": 77,
+      "kind": "wrong_closing_qty"
+    },
+    {
+      "product": "28 rows",
+      "field": "sales_value",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 28,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    },
+    {
+      "product": "28 rows",
+      "field": "closing_value",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 28,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    }
+  ],
+  "ocr_review": [
+    {
+      "product": "HIMCOLIN-GEL",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "HERBOLAX",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "OPHTHACARE EYE",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "QUISTA-DN MILK",
+      "api_product": "QUISTA-DN MILK MAS",
+      "similarity": 0.875,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "TENTEX FORTE",
+      "field": "closing_qty",
+      "expected": null,
+      "actual": 115,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "CLARINA FACE",
+      "api_product": "CLARINA FACE WASH",
+      "similarity": 0.828,
+      "note": "Product names differ but the row quantities correspond."
+    }
+  ],
+  "accounting": [
+    {
+      "product": "TRIPHALA TAB",
+      "formula": "adjusted",
+      "expected_closing": 9,
+      "actual_closing": 5,
+      "kind": "accounting_inconsistency"
+    },
+    {
+      "product": "RENALKA SYP.",
+      "formula": "adjusted",
+      "expected_closing": 59,
+      "actual_closing": 49,
+      "kind": "accounting_inconsistency"
+    },
+    {
+      "product": "QUISTA-ACTIVE",
+      "formula": "adjusted",
+      "expected_closing": 14,
+      "actual_closing": 7,
+      "kind": "accounting_inconsistency"
+    },
+    {
+      "product": "PILEX FORTE OINT",
+      "formula": "adjusted",
+      "expected_closing": 142,
+      "actual_closing": 67,
+      "kind": "accounting_inconsistency"
+    },
+    {
+      "product": "LIV-52 TAB",
+      "formula": "adjusted",
+      "expected_closing": 444,
+      "actual_closing": 218,
+      "kind": "accounting_inconsistency"
+    },
+    {
+      "product": "LIV-52 SYP",
+      "formula": "adjusted",
+      "expected_closing": 645,
+      "actual_closing": 204,
+      "kind": "accounting_inconsistency"
+    },
+    {
+      "product": "LIV-52 HB CAP",
+      "formula": "adjusted",
+      "expected_closing": 164,
+      "actual_closing": 89,
+      "kind": "accounting_inconsistency"
+    },
+    {
+      "product": "HAIRZONE SOLU. —",
+      "formula": "adjusted",
+      "expected_closing": 33,
+      "actual_closing": 29,
+      "kind": "accounting_inconsistency"
+    },
+    {
+      "product": "HADJOD TAB",
+      "formula": "adjusted",
+      "expected_closing": 101,
+      "actual_closing": 87,
+      "kind": "accounting_inconsistency"
+    },
+    {
+      "product": "DIABECON-DS TAB",
+      "formula": "adjusted",
+      "expected_closing": 68,
+      "actual_closing": 51,
+      "kind": "accounting_inconsistency"
+    },
+    {
+      "product": "CLARINA CREAM",
+      "formula": "adjusted",
+      "expected_closing": 39,
+      "actual_closing": 36,
+      "kind": "accounting_inconsistency"
+    },
+    {
+      "product": "BLEMINOR CREAM",
+      "formula": "adjusted",
+      "expected_closing": 42,
+      "actual_closing": 41,
+      "kind": "accounting_inconsistency"
+    },
+    {
+      "product": "PILEX FORTETAB",
+      "formula": "adjusted",
+      "expected_closing": 56,
+      "actual_closing": 46,
+      "kind": "accounting_inconsistency"
+    },
+    {
+      "product": "ORO-T",
+      "formula": "adjusted",
+      "expected_closing": 114,
+      "actual_closing": 59,
+      "kind": "accounting_inconsistency"
+    },
+    {
+      "product": "QUISTA-DN MILK",
+      "formula": "adjusted",
+      "expected_closing": 8,
+      "actual_closing": 6,
+      "kind": "accounting_inconsistency"
+    },
+    {
+      "product": "CLARINA FACE",
+      "formula": "adjusted",
+      "expected_closing": 65,
+      "actual_closing": 50,
+      "kind": "accounting_inconsistency"
+    }
+  ],
+  "confidence": "medium",
+  "notes": [
+    "OCR used tesseract psm 6."
+  ],
+  "result_key": "0000701851_2026_08_ZL_20_302_03092026134940",
+  "unavailable_fields": {
+    "sales_value": 28,
+    "closing_value": 28
+  },
+  "formula_checked": "adjusted"
+}

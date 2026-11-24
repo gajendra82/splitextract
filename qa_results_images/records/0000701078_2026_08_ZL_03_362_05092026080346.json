@@ -1,0 +1,362 @@
+{
+  "file": "0000701078_2026_08_ZL_03_362_05092026080346.jpeg",
+  "path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000701078_2026_08_ZL_03_362_05092026080346.jpeg",
+  "format": "Sales & Stock Statement",
+  "api_method": "gemini_extraction_fallback",
+  "status": "FAIL",
+  "expected_rows": 49,
+  "extracted_rows": 62,
+  "matched_rows": 41,
+  "missing_rows": [
+    {
+      "product": "SOAP",
+      "opening_qty": 82,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "AACTARIL ABANA TAB ALTHEA LOTION ANTI HAIR LOSS CREA",
+      "opening_qty": 0,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "CLARINA CREAM CLARINA KIT 4PKT",
+      "opening_qty": 0,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "COLD BALM 106 CONFIDO TAB",
+      "opening_qty": 0,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "HIMCOLIN GEL HIORA MWASH KAPIKACHHU CAP — LIV 52 HB GAP LIV 52 SYP/B",
+      "opening_qty": 2713,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "ORO-T LIQ OXITARD CAPS. PAINBALMSTRONG",
+      "opening_qty": 0,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "PILEXFORTETAB —-2*30'S PILEX TAB",
+      "opening_qty": 300,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "PURE HANDS-GA PUREHAND-F 500 mi",
+      "opening_qty": 0,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    }
+  ],
+  "extra_rows": [
+    {
+      "product": "AACTARIL SOAP",
+      "opening_qty": 82,
+      "sales_qty": 0,
+      "closing_qty": 69,
+      "kind": "extra_product"
+    },
+    {
+      "product": "ABANA TAB",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 73,
+      "kind": "extra_product"
+    },
+    {
+      "product": "ALTHEA LOTION",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "ANTI HAIR LOSS CREA",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "CLARINA CREAM",
+      "opening_qty": 74,
+      "sales_qty": 0,
+      "closing_qty": 119,
+      "kind": "extra_product"
+    },
+    {
+      "product": "CLARINA KIT",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "COLD BALM",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "CONFIDO TAB",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 252,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HIMCOLIN GEL",
+      "opening_qty": 63,
+      "sales_qty": 0,
+      "closing_qty": 106,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HIORA MWASH",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "KAPIKACHHU CAP",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "LIV 52 HB CAP",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 58,
+      "kind": "extra_product"
+    },
+    {
+      "product": "LIV 52 SYP/B",
+      "opening_qty": 2713,
+      "sales_qty": 0,
+      "closing_qty": 841,
+      "kind": "extra_product"
+    },
+    {
+      "product": "ORO-T LIQ",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "OXITARD CAPS.",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "PAIN BALM STRONG",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "PILEX FORTE TAB",
+      "opening_qty": 103,
+      "sales_qty": 0,
+      "closing_qty": 67,
+      "kind": "extra_product"
+    },
+    {
+      "product": "PILEX TAB",
+      "opening_qty": 300,
+      "sales_qty": 0,
+      "closing_qty": 191,
+      "kind": "extra_product"
+    },
+    {
+      "product": "PURE HANDS-GA",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "PUREHAND-F",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "PURIM TAB",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    }
+  ],
+  "duplicates": [],
+  "mismatches": [
+    {
+      "product": "ORO-T (S)",
+      "field": "opening_qty",
+      "expected": 60,
+      "actual": 50,
+      "kind": "wrong_opening_qty"
+    },
+    {
+      "product": "LIV 52 SYP/S.",
+      "field": "opening_qty",
+      "expected": 3623,
+      "actual": 3523,
+      "kind": "wrong_opening_qty"
+    },
+    {
+      "product": "HERBOLAX CAP",
+      "field": "opening_qty",
+      "expected": 63,
+      "actual": 0,
+      "kind": "wrong_opening_qty"
+    },
+    {
+      "product": "DIAREX SYP",
+      "field": "opening_qty",
+      "expected": 4,
+      "actual": 1,
+      "kind": "wrong_opening_qty"
+    },
+    {
+      "product": "BLEMINOR CREAM",
+      "field": "opening_qty",
+      "expected": 74,
+      "actual": 59,
+      "kind": "wrong_opening_qty"
+    },
+    {
+      "product": "‘ASHTI MADHU CAP.",
+      "field": "opening_qty",
+      "expected": 16,
+      "actual": 15,
+      "kind": "wrong_opening_qty"
+    },
+    {
+      "product": "RENALKA SYP(B) _200ML",
+      "field": "opening_qty",
+      "expected": 48,
+      "actual": 46,
+      "kind": "wrong_opening_qty"
+    },
+    {
+      "product": "41 rows",
+      "field": "sales_value",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 41,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    },
+    {
+      "product": "41 rows",
+      "field": "closing_value",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 41,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    },
+    {
+      "product": "41 rows",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 41,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    },
+    {
+      "product": "41 rows",
+      "field": "closing_qty",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 41,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    },
+    {
+      "product": "41 rows",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 41,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    }
+  ],
+  "ocr_review": [
+    {
+      "product": "LIV52TAB",
+      "api_product": "LIV 52 TAB",
+      "similarity": 0.889,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "VEUKSHAMLA CAP.",
+      "api_product": "VRIKSHAMLA CAP.",
+      "similarity": 0.857,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "PURIM TAB QUISTA ACTIVE(CF)",
+      "api_product": "QUISTA ACTIVE(CF)",
+      "similarity": 0.762,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "PUREHAND-O 500 mi",
+      "api_product": "PUREHAND-O",
+      "similarity": 0.741,
+      "note": "Product names differ but the row quantities correspond."
+    }
+  ],
+  "accounting": [],
+  "confidence": "medium",
+  "notes": [
+    "OCR used tesseract psm 6."
+  ],
+  "result_key": "0000701078_2026_08_ZL_03_362_05092026080346",
+  "unavailable_fields": {
+    "sales_value": 41,
+    "closing_value": 41,
+    "receipts_qty": 41,
+    "closing_qty": 41,
+    "sales_qty": 41
+  },
+  "formula_checked": "none"
+}

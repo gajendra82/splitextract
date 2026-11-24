@@ -1,0 +1,65 @@
+{
+  "count": 4,
+  "documents": [
+    {
+      "document_id": "0000700017_2026_08_ZL_06_476_02092026121836.pdf",
+      "extension": ".pdf",
+      "previous_parser": "pdf_text_gemini",
+      "previous_profile": "generic",
+      "previous_root_cause": "MAPPING_ERROR",
+      "replay_status": "EXTRACTED",
+      "comparison": "FAIL \u2192 PASS",
+      "current_parser": "op_pur_orec_sale_oiss",
+      "current_profile": "op_pur_orec_sale_oiss",
+      "current_formula": "closing=opening+purchase+other_receipt-sale-other_issue",
+      "identity_failure_count": 0,
+      "row_count": 49,
+      "change_kind": "identity_validation"
+    },
+    {
+      "document_id": "0000701555_2026_08_ZL_37_390_06092026182510.docx",
+      "extension": ".docx",
+      "previous_parser": "generic",
+      "previous_profile": "generic",
+      "previous_root_cause": "MAPPING_ERROR",
+      "replay_status": "EXTRACTED",
+      "comparison": "FAIL \u2192 PASS",
+      "current_parser": "profitmaker_ostk_docx",
+      "current_profile": "generic",
+      "current_formula": "closing=opening+receipts-sales",
+      "identity_failure_count": 0,
+      "row_count": 68,
+      "change_kind": "identity_validation"
+    },
+    {
+      "document_id": "0000728682_2026_08_ZL _10_380_04092026092536.xlsx",
+      "extension": ".xlsx",
+      "previous_parser": "generic",
+      "previous_profile": "generic",
+      "previous_root_cause": "IDENTITY_EQUATION_ERROR",
+      "replay_status": "EXTRACTED",
+      "comparison": "FAIL \u2192 FAIL",
+      "current_parser": null,
+      "current_profile": "saleret",
+      "current_formula": "total=opening+purchase; closing=total-sale+sale_return-exp_damage",
+      "identity_failure_count": 1,
+      "row_count": 52,
+      "change_kind": "parser_or_profile"
+    },
+    {
+      "document_id": "0000734248_2026_08_ZL_12_554_07092026051856.XLS",
+      "extension": ".xls",
+      "previous_parser": "marg_erp_xls_receive_issue_value",
+      "previous_profile": "generic",
+      "previous_root_cause": "PARSER_ERROR",
+      "replay_status": "EXTRACTED",
+      "comparison": "FAIL \u2192 PASS",
+      "current_parser": "marg_erp_xls_receive_issue_value",
+      "current_profile": "generic",
+      "current_formula": "closing=opening+receipts-sales",
+      "identity_failure_count": 0,
+      "row_count": 32,
+      "change_kind": "identity_validation"
+    }
+  ]
+}

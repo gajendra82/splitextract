@@ -1,0 +1,1936 @@
+{
+  "run_id": "20261013T385full",
+  "image_root_arg": "C:\\Users\\amnsa\\Downloads\\image dataset stock",
+  "resolved_dataset_dir": "C:\\Users\\amnsa\\Downloads\\image dataset stock",
+  "document_count": 385,
+  "created_utc": "2026-10-13T05:27:19.108832+00:00",
+  "entrypoint": "DocumentIntelligencePipeline.run",
+  "primary_ocr_engine_env": "paddleocr-vl",
+  "documents": [
+    {
+      "document_id": "0000700026_2026_08_ZA_06_333_04092026081643.png",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000700026_2026_08_ZA_06_333_04092026081643.png",
+      "bytes": 221945
+    },
+    {
+      "document_id": "0000700060_2026_08_ZA_06_617_04092026082801.png",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000700060_2026_08_ZA_06_617_04092026082801.png",
+      "bytes": 440437
+    },
+    {
+      "document_id": "0000700081_2026_08_ZA_06_333_04092026081604.png",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000700081_2026_08_ZA_06_333_04092026081604.png",
+      "bytes": 189355
+    },
+    {
+      "document_id": "0000700082_2026_08_ZA_06_467_04092026082339.png",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000700082_2026_08_ZA_06_467_04092026082339.png",
+      "bytes": 553051
+    },
+    {
+      "document_id": "0000700087_2026_08_ZA_06_333_04092026081228.png",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000700087_2026_08_ZA_06_333_04092026081228.png",
+      "bytes": 387933
+    },
+    {
+      "document_id": "0000700155_2026_08_ZA_06_333_04092026080817.png",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000700155_2026_08_ZA_06_333_04092026080817.png",
+      "bytes": 543814
+    },
+    {
+      "document_id": "0000700974_2026_08_ZA_11_210_07092026105901.png",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000700974_2026_08_ZA_11_210_07092026105901.png",
+      "bytes": 396089
+    },
+    {
+      "document_id": "0000700989_2026_08_ZA_11_210_07092026105922.png",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000700989_2026_08_ZA_11_210_07092026105922.png",
+      "bytes": 483051
+    },
+    {
+      "document_id": "0000701027_2026_08_ZA_11_210_07092026110044.png",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000701027_2026_08_ZA_11_210_07092026110044.png",
+      "bytes": 396089
+    },
+    {
+      "document_id": "0000701385_2026_08_ZA_37_216_01092026072110.png",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000701385_2026_08_ZA_37_216_01092026072110.png",
+      "bytes": 385122
+    },
+    {
+      "document_id": "0000701386_2026_08_ZA_37_216_01092026060705.png",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000701386_2026_08_ZA_37_216_01092026060705.png",
+      "bytes": 346029
+    },
+    {
+      "document_id": "0000701486_2026_08_ZA_37_216_01092026062328.png",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000701486_2026_08_ZA_37_216_01092026062328.png",
+      "bytes": 410379
+    },
+    {
+      "document_id": "0000701497_2026_08_ZA_37_216_01092026063625.png",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000701497_2026_08_ZA_37_216_01092026063625.png",
+      "bytes": 378402
+    },
+    {
+      "document_id": "0000701518_2026_08_ZA_37_216_01092026064642.png",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000701518_2026_08_ZA_37_216_01092026064642.png",
+      "bytes": 663607
+    },
+    {
+      "document_id": "0000701699_2026_08_ZA_37_216_01092026065925.png",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000701699_2026_08_ZA_37_216_01092026065925.png",
+      "bytes": 510253
+    },
+    {
+      "document_id": "0000701765_2026_08_ZA_37_216_01092026071349.png",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000701765_2026_08_ZA_37_216_01092026071349.png",
+      "bytes": 288203
+    },
+    {
+      "document_id": "0000702302_2026_08_ZA_24_291_07092026110840.png",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000702302_2026_08_ZA_24_291_07092026110840.png",
+      "bytes": 425736
+    },
+    {
+      "document_id": "0000702823_2026_08_ZA_22_235_05092026075405.png",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000702823_2026_08_ZA_22_235_05092026075405.png",
+      "bytes": 311523
+    },
+    {
+      "document_id": "0000702894_2026_08_ZA_22_235_05092026081637.png",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000702894_2026_08_ZA_22_235_05092026081637.png",
+      "bytes": 307716
+    },
+    {
+      "document_id": "0000702898_2026_08_ZA_22_235_05092026081715.png",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000702898_2026_08_ZA_22_235_05092026081715.png",
+      "bytes": 354836
+    },
+    {
+      "document_id": "0000705516_2026_08_ZA_22_235_05092026081504.png",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000705516_2026_08_ZA_22_235_05092026081504.png",
+      "bytes": 311523
+    },
+    {
+      "document_id": "0000708067_2026_08_ZA_24_536_04092026011934.png",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000708067_2026_08_ZA_24_536_04092026011934.png",
+      "bytes": 343997
+    },
+    {
+      "document_id": "0000708111_2026_08_ZA_37_216_01092026061710.png",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000708111_2026_08_ZA_37_216_01092026061710.png",
+      "bytes": 355957
+    },
+    {
+      "document_id": "0000709869_2026_08_ZA_06_8121_04092026080619.png",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000709869_2026_08_ZA_06_8121_04092026080619.png",
+      "bytes": 317863
+    },
+    {
+      "document_id": "0000711181_2026_08_ZA_06_617_04092026082556.png",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000711181_2026_08_ZA_06_617_04092026082556.png",
+      "bytes": 534049
+    },
+    {
+      "document_id": "0000713377_2026_08_ZA_37_216_01092026065126.png",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000713377_2026_08_ZA_37_216_01092026065126.png",
+      "bytes": 405730
+    },
+    {
+      "document_id": "0000714739_2026_08_ZA_22_235_05092026081605.png",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000714739_2026_08_ZA_22_235_05092026081605.png",
+      "bytes": 303337
+    },
+    {
+      "document_id": "0000715087_2026_08_ZA_24_293_04092026174549.png",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000715087_2026_08_ZA_24_293_04092026174549.png",
+      "bytes": 3911620
+    },
+    {
+      "document_id": "0000715088_2026_08_ZA_24_293_04092026181420.png",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000715088_2026_08_ZA_24_293_04092026181420.png",
+      "bytes": 5230057
+    },
+    {
+      "document_id": "0000715736_2026_08_ZA_24_255_07092026172425.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000715736_2026_08_ZA_24_255_07092026172425.jpg",
+      "bytes": 186962
+    },
+    {
+      "document_id": "0000715743_2026_08_ZA_33_701_02092026140448.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000715743_2026_08_ZA_33_701_02092026140448.jpg",
+      "bytes": 4235523
+    },
+    {
+      "document_id": "0000715753_2026_08_ZA_20_9232_01092026041414.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000715753_2026_08_ZA_20_9232_01092026041414.jpg",
+      "bytes": 86141
+    },
+    {
+      "document_id": "0000715762_2026_08_ZA_24_255_07092026102024.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000715762_2026_08_ZA_24_255_07092026102024.jpg",
+      "bytes": 827871
+    },
+    {
+      "document_id": "0000715763_2026_08_ZA_24_469_05092026085654.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000715763_2026_08_ZA_24_469_05092026085654.jpg",
+      "bytes": 2290220
+    },
+    {
+      "document_id": "0000715773_2026_08_ZA_24_255_07092026165557.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000715773_2026_08_ZA_24_255_07092026165557.jpg",
+      "bytes": 186962
+    },
+    {
+      "document_id": "0000715787_2026_08_ZA_04_747_03092026110903.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000715787_2026_08_ZA_04_747_03092026110903.jpg",
+      "bytes": 2040015
+    },
+    {
+      "document_id": "0000715797_2026_08_ZA_12_8165_02092026163733.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000715797_2026_08_ZA_12_8165_02092026163733.jpg",
+      "bytes": 308206
+    },
+    {
+      "document_id": "0000715804_2026_08_ZA_22_233_01092026170934.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000715804_2026_08_ZA_22_233_01092026170934.jpg",
+      "bytes": 680930
+    },
+    {
+      "document_id": "0000715818_2026_08_ZA_22_234_05092026065131.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000715818_2026_08_ZA_22_234_05092026065131.jpg",
+      "bytes": 1337311
+    },
+    {
+      "document_id": "0000715821_2026_08_ZA_33_352_07092026100342.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000715821_2026_08_ZA_33_352_07092026100342.jpg",
+      "bytes": 234323
+    },
+    {
+      "document_id": "0000715871_2026_08_ZA_24_8136_04092026052545.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000715871_2026_08_ZA_24_8136_04092026052545.jpg",
+      "bytes": 4514926
+    },
+    {
+      "document_id": "0000715888_2026_08_ZA_22_236_08092026031608.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000715888_2026_08_ZA_22_236_08092026031608.jpg",
+      "bytes": 1382698
+    },
+    {
+      "document_id": "0000716678_2026_08_ZA_24_290_03092026110428.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000716678_2026_08_ZA_24_290_03092026110428.jpg",
+      "bytes": 2594726
+    },
+    {
+      "document_id": "0000716849_2026_08_ZA_24_256_02092026043001.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000716849_2026_08_ZA_24_256_02092026043001.jpg",
+      "bytes": 1100907
+    },
+    {
+      "document_id": "0000717464_2026_08_ZA_01_224_03092026021751.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000717464_2026_08_ZA_01_224_03092026021751.jpg",
+      "bytes": 196055
+    },
+    {
+      "document_id": "0000717569_2026_08_ZA_35_8162_03092026110952.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000717569_2026_08_ZA_35_8162_03092026110952.jpg",
+      "bytes": 1753412
+    },
+    {
+      "document_id": "0000717878_2026_08_ZA_24_469_06092026021850.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000717878_2026_08_ZA_24_469_06092026021850.jpg",
+      "bytes": 3390135
+    },
+    {
+      "document_id": "0000718438_2026_08_ZA_01_223_04092026163207.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000718438_2026_08_ZA_01_223_04092026163207.jpg",
+      "bytes": 1967890
+    },
+    {
+      "document_id": "0000718784_2026_08_ZA_24_293_04092026071150.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000718784_2026_08_ZA_24_293_04092026071150.jpg",
+      "bytes": 3805112
+    },
+    {
+      "document_id": "0000718796_2026_08_ZA_24_262_03092026135208.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000718796_2026_08_ZA_24_262_03092026135208.jpg",
+      "bytes": 609351
+    },
+    {
+      "document_id": "0000718799_2026_08_ZA_12_390_04092026165053.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000718799_2026_08_ZA_12_390_04092026165053.jpg",
+      "bytes": 1906509
+    },
+    {
+      "document_id": "0000718881_2026_08_ZA_24_293_04092026074302.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000718881_2026_08_ZA_24_293_04092026074302.jpg",
+      "bytes": 4075293
+    },
+    {
+      "document_id": "0000718903_2026_08_ZA_24_293_04092026060012.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000718903_2026_08_ZA_24_293_04092026060012.jpg",
+      "bytes": 2827292
+    },
+    {
+      "document_id": "0000718910_2026_08_ZA_11_214_04092026134311.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000718910_2026_08_ZA_11_214_04092026134311.jpg",
+      "bytes": 2395384
+    },
+    {
+      "document_id": "0000718937_2026_08_ZA_04_530_08092026033019.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000718937_2026_08_ZA_04_530_08092026033019.jpg",
+      "bytes": 287330
+    },
+    {
+      "document_id": "0000718938_2026_08_ZA_33_352_07092026100528.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000718938_2026_08_ZA_33_352_07092026100528.jpg",
+      "bytes": 186578
+    },
+    {
+      "document_id": "0000718946_2026_08_ZA_12_466_03092026093948.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000718946_2026_08_ZA_12_466_03092026093948.jpg",
+      "bytes": 1890437
+    },
+    {
+      "document_id": "0000718964_2026_08_ZA_24_255_07092026081933.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000718964_2026_08_ZA_24_255_07092026081933.jpg",
+      "bytes": 1701197
+    },
+    {
+      "document_id": "0000718972_2026_08_ZA_24_8119_06092026050607.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000718972_2026_08_ZA_24_8119_06092026050607.jpg",
+      "bytes": 165577
+    },
+    {
+      "document_id": "0000719004_2026_08_ZA_04_550_02092026014949.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000719004_2026_08_ZA_04_550_02092026014949.jpg",
+      "bytes": 104283
+    },
+    {
+      "document_id": "0000719005_2026_08_ZA_18_800_05092026161646.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000719005_2026_08_ZA_18_800_05092026161646.jpg",
+      "bytes": 479465
+    },
+    {
+      "document_id": "0000719032_2026_08_ZA_12_346_03092026111446.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000719032_2026_08_ZA_12_346_03092026111446.jpg",
+      "bytes": 1168454
+    },
+    {
+      "document_id": "0000719133_2026_08_ZA_13_251_06092026132910.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000719133_2026_08_ZA_13_251_06092026132910.jpg",
+      "bytes": 1357957
+    },
+    {
+      "document_id": "0000719421_2026_08_ZA_12_353_03092026113855.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000719421_2026_08_ZA_12_353_03092026113855.jpg",
+      "bytes": 3647231
+    },
+    {
+      "document_id": "0000719540_2026_08_ZA_35_273_06092026112801.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000719540_2026_08_ZA_35_273_06092026112801.jpg",
+      "bytes": 2851097
+    },
+    {
+      "document_id": "0000719588_2026_08_ZA_24_8166_03092026071813.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000719588_2026_08_ZA_24_8166_03092026071813.jpg",
+      "bytes": 1889905
+    },
+    {
+      "document_id": "0000719643_2026_08_ZA_08_8169_01092026040217.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000719643_2026_08_ZA_08_8169_01092026040217.jpg",
+      "bytes": 1998631
+    },
+    {
+      "document_id": "0000719779_2026_08_ZA_06_332_01092026110551.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000719779_2026_08_ZA_06_332_01092026110551.jpg",
+      "bytes": 3254733
+    },
+    {
+      "document_id": "0000720438_2026_08_ZA_24_8166_03092026065846.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000720438_2026_08_ZA_24_8166_03092026065846.jpg",
+      "bytes": 1880850
+    },
+    {
+      "document_id": "0000720579_2026_08_ZA_35_559_07092026073347.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000720579_2026_08_ZA_35_559_07092026073347.jpg",
+      "bytes": 989778
+    },
+    {
+      "document_id": "0000720709_2026_08_ZA_24_289A_03092026164957.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000720709_2026_08_ZA_24_289A_03092026164957.jpg",
+      "bytes": 1199773
+    },
+    {
+      "document_id": "0000720716_2026_08_ZA_24_259_03092026070308.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000720716_2026_08_ZA_24_259_03092026070308.jpg",
+      "bytes": 332855
+    },
+    {
+      "document_id": "0000720755_2026_08_ZA_22_232_05092026073045.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000720755_2026_08_ZA_22_232_05092026073045.jpg",
+      "bytes": 335742
+    },
+    {
+      "document_id": "0000720756_2026_08_ZA_24_291_07092026162249.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000720756_2026_08_ZA_24_291_07092026162249.jpg",
+      "bytes": 61266
+    },
+    {
+      "document_id": "0000720855_2026_08_ZA_24_271_06092026045256.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000720855_2026_08_ZA_24_271_06092026045256.jpg",
+      "bytes": 2247611
+    },
+    {
+      "document_id": "0000720856_2026_08_ZA_24_271_06092026042506.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000720856_2026_08_ZA_24_271_06092026042506.jpg",
+      "bytes": 2846397
+    },
+    {
+      "document_id": "0000721369_2026_08_ZA_12_346_06092026035750.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000721369_2026_08_ZA_12_346_06092026035750.jpg",
+      "bytes": 5338441
+    },
+    {
+      "document_id": "0000721682_2026_08_ZA_24_256A_04092026081310.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000721682_2026_08_ZA_24_256A_04092026081310.jpg",
+      "bytes": 172103
+    },
+    {
+      "document_id": "0000721862_2026_08_ZA_12_8163_01092026113410.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000721862_2026_08_ZA_12_8163_01092026113410.jpg",
+      "bytes": 429554
+    },
+    {
+      "document_id": "0000721865_2026_08_ZA_24_256A_06092026090906.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000721865_2026_08_ZA_24_256A_06092026090906.jpg",
+      "bytes": 178158
+    },
+    {
+      "document_id": "0000721869_2026_08_ZA_12_346_06092026040348.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000721869_2026_08_ZA_12_346_06092026040348.jpg",
+      "bytes": 5660652
+    },
+    {
+      "document_id": "0000721891_2026_08_ZA_33_701_02092026142157.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000721891_2026_08_ZA_33_701_02092026142157.jpg",
+      "bytes": 2898892
+    },
+    {
+      "document_id": "0000721894_2026_08_ZA_12_752_04092026061541.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000721894_2026_08_ZA_12_752_04092026061541.jpg",
+      "bytes": 138501
+    },
+    {
+      "document_id": "0000721895_2026_08_ZA_35_274_02092026130734.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000721895_2026_08_ZA_35_274_02092026130734.jpg",
+      "bytes": 2767229
+    },
+    {
+      "document_id": "0000721911_2026_08_ZA_12_738_03092026050541.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000721911_2026_08_ZA_12_738_03092026050541.jpg",
+      "bytes": 814688
+    },
+    {
+      "document_id": "0000721920_2026_08_ZA_04_556_03092026013957.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000721920_2026_08_ZA_04_556_03092026013957.jpg",
+      "bytes": 418306
+    },
+    {
+      "document_id": "0000721924_2026_08_ZA_12_350_03092026163109.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000721924_2026_08_ZA_12_350_03092026163109.jpg",
+      "bytes": 474365
+    },
+    {
+      "document_id": "0000721962_2026_08_ZA_14_311_02092026163242.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000721962_2026_08_ZA_14_311_02092026163242.jpg",
+      "bytes": 128113
+    },
+    {
+      "document_id": "0000722003_2026_08_ZA_03_375_04092026111150.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000722003_2026_08_ZA_03_375_04092026111150.jpeg",
+      "bytes": 406696
+    },
+    {
+      "document_id": "0000722067_2026_08_ZA_24_258_01092026075954.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000722067_2026_08_ZA_24_258_01092026075954.jpeg",
+      "bytes": 164519
+    },
+    {
+      "document_id": "0000722074_2026_08_ZA_24_258_01092026070131.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000722074_2026_08_ZA_24_258_01092026070131.jpeg",
+      "bytes": 182941
+    },
+    {
+      "document_id": "0000722075_2026_08_ZA_24_258_01092026071620.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000722075_2026_08_ZA_24_258_01092026071620.jpeg",
+      "bytes": 160681
+    },
+    {
+      "document_id": "0000722080_2026_08_ZA_03_731_05092026182157.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000722080_2026_08_ZA_03_731_05092026182157.jpeg",
+      "bytes": 102053
+    },
+    {
+      "document_id": "0000722289_2026_08_ZA_04_589_04092026043529.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000722289_2026_08_ZA_04_589_04092026043529.jpg",
+      "bytes": 390624
+    },
+    {
+      "document_id": "0000722304_2026_08_ZA_13_241A_02092026163627.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000722304_2026_08_ZA_13_241A_02092026163627.jpg",
+      "bytes": 519412
+    },
+    {
+      "document_id": "0000722646_2026_08_ZA_10_202_02092026145210.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000722646_2026_08_ZA_10_202_02092026145210.jpg",
+      "bytes": 233828
+    },
+    {
+      "document_id": "0000722750_2026_08_ZA_24_258_01092026074817.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000722750_2026_08_ZA_24_258_01092026074817.jpeg",
+      "bytes": 146919
+    },
+    {
+      "document_id": "0000722831_2026_08_ZA_01_220_04092026030138.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000722831_2026_08_ZA_01_220_04092026030138.jpg",
+      "bytes": 147787
+    },
+    {
+      "document_id": "0000722833_2026_08_ZA_10_202_02092026142536.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000722833_2026_08_ZA_10_202_02092026142536.jpg",
+      "bytes": 145884
+    },
+    {
+      "document_id": "0000722834_2026_08_ZA_01_224_03092026021843.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000722834_2026_08_ZA_01_224_03092026021843.jpg",
+      "bytes": 298923
+    },
+    {
+      "document_id": "0000722943_2026_08_ZA_19_326_04092026180035.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000722943_2026_08_ZA_19_326_04092026180035.jpg",
+      "bytes": 4182552
+    },
+    {
+      "document_id": "0000723002_2026_08_ZA_01_521_04092026104733.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000723002_2026_08_ZA_01_521_04092026104733.jpg",
+      "bytes": 930173
+    },
+    {
+      "document_id": "0000723010_2026_08_ZA_24_288_05092026164514.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000723010_2026_08_ZA_24_288_05092026164514.jpg",
+      "bytes": 1459088
+    },
+    {
+      "document_id": "0000723047_2026_08_ZA_24_527_03092026144607.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000723047_2026_08_ZA_24_527_03092026144607.jpg",
+      "bytes": 8157176
+    },
+    {
+      "document_id": "0000723048_2026_08_ZA_24_258_01092026075113.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000723048_2026_08_ZA_24_258_01092026075113.jpeg",
+      "bytes": 172886
+    },
+    {
+      "document_id": "0000723059_2026_08_ZA_20_338_07092026054617.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000723059_2026_08_ZA_20_338_07092026054617.jpg",
+      "bytes": 729873
+    },
+    {
+      "document_id": "0000723066_2026_08_ZA_24_290_03092026110203.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000723066_2026_08_ZA_24_290_03092026110203.jpg",
+      "bytes": 2836805
+    },
+    {
+      "document_id": "0000723071_2026_08_ZA_24_256_02092026171604.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000723071_2026_08_ZA_24_256_02092026171604.jpg",
+      "bytes": 2306104
+    },
+    {
+      "document_id": "0000723083_2026_08_ZA_24_270_05092026015848.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000723083_2026_08_ZA_24_270_05092026015848.jpg",
+      "bytes": 1768967
+    },
+    {
+      "document_id": "0000723088_2026_08_ZA_24_291_07092026035747.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000723088_2026_08_ZA_24_291_07092026035747.jpg",
+      "bytes": 234833
+    },
+    {
+      "document_id": "0000723103_2026_08_ZA_10_201_07092026035415.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000723103_2026_08_ZA_10_201_07092026035415.jpg",
+      "bytes": 105642
+    },
+    {
+      "document_id": "0000723105_2026_08_ZA_24_257_03092026111119.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000723105_2026_08_ZA_24_257_03092026111119.jpg",
+      "bytes": 2345323
+    },
+    {
+      "document_id": "0000723401_2026_08_ZA_24_270_05092026015919.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000723401_2026_08_ZA_24_270_05092026015919.jpg",
+      "bytes": 1419594
+    },
+    {
+      "document_id": "0000723405_2026_08_ZA_24_270_06092026113124.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000723405_2026_08_ZA_24_270_06092026113124.jpg",
+      "bytes": 1275094
+    },
+    {
+      "document_id": "0000723519_2026_08_ZA_30_313_02092026145808.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000723519_2026_08_ZA_30_313_02092026145808.jpg",
+      "bytes": 664485
+    },
+    {
+      "document_id": "0000723645_2026_08_ZA_03_306_03092026100117.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000723645_2026_08_ZA_03_306_03092026100117.jpg",
+      "bytes": 1460971
+    },
+    {
+      "document_id": "0000723736_2026_08_ZA_24_587_02092026035124.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000723736_2026_08_ZA_24_587_02092026035124.jpg",
+      "bytes": 1679939
+    },
+    {
+      "document_id": "0000724038_2026_08_ZA_12_466_03092026091650.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000724038_2026_08_ZA_12_466_03092026091650.jpg",
+      "bytes": 1930975
+    },
+    {
+      "document_id": "0000724759_2026_08_ZA_24_265_05092026025040.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000724759_2026_08_ZA_24_265_05092026025040.jpeg",
+      "bytes": 227493
+    },
+    {
+      "document_id": "0000725099_2026_08_ZA_33_352_07092026100618.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000725099_2026_08_ZA_33_352_07092026100618.jpg",
+      "bytes": 539478
+    },
+    {
+      "document_id": "0000725163_2026_08_ZA_04_504_07092026044432.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000725163_2026_08_ZA_04_504_07092026044432.jpg",
+      "bytes": 1531577
+    },
+    {
+      "document_id": "0000725327_2026_08_ZA_01_750_04092026102312.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000725327_2026_08_ZA_01_750_04092026102312.jpeg",
+      "bytes": 383979
+    },
+    {
+      "document_id": "0000725353_2026_08_ZA_35_273_06092026112355.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000725353_2026_08_ZA_35_273_06092026112355.jpg",
+      "bytes": 3267176
+    },
+    {
+      "document_id": "0000725356_2026_08_ZA_24_469_05092026174608.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000725356_2026_08_ZA_24_469_05092026174608.jpg",
+      "bytes": 3111699
+    },
+    {
+      "document_id": "0000725365_2026_08_ZA_37_216_01092026070642.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000725365_2026_08_ZA_37_216_01092026070642.jpg",
+      "bytes": 4505617
+    },
+    {
+      "document_id": "0000727230_2026_08_ZA_24_265_05092026025825.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000727230_2026_08_ZA_24_265_05092026025825.jpeg",
+      "bytes": 242941
+    },
+    {
+      "document_id": "0000727243_2026_08_ZA_24_265_05092026025903.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000727243_2026_08_ZA_24_265_05092026025903.jpeg",
+      "bytes": 226298
+    },
+    {
+      "document_id": "0000727268_2026_08_ZA_35_8162_03092026111456.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000727268_2026_08_ZA_35_8162_03092026111456.jpg",
+      "bytes": 1769081
+    },
+    {
+      "document_id": "0000727269_2026_08_ZA_35_8162_03092026110815.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000727269_2026_08_ZA_35_8162_03092026110815.jpg",
+      "bytes": 1552530
+    },
+    {
+      "document_id": "0000727285_2026_08_ZA_24_8136_04092026051629.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000727285_2026_08_ZA_24_8136_04092026051629.jpg",
+      "bytes": 4164833
+    },
+    {
+      "document_id": "0000727286_2026_08_ZA_24_8136_04092026051907.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000727286_2026_08_ZA_24_8136_04092026051907.jpg",
+      "bytes": 4042683
+    },
+    {
+      "document_id": "0000727298_2026_08_ZA_12_346_06092026131431.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000727298_2026_08_ZA_12_346_06092026131431.jpg",
+      "bytes": 720896
+    },
+    {
+      "document_id": "0000727450_2026_08_ZA_24_8113_05092026033556.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000727450_2026_08_ZA_24_8113_05092026033556.jpg",
+      "bytes": 1305517
+    },
+    {
+      "document_id": "0000727491_2026_08_ZA_04_282_07092026140408.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000727491_2026_08_ZA_04_282_07092026140408.jpg",
+      "bytes": 370530
+    },
+    {
+      "document_id": "0000727575_2026_08_ZA_03_711_06092026191844.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000727575_2026_08_ZA_03_711_06092026191844.jpeg",
+      "bytes": 205221
+    },
+    {
+      "document_id": "0000727669_2026_08_ZA_18_8126_06092026155640.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000727669_2026_08_ZA_18_8126_06092026155640.jpg",
+      "bytes": 2788574
+    },
+    {
+      "document_id": "0000727741_2026_08_ZA_24_256_02092026171654.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000727741_2026_08_ZA_24_256_02092026171654.jpg",
+      "bytes": 194441
+    },
+    {
+      "document_id": "0000727762_2026_08_ZA_12_4345_03092026145318.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000727762_2026_08_ZA_12_4345_03092026145318.jpg",
+      "bytes": 1864484
+    },
+    {
+      "document_id": "0000727764_2026_08_ZA_01_561_07092026160620.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000727764_2026_08_ZA_01_561_07092026160620.jpg",
+      "bytes": 560697
+    },
+    {
+      "document_id": "0000727765_2026_08_ZA_32_357_05092026083512.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000727765_2026_08_ZA_32_357_05092026083512.jpeg",
+      "bytes": 75742
+    },
+    {
+      "document_id": "0000727803_2026_08_ZA_24_259_03092026065953.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000727803_2026_08_ZA_24_259_03092026065953.jpg",
+      "bytes": 309688
+    },
+    {
+      "document_id": "0000727823_2026_08_ZA_12_4347_03092026075453.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000727823_2026_08_ZA_12_4347_03092026075453.jpeg",
+      "bytes": 91096
+    },
+    {
+      "document_id": "0000727884_2026_08_ZA_10_201_07092026042110.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000727884_2026_08_ZA_10_201_07092026042110.jpg",
+      "bytes": 251142
+    },
+    {
+      "document_id": "0000727957_2026_08_ZA_24_258_01092026065507.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000727957_2026_08_ZA_24_258_01092026065507.jpeg",
+      "bytes": 170522
+    },
+    {
+      "document_id": "0000727961_2026_08_ZA_35_274_02092026130210.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000727961_2026_08_ZA_35_274_02092026130210.jpg",
+      "bytes": 2445801
+    },
+    {
+      "document_id": "0000727989_2026_08_ZA_24_265_05092026024840.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000727989_2026_08_ZA_24_265_05092026024840.jpeg",
+      "bytes": 243793
+    },
+    {
+      "document_id": "0000728065_2026_08_ZA_04_282_07092026153743.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000728065_2026_08_ZA_04_282_07092026153743.jpg",
+      "bytes": 1867431
+    },
+    {
+      "document_id": "0000728183_2026_08_ZA_03_306_03092026112442.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000728183_2026_08_ZA_03_306_03092026112442.jpg",
+      "bytes": 446352
+    },
+    {
+      "document_id": "0000728222_2026_08_ZA_24_292_04092026151723.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000728222_2026_08_ZA_24_292_04092026151723.jpg",
+      "bytes": 1994086
+    },
+    {
+      "document_id": "0000728244_2026_08_ZA_35_3836_02092026185555.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000728244_2026_08_ZA_35_3836_02092026185555.jpg",
+      "bytes": 2023014
+    },
+    {
+      "document_id": "0000728245_2026_08_ZA_24_259_03092026070016.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000728245_2026_08_ZA_24_259_03092026070016.jpg",
+      "bytes": 364378
+    },
+    {
+      "document_id": "0000728246_2026_08_ZA_24_8113_05092026033258.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000728246_2026_08_ZA_24_8113_05092026033258.jpg",
+      "bytes": 1427442
+    },
+    {
+      "document_id": "0000728248_2026_08_ZA_24_3839_05092026111549.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000728248_2026_08_ZA_24_3839_05092026111549.jpg",
+      "bytes": 2532288
+    },
+    {
+      "document_id": "0000728260_2026_08_ZA_15_362_03092026134019.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000728260_2026_08_ZA_15_362_03092026134019.jpeg",
+      "bytes": 325336
+    },
+    {
+      "document_id": "0000728266_2026_08_ZA_04_9307_05092026064839.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000728266_2026_08_ZA_04_9307_05092026064839.jpg",
+      "bytes": 205563
+    },
+    {
+      "document_id": "0000728272_2026_08_ZA_30_313_01092026152215.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000728272_2026_08_ZA_30_313_01092026152215.jpg",
+      "bytes": 525764
+    },
+    {
+      "document_id": "0000728286_2026_08_ZA_04_282_07092026142556.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000728286_2026_08_ZA_04_282_07092026142556.jpg",
+      "bytes": 281253
+    },
+    {
+      "document_id": "0000728304_2026_08_ZA_03_308_05092026183938.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000728304_2026_08_ZA_03_308_05092026183938.jpeg",
+      "bytes": 147029
+    },
+    {
+      "document_id": "0000728305_2026_08_ZA_06_330_05092026123426.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000728305_2026_08_ZA_06_330_05092026123426.jpg",
+      "bytes": 1741224
+    },
+    {
+      "document_id": "0000728319_2026_08_ZA_22_237_05092026062410.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000728319_2026_08_ZA_22_237_05092026062410.jpg",
+      "bytes": 73293
+    },
+    {
+      "document_id": "0000728322_2026_08_ZA_04_275_06092026182931.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000728322_2026_08_ZA_04_275_06092026182931.jpeg",
+      "bytes": 205961
+    },
+    {
+      "document_id": "0000728345_2026_08_ZA_30_313_01092026145850.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000728345_2026_08_ZA_30_313_01092026145850.jpg",
+      "bytes": 716903
+    },
+    {
+      "document_id": "0000728347_2026_08_ZA_04_747_02092026153045.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000728347_2026_08_ZA_04_747_02092026153045.jpg",
+      "bytes": 1288047
+    },
+    {
+      "document_id": "0000728351_2026_08_ZA_04_589_04092026043841.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000728351_2026_08_ZA_04_589_04092026043841.jpg",
+      "bytes": 319436
+    },
+    {
+      "document_id": "0000728361_2026_08_ZA_10_204_07092026165337.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000728361_2026_08_ZA_10_204_07092026165337.jpg",
+      "bytes": 354853
+    },
+    {
+      "document_id": "0000728364_2026_08_ZA_12_570_02092026120208.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000728364_2026_08_ZA_12_570_02092026120208.jpg",
+      "bytes": 2167784
+    },
+    {
+      "document_id": "0000728369_2026_08_ZA_13_242A_02092026134237.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000728369_2026_08_ZA_13_242A_02092026134237.jpg",
+      "bytes": 2303129
+    },
+    {
+      "document_id": "0000728374_2026_08_ZA_33_349_06092026172457.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000728374_2026_08_ZA_33_349_06092026172457.jpeg",
+      "bytes": 164244
+    },
+    {
+      "document_id": "0000728384_2026_08_ZA_12_752_04092026065619.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000728384_2026_08_ZA_12_752_04092026065619.jpg",
+      "bytes": 254989
+    },
+    {
+      "document_id": "0000728402_2026_08_ZA_24_605_07092026033818.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000728402_2026_08_ZA_24_605_07092026033818.jpg",
+      "bytes": 7347021
+    },
+    {
+      "document_id": "0000728427_2026_08_ZA_19_326_02092026141457.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000728427_2026_08_ZA_19_326_02092026141457.jpg",
+      "bytes": 1872355
+    },
+    {
+      "document_id": "0000728429_2026_08_ZA_23_303_07092026172709.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000728429_2026_08_ZA_23_303_07092026172709.jpeg",
+      "bytes": 126713
+    },
+    {
+      "document_id": "0000728454_2026_08_ZA_04_504_07092026043228.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000728454_2026_08_ZA_04_504_07092026043228.jpg",
+      "bytes": 1496423
+    },
+    {
+      "document_id": "0000728469_2026_08_ZA_24_256_05092026160904.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000728469_2026_08_ZA_24_256_05092026160904.jpg",
+      "bytes": 338989
+    },
+    {
+      "document_id": "0000728559_2026_08_ZA_24_257_03092026103902.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000728559_2026_08_ZA_24_257_03092026103902.jpg",
+      "bytes": 1566841
+    },
+    {
+      "document_id": "0000728883_2026_08_ZA_12_353_03092026105518.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000728883_2026_08_ZA_12_353_03092026105518.jpg",
+      "bytes": 1509624
+    },
+    {
+      "document_id": "0000728907_2026_08_ZA_01_220_04092026025552.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000728907_2026_08_ZA_01_220_04092026025552.jpg",
+      "bytes": 142130
+    },
+    {
+      "document_id": "0000729030_2026_08_ZA_24_288_05092026140956.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000729030_2026_08_ZA_24_288_05092026140956.jpg",
+      "bytes": 270132
+    },
+    {
+      "document_id": "0000729114_2026_08_ZA_24_8113_05092026034040.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000729114_2026_08_ZA_24_8113_05092026034040.jpg",
+      "bytes": 1602370
+    },
+    {
+      "document_id": "0000729390_2026_08_ZA_24_8148_04092026155134.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000729390_2026_08_ZA_24_8148_04092026155134.jpeg",
+      "bytes": 180480
+    },
+    {
+      "document_id": "0000729393_2026_08_ZA_24_614_04092026113755.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000729393_2026_08_ZA_24_614_04092026113755.jpg",
+      "bytes": 1180450
+    },
+    {
+      "document_id": "0000729396_2026_08_ZA_24_614_03092026135147.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000729396_2026_08_ZA_24_614_03092026135147.jpg",
+      "bytes": 339862
+    },
+    {
+      "document_id": "0000729398_2026_08_ZA_04_556_03092026022843.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000729398_2026_08_ZA_04_556_03092026022843.jpg",
+      "bytes": 513402
+    },
+    {
+      "document_id": "0000729402_2026_08_ZA_24_720_04092026073040.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000729402_2026_08_ZA_24_720_04092026073040.jpg",
+      "bytes": 3830912
+    },
+    {
+      "document_id": "0000729406_2026_08_ZA_04_571_06092026050551.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000729406_2026_08_ZA_04_571_06092026050551.jpeg",
+      "bytes": 1656913
+    },
+    {
+      "document_id": "0000729410_2026_08_ZA_20_811_03092026044431.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000729410_2026_08_ZA_20_811_03092026044431.jpg",
+      "bytes": 442987
+    },
+    {
+      "document_id": "0000729414_2026_08_ZA_24_271_06092026044238.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000729414_2026_08_ZA_24_271_06092026044238.jpg",
+      "bytes": 2156601
+    },
+    {
+      "document_id": "0000729415_2026_08_ZA_24_271_06092026042658.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000729415_2026_08_ZA_24_271_06092026042658.jpg",
+      "bytes": 2832568
+    },
+    {
+      "document_id": "0000729426_2026_08_ZA_35_274_02092026131419.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000729426_2026_08_ZA_35_274_02092026131419.jpg",
+      "bytes": 2277585
+    },
+    {
+      "document_id": "0000729441_2026_08_ZA_18_8124_06092026081603.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000729441_2026_08_ZA_18_8124_06092026081603.jpeg",
+      "bytes": 117033
+    },
+    {
+      "document_id": "0000729449_2026_08_ZA_24_288_07092026035107.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000729449_2026_08_ZA_24_288_07092026035107.jpg",
+      "bytes": 2685184
+    },
+    {
+      "document_id": "0000729480_2026_08_ZA_04_592_07092026023600.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000729480_2026_08_ZA_04_592_07092026023600.jpg",
+      "bytes": 1935246
+    },
+    {
+      "document_id": "0000729500_2026_08_ZA_18_8126_06092026153749.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000729500_2026_08_ZA_18_8126_06092026153749.jpg",
+      "bytes": 2276041
+    },
+    {
+      "document_id": "0000729505_2026_08_ZA_24_289A_05092026025757.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000729505_2026_08_ZA_24_289A_05092026025757.jpg",
+      "bytes": 2689601
+    },
+    {
+      "document_id": "0000729510_2026_08_ZA_24_255_07092026103728.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000729510_2026_08_ZA_24_255_07092026103728.jpg",
+      "bytes": 928729
+    },
+    {
+      "document_id": "0000729681_2026_08_ZA_24_288_07092026172203.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000729681_2026_08_ZA_24_288_07092026172203.jpg",
+      "bytes": 2496134
+    },
+    {
+      "document_id": "0000729696_2026_08_ZA_24_291_06092026052921.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000729696_2026_08_ZA_24_291_06092026052921.jpg",
+      "bytes": 237691
+    },
+    {
+      "document_id": "0000729699_2026_08_ZA_24_288_05092026161611.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000729699_2026_08_ZA_24_288_05092026161611.jpg",
+      "bytes": 202501
+    },
+    {
+      "document_id": "0000729701_2026_08_ZA_04_554_02092026015643.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000729701_2026_08_ZA_04_554_02092026015643.jpg",
+      "bytes": 113407
+    },
+    {
+      "document_id": "0000729709_2026_08_ZA_24_257_03092026105456.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000729709_2026_08_ZA_24_257_03092026105456.jpg",
+      "bytes": 1415988
+    },
+    {
+      "document_id": "0000729726_2026_08_ZA_12_4345_03092026142155.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000729726_2026_08_ZA_12_4345_03092026142155.jpg",
+      "bytes": 1714257
+    },
+    {
+      "document_id": "0000729727_2026_08_ZA_30_313_05092026130058.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000729727_2026_08_ZA_30_313_05092026130058.jpg",
+      "bytes": 1924532
+    },
+    {
+      "document_id": "0000729730_2026_08_ZA_12_4345_03092026152841.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000729730_2026_08_ZA_12_4345_03092026152841.jpg",
+      "bytes": 2192061
+    },
+    {
+      "document_id": "0000729733_2026_08_ZA_24_536_03092026184646.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000729733_2026_08_ZA_24_536_03092026184646.jpg",
+      "bytes": 4110849
+    },
+    {
+      "document_id": "0000729738_2026_08_ZA_24_536_03092026040941.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000729738_2026_08_ZA_24_536_03092026040941.jpg",
+      "bytes": 1427232
+    },
+    {
+      "document_id": "0000729747_2026_08_ZA_24_290_04092026094728.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000729747_2026_08_ZA_24_290_04092026094728.jpg",
+      "bytes": 3201534
+    },
+    {
+      "document_id": "0000729751_2026_08_ZA_04_282_07092026134435.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000729751_2026_08_ZA_04_282_07092026134435.jpg",
+      "bytes": 1369464
+    },
+    {
+      "document_id": "0000729760_2026_08_ZA_24_257_03092026111622.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000729760_2026_08_ZA_24_257_03092026111622.jpg",
+      "bytes": 2289366
+    },
+    {
+      "document_id": "0000729761_2026_08_ZA_24_291_07092026041741.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000729761_2026_08_ZA_24_291_07092026041741.jpg",
+      "bytes": 1806558
+    },
+    {
+      "document_id": "0000729765_2026_08_ZA_22_236_07092026165553.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000729765_2026_08_ZA_22_236_07092026165553.jpg",
+      "bytes": 1149479
+    },
+    {
+      "document_id": "0000729768_2026_08_ZA_04_571_06092026025709.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000729768_2026_08_ZA_04_571_06092026025709.jpeg",
+      "bytes": 1611663
+    },
+    {
+      "document_id": "0000729773_2026_08_ZA_04_504_07092026042611.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000729773_2026_08_ZA_04_504_07092026042611.jpg",
+      "bytes": 1224602
+    },
+    {
+      "document_id": "0000729778_2026_08_ZA_01_750_03092026232553.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000729778_2026_08_ZA_01_750_03092026232553.jpeg",
+      "bytes": 249362
+    },
+    {
+      "document_id": "0000729786_2026_08_ZA_12_756_04092026044118.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000729786_2026_08_ZA_12_756_04092026044118.jpg",
+      "bytes": 199424
+    },
+    {
+      "document_id": "0000729809_2026_08_ZA_33_710_06092026101412.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000729809_2026_08_ZA_33_710_06092026101412.jpg",
+      "bytes": 441158
+    },
+    {
+      "document_id": "0000729811_2026_08_ZA_10_202_02092026150348.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000729811_2026_08_ZA_10_202_02092026150348.jpg",
+      "bytes": 275964
+    },
+    {
+      "document_id": "0000729824_2026_08_ZA_24_290_03092026110126.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000729824_2026_08_ZA_24_290_03092026110126.jpg",
+      "bytes": 3115336
+    },
+    {
+      "document_id": "0000729845_2026_08_ZA_09_363_04092026062452.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000729845_2026_08_ZA_09_363_04092026062452.jpeg",
+      "bytes": 165234
+    },
+    {
+      "document_id": "0000729849_2026_08_ZA_04_504_07092026043758.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000729849_2026_08_ZA_04_504_07092026043758.jpg",
+      "bytes": 1482914
+    },
+    {
+      "document_id": "0000729859_2026_08_ZA_01_220_02092026110227.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000729859_2026_08_ZA_01_220_02092026110227.jpg",
+      "bytes": 148466
+    },
+    {
+      "document_id": "0000729867_2026_08_ZA_04_705_03092026133550.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000729867_2026_08_ZA_04_705_03092026133550.jpg",
+      "bytes": 1673396
+    },
+    {
+      "document_id": "0000729895_2026_08_ZA_24_590_05092026050659.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000729895_2026_08_ZA_24_590_05092026050659.jpg",
+      "bytes": 2407102
+    },
+    {
+      "document_id": "0000729908_2026_08_ZA_04_705_03092026120535.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000729908_2026_08_ZA_04_705_03092026120535.jpg",
+      "bytes": 409221
+    },
+    {
+      "document_id": "0000729912_2026_08_ZA_24_292_07092026165505.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000729912_2026_08_ZA_24_292_07092026165505.jpg",
+      "bytes": 796858
+    },
+    {
+      "document_id": "0000729926_2026_08_ZA_04_275_06092026185457.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000729926_2026_08_ZA_04_275_06092026185457.jpeg",
+      "bytes": 296116
+    },
+    {
+      "document_id": "0000729973_2026_08_ZA_13_241A_02092026175924.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000729973_2026_08_ZA_13_241A_02092026175924.jpg",
+      "bytes": 497975
+    },
+    {
+      "document_id": "0000729987_2026_08_ZA_13_242A_02092026133738.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000729987_2026_08_ZA_13_242A_02092026133738.jpg",
+      "bytes": 2017276
+    },
+    {
+      "document_id": "0000730041_2026_08_ZA_24_255_07092026095851.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000730041_2026_08_ZA_24_255_07092026095851.jpg",
+      "bytes": 4671117
+    },
+    {
+      "document_id": "0000730050_2026_08_ZA_03_711_06092026191941.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000730050_2026_08_ZA_03_711_06092026191941.jpeg",
+      "bytes": 76735
+    },
+    {
+      "document_id": "0000730096_2026_08_ZA_13_251_06092026133503.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000730096_2026_08_ZA_13_251_06092026133503.jpg",
+      "bytes": 2530808
+    },
+    {
+      "document_id": "0000730316_2026_08_ZA_07_319_06092026005507.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000730316_2026_08_ZA_07_319_06092026005507.jpeg",
+      "bytes": 170486
+    },
+    {
+      "document_id": "0000730724_2026_08_ZA_13_242A_02092026130841.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000730724_2026_08_ZA_13_242A_02092026130841.jpg",
+      "bytes": 2620473
+    },
+    {
+      "document_id": "0000730732_2026_08_ZA_24_8144_04092026054139.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000730732_2026_08_ZA_24_8144_04092026054139.jpeg",
+      "bytes": 159038
+    },
+    {
+      "document_id": "0000730765_2026_08_ZA_24_260_03092026140350.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000730765_2026_08_ZA_24_260_03092026140350.jpeg",
+      "bytes": 329103
+    },
+    {
+      "document_id": "0000730817_2026_08_ZA_06_330_06092026073825.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000730817_2026_08_ZA_06_330_06092026073825.jpg",
+      "bytes": 531953
+    },
+    {
+      "document_id": "0000730837_2026_08_ZA_22_236_05092026030911.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000730837_2026_08_ZA_22_236_05092026030911.jpg",
+      "bytes": 1414877
+    },
+    {
+      "document_id": "0000730912_2026_08_ZA_24_8135_04092026143234.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000730912_2026_08_ZA_24_8135_04092026143234.jpg",
+      "bytes": 1717448
+    },
+    {
+      "document_id": "0000730913_2026_08_ZA_24_8135_04092026142357.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000730913_2026_08_ZA_24_8135_04092026142357.jpg",
+      "bytes": 1345966
+    },
+    {
+      "document_id": "0000730914_2026_08_ZA_24_258_01092026064453.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000730914_2026_08_ZA_24_258_01092026064453.jpeg",
+      "bytes": 196081
+    },
+    {
+      "document_id": "0000730934_2026_08_ZA_13_241A_03092026132956.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000730934_2026_08_ZA_13_241A_03092026132956.jpg",
+      "bytes": 753915
+    },
+    {
+      "document_id": "0000730965_2026_08_ZA_35_3836_03092026025131.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000730965_2026_08_ZA_35_3836_03092026025131.jpg",
+      "bytes": 2157013
+    },
+    {
+      "document_id": "0000730976_2026_08_ZA_04_705_03092026151420.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000730976_2026_08_ZA_04_705_03092026151420.jpg",
+      "bytes": 808397
+    },
+    {
+      "document_id": "0000730986_2026_08_ZA_07_602_03092026130419.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000730986_2026_08_ZA_07_602_03092026130419.jpeg",
+      "bytes": 192764
+    },
+    {
+      "document_id": "0000731042_2026_08_ZA_24_265_05092026025753.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000731042_2026_08_ZA_24_265_05092026025753.jpeg",
+      "bytes": 239702
+    },
+    {
+      "document_id": "0000731115_2026_08_ZA_24_271_06092026042010.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000731115_2026_08_ZA_24_271_06092026042010.jpg",
+      "bytes": 2176661
+    },
+    {
+      "document_id": "0000731147_2026_08_ZA_20_9232_01092026043254.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000731147_2026_08_ZA_20_9232_01092026043254.jpg",
+      "bytes": 145076
+    },
+    {
+      "document_id": "0000731199_2026_08_ZA_37_216_01092026061241.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000731199_2026_08_ZA_37_216_01092026061241.jpg",
+      "bytes": 3869482
+    },
+    {
+      "document_id": "0000731266_2026_08_ZA_24_291_07092026162027.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000731266_2026_08_ZA_24_291_07092026162027.jpg",
+      "bytes": 135185
+    },
+    {
+      "document_id": "0000731268_2026_08_ZA_24_469_06092026021621.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000731268_2026_08_ZA_24_469_06092026021621.jpg",
+      "bytes": 1568681
+    },
+    {
+      "document_id": "0000731270_2026_08_ZA_13_242A_02092026132142.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000731270_2026_08_ZA_13_242A_02092026132142.jpg",
+      "bytes": 2428808
+    },
+    {
+      "document_id": "0000731278_2026_08_ZA_35_273_06092026112309.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000731278_2026_08_ZA_35_273_06092026112309.jpg",
+      "bytes": 3216487
+    },
+    {
+      "document_id": "0000731506_2026_08_ZA_25_313B_08092026044651.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000731506_2026_08_ZA_25_313B_08092026044651.jpeg",
+      "bytes": 85959
+    },
+    {
+      "document_id": "0000731510_2026_08_ZA_24_8137_05092026102950.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000731510_2026_08_ZA_24_8137_05092026102950.jpg",
+      "bytes": 3589739
+    },
+    {
+      "document_id": "0000731517_2026_08_ZA_25_313B_08092026044316.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000731517_2026_08_ZA_25_313B_08092026044316.jpeg",
+      "bytes": 57783
+    },
+    {
+      "document_id": "0000731626_2026_08_ZA_20_811_03092026044458.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000731626_2026_08_ZA_20_811_03092026044458.jpg",
+      "bytes": 201086
+    },
+    {
+      "document_id": "0000731773_2026_08_ZA_22_236_05092026020441.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000731773_2026_08_ZA_22_236_05092026020441.jpg",
+      "bytes": 914039
+    },
+    {
+      "document_id": "0000731785_2026_08_ZA_24_269_04092026152614.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000731785_2026_08_ZA_24_269_04092026152614.jpg",
+      "bytes": 1919862
+    },
+    {
+      "document_id": "0000731836_2026_08_ZA_25_295_02092026133808.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000731836_2026_08_ZA_25_295_02092026133808.jpg",
+      "bytes": 1957971
+    },
+    {
+      "document_id": "0000731852_2026_08_ZA_03_9256_05092026171841.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000731852_2026_08_ZA_03_9256_05092026171841.jpeg",
+      "bytes": 266217
+    },
+    {
+      "document_id": "0000731863_2026_08_ZA_25_298_07092026171549.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000731863_2026_08_ZA_25_298_07092026171549.jpg",
+      "bytes": 327192
+    },
+    {
+      "document_id": "0000731865_2026_08_ZA_25_298_07092026171413.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000731865_2026_08_ZA_25_298_07092026171413.jpg",
+      "bytes": 229746
+    },
+    {
+      "document_id": "0000731888_2026_08_ZA_12_353_03092026105200.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000731888_2026_08_ZA_12_353_03092026105200.jpg",
+      "bytes": 1437399
+    },
+    {
+      "document_id": "0000731902_2026_08_ZA_04_286_05092026142044.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000731902_2026_08_ZA_04_286_05092026142044.jpeg",
+      "bytes": 138308
+    },
+    {
+      "document_id": "0000731980_2026_08_ZA_12_390_04092026123716.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000731980_2026_08_ZA_12_390_04092026123716.jpg",
+      "bytes": 489973
+    },
+    {
+      "document_id": "0000732144_2026_08_ZA_24_259_03092026070038.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000732144_2026_08_ZA_24_259_03092026070038.jpg",
+      "bytes": 279757
+    },
+    {
+      "document_id": "0000732146_2026_08_ZA_24_259_03092026070245.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000732146_2026_08_ZA_24_259_03092026070245.jpg",
+      "bytes": 318416
+    },
+    {
+      "document_id": "0000732163_2026_08_ZA_09_329_04092026063907.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000732163_2026_08_ZA_09_329_04092026063907.jpeg",
+      "bytes": 154077
+    },
+    {
+      "document_id": "0000732388_2026_08_ZA_04_504_07092026040749.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000732388_2026_08_ZA_04_504_07092026040749.jpg",
+      "bytes": 1505453
+    },
+    {
+      "document_id": "0000732480_2026_08_ZA_12_347_01092026172110.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000732480_2026_08_ZA_12_347_01092026172110.jpg",
+      "bytes": 1698898
+    },
+    {
+      "document_id": "0000732487_2026_08_ZA_12_347_01092026162917.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000732487_2026_08_ZA_12_347_01092026162917.jpg",
+      "bytes": 1771685
+    },
+    {
+      "document_id": "0000732489_2026_08_ZA_12_347_01092026165539.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000732489_2026_08_ZA_12_347_01092026165539.jpg",
+      "bytes": 1807083
+    },
+    {
+      "document_id": "0000732515_2026_08_ZA_04_504_07092026042406.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000732515_2026_08_ZA_04_504_07092026042406.jpg",
+      "bytes": 1405101
+    },
+    {
+      "document_id": "0000732578_2026_08_ZA_04_504_07092026040502.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000732578_2026_08_ZA_04_504_07092026040502.jpg",
+      "bytes": 1455136
+    },
+    {
+      "document_id": "0000732695_2026_08_ZA_24_615_04092026175009.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000732695_2026_08_ZA_24_615_04092026175009.jpg",
+      "bytes": 2864929
+    },
+    {
+      "document_id": "0000732701_2026_08_ZA_35_274_02092026131306.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000732701_2026_08_ZA_35_274_02092026131306.jpg",
+      "bytes": 3647242
+    },
+    {
+      "document_id": "0000732702_2026_08_ZA_24_271_03092026115957.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000732702_2026_08_ZA_24_271_03092026115957.jpg",
+      "bytes": 2891954
+    },
+    {
+      "document_id": "0000732703_2026_08_ZA_35_274_02092026130703.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000732703_2026_08_ZA_35_274_02092026130703.jpg",
+      "bytes": 2953982
+    },
+    {
+      "document_id": "0000732706_2026_08_ZA_35_274_02092026130843.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000732706_2026_08_ZA_35_274_02092026130843.jpg",
+      "bytes": 2474576
+    },
+    {
+      "document_id": "0000732707_2026_08_ZA_08_8169_01092026041107.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000732707_2026_08_ZA_08_8169_01092026041107.jpg",
+      "bytes": 2474794
+    },
+    {
+      "document_id": "0000732711_2026_08_ZA_24_271_03092026122628.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000732711_2026_08_ZA_24_271_03092026122628.jpg",
+      "bytes": 2583896
+    },
+    {
+      "document_id": "0000732714_2026_08_ZA_24_270_05092026124848.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000732714_2026_08_ZA_24_270_05092026124848.jpg",
+      "bytes": 1889201
+    },
+    {
+      "document_id": "0000732724_2026_08_ZA_24_255_02092026033715.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000732724_2026_08_ZA_24_255_02092026033715.jpg",
+      "bytes": 3905787
+    },
+    {
+      "document_id": "0000732727_2026_08_ZA_24_255_07092026101618.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000732727_2026_08_ZA_24_255_07092026101618.jpg",
+      "bytes": 654341
+    },
+    {
+      "document_id": "0000732735_2026_08_ZA_24_255_07092026165629.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000732735_2026_08_ZA_24_255_07092026165629.jpg",
+      "bytes": 170170
+    },
+    {
+      "document_id": "0000732815_2026_08_ZA_18_800_05092026162918.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000732815_2026_08_ZA_18_800_05092026162918.jpg",
+      "bytes": 430308
+    },
+    {
+      "document_id": "0000732822_2026_08_ZA_24_260_03092026135258.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000732822_2026_08_ZA_24_260_03092026135258.jpeg",
+      "bytes": 341216
+    },
+    {
+      "document_id": "0000733096_2026_08_ZA_24_737_07092026083324.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000733096_2026_08_ZA_24_737_07092026083324.jpg",
+      "bytes": 3945913
+    },
+    {
+      "document_id": "0000733097_2026_08_ZA_24_271_06092026042203.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000733097_2026_08_ZA_24_271_06092026042203.jpg",
+      "bytes": 2327066
+    },
+    {
+      "document_id": "0000733103_2026_08_ZA_16_703_07092026150714.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000733103_2026_08_ZA_16_703_07092026150714.jpeg",
+      "bytes": 159392
+    },
+    {
+      "document_id": "0000733155_2026_08_ZA_24_265_05092026024940.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000733155_2026_08_ZA_24_265_05092026024940.jpeg",
+      "bytes": 244586
+    },
+    {
+      "document_id": "0000733257_2026_08_ZA_09_329_04092026065303.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000733257_2026_08_ZA_09_329_04092026065303.jpeg",
+      "bytes": 127676
+    },
+    {
+      "document_id": "0000733271_2026_08_ZA_09_363_04092026062006.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000733271_2026_08_ZA_09_363_04092026062006.jpeg",
+      "bytes": 171629
+    },
+    {
+      "document_id": "0000733279_2026_08_ZA_09_329_04092026131603.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000733279_2026_08_ZA_09_329_04092026131603.jpeg",
+      "bytes": 225086
+    },
+    {
+      "document_id": "0000733310_2026_08_ZA_09_363_04092026062301.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000733310_2026_08_ZA_09_363_04092026062301.jpeg",
+      "bytes": 155646
+    },
+    {
+      "document_id": "0000733394_2026_08_ZA_04_8116_07092026071928.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000733394_2026_08_ZA_04_8116_07092026071928.jpeg",
+      "bytes": 152299
+    },
+    {
+      "document_id": "0000733451_2026_08_ZA_24_255_02092026033011.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000733451_2026_08_ZA_24_255_02092026033011.jpg",
+      "bytes": 3868407
+    },
+    {
+      "document_id": "0000733463_2026_08_ZA_24_255_07092026102944.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000733463_2026_08_ZA_24_255_07092026102944.jpg",
+      "bytes": 764764
+    },
+    {
+      "document_id": "0000733596_2026_08_ZA_04_740_07092026134302.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000733596_2026_08_ZA_04_740_07092026134302.jpeg",
+      "bytes": 132000
+    },
+    {
+      "document_id": "0000733730_2026_08_ZA_20_616A_02092026170240.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000733730_2026_08_ZA_20_616A_02092026170240.jpg",
+      "bytes": 1910747
+    },
+    {
+      "document_id": "0000733793_2026_08_ZA_24_255_04092026133828.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000733793_2026_08_ZA_24_255_04092026133828.jpg",
+      "bytes": 1804839
+    },
+    {
+      "document_id": "0000733800_2026_08_ZA_24_255_07092026101417.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000733800_2026_08_ZA_24_255_07092026101417.jpg",
+      "bytes": 3891690
+    },
+    {
+      "document_id": "0000733855_2026_08_ZA_24_290_03092026105936.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000733855_2026_08_ZA_24_290_03092026105936.jpg",
+      "bytes": 3177644
+    },
+    {
+      "document_id": "0000733894_2026_08_ZA_35_559_03092026095100.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000733894_2026_08_ZA_35_559_03092026095100.jpg",
+      "bytes": 254736
+    },
+    {
+      "document_id": "0000733896_2026_08_ZA_24_271_06092026042853.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000733896_2026_08_ZA_24_271_06092026042853.jpg",
+      "bytes": 2132007
+    },
+    {
+      "document_id": "0000733917_2026_08_ZA_04_589_04092026141635.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000733917_2026_08_ZA_04_589_04092026141635.jpg",
+      "bytes": 288420
+    },
+    {
+      "document_id": "0000733954_2026_08_ZA_04_504_07092026044652.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000733954_2026_08_ZA_04_504_07092026044652.jpg",
+      "bytes": 1455335
+    },
+    {
+      "document_id": "0000733957_2026_08_ZA_03_375_04092026075626.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000733957_2026_08_ZA_03_375_04092026075626.jpg",
+      "bytes": 221240
+    },
+    {
+      "document_id": "0000733970_2026_08_ZA_03_375_04092026105238.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000733970_2026_08_ZA_03_375_04092026105238.jpg",
+      "bytes": 230360
+    },
+    {
+      "document_id": "0000734088_2026_08_ZA_12_344_07092026161108.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000734088_2026_08_ZA_12_344_07092026161108.jpg",
+      "bytes": 7691745
+    },
+    {
+      "document_id": "0000734120_2026_08_ZA_24_469_05092026123747.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000734120_2026_08_ZA_24_469_05092026123747.jpg",
+      "bytes": 1782533
+    },
+    {
+      "document_id": "0000734145_2026_08_ZA_15_362_03092026090234.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000734145_2026_08_ZA_15_362_03092026090234.jpeg",
+      "bytes": 198144
+    },
+    {
+      "document_id": "0000734247_2026_08_ZA_12_8117_02092026035439.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000734247_2026_08_ZA_12_8117_02092026035439.jpg",
+      "bytes": 1370810
+    },
+    {
+      "document_id": "0000734312_2026_08_ZA_12_8165_02092026151628.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000734312_2026_08_ZA_12_8165_02092026151628.jpg",
+      "bytes": 151746
+    },
+    {
+      "document_id": "0000734313_2026_08_ZA_13_242_03092026142726.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000734313_2026_08_ZA_13_242_03092026142726.jpg",
+      "bytes": 577732
+    },
+    {
+      "document_id": "0000734335_2026_08_ZA_24_291_06092026053159.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000734335_2026_08_ZA_24_291_06092026053159.jpg",
+      "bytes": 229688
+    },
+    {
+      "document_id": "0000734385_2026_08_ZA_03_9204_07092026041755.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000734385_2026_08_ZA_03_9204_07092026041755.jpeg",
+      "bytes": 103064
+    },
+    {
+      "document_id": "0000734401_2026_08_ZA_33_352_07092026100308.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000734401_2026_08_ZA_33_352_07092026100308.jpg",
+      "bytes": 252183
+    },
+    {
+      "document_id": "0000734436_2026_08_ZA_03_9204_05092026182724.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000734436_2026_08_ZA_03_9204_05092026182724.jpeg",
+      "bytes": 237948
+    },
+    {
+      "document_id": "0000734454_2026_08_ZA_35_273_06092026112446.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000734454_2026_08_ZA_35_273_06092026112446.jpg",
+      "bytes": 2889021
+    },
+    {
+      "document_id": "0000734459_2026_08_ZA_24_259_03092026065837.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000734459_2026_08_ZA_24_259_03092026065837.jpg",
+      "bytes": 354611
+    },
+    {
+      "document_id": "0000734472_2026_08_ZA_24_469_05092026180235.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000734472_2026_08_ZA_24_469_05092026180235.jpg",
+      "bytes": 4284186
+    },
+    {
+      "document_id": "0000734512_2026_08_ZA_24_291_06092026053221.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000734512_2026_08_ZA_24_291_06092026053221.jpg",
+      "bytes": 223760
+    },
+    {
+      "document_id": "0000734522_2026_08_ZA_24_737_07092026153933.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000734522_2026_08_ZA_24_737_07092026153933.jpeg",
+      "bytes": 107314
+    },
+    {
+      "document_id": "0000734555_2026_08_ZA_24_259_03092026065537.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000734555_2026_08_ZA_24_259_03092026065537.jpg",
+      "bytes": 425858
+    },
+    {
+      "document_id": "0000734671_2026_08_ZA_18_539_07092026141118.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000734671_2026_08_ZA_18_539_07092026141118.jpg",
+      "bytes": 529922
+    },
+    {
+      "document_id": "0000734677_2026_08_ZA_35_274_02092026130328.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000734677_2026_08_ZA_35_274_02092026130328.jpg",
+      "bytes": 2327723
+    },
+    {
+      "document_id": "0000734725_2026_08_ZA_18_227_08092026030817.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000734725_2026_08_ZA_18_227_08092026030817.jpg",
+      "bytes": 2078540
+    },
+    {
+      "document_id": "0000734726_2026_08_ZA_22_236_05092026031501.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000734726_2026_08_ZA_22_236_05092026031501.jpg",
+      "bytes": 1312155
+    },
+    {
+      "document_id": "0000734745_2026_08_ZA_24_8148_04092026155704.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000734745_2026_08_ZA_24_8148_04092026155704.jpeg",
+      "bytes": 139321
+    },
+    {
+      "document_id": "0000734764_2026_08_ZA_24_255_07092026060113.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000734764_2026_08_ZA_24_255_07092026060113.jpg",
+      "bytes": 3141931
+    },
+    {
+      "document_id": "0000734808_2026_08_ZA_04_705_03092026123537.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000734808_2026_08_ZA_04_705_03092026123537.jpg",
+      "bytes": 484960
+    },
+    {
+      "document_id": "0000734815_2026_08_ZA_07_706_06092026024309.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000734815_2026_08_ZA_07_706_06092026024309.jpeg",
+      "bytes": 110330
+    },
+    {
+      "document_id": "0000734819_2026_08_ZA_13_241A_02092026174949.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000734819_2026_08_ZA_13_241A_02092026174949.jpg",
+      "bytes": 643874
+    },
+    {
+      "document_id": "0000734827_2026_08_ZA_24_259_03092026065501.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000734827_2026_08_ZA_24_259_03092026065501.jpg",
+      "bytes": 317450
+    },
+    {
+      "document_id": "0000734860_2026_08_ZA_24_288_07092026034158.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000734860_2026_08_ZA_24_288_07092026034158.jpg",
+      "bytes": 2767516
+    },
+    {
+      "document_id": "0000734863_2026_08_ZA_24_256_02092026042525.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000734863_2026_08_ZA_24_256_02092026042525.jpg",
+      "bytes": 536912
+    },
+    {
+      "document_id": "0000734888_2026_08_ZA_24_258_01092026071320.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000734888_2026_08_ZA_24_258_01092026071320.jpeg",
+      "bytes": 186929
+    },
+    {
+      "document_id": "0000734986_2026_08_ZA_24_290_03092026110039.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000734986_2026_08_ZA_24_290_03092026110039.jpg",
+      "bytes": 3108190
+    },
+    {
+      "document_id": "0000735051_2026_08_ZA_01_223_05092026155055.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000735051_2026_08_ZA_01_223_05092026155055.jpg",
+      "bytes": 526078
+    },
+    {
+      "document_id": "0000735078_2026_08_ZA_20_8131_05092026065912.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000735078_2026_08_ZA_20_8131_05092026065912.jpg",
+      "bytes": 91758
+    },
+    {
+      "document_id": "0000735168_2026_08_ZA_10_201_07092026171856.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000735168_2026_08_ZA_10_201_07092026171856.jpg",
+      "bytes": 186135
+    },
+    {
+      "document_id": "0000735170_2026_08_ZA_24_3837_04092026041106.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000735170_2026_08_ZA_24_3837_04092026041106.jpg",
+      "bytes": 196288
+    },
+    {
+      "document_id": "0000735197_2026_08_ZA_24_265_05092026025010.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000735197_2026_08_ZA_24_265_05092026025010.jpeg",
+      "bytes": 236329
+    },
+    {
+      "document_id": "0000735205_2026_08_ZA_24_587_02092026050105.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000735205_2026_08_ZA_24_587_02092026050105.jpg",
+      "bytes": 199625
+    },
+    {
+      "document_id": "0000735288_2026_08_ZA_24_262_03092026133438.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000735288_2026_08_ZA_24_262_03092026133438.jpg",
+      "bytes": 1970172
+    },
+    {
+      "document_id": "0000735380_2026_08_ZA_01_561_05092026063000.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000735380_2026_08_ZA_01_561_05092026063000.jpg",
+      "bytes": 295212
+    },
+    {
+      "document_id": "0000735391_2026_08_ZA_24_265_05092026025117.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000735391_2026_08_ZA_24_265_05092026025117.jpeg",
+      "bytes": 251257
+    },
+    {
+      "document_id": "0000735407_2026_08_ZA_13_251_06092026132754.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000735407_2026_08_ZA_13_251_06092026132754.jpg",
+      "bytes": 1451727
+    },
+    {
+      "document_id": "0000735423_2026_08_ZA_24_3837_04092026044558.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000735423_2026_08_ZA_24_3837_04092026044558.jpg",
+      "bytes": 135113
+    },
+    {
+      "document_id": "0000735475_2026_08_ZA_03_711_06092026191704.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000735475_2026_08_ZA_03_711_06092026191704.jpeg",
+      "bytes": 141640
+    },
+    {
+      "document_id": "0000735591_2026_08_ZA_22_237_05092026101509.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000735591_2026_08_ZA_22_237_05092026101509.jpg",
+      "bytes": 102179
+    },
+    {
+      "document_id": "0000735619_2026_08_ZA_19_326_02092026153806.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000735619_2026_08_ZA_19_326_02092026153806.jpg",
+      "bytes": 1607558
+    },
+    {
+      "document_id": "0000735783_2026_08_ZA_24_293_04092026180016.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000735783_2026_08_ZA_24_293_04092026180016.jpg",
+      "bytes": 4720984
+    },
+    {
+      "document_id": "0000735834_2026_08_ZA_24_255_07092026102453.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000735834_2026_08_ZA_24_255_07092026102453.jpg",
+      "bytes": 834681
+    },
+    {
+      "document_id": "0000735839_2026_08_ZA_24_258_01092026073152.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000735839_2026_08_ZA_24_258_01092026073152.jpeg",
+      "bytes": 147083
+    },
+    {
+      "document_id": "0000735846_2026_08_ZA_24_259_03092026070121.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000735846_2026_08_ZA_24_259_03092026070121.jpg",
+      "bytes": 330753
+    },
+    {
+      "document_id": "0000735849_2026_08_ZA_24_258_01092026075313.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000735849_2026_08_ZA_24_258_01092026075313.jpeg",
+      "bytes": 148776
+    },
+    {
+      "document_id": "0000735850_2026_08_ZA_09_329_04092026063613.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000735850_2026_08_ZA_09_329_04092026063613.jpeg",
+      "bytes": 149670
+    },
+    {
+      "document_id": "0000735936_2026_08_ZA_24_256_02092026173543.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000735936_2026_08_ZA_24_256_02092026173543.jpg",
+      "bytes": 3030610
+    },
+    {
+      "document_id": "0000735937_2026_08_ZA_24_258_01092026065830.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000735937_2026_08_ZA_24_258_01092026065830.jpeg",
+      "bytes": 91540
+    },
+    {
+      "document_id": "0000735938_2026_08_ZA_24_265_05092026025509.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000735938_2026_08_ZA_24_265_05092026025509.jpeg",
+      "bytes": 229439
+    },
+    {
+      "document_id": "0000735974_2026_08_ZA_24_259_03092026070145.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000735974_2026_08_ZA_24_259_03092026070145.jpg",
+      "bytes": 320704
+    },
+    {
+      "document_id": "0000736020_2026_08_ZA_24_259_03092026065900.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000736020_2026_08_ZA_24_259_03092026065900.jpg",
+      "bytes": 318295
+    },
+    {
+      "document_id": "0000736024_2026_08_ZA_30_313_04092026142630.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000736024_2026_08_ZA_30_313_04092026142630.jpg",
+      "bytes": 2137245
+    },
+    {
+      "document_id": "0000736056_2026_08_ZA_24_8136_04092026053006.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000736056_2026_08_ZA_24_8136_04092026053006.jpg",
+      "bytes": 4767692
+    },
+    {
+      "document_id": "0000736091_2026_08_ZA_04_550_02092026015108.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000736091_2026_08_ZA_04_550_02092026015108.jpg",
+      "bytes": 362194
+    },
+    {
+      "document_id": "0000736104_2026_08_ZA_24_291_06092026052958.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000736104_2026_08_ZA_24_291_06092026052958.jpg",
+      "bytes": 225219
+    },
+    {
+      "document_id": "0000736107_2026_08_ZA_24_291_07092026162133.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000736107_2026_08_ZA_24_291_07092026162133.jpg",
+      "bytes": 135377
+    },
+    {
+      "document_id": "0000736207_2026_08_ZA_04_589_04092026043944.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000736207_2026_08_ZA_04_589_04092026043944.jpg",
+      "bytes": 476548
+    },
+    {
+      "document_id": "0000736520_2026_08_ZA_04_277_04092026103029.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000736520_2026_08_ZA_04_277_04092026103029.jpg",
+      "bytes": 142705
+    },
+    {
+      "document_id": "0000736667_2026_08_ZA_25_299_07092026182322.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000736667_2026_08_ZA_25_299_07092026182322.jpeg",
+      "bytes": 115174
+    },
+    {
+      "document_id": "0000736811_2026_08_ZA_35_559_05092026073935.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000736811_2026_08_ZA_35_559_05092026073935.jpg",
+      "bytes": 715603
+    },
+    {
+      "document_id": "0000736883_2026_08_ZA_24_8164_06092026161736.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000736883_2026_08_ZA_24_8164_06092026161736.jpg",
+      "bytes": 3445553
+    },
+    {
+      "document_id": "0000736966_2026_08_ZA_24_255_02092026033911.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000736966_2026_08_ZA_24_255_02092026033911.jpg",
+      "bytes": 3013191
+    },
+    {
+      "document_id": "0000736977_2026_08_ZA_24_605_07092026140857.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000736977_2026_08_ZA_24_605_07092026140857.jpg",
+      "bytes": 1817787
+    },
+    {
+      "document_id": "0000736984_2026_08_ZA_22_594_05092026033933.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000736984_2026_08_ZA_22_594_05092026033933.jpg",
+      "bytes": 669156
+    },
+    {
+      "document_id": "0000737100_2026_08_ZA_24_257_05092026072837.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000737100_2026_08_ZA_24_257_05092026072837.jpg",
+      "bytes": 3530493
+    },
+    {
+      "document_id": "0000737101_2026_08_ZA_24_271_03092026120646.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000737101_2026_08_ZA_24_271_03092026120646.jpg",
+      "bytes": 2820038
+    },
+    {
+      "document_id": "0000737317_2026_08_ZA_04_747_02092026152019.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000737317_2026_08_ZA_04_747_02092026152019.jpg",
+      "bytes": 1293193
+    },
+    {
+      "document_id": "0000737332_2026_08_ZA_24_255_07092026075852.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000737332_2026_08_ZA_24_255_07092026075852.jpg",
+      "bytes": 2210970
+    },
+    {
+      "document_id": "0000737569_2026_08_ZA_13_806_07092026042658.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000737569_2026_08_ZA_13_806_07092026042658.jpg",
+      "bytes": 458836
+    },
+    {
+      "document_id": "0000737608_2026_08_ZA_04_740_07092026134857.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000737608_2026_08_ZA_04_740_07092026134857.jpeg",
+      "bytes": 185791
+    },
+    {
+      "document_id": "0000737609_2026_08_ZA_22_233_08092026060839.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000737609_2026_08_ZA_22_233_08092026060839.jpg",
+      "bytes": 442528
+    },
+    {
+      "document_id": "0000737771_2026_08_ZA_03_9256_06092026074808.jpeg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000737771_2026_08_ZA_03_9256_06092026074808.jpeg",
+      "bytes": 249074
+    },
+    {
+      "document_id": "0000737792_2026_08_ZA_04_9307_08092026064119.jpg",
+      "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000737792_2026_08_ZA_04_9307_08092026064119.jpg",
+      "bytes": 2165782
+    }
+  ]
+}

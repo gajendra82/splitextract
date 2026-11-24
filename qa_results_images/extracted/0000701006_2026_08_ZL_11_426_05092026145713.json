@@ -1,0 +1,151 @@
+{
+  "source_file": "0000701006_2026_08_ZL_11_426_05092026145713.jpeg",
+  "source_format": "jpeg",
+  "stockist_name": "PHARMA TRADE",
+  "stockist_address": "11/442(3), 1st FLOOK, SAI COMPLEX\nNSION STREET, PALAKKAD-678001\n0491-5200742,2501100",
+  "company_name": "203 HIMALAYA ZEAL",
+  "period_from": "2026-08-31",
+  "period_to": "2026-08-31",
+  "report_title": "Stock & Sales Statement",
+  "line_items": [
+    {
+      "product_code": null,
+      "product_name": "LIV 52 SYP",
+      "packing": "100ML",
+      "opening_qty": 37.0,
+      "opening_value": null,
+      "receipts_qty": 9.0,
+      "receipts_value": null,
+      "sales_qty": 70.0,
+      "sales_value": 31.0,
+      "closing_qty": 48.0,
+      "closing_value": 5119.68,
+      "extra": {
+        "expected_total": 46.0,
+        "expected_closing": -24.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV 52 SYP",
+      "packing": "200ML",
+      "opening_qty": 34.0,
+      "opening_value": null,
+      "receipts_qty": 2.0,
+      "receipts_value": null,
+      "sales_qty": 70.0,
+      "sales_value": 37.0,
+      "closing_qty": 35.0,
+      "closing_value": 6239.8,
+      "extra": {
+        "expected_total": 36.0,
+        "expected_closing": -34.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV 52 TAB FC",
+      "packing": "100'S",
+      "opening_qty": 37.0,
+      "opening_value": null,
+      "receipts_qty": 57.0,
+      "receipts_value": null,
+      "sales_qty": 100.0,
+      "sales_value": 50.0,
+      "closing_qty": 107.0,
+      "closing_value": 17935.34,
+      "extra": {
+        "expected_total": 94.0,
+        "expected_closing": -6.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "OPHTHACARE EYE DROPS 10ML",
+      "packing": "10ML",
+      "opening_qty": 23.0,
+      "opening_value": null,
+      "receipts_qty": 24.0,
+      "receipts_value": null,
+      "sales_qty": 72.0,
+      "sales_value": 18.0,
+      "closing_qty": 78.0,
+      "closing_value": 6121.44,
+      "extra": {
+        "expected_total": 47.0,
+        "expected_closing": -25.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PILEX FORTE OINT",
+      "packing": "30GM",
+      "opening_qty": 63.0,
+      "opening_value": null,
+      "receipts_qty": 54.0,
+      "receipts_value": null,
+      "sales_qty": 100.0,
+      "sales_value": 54.0,
+      "closing_qty": 100.0,
+      "closing_value": 11428.0,
+      "extra": {
+        "expected_total": 117.0,
+        "expected_closing": 17.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PILEX TAB",
+      "packing": "60. S",
+      "opening_qty": 97.0,
+      "opening_value": null,
+      "receipts_qty": 49.0,
+      "receipts_value": null,
+      "sales_qty": 100.0,
+      "sales_value": 69.0,
+      "closing_qty": 80.0,
+      "closing_value": 14262.4,
+      "extra": {
+        "expected_total": 146.0,
+        "expected_closing": 46.0,
+        "stock_identity_ok": false
+      }
+    }
+  ],
+  "totals": {
+    "sales_value": 38158.66,
+    "closing_value": 61106.66,
+    "extra": {
+      "extraction_method": "gemini_extraction_fallback",
+      "line_sales_value_sum": 259.0,
+      "line_closing_value_sum": 61106.66,
+      "sales_qty": 512.0,
+      "closing_qty": 448.0,
+      "stock_identity_kind": "opening_receipts_sales_closing",
+      "stock_identity_formula": "closing=opening+receipts-sales",
+      "stock_identity_fail_count": 6,
+      "stock_validation": {
+        "opening_plus_purchase": 486.0,
+        "expected_total": 486.0,
+        "calculated_closing": -26.0,
+        "extracted_closing": 448.0,
+        "is_valid": false
+      },
+      "extraction_quality": {
+        "quality": "poor",
+        "score": 75,
+        "reasons": [
+          "stock_identity_failure"
+        ],
+        "threshold": 75.0
+      },
+      "gemini_fallback": "validation_failed",
+      "early_vision_reason": "missing_stock_headers,low_ocr_quality_score"
+    }
+  }
+}

@@ -1,0 +1,384 @@
+{
+  "document_id": "0000700358_2026_08_ZL_18_8173_05092026185826.pdf",
+  "role": "compatible_ssa_like",
+  "source_path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700358_2026_08_ZL_18_8173_05092026185826.pdf",
+  "off": {
+    "correct_count": 21,
+    "field_count": 21,
+    "silent_wrong_count": 0,
+    "missing_count": 0,
+    "secondary_ocr_ms": 3.5,
+    "pipeline_helper_ms": 3.4,
+    "text_sha": "e1acafa9a16aa2db",
+    "repair_report": {
+      "document_id": "0000700358_2026_08_ZL_18_8173_05092026185826.pdf",
+      "repairs": [],
+      "unresolved": [
+        {
+          "reason": "secondary_repair_disabled"
+        }
+      ]
+    }
+  },
+  "on": {
+    "correct_count": 21,
+    "field_count": 21,
+    "silent_wrong_count": 0,
+    "missing_count": 0,
+    "secondary_ocr_ms": 1170.5,
+    "pipeline_helper_ms": 1165.0,
+    "text_sha": "e1acafa9a16aa2db",
+    "repair_report": {
+      "document_id": "0000700358_2026_08_ZL_18_8173_05092026185826.pdf",
+      "repairs": [],
+      "unresolved": [
+        {
+          "reason": "total_footer_layout_not_himalaya_qty"
+        }
+      ]
+    },
+    "pipeline_text_matches": true
+  },
+  "deltas": [],
+  "repair_types_on": [],
+  "matches_off": [
+    {
+      "field_id": "vendor",
+      "expected_raw": "SAKUNIA MEDICAL AGENCY",
+      "predicted_raw": "SAKUNIA MEDICAL AGENCY",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_opening",
+      "expected_raw": "Opening",
+      "predicted_raw": "Opening",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_issues",
+      "expected_raw": "Issues",
+      "predicted_raw": "Issues",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_closing",
+      "expected_raw": "Closing",
+      "predicted_raw": "Closing",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "clarina_op",
+      "expected_raw": "27",
+      "predicted_raw": "27",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "clarina_iss",
+      "expected_raw": "15",
+      "predicted_raw": "15",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "clarina_cl",
+      "expected_raw": "12",
+      "predicted_raw": "12",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "conf_op",
+      "expected_raw": "60",
+      "predicted_raw": "60",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "conf_iss",
+      "expected_raw": "16",
+      "predicted_raw": "16",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "conf_cl",
+      "expected_raw": "44",
+      "predicted_raw": "44",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv100_op",
+      "expected_raw": "70",
+      "predicted_raw": "70",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv100_rec",
+      "expected_raw": "70",
+      "predicted_raw": "70",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv100_iss",
+      "expected_raw": "117",
+      "predicted_raw": "117",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv100_cl",
+      "expected_raw": "23",
+      "predicted_raw": "23",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv200_rec",
+      "expected_raw": "560",
+      "predicted_raw": "560",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv200_iss",
+      "expected_raw": "248",
+      "predicted_raw": "248",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv200_cl",
+      "expected_raw": "312",
+      "predicted_raw": "312",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "pilex_tabs_iss",
+      "expected_raw": "30",
+      "predicted_raw": "30",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "pilex_tabs_cl",
+      "expected_raw": "-1",
+      "predicted_raw": "-1",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tot_sales_amt",
+      "expected_raw": "80217.69",
+      "predicted_raw": "80,217.69",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tot_close_amt",
+      "expected_raw": "87290.46",
+      "predicted_raw": "87,290.46",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    }
+  ],
+  "matches_on": [
+    {
+      "field_id": "vendor",
+      "expected_raw": "SAKUNIA MEDICAL AGENCY",
+      "predicted_raw": "SAKUNIA MEDICAL AGENCY",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_opening",
+      "expected_raw": "Opening",
+      "predicted_raw": "Opening",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_issues",
+      "expected_raw": "Issues",
+      "predicted_raw": "Issues",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_closing",
+      "expected_raw": "Closing",
+      "predicted_raw": "Closing",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "clarina_op",
+      "expected_raw": "27",
+      "predicted_raw": "27",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "clarina_iss",
+      "expected_raw": "15",
+      "predicted_raw": "15",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "clarina_cl",
+      "expected_raw": "12",
+      "predicted_raw": "12",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "conf_op",
+      "expected_raw": "60",
+      "predicted_raw": "60",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "conf_iss",
+      "expected_raw": "16",
+      "predicted_raw": "16",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "conf_cl",
+      "expected_raw": "44",
+      "predicted_raw": "44",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv100_op",
+      "expected_raw": "70",
+      "predicted_raw": "70",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv100_rec",
+      "expected_raw": "70",
+      "predicted_raw": "70",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv100_iss",
+      "expected_raw": "117",
+      "predicted_raw": "117",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv100_cl",
+      "expected_raw": "23",
+      "predicted_raw": "23",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv200_rec",
+      "expected_raw": "560",
+      "predicted_raw": "560",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv200_iss",
+      "expected_raw": "248",
+      "predicted_raw": "248",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv200_cl",
+      "expected_raw": "312",
+      "predicted_raw": "312",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "pilex_tabs_iss",
+      "expected_raw": "30",
+      "predicted_raw": "30",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "pilex_tabs_cl",
+      "expected_raw": "-1",
+      "predicted_raw": "-1",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tot_sales_amt",
+      "expected_raw": "80217.69",
+      "predicted_raw": "80,217.69",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tot_close_amt",
+      "expected_raw": "87290.46",
+      "predicted_raw": "87,290.46",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    }
+  ]
+}

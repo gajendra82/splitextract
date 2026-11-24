@@ -1,0 +1,336 @@
+{
+  "document_id": "0000700346_2026_08_ZL_18_8189_05092026025159.pdf",
+  "role": "ordinary",
+  "source_path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700346_2026_08_ZL_18_8189_05092026025159.pdf",
+  "off": {
+    "correct_count": 18,
+    "field_count": 18,
+    "silent_wrong_count": 0,
+    "missing_count": 0,
+    "secondary_ocr_ms": 10.6,
+    "pipeline_helper_ms": 9.9,
+    "text_sha": "1d5e4ee2180e954f",
+    "repair_report": {
+      "document_id": "0000700346_2026_08_ZL_18_8189_05092026025159.pdf",
+      "repairs": [],
+      "unresolved": [
+        {
+          "reason": "secondary_repair_disabled"
+        }
+      ]
+    }
+  },
+  "on": {
+    "correct_count": 18,
+    "field_count": 18,
+    "silent_wrong_count": 0,
+    "missing_count": 0,
+    "secondary_ocr_ms": 3186.4,
+    "pipeline_helper_ms": 3339.4,
+    "text_sha": "1d5e4ee2180e954f",
+    "repair_report": {
+      "document_id": "0000700346_2026_08_ZL_18_8189_05092026025159.pdf",
+      "repairs": [],
+      "unresolved": [
+        {
+          "reason": "total_footer_layout_not_himalaya_qty"
+        }
+      ]
+    },
+    "pipeline_text_matches": true
+  },
+  "deltas": [],
+  "repair_types_on": [],
+  "matches_off": [
+    {
+      "field_id": "vendor",
+      "expected_raw": "RAJARAM AGENCIES",
+      "predicted_raw": "RAJARAM AGENCIES",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_ob",
+      "expected_raw": "OB",
+      "predicted_raw": "OB",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_sal",
+      "expected_raw": "SAL",
+      "predicted_raw": "SAL",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_cb",
+      "expected_raw": "CB",
+      "predicted_raw": "CB",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "aact_ob",
+      "expected_raw": "0",
+      "predicted_raw": "0",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "aact_cb",
+      "expected_raw": "0",
+      "predicted_raw": "0",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "bon_ob",
+      "expected_raw": "241",
+      "predicted_raw": "241",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "bon_sal",
+      "expected_raw": "83",
+      "predicted_raw": "83",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "bon_cb",
+      "expected_raw": "156",
+      "predicted_raw": "156",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "cyst_ob",
+      "expected_raw": "27",
+      "predicted_raw": "27",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "cyst_sal",
+      "expected_raw": "14",
+      "predicted_raw": "14",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "cyst_cb",
+      "expected_raw": "13",
+      "predicted_raw": "13",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv200_ob",
+      "expected_raw": "35",
+      "predicted_raw": "35",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv200_sal",
+      "expected_raw": "33",
+      "predicted_raw": "33",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv200_cb",
+      "expected_raw": "2",
+      "predicted_raw": "2",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "livds_ob",
+      "expected_raw": "70",
+      "predicted_raw": "70",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "livds_sal",
+      "expected_raw": "16",
+      "predicted_raw": "16",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "livds_cb",
+      "expected_raw": "54",
+      "predicted_raw": "54",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    }
+  ],
+  "matches_on": [
+    {
+      "field_id": "vendor",
+      "expected_raw": "RAJARAM AGENCIES",
+      "predicted_raw": "RAJARAM AGENCIES",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_ob",
+      "expected_raw": "OB",
+      "predicted_raw": "OB",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_sal",
+      "expected_raw": "SAL",
+      "predicted_raw": "SAL",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_cb",
+      "expected_raw": "CB",
+      "predicted_raw": "CB",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "aact_ob",
+      "expected_raw": "0",
+      "predicted_raw": "0",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "aact_cb",
+      "expected_raw": "0",
+      "predicted_raw": "0",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "bon_ob",
+      "expected_raw": "241",
+      "predicted_raw": "241",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "bon_sal",
+      "expected_raw": "83",
+      "predicted_raw": "83",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "bon_cb",
+      "expected_raw": "156",
+      "predicted_raw": "156",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "cyst_ob",
+      "expected_raw": "27",
+      "predicted_raw": "27",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "cyst_sal",
+      "expected_raw": "14",
+      "predicted_raw": "14",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "cyst_cb",
+      "expected_raw": "13",
+      "predicted_raw": "13",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv200_ob",
+      "expected_raw": "35",
+      "predicted_raw": "35",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv200_sal",
+      "expected_raw": "33",
+      "predicted_raw": "33",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv200_cb",
+      "expected_raw": "2",
+      "predicted_raw": "2",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "livds_ob",
+      "expected_raw": "70",
+      "predicted_raw": "70",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "livds_sal",
+      "expected_raw": "16",
+      "predicted_raw": "16",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "livds_cb",
+      "expected_raw": "54",
+      "predicted_raw": "54",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    }
+  ]
+}

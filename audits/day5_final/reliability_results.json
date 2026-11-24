@@ -1,0 +1,32 @@
+{
+  "reliability": {
+    "checks": {
+      "ocr_timeout": true,
+      "gemini_429": true,
+      "context_isolation": true,
+      "partial_batch": true,
+      "max_body_size_200mb": true,
+      "deadline_default_600": true,
+      "gemini_retries_bounded": true,
+      "max_concurrent_extractions": 2,
+      "ocr_cache_max": true
+    },
+    "passed": true
+  },
+  "multipage_override_probe": {
+    "seen_pages": [
+      1,
+      2,
+      3
+    ],
+    "page_order_ok": true,
+    "no_drop": true,
+    "result_ok": true,
+    "verified": null,
+    "observability_engines": [
+      "fake",
+      "fake",
+      "fake"
+    ]
+  }
+}

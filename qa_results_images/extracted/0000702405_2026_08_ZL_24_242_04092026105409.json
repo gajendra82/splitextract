@@ -1,0 +1,463 @@
+{
+  "source_file": "0000702405_2026_08_ZL_24_242_04092026105409.jpg",
+  "source_format": "jpg",
+  "stockist_name": null,
+  "stockist_address": null,
+  "company_name": "SAKET MEDICAL AGENCIES",
+  "period_from": "2026-08-01",
+  "period_to": "2026-08-31",
+  "report_title": "STOCK & SALES ANALYSIS",
+  "line_items": [
+    {
+      "product_code": null,
+      "product_name": "ABANA TAB",
+      "packing": "50TAB",
+      "opening_qty": -2.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": -2.0,
+      "closing_value": 0.0,
+      "extra": {
+        "rejected_closing_value": -302.72,
+        "expected_total": -2.0,
+        "expected_closing": -2.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "CLARINA CREAM",
+      "packing": "30GM",
+      "opening_qty": 1.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 1.0,
+      "closing_value": 73.73,
+      "extra": {
+        "expected_total": 1.0,
+        "expected_closing": 1.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "CONFIDO ТАВ.",
+      "packing": "60's",
+      "opening_qty": 76.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 48.0,
+      "closing_value": 7693.1,
+      "extra": {
+        "expected_total": 76.0,
+        "expected_closing": 76.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "DIABECON DS TAB",
+      "packing": "60",
+      "opening_qty": 36.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 35.0,
+      "closing_value": 6578.82,
+      "extra": {
+        "expected_total": 36.0,
+        "expected_closing": 36.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "DIABECON TAB",
+      "packing": "60's",
+      "opening_qty": -6.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": -6.0,
+      "closing_value": 0.0,
+      "extra": {
+        "rejected_closing_value": -430.08,
+        "expected_total": -6.0,
+        "expected_closing": -6.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "DIAREX SYP.",
+      "packing": "100ML",
+      "opening_qty": -1.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": -1.0,
+      "closing_value": 0.0,
+      "extra": {
+        "rejected_closing_value": -36.6,
+        "expected_total": -1.0,
+        "expected_closing": -1.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "HAIRZONE LOTION",
+      "packing": "60ML",
+      "opening_qty": 17.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 10.0,
+      "closing_value": 3120.39,
+      "extra": {
+        "expected_total": 17.0,
+        "expected_closing": 17.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "HERBOLAX CAP",
+      "packing": "10's",
+      "opening_qty": 170.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 160.0,
+      "closing_value": 9532.32,
+      "extra": {
+        "expected_total": 170.0,
+        "expected_closing": 170.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "HERBOLEX TAB",
+      "packing": "100's",
+      "opening_qty": 56.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 56.0,
+      "closing_value": 8126.05,
+      "extra": {
+        "expected_total": 56.0,
+        "expected_closing": 56.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "HIMCOLIN GEL",
+      "packing": "30GM",
+      "opening_qty": -23.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": -23.0,
+      "closing_value": 0.0,
+      "extra": {
+        "rejected_closing_value": -4958.72,
+        "expected_total": -23.0,
+        "expected_closing": -23.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV 52 SYP",
+      "packing": "100ML",
+      "opening_qty": 36.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": -3.0,
+      "closing_value": 0.0,
+      "extra": {
+        "rejected_closing_value": -282.94,
+        "expected_total": 36.0,
+        "expected_closing": 36.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV 52 SYP",
+      "packing": "200ML",
+      "opening_qty": 50.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 14.0,
+      "closing_value": 2253.63,
+      "extra": {
+        "expected_total": 50.0,
+        "expected_closing": 50.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV 52 TAB",
+      "packing": "100",
+      "opening_qty": 193.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 164.0,
+      "closing_value": 24821.25,
+      "extra": {
+        "expected_total": 193.0,
+        "expected_closing": 193.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV-52 HB CAP",
+      "packing": "10's",
+      "opening_qty": 21.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 11.0,
+      "closing_value": 1755.14,
+      "extra": {
+        "expected_total": 21.0,
+        "expected_closing": 21.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "OPTHACARE EYE DROP",
+      "packing": "10ML",
+      "opening_qty": 40.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 31.0,
+      "closing_value": 2015.02,
+      "extra": {
+        "expected_total": 40.0,
+        "expected_closing": 40.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "OXITARD CAP.",
+      "packing": "10's",
+      "opening_qty": -3.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": -3.0,
+      "closing_value": 0.0,
+      "extra": {
+        "rejected_closing_value": -133.12,
+        "expected_total": -3.0,
+        "expected_closing": -3.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PILEX FORTE OINT.",
+      "packing": "30GM",
+      "opening_qty": 53.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 40.0,
+      "closing_value": 3957.17,
+      "extra": {
+        "expected_total": 53.0,
+        "expected_closing": 53.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PILEX FORTE TAB",
+      "packing": "30's",
+      "opening_qty": -5.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": -7.0,
+      "closing_value": 0.0,
+      "extra": {
+        "rejected_closing_value": -1285.17,
+        "expected_total": -5.0,
+        "expected_closing": -5.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PILEX OINT",
+      "packing": "20GM",
+      "opening_qty": 3.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 3.0,
+      "closing_value": 153.62,
+      "extra": {
+        "expected_total": 3.0,
+        "expected_closing": 3.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PILEX TAB",
+      "packing": "60's",
+      "opening_qty": 116.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 95.0,
+      "closing_value": 15292.52,
+      "extra": {
+        "expected_total": 116.0,
+        "expected_closing": 116.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PUREHANDS (LICHI)",
+      "packing": "500ML",
+      "opening_qty": 48.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 48.0,
+      "closing_value": 1199.01,
+      "extra": {
+        "expected_total": 48.0,
+        "expected_closing": 48.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PURIM TAB.",
+      "packing": "60's",
+      "opening_qty": 3.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 3.0,
+      "closing_value": 179.71,
+      "extra": {
+        "expected_total": 3.0,
+        "expected_closing": 3.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "TENTEX FORTE TAB",
+      "packing": "10's",
+      "opening_qty": 189.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 179.0,
+      "closing_value": 16526.73,
+      "extra": {
+        "expected_total": 189.0,
+        "expected_closing": 189.0,
+        "stock_identity_ok": false
+      }
+    }
+  ],
+  "totals": {
+    "sales_value": null,
+    "closing_value": 95848.86,
+    "extra": {
+      "extraction_method": "gemini_extraction_fallback",
+      "line_sales_value_sum": 0.0,
+      "line_closing_value_sum": 103278.21,
+      "sales_qty": 0.0,
+      "closing_qty": 853.0,
+      "stock_identity_kind": "opening_receipts_sales_closing",
+      "stock_identity_formula": "closing=opening+receipts-sales",
+      "stock_identity_fail_count": 13,
+      "stock_validation": {
+        "opening_plus_purchase": 1068.0,
+        "expected_total": 1068.0,
+        "calculated_closing": 1068.0,
+        "extracted_closing": 853.0,
+        "is_valid": false
+      },
+      "extraction_quality": {
+        "quality": "poor",
+        "score": 75,
+        "reasons": [
+          "stock_identity_failure"
+        ],
+        "threshold": 75.0
+      },
+      "gemini_fallback": "validation_failed"
+    }
+  }
+}

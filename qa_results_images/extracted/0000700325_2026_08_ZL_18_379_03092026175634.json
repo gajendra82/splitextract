@@ -1,0 +1,863 @@
+{
+  "source_file": "0000700325_2026_08_ZL_18_379_03092026175634.jpg",
+  "source_format": "jpg",
+  "stockist_name": null,
+  "stockist_address": null,
+  "company_name": "HIMALAYA (ZEAL)",
+  "period_from": "2026-08-01",
+  "period_to": "2026-08-31",
+  "report_title": "Product wise stock statement",
+  "line_items": [
+    {
+      "product_code": null,
+      "product_name": "AACTARIL SOAP",
+      "packing": "75GM",
+      "opening_qty": 72.0,
+      "opening_value": null,
+      "receipts_qty": 21.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": null,
+      "closing_qty": 51.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "receipts_free": 21.0,
+        "liquidation_days": 73.0,
+        "expected_closing": 93.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ALTHEA CREAM",
+      "packing": "60GM",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": null,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ALTHEA LOTION",
+      "packing": "100ML",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": null,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "BLEMINOR CREAM",
+      "packing": "30ML",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": null,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "CHIROPEX CREAM",
+      "packing": "30GM",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": null,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "CLARINA ANTIACNE CREAM",
+      "packing": "30G",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": null,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "CLARINA CREAM",
+      "packing": "30GM",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": null,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "CLARINA FACE WASH GEL 60M",
+      "packing": "60ML",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": null,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "CLARINA FACE WASHGEL* =",
+      "packing": "60ML",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": null,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "CONFIDO TAB",
+      "packing": "60S",
+      "opening_qty": 51.0,
+      "opening_value": null,
+      "receipts_qty": 34.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": null,
+      "closing_qty": 36.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "receipts_free": 34.0,
+        "liquidation_days": 58.0,
+        "expected_closing": 85.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "CYSTONE FORTE TAB",
+      "packing": "30S",
+      "opening_qty": 52.0,
+      "opening_value": null,
+      "receipts_qty": 2.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": null,
+      "closing_qty": 44.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "receipts_free": 2.0,
+        "liquidation_days": 330.0,
+        "expected_closing": 54.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "HAIR ZONE SOLU",
+      "packing": "60ML",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": null,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "HAIR ZONE SOLU*",
+      "packing": "60ML",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": null,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "HEAL LIP GEL",
+      "packing": "10GM",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": null,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "HERBOLAX CAP",
+      "packing": "10s",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": null,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "HERBOLAX TAB",
+      "packing": "100S",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": null,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "HIMCOCID SYP (BANANA FLAV",
+      "packing": "200ML",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": null,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "HIMCOCID SYP (MINT FLAVOU",
+      "packing": "200ML",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": null,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "HIMCOCID SYP (SAUNF FLAVO",
+      "packing": "200ML",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": null,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "HIMCOLIN CR",
+      "packing": "30GM",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": null,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "HIOWNA KIDZ (CHOC)",
+      "packing": "200GM",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": null,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "HIOWNA KIDZ (VANI)",
+      "packing": "200GM",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": null,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "HIOWNA POW",
+      "packing": "200GM",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": null,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "HIOWNA POW (CHOCOLATE)",
+      "packing": "200GM",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": null,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "HIOWNA POW (VAN)",
+      "packing": "200GM",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": null,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "HIOWNA POW(CHOCO)",
+      "packing": "400GM",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": null,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV SUGAR FREE SYP",
+      "packing": "200ML",
+      "opening_qty": 15.0,
+      "opening_value": null,
+      "receipts_qty": 3.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": null,
+      "closing_qty": 12.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "receipts_free": 3.0,
+        "liquidation_days": 120.0,
+        "expected_closing": 18.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV SYP",
+      "packing": "200m!",
+      "opening_qty": 403.0,
+      "opening_value": null,
+      "receipts_qty": 715.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": null,
+      "closing_qty": 443.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "receipts_free": 295.0,
+        "liquidation_days": 42.0,
+        "expected_closing": 1118.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV SYP (SF)",
+      "packing": "100ML",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": null,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV SYP 100ml",
+      "packing": "100ml",
+      "opening_qty": 119.0,
+      "opening_value": null,
+      "receipts_qty": 138.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": null,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "receipts_free": 138.0,
+        "expected_closing": 257.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "UV TAB",
+      "packing": "100s",
+      "opening_qty": 283.0,
+      "opening_value": null,
+      "receipts_qty": 106.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": null,
+      "closing_qty": 191.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "receipts_free": 106.0,
+        "liquidation_days": 83.0,
+        "expected_closing": 389.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "OPTHACARE EYE DROP",
+      "packing": "10ML",
+      "opening_qty": 100.0,
+      "opening_value": null,
+      "receipts_qty": 23.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": null,
+      "closing_qty": 7.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "receipts_free": 23.0,
+        "liquidation_days": 46.0,
+        "expected_closing": 123.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ORO-T ORAL RINSE LIQ",
+      "packing": "100ML",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": null,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ORO-T ORAL RINSE LIQ",
+      "packing": "200ML",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": null,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PILEX FORTE OINT",
+      "packing": "30GM",
+      "opening_qty": 224.0,
+      "opening_value": null,
+      "receipts_qty": 102.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": null,
+      "closing_qty": 83.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "receipts_free": 102.0,
+        "liquidation_days": 19.0,
+        "expected_closing": 326.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PILEX FORTE TAB",
+      "packing": "30S",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": null,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PILEX OINT",
+      "packing": "30GM",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": null,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PILEX TAB",
+      "packing": "60s",
+      "opening_qty": 293.0,
+      "opening_value": null,
+      "receipts_qty": 112.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": null,
+      "closing_qty": 80.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "receipts_free": 112.0,
+        "liquidation_days": 14.0,
+        "expected_closing": 405.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PURE HANDS SANITIZER",
+      "packing": "50ML",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": null,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PUREHANDS SANITIZER(ORA",
+      "packing": "500ML",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": null,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "TALEKT CAP",
+      "packing": "60S",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": null,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "TALEKT SYP",
+      "packing": "120ML",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": null,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "TENTEX FORTE TAB",
+      "packing": "10s",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": null,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "VEGECORT CREAM",
+      "packing": "30GM",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": null,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    }
+  ],
+  "totals": {
+    "sales_value": 162635.0,
+    "closing_value": 167486.0,
+    "extra": {
+      "extraction_method": "product_wise_stock_statement_image",
+      "layout": "product_wise_stock_statement_photo",
+      "statement_count": 1,
+      "total_row_source": "product_wise_stock_statement_footer",
+      "line_sales_value_sum": 0.0,
+      "line_closing_value_sum": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 947.0,
+      "stock_identity_kind": "product_wise_stock_statement_image",
+      "stock_identity_formula": "opening + receipt(+free) - issues(+free/goods) = closing; liquidation days excluded",
+      "opening_qty": 1612.0,
+      "receipts_qty": 1256.0,
+      "stock_identity_fail_count": 10,
+      "stock_validation": {
+        "opening_qty": 1612.0,
+        "receipts_qty": 1256.0,
+        "sales_qty": 0.0,
+        "calculated_closing": 2868.0,
+        "extracted_closing": 947.0,
+        "sales_value": 162635.0,
+        "closing_value": 167486.0,
+        "is_valid": false
+      },
+      "extraction_quality": {
+        "quality": "good",
+        "score": 100,
+        "reasons": [],
+        "threshold": 75.0
+      },
+      "gemini_fallback": "not_called"
+    },
+    "opening_qty": 1612.0,
+    "receipts_qty": 1256.0,
+    "sales_qty": 0.0,
+    "closing_qty": 947.0
+  }
+}

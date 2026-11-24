@@ -1,0 +1,4031 @@
+{
+  "document_id": "0000709869_2026_08_ZA_06_8121_04092026080619.png",
+  "source_file": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000709869_2026_08_ZA_06_8121_04092026080619.png",
+  "source_file_exists": true,
+  "verification_status": "unverified",
+  "annotation_origin": "AI_PROPOSED",
+  "ai_generated": true,
+  "human_verified": false,
+  "rows": [
+    {
+      "row_id": "r01",
+      "row_index": 1,
+      "product_name": {
+        "raw": "BONNISAN DROPS 30ML",
+        "normalized": "BONNISAN DROPS 30ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "30ML",
+        "normalized": "30ML",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "UPC",
+          "semantic": "unknown",
+          "raw": "7000080",
+          "normalized": 7000080.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "opqty",
+          "semantic": "opening_qty",
+          "raw": "57",
+          "normalized": 57.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Receipt",
+          "semantic": "receipt_qty",
+          "raw": "50",
+          "normalized": 50.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "sale",
+          "semantic": "sales_qty",
+          "raw": "56",
+          "normalized": 56.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "saleval",
+          "semantic": "unknown",
+          "raw": "4181",
+          "normalized": 4181.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "CompRet",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Transit",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "SalFree",
+          "semantic": "sales_scheme_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "FreeVal",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r02",
+      "row_index": 2,
+      "product_name": {
+        "raw": "JONNISAN LIQUID 100ML",
+        "normalized": "JONNISAN LIQUID 100ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "100ML",
+        "normalized": "100ML",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "UPC",
+          "semantic": "unknown",
+          "raw": "7001338",
+          "normalized": 7001338.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "opqty",
+          "semantic": "opening_qty",
+          "raw": "31",
+          "normalized": 31.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Receipt",
+          "semantic": "receipt_qty",
+          "raw": "56",
+          "normalized": 56.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "sale",
+          "semantic": "sales_qty",
+          "raw": "31",
+          "normalized": 31.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "saleval",
+          "semantic": "unknown",
+          "raw": "2102",
+          "normalized": 2102.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "CompRet",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Transit",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "SalFree",
+          "semantic": "sales_scheme_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "FreeVal",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r03",
+      "row_index": 3,
+      "product_name": {
+        "raw": "JONNISAN LIQUID 200ML",
+        "normalized": "JONNISAN LIQUID 200ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200ML",
+        "normalized": "200ML",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "UPC",
+          "semantic": "unknown",
+          "raw": "HIM6303289",
+          "normalized": null,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "opqty",
+          "semantic": "opening_qty",
+          "raw": "25",
+          "normalized": 25.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Receipt",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "sale",
+          "semantic": "sales_qty",
+          "raw": "8",
+          "normalized": 8.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "saleval",
+          "semantic": "unknown",
+          "raw": "914",
+          "normalized": 914.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "CompRet",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Transit",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "SalFree",
+          "semantic": "sales_scheme_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "FreeVal",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r04",
+      "row_index": 4,
+      "product_name": {
+        "raw": "JONNISPAZ DROPS 15ML",
+        "normalized": "JONNISPAZ DROPS 15ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "15ML",
+        "normalized": "15ML",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "UPC",
+          "semantic": "unknown",
+          "raw": "7000087",
+          "normalized": 7000087.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "opqty",
+          "semantic": "opening_qty",
+          "raw": "40",
+          "normalized": 40.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Receipt",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "sale",
+          "semantic": "sales_qty",
+          "raw": "11",
+          "normalized": 11.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "saleval",
+          "semantic": "unknown",
+          "raw": "704",
+          "normalized": 704.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "CompRet",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Transit",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "SalFree",
+          "semantic": "sales_scheme_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "FreeVal",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r05",
+      "row_index": 5,
+      "product_name": {
+        "raw": "BRESOL 200ML",
+        "normalized": "BRESOL 200ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200ML",
+        "normalized": "200ML",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "UPC",
+          "semantic": "unknown",
+          "raw": "7002534",
+          "normalized": 7002534.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "opqty",
+          "semantic": "opening_qty",
+          "raw": "16",
+          "normalized": 16.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Receipt",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "sale",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "saleval",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "CompRet",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Transit",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "SalFree",
+          "semantic": "sales_scheme_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "FreeVal",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r06",
+      "row_index": 6,
+      "product_name": {
+        "raw": "BRESOL TAB 60 TAB",
+        "normalized": "BRESOL TAB 60 TAB",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60 TAB",
+        "normalized": "60 TAB",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "UPC",
+          "semantic": "unknown",
+          "raw": "7000094",
+          "normalized": 7000094.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "opqty",
+          "semantic": "opening_qty",
+          "raw": "18",
+          "normalized": 18.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Receipt",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "sale",
+          "semantic": "sales_qty",
+          "raw": "4",
+          "normalized": 4.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "saleval",
+          "semantic": "unknown",
+          "raw": "686",
+          "normalized": 686.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "CompRet",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Transit",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "SalFree",
+          "semantic": "sales_scheme_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "FreeVal",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r07",
+      "row_index": 7,
+      "product_name": {
+        "raw": "CYSTONE FORTE TAB 30 TAB",
+        "normalized": "CYSTONE FORTE TAB 30 TAB",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "30 TAB",
+        "normalized": "30 TAB",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "UPC",
+          "semantic": "unknown",
+          "raw": "7003058",
+          "normalized": 7003058.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "opqty",
+          "semantic": "opening_qty",
+          "raw": "27",
+          "normalized": 27.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Receipt",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "sale",
+          "semantic": "sales_qty",
+          "raw": "5",
+          "normalized": 5.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "saleval",
+          "semantic": "unknown",
+          "raw": "554",
+          "normalized": 554.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "CompRet",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Transit",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "SalFree",
+          "semantic": "sales_scheme_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "FreeVal",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r08",
+      "row_index": 8,
+      "product_name": {
+        "raw": "CYSTONE SYP 200ML",
+        "normalized": "CYSTONE SYP 200ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200ML",
+        "normalized": "200ML",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "UPC",
+          "semantic": "unknown",
+          "raw": "7000111",
+          "normalized": 7000111.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "opqty",
+          "semantic": "opening_qty",
+          "raw": "62",
+          "normalized": 62.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Receipt",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "sale",
+          "semantic": "sales_qty",
+          "raw": "34",
+          "normalized": 34.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "saleval",
+          "semantic": "unknown",
+          "raw": "7020",
+          "normalized": 7020.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "CompRet",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Transit",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "SalFree",
+          "semantic": "sales_scheme_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "FreeVal",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r09",
+      "row_index": 9,
+      "product_name": {
+        "raw": "CYSTONE TAB 60TAB",
+        "normalized": "CYSTONE TAB 60TAB",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60TAB",
+        "normalized": "60TAB",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "UPC",
+          "semantic": "unknown",
+          "raw": "7000114",
+          "normalized": 7000114.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "opqty",
+          "semantic": "opening_qty",
+          "raw": "53",
+          "normalized": 53.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Receipt",
+          "semantic": "receipt_qty",
+          "raw": "100",
+          "normalized": 100.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "sale",
+          "semantic": "sales_qty",
+          "raw": "76",
+          "normalized": 76.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "saleval",
+          "semantic": "unknown",
+          "raw": "14071",
+          "normalized": 14071.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "CompRet",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Transit",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "SalFree",
+          "semantic": "sales_scheme_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "FreeVal",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r10",
+      "row_index": 10,
+      "product_name": {
+        "raw": "EVACARE FORTE LIQ 200ML",
+        "normalized": "EVACARE FORTE LIQ 200ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200ML",
+        "normalized": "200ML",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "UPC",
+          "semantic": "unknown",
+          "raw": "7003318",
+          "normalized": 7003318.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "opqty",
+          "semantic": "opening_qty",
+          "raw": "11",
+          "normalized": 11.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Receipt",
+          "semantic": "receipt_qty",
+          "raw": "56",
+          "normalized": 56.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "sale",
+          "semantic": "sales_qty",
+          "raw": "39",
+          "normalized": 39.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "saleval",
+          "semantic": "unknown",
+          "raw": "7513",
+          "normalized": 7513.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "CompRet",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Transit",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "SalFree",
+          "semantic": "sales_scheme_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "FreeVal",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r11",
+      "row_index": 11,
+      "product_name": {
+        "raw": "EVECARE 200ML",
+        "normalized": "EVECARE 200ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200ML",
+        "normalized": "200ML",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "UPC",
+          "semantic": "unknown",
+          "raw": "7000136",
+          "normalized": 7000136.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "opqty",
+          "semantic": "opening_qty",
+          "raw": "49",
+          "normalized": 49.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Receipt",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "sale",
+          "semantic": "sales_qty",
+          "raw": "12",
+          "normalized": 12.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "saleval",
+          "semantic": "unknown",
+          "raw": "1966",
+          "normalized": 1966.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "CompRet",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Transit",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "SalFree",
+          "semantic": "sales_scheme_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "FreeVal",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r12",
+      "row_index": 12,
+      "product_name": {
+        "raw": "VECARE CAP 30CAP",
+        "normalized": "VECARE CAP 30CAP",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "30CAP",
+        "normalized": "30CAP",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "UPC",
+          "semantic": "unknown",
+          "raw": "HIM4144345",
+          "normalized": null,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "opqty",
+          "semantic": "opening_qty",
+          "raw": "93",
+          "normalized": 93.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Receipt",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "sale",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "saleval",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "CompRet",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Transit",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "SalFree",
+          "semantic": "sales_scheme_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "FreeVal",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r13",
+      "row_index": 13,
+      "product_name": {
+        "raw": "SALACTOSURE GRANULES 200G 200G",
+        "normalized": "SALACTOSURE GRANULES 200G 200G",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200G",
+        "normalized": "200G",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "UPC",
+          "semantic": "unknown",
+          "raw": "7006190",
+          "normalized": 7006190.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "opqty",
+          "semantic": "opening_qty",
+          "raw": "12",
+          "normalized": 12.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Receipt",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "sale",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "saleval",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "CompRet",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Transit",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "SalFree",
+          "semantic": "sales_scheme_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "FreeVal",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r14",
+      "row_index": 14,
+      "product_name": {
+        "raw": "IMPLASIA TAB 30TAB",
+        "normalized": "IMPLASIA TAB 30TAB",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "30TAB",
+        "normalized": "30TAB",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "UPC",
+          "semantic": "unknown",
+          "raw": "7005591",
+          "normalized": 7005591.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "opqty",
+          "semantic": "opening_qty",
+          "raw": "64",
+          "normalized": 64.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Receipt",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "sale",
+          "semantic": "sales_qty",
+          "raw": "2",
+          "normalized": 2.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "saleval",
+          "semantic": "unknown",
+          "raw": "677",
+          "normalized": 677.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "CompRet",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Transit",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "SalFree",
+          "semantic": "sales_scheme_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "FreeVal",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r15",
+      "row_index": 15,
+      "product_name": {
+        "raw": "KIORA GA 15ML",
+        "normalized": "KIORA GA 15ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "15ML",
+        "normalized": "15ML",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "UPC",
+          "semantic": "unknown",
+          "raw": "7000210",
+          "normalized": 7000210.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "opqty",
+          "semantic": "opening_qty",
+          "raw": "25",
+          "normalized": 25.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Receipt",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "sale",
+          "semantic": "sales_qty",
+          "raw": "1",
+          "normalized": 1.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "saleval",
+          "semantic": "unknown",
+          "raw": "78",
+          "normalized": 78.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "CompRet",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Transit",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "SalFree",
+          "semantic": "sales_scheme_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "FreeVal",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r16",
+      "row_index": 16,
+      "product_name": {
+        "raw": "HORA K MOUTH WASH 150ML",
+        "normalized": "HORA K MOUTH WASH 150ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "150ML",
+        "normalized": "150ML",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "UPC",
+          "semantic": "unknown",
+          "raw": "7001520",
+          "normalized": 7001520.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "opqty",
+          "semantic": "opening_qty",
+          "raw": "8",
+          "normalized": 8.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Receipt",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "sale",
+          "semantic": "sales_qty",
+          "raw": "1",
+          "normalized": 1.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "saleval",
+          "semantic": "unknown",
+          "raw": "82",
+          "normalized": 82.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "CompRet",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Transit",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "SalFree",
+          "semantic": "sales_scheme_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "FreeVal",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r17",
+      "row_index": 17,
+      "product_name": {
+        "raw": "HORA K TOOTH PASTE 50G",
+        "normalized": "HORA K TOOTH PASTE 50G",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "50G",
+        "normalized": "50G",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "UPC",
+          "semantic": "unknown",
+          "raw": "7000214",
+          "normalized": 7000214.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "opqty",
+          "semantic": "opening_qty",
+          "raw": "57",
+          "normalized": 57.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Receipt",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "sale",
+          "semantic": "sales_qty",
+          "raw": "9",
+          "normalized": 9.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "saleval",
+          "semantic": "unknown",
+          "raw": "727",
+          "normalized": 727.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "CompRet",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Transit",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "SalFree",
+          "semantic": "sales_scheme_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "FreeVal",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r18",
+      "row_index": 18,
+      "product_name": {
+        "raw": "HORA K TOOTH PASTE 100GM",
+        "normalized": "HORA K TOOTH PASTE 100GM",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "100GM",
+        "normalized": "100GM",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "UPC",
+          "semantic": "unknown",
+          "raw": "7000212",
+          "normalized": 7000212.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "opqty",
+          "semantic": "opening_qty",
+          "raw": "46",
+          "normalized": 46.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Receipt",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "sale",
+          "semantic": "sales_qty",
+          "raw": "7",
+          "normalized": 7.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "saleval",
+          "semantic": "unknown",
+          "raw": "853",
+          "normalized": 853.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "CompRet",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Transit",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "SalFree",
+          "semantic": "sales_scheme_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "FreeVal",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r19",
+      "row_index": 19,
+      "product_name": {
+        "raw": "HORA SG GEL 10G",
+        "normalized": "HORA SG GEL 10G",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "10G",
+        "normalized": "10G",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "UPC",
+          "semantic": "unknown",
+          "raw": "7000219",
+          "normalized": 7000219.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "opqty",
+          "semantic": "opening_qty",
+          "raw": "55",
+          "normalized": 55.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Receipt",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "sale",
+          "semantic": "sales_qty",
+          "raw": "2",
+          "normalized": 2.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "saleval",
+          "semantic": "unknown",
+          "raw": "171",
+          "normalized": 171.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "CompRet",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Transit",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "SalFree",
+          "semantic": "sales_scheme_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "FreeVal",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r20",
+      "row_index": 20,
+      "product_name": {
+        "raw": "KARELA TAB 60TAB",
+        "normalized": "KARELA TAB 60TAB",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60TAB",
+        "normalized": "60TAB",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "UPC",
+          "semantic": "unknown",
+          "raw": "7002270",
+          "normalized": 7002270.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "opqty",
+          "semantic": "opening_qty",
+          "raw": "42",
+          "normalized": 42.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Receipt",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "sale",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "saleval",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "CompRet",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Transit",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "SalFree",
+          "semantic": "sales_scheme_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "FreeVal",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r21",
+      "row_index": 21,
+      "product_name": {
+        "raw": "ASUNA TAB 60 TAB",
+        "normalized": "ASUNA TAB 60 TAB",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60 TAB",
+        "normalized": "60 TAB",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "UPC",
+          "semantic": "unknown",
+          "raw": "HIMLASUNCPXXXX00",
+          "normalized": null,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "opqty",
+          "semantic": "opening_qty",
+          "raw": "19",
+          "normalized": 19.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Receipt",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "sale",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "saleval",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "CompRet",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Transit",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "SalFree",
+          "semantic": "sales_scheme_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "FreeVal",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r22",
+      "row_index": 22,
+      "product_name": {
+        "raw": "JV.52 DROPS 60ML",
+        "normalized": "JV.52 DROPS 60ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60ML",
+        "normalized": "60ML",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "UPC",
+          "semantic": "unknown",
+          "raw": "HIMLIVS2DPXXXX00",
+          "normalized": null,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "opqty",
+          "semantic": "opening_qty",
+          "raw": "38",
+          "normalized": 38.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Receipt",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "sale",
+          "semantic": "sales_qty",
+          "raw": "5",
+          "normalized": 5.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "saleval",
+          "semantic": "unknown",
+          "raw": "430",
+          "normalized": 430.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "CompRet",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Transit",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "SalFree",
+          "semantic": "sales_scheme_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "FreeVal",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r23",
+      "row_index": 23,
+      "product_name": {
+        "raw": "JV.52 DS SYP 100ML",
+        "normalized": "JV.52 DS SYP 100ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "100ML",
+        "normalized": "100ML",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "UPC",
+          "semantic": "unknown",
+          "raw": "7000253",
+          "normalized": 7000253.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "opqty",
+          "semantic": "opening_qty",
+          "raw": "66",
+          "normalized": 66.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Receipt",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "sale",
+          "semantic": "sales_qty",
+          "raw": "4",
+          "normalized": 4.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "saleval",
+          "semantic": "unknown",
+          "raw": "657",
+          "normalized": 657.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "CompRet",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Transit",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "SalFree",
+          "semantic": "sales_scheme_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "FreeVal",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r24",
+      "row_index": 24,
+      "product_name": {
+        "raw": "JV.52 DS SYP 200ML",
+        "normalized": "JV.52 DS SYP 200ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200ML",
+        "normalized": "200ML",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "UPC",
+          "semantic": "unknown",
+          "raw": "7002239",
+          "normalized": 7002239.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "opqty",
+          "semantic": "opening_qty",
+          "raw": "29",
+          "normalized": 29.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Receipt",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "sale",
+          "semantic": "sales_qty",
+          "raw": "2",
+          "normalized": 2.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "saleval",
+          "semantic": "unknown",
+          "raw": "500",
+          "normalized": 500.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "CompRet",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Transit",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "SalFree",
+          "semantic": "sales_scheme_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "FreeVal",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r25",
+      "row_index": 25,
+      "product_name": {
+        "raw": "JV.52 DS TAB 60TAB",
+        "normalized": "JV.52 DS TAB 60TAB",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60TAB",
+        "normalized": "60TAB",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "UPC",
+          "semantic": "unknown",
+          "raw": "7000256",
+          "normalized": 7000256.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "opqty",
+          "semantic": "opening_qty",
+          "raw": "80",
+          "normalized": 80.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Receipt",
+          "semantic": "receipt_qty",
+          "raw": "1500",
+          "normalized": 1500.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "sale",
+          "semantic": "sales_qty",
+          "raw": "1517",
+          "normalized": 1517.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "saleval",
+          "semantic": "unknown",
+          "raw": "324790",
+          "normalized": 324790.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "CompRet",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Transit",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "SalFree",
+          "semantic": "sales_scheme_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "FreeVal",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r26",
+      "row_index": 26,
+      "product_name": {
+        "raw": "UKOL SYP 200ML",
+        "normalized": "UKOL SYP 200ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200ML",
+        "normalized": "200ML",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "UPC",
+          "semantic": "unknown",
+          "raw": "7001730",
+          "normalized": 7001730.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "opqty",
+          "semantic": "opening_qty",
+          "raw": "49",
+          "normalized": 49.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Receipt",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "sale",
+          "semantic": "sales_qty",
+          "raw": "2",
+          "normalized": 2.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "saleval",
+          "semantic": "unknown",
+          "raw": "321",
+          "normalized": 321.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "CompRet",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Transit",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "SalFree",
+          "semantic": "sales_scheme_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "FreeVal",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r27",
+      "row_index": 27,
+      "product_name": {
+        "raw": "UKOL TAB 60 TAB",
+        "normalized": "UKOL TAB 60 TAB",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60 TAB",
+        "normalized": "60 TAB",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "UPC",
+          "semantic": "unknown",
+          "raw": "7000269",
+          "normalized": 7000269.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "opqty",
+          "semantic": "opening_qty",
+          "raw": "49",
+          "normalized": 49.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Receipt",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "sale",
+          "semantic": "sales_qty",
+          "raw": "9",
+          "normalized": 9.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "saleval",
+          "semantic": "unknown",
+          "raw": "1735",
+          "normalized": 1735.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "CompRet",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Transit",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "SalFree",
+          "semantic": "sales_scheme_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "FreeVal",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r28",
+      "row_index": 28,
+      "product_name": {
+        "raw": "MENTAT SYP 200ML",
+        "normalized": "MENTAT SYP 200ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200ML",
+        "normalized": "200ML",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "UPC",
+          "semantic": "unknown",
+          "raw": "7000283",
+          "normalized": 7000283.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "opqty",
+          "semantic": "opening_qty",
+          "raw": "7",
+          "normalized": 7.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Receipt",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "sale",
+          "semantic": "sales_qty",
+          "raw": "4",
+          "normalized": 4.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "saleval",
+          "semantic": "unknown",
+          "raw": "783",
+          "normalized": 783.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "CompRet",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Transit",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "SalFree",
+          "semantic": "sales_scheme_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "FreeVal",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r29",
+      "row_index": 29,
+      "product_name": {
+        "raw": "MENTAT TAB 60 TAB",
+        "normalized": "MENTAT TAB 60 TAB",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60 TAB",
+        "normalized": "60 TAB",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "UPC",
+          "semantic": "unknown",
+          "raw": "7000288",
+          "normalized": 7000288.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "opqty",
+          "semantic": "opening_qty",
+          "raw": "57",
+          "normalized": 57.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Receipt",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "sale",
+          "semantic": "sales_qty",
+          "raw": "2",
+          "normalized": 2.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "saleval",
+          "semantic": "unknown",
+          "raw": "314",
+          "normalized": 314.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "CompRet",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Transit",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "SalFree",
+          "semantic": "sales_scheme_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "FreeVal",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r30",
+      "row_index": 30,
+      "product_name": {
+        "raw": "PLATENZA 20 TAB",
+        "normalized": "PLATENZA 20 TAB",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "20 TAB",
+        "normalized": "20 TAB",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "UPC",
+          "semantic": "unknown",
+          "raw": "7003449",
+          "normalized": 7003449.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "opqty",
+          "semantic": "opening_qty",
+          "raw": "105",
+          "normalized": 105.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Receipt",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "sale",
+          "semantic": "sales_qty",
+          "raw": "12",
+          "normalized": 12.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "saleval",
+          "semantic": "unknown",
+          "raw": "1877",
+          "normalized": 1877.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "CompRet",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Transit",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "SalFree",
+          "semantic": "sales_scheme_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "FreeVal",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r31",
+      "row_index": 31,
+      "product_name": {
+        "raw": "SEPTILIN SYP 200ML",
+        "normalized": "SEPTILIN SYP 200ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200ML",
+        "normalized": "200ML",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "UPC",
+          "semantic": "unknown",
+          "raw": "7000358",
+          "normalized": 7000358.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "opqty",
+          "semantic": "opening_qty",
+          "raw": "40",
+          "normalized": 40.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Receipt",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "sale",
+          "semantic": "sales_qty",
+          "raw": "4",
+          "normalized": 4.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "saleval",
+          "semantic": "unknown",
+          "raw": "686",
+          "normalized": 686.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "CompRet",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Transit",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "SalFree",
+          "semantic": "sales_scheme_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "FreeVal",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r32",
+      "row_index": 32,
+      "product_name": {
+        "raw": "SEPTILIN TAB 60 TAB",
+        "normalized": "SEPTILIN TAB 60 TAB",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60 TAB",
+        "normalized": "60 TAB",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "UPC",
+          "semantic": "unknown",
+          "raw": "7000363",
+          "normalized": 7000363.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "opqty",
+          "semantic": "opening_qty",
+          "raw": "71",
+          "normalized": 71.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Receipt",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "sale",
+          "semantic": "sales_qty",
+          "raw": "5",
+          "normalized": 5.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "saleval",
+          "semantic": "unknown",
+          "raw": "979",
+          "normalized": 979.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "CompRet",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Transit",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "SalFree",
+          "semantic": "sales_scheme_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "FreeVal",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r33",
+      "row_index": 33,
+      "product_name": {
+        "raw": "SPEMAN 60 TAB",
+        "normalized": "SPEMAN 60 TAB",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60 TAB",
+        "normalized": "60 TAB",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "UPC",
+          "semantic": "unknown",
+          "raw": "7000379",
+          "normalized": 7000379.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "opqty",
+          "semantic": "opening_qty",
+          "raw": "22",
+          "normalized": 22.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Receipt",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "sale",
+          "semantic": "sales_qty",
+          "raw": "2",
+          "normalized": 2.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "saleval",
+          "semantic": "unknown",
+          "raw": "379",
+          "normalized": 379.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "CompRet",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Transit",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "SalFree",
+          "semantic": "sales_scheme_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "FreeVal",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r34",
+      "row_index": 34,
+      "product_name": {
+        "raw": "GEL 30G",
+        "normalized": "GEL 30G",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "30G",
+        "normalized": "30G",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "UPC",
+          "semantic": "unknown",
+          "raw": "7000404",
+          "normalized": 7000404.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "opqty",
+          "semantic": "opening_qty",
+          "raw": "27",
+          "normalized": 27.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Receipt",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "sale",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "saleval",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "CompRet",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Transit",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "SalFree",
+          "semantic": "sales_scheme_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "FreeVal",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    }
+  ],
+  "headers": [],
+  "notes": [
+    "AI_PROPOSED from the original image only. Not verified. Named quantities are set only when a printed header was copied. Blank cells were not stored as zero."
+  ],
+  "failure": null,
+  "vision_model": "gemini-2.5-flash",
+  "vision_input": "original",
+  "ocr_used_as_label": false
+}

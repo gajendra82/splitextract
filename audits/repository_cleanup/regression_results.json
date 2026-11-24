@@ -1,0 +1,8 @@
+﻿{
+  "method": "unittest.discover",
+  "day5_baseline": {"ran": 1268, "skipped": 159, "failures": 0, "errors": 0, "duration_s": 153.269},
+  "after_cleanup": {"ran": 1268, "skipped": 158, "failures": 0, "errors": 0, "duration_s": 149.22, "wasSuccessful": true},
+  "pytest_triage": {"passed": 1124, "skipped": 173, "failed": 0, "duration_s": 142.22},
+  "smoke": {"fastapi_routes": 14, "ok": true},
+  "suite_ok": true
+}

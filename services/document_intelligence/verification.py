@@ -58,6 +58,12 @@ def independently_verify(
         issues.append("cell_validation_failure")
     if _source_discrepancy(result) or "source_discrepancy" in reasons:
         issues.append("source_discrepancy")
+    if _source_evidence_missing(result) or "insufficient_source_evidence" in reasons:
+        issues.append("insufficient_source_evidence")
+    if gemini_vision_lacks_source_evidence(result) or (
+        "gemini_vision_without_source_evidence" in reasons
+    ):
+        issues.append("gemini_vision_without_source_evidence")
     if checks.get("ocr_verified") is False:
         issues.append("unverified_ocr_fallback")
 
@@ -86,7 +92,9 @@ def independently_verify(
             "ocr_verified": "unverified_ocr_fallback" not in issues,
             "column_mapping_ok": "column_confusion" not in issues,
             "cell_validation_ok": "cell_validation_failure" not in issues,
-            "source_match": "source_discrepancy" not in issues,
+            "source_match": "source_discrepancy" not in issues
+            and "insufficient_source_evidence" not in issues
+            and "gemini_vision_without_source_evidence" not in issues,
             "canonical_guard": "dynamic_overwrote_canonical" not in issues,
             # Stock equation balance is diagnostic only — never sole proof.
             "stock_equation_is_not_proof": True,
@@ -100,6 +108,123 @@ def _unique(values: List[str]) -> List[str]:
         if value and value not in seen:
             seen.append(value)
     return seen
+
+
+def gemini_vision_lacks_source_evidence(result: Dict[str, Any]) -> bool:
+    """Gemini wrote quantities, and neither OCR text nor source columns exist.
+
+    A checked source table or usable OCR text can still support those
+    quantities. Vision numbers alone cannot.
+    """
+    if not isinstance(result, dict) or not _uses_gemini_vision(result):
+        return False
+    if _has_usable_ocr_text(result) or _has_source_columns(result):
+        return False
+    return _has_quantity(result)
+
+
+def _uses_gemini_vision(result: Dict[str, Any]) -> bool:
+    totals = result.get("totals") if isinstance(result.get("totals"), dict) else {}
+    extra = totals.get("extra") if isinstance(totals.get("extra"), dict) else {}
+    method = str(extra.get("extraction_method") or "").casefold()
+    # VL HTML table parse is structured OCR evidence, not full-page Gemini.
+    if method == "vl_html_table_parse":
+        return False
+    parts = [
+        extra.get("extraction_method"),
+        extra.get("reader_engine"),
+        extra.get("repaired_from"),
+        extra.get("layout"),
+    ]
+    blob = " ".join(str(part or "") for part in parts).casefold()
+    # Named parsers such as swil_receipt_pur_value_vision are not Gemini.
+    return "gemini" in blob
+
+
+def _has_usable_ocr_text(result: Dict[str, Any]) -> bool:
+    from services.source_evidence import has_valid_source_evidence
+
+    # Gemini-as-OCR / SmartRouter table HTML counts as usable source text.
+    if has_valid_source_evidence(extraction_result=result):
+        return True
+    direct = result.get("_grounding_ocr_text")
+    if isinstance(direct, str) and direct.strip():
+        return True
+    totals = result.get("totals") if isinstance(result.get("totals"), dict) else {}
+    extra = totals.get("extra") if isinstance(totals.get("extra"), dict) else {}
+    grounding = extra.get("source_grounding")
+    if isinstance(grounding, dict):
+        text = grounding.get("ocr_text")
+        if isinstance(text, str) and text.strip():
+            return True
+    for evidence in _ocr_evidence_dicts(result):
+        pages = evidence.get("pages")
+        if not isinstance(pages, list):
+            continue
+        for page in pages:
+            if not isinstance(page, dict):
+                continue
+            text = page.get("text")
+            if isinstance(text, str) and text.strip():
+                return True
+            try:
+                if int(page.get("text_length") or 0) > 0:
+                    return True
+            except (TypeError, ValueError):
+                continue
+    return False
+
+
+def _ocr_evidence_dicts(result: Dict[str, Any]) -> List[Dict[str, Any]]:
+    found: List[Dict[str, Any]] = []
+    evidence = result.get("ocr_evidence")
+    if isinstance(evidence, dict):
+        found.append(evidence)
+    di = result.get("document_intelligence")
+    if isinstance(di, dict):
+        ocr = di.get("ocr")
+        if isinstance(ocr, dict) and isinstance(ocr.get("evidence"), dict):
+            found.append(ocr["evidence"])
+    return found
+
+
+def _has_source_columns(result: Dict[str, Any]) -> bool:
+    totals = result.get("totals") if isinstance(result.get("totals"), dict) else {}
+    extra = totals.get("extra") if isinstance(totals.get("extra"), dict) else {}
+    grounding = extra.get("source_grounding")
+    if not isinstance(grounding, dict):
+        return False
+    if str(grounding.get("status") or "") != "checked":
+        return False
+    try:
+        compared = int(grounding.get("compared_rows") or 0)
+    except (TypeError, ValueError):
+        compared = 0
+    return compared > 0
+
+
+def _has_quantity(result: Dict[str, Any]) -> bool:
+    items = result.get("line_items")
+    if not isinstance(items, list):
+        return False
+    fields = ("opening_qty", "receipts_qty", "sales_qty", "closing_qty")
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        if any(item.get(field) is not None for field in fields):
+            return True
+    return False
+
+
+def _source_evidence_missing(result: Dict[str, Any]) -> bool:
+    totals = result.get("totals") if isinstance(result.get("totals"), dict) else {}
+    extra = totals.get("extra") if isinstance(totals.get("extra"), dict) else {}
+    grounding = extra.get("source_grounding")
+    if not isinstance(grounding, dict):
+        return False
+    if grounding.get("status") == "insufficient_source_evidence":
+        return True
+    return bool(grounding.get("blocks_verification"))
 
 
 def _source_discrepancy(result: Dict[str, Any]) -> bool:

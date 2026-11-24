@@ -1,0 +1,8 @@
+{
+  "document_id": "0000727765_2026_08_ZA_32_357_05092026083512.jpeg",
+  "sha256": "47eeb975b2c6379fdfbad7866a2fb77c8274c95d13b63375fa3cd31b9fed0a48",
+  "engine": "paddleocr-vl-1.6",
+  "text": "Stocks and Sales Report\nReport generated for the date 01 August 2026 to 31 August 2026",
+  "text_len": 86,
+  "status": "success"
+}

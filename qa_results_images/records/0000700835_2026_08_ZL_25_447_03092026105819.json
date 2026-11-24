@@ -1,0 +1,373 @@
+{
+  "file": "0000700835_2026_08_ZL_25_447_03092026105819.jpeg",
+  "path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700835_2026_08_ZL_25_447_03092026105819.jpeg",
+  "format": "Sales & Stock Statement",
+  "api_method": "gemini_extraction_fallback",
+  "status": "FAIL",
+  "expected_rows": 19,
+  "extracted_rows": 25,
+  "matched_rows": 12,
+  "missing_rows": [
+    {
+      "product": "ALTHEA LOTION CLARINA ANTLACNE CLARINA CREAM",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 2,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "HIMCOLIN GEL LIV 52 SYPSUGAR FRE",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 6,
+      "closing_qty": 8,
+      "kind": "missing_product"
+    },
+    {
+      "product": "Livs2 HB CAP",
+      "opening_qty": null,
+      "receipts_qty": 96,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "LIV'52 SYRUP, Lvs? TAB",
+      "opening_qty": null,
+      "receipts_qty": 2,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "PILEX FORTE OINT PILEX FORTE TAB",
+      "opening_qty": null,
+      "receipts_qty": 0,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "PILEX TAB PURIM TAB",
+      "opening_qty": null,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "TENTEX FORTE TAB TOTAL",
+      "opening_qty": null,
+      "receipts_qty": 107708,
+      "sales_qty": 203965330707,
+      "closing_qty": null,
+      "kind": "missing_product"
+    }
+  ],
+  "extra_rows": [
+    {
+      "product": "ALTHEA LOTION",
+      "opening_qty": 50,
+      "sales_qty": 0,
+      "closing_qty": 50,
+      "kind": "extra_product"
+    },
+    {
+      "product": "CLARINA ANTI ACNE FA",
+      "opening_qty": 100,
+      "sales_qty": 27,
+      "closing_qty": 73,
+      "kind": "extra_product"
+    },
+    {
+      "product": "CLARINA CREAM",
+      "opening_qty": 49,
+      "sales_qty": 2,
+      "closing_qty": 47,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HIMCOLIN GEL",
+      "opening_qty": 119,
+      "sales_qty": 15,
+      "closing_qty": 104,
+      "kind": "extra_product"
+    },
+    {
+      "product": "LIV 52 SYP SUGAR FRE",
+      "opening_qty": 14,
+      "sales_qty": 6,
+      "closing_qty": 8,
+      "kind": "extra_product"
+    },
+    {
+      "product": "LIV.52 HB CAP",
+      "opening_qty": 96,
+      "sales_qty": 3,
+      "closing_qty": 93,
+      "kind": "extra_product"
+    },
+    {
+      "product": "LIV.52 SYRUP.",
+      "opening_qty": 136,
+      "sales_qty": 567,
+      "closing_qty": 269,
+      "kind": "extra_product"
+    },
+    {
+      "product": "LIV.52 TAB",
+      "opening_qty": 551,
+      "sales_qty": 200,
+      "closing_qty": 353,
+      "kind": "extra_product"
+    },
+    {
+      "product": "PILEX FORTE OINT",
+      "opening_qty": 191,
+      "sales_qty": 67,
+      "closing_qty": 124,
+      "kind": "extra_product"
+    },
+    {
+      "product": "PILEX FORTE TAB",
+      "opening_qty": 118,
+      "sales_qty": 22,
+      "closing_qty": 96,
+      "kind": "extra_product"
+    },
+    {
+      "product": "PILEX TAB",
+      "opening_qty": 201,
+      "sales_qty": 54,
+      "closing_qty": 147,
+      "kind": "extra_product"
+    },
+    {
+      "product": "PURIM TAB",
+      "opening_qty": 8,
+      "sales_qty": 0,
+      "closing_qty": 8,
+      "kind": "extra_product"
+    },
+    {
+      "product": "TENTEX FORTE TAB",
+      "opening_qty": 579,
+      "sales_qty": 47,
+      "closing_qty": 532,
+      "kind": "extra_product"
+    }
+  ],
+  "duplicates": [],
+  "mismatches": [
+    {
+      "product": "DIABECON DS TAB",
+      "field": "closing_qty",
+      "expected": 97,
+      "actual": 37,
+      "kind": "wrong_closing_qty"
+    },
+    {
+      "product": "RENALKA SYP",
+      "field": "receipts_qty",
+      "expected": 568,
+      "actual": 0,
+      "kind": "wrong_receipt_qty"
+    },
+    {
+      "product": "DIAREX TAB",
+      "field": "sales_qty",
+      "expected": 58,
+      "actual": 5,
+      "kind": "wrong_sales_qty"
+    },
+    {
+      "product": "12 rows",
+      "field": "sales_value",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 12,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    },
+    {
+      "product": "12 rows",
+      "field": "closing_value",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 12,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    },
+    {
+      "product": "12 rows",
+      "field": "opening_qty",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 12,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    }
+  ],
+  "ocr_review": [
+    {
+      "product": "HERBOLAX CAP.",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "ABANA",
+      "field": "closing_qty",
+      "expected": null,
+      "actual": 45,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "RENALKA SYP (200ML)",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "RENALKA SYP (200ML)",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 30,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "OPHTHACARE/DROP",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 10,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "OPHTHACARE/DROP",
+      "field": "closing_qty",
+      "expected": null,
+      "actual": 24,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "HAIR ZONE SOLUTION",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 10,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "HAIR ZONE SOLUTION",
+      "field": "closing_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "CONFIDO TAB",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 55,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "CONFIDO TAB",
+      "field": "closing_qty",
+      "expected": null,
+      "actual": 252,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "AACTARIL SOAP",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 43,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "AACTARIL SOAP",
+      "field": "closing_qty",
+      "expected": null,
+      "actual": 43,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "DIAREX SYRUP",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 26,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "DIAREX SYRUP",
+      "field": "closing_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "Liv.s2 SYRUP",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 1,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "Liv.s2 SYRUP",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 87,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "DIABECON DS TAB",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "RENALKA SYP",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 15,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "RENALKA SYP",
+      "field": "closing_qty",
+      "expected": null,
+      "actual": 41,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "DIAREX TAB",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "DIAREX TAB",
+      "field": "closing_qty",
+      "expected": null,
+      "actual": 59,
+      "note": "Ground truth did not read this cell confidently."
+    }
+  ],
+  "accounting": [],
+  "confidence": "medium",
+  "notes": [
+    "OCR used tesseract psm 6."
+  ],
+  "result_key": "0000700835_2026_08_ZL_25_447_03092026105819",
+  "unavailable_fields": {
+    "sales_value": 12,
+    "closing_value": 12,
+    "opening_qty": 12
+  },
+  "formula_checked": "none"
+}

@@ -1,0 +1,110 @@
+{
+  "document_id": "0000700112_2026_08_ZL_06_305_02092026004955.pdf",
+  "relative_path": "0000700112_2026_08_ZL_06_305_02092026004955.pdf",
+  "source_path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700112_2026_08_ZL_06_305_02092026004955.pdf",
+  "file_type": "pdf",
+  "pdf_kind": "digital",
+  "manifest_ocr_required": false,
+  "engine": "paddleocr-vl-1.6",
+  "model": "PaddleOCR-VL-1.6",
+  "model_version": "v1.6",
+  "started_at": "2026-10-08T12:02:03.081765+00:00",
+  "pages": [
+    {
+      "page": 1,
+      "status": "skipped_native_text",
+      "paddle_vl_status": "skipped_native_text",
+      "native_text": true,
+      "ocr_required": false,
+      "engine": "paddleocr-vl-1.6",
+      "latency_ms": 5.0578000000314205,
+      "embedded_text_chars": 726,
+      "reason": "native_text",
+      "page_count": 7
+    },
+    {
+      "page": 2,
+      "status": "skipped_native_text",
+      "paddle_vl_status": "skipped_native_text",
+      "native_text": true,
+      "ocr_required": false,
+      "engine": "paddleocr-vl-1.6",
+      "latency_ms": 5.815200000142795,
+      "embedded_text_chars": 1108,
+      "reason": "native_text",
+      "page_count": 7
+    },
+    {
+      "page": 3,
+      "status": "skipped_native_text",
+      "paddle_vl_status": "skipped_native_text",
+      "native_text": true,
+      "ocr_required": false,
+      "engine": "paddleocr-vl-1.6",
+      "latency_ms": 7.200800000191521,
+      "embedded_text_chars": 1775,
+      "reason": "native_text",
+      "page_count": 7
+    },
+    {
+      "page": 4,
+      "status": "skipped_native_text",
+      "paddle_vl_status": "skipped_native_text",
+      "native_text": true,
+      "ocr_required": false,
+      "engine": "paddleocr-vl-1.6",
+      "latency_ms": 4.076100000020233,
+      "embedded_text_chars": 547,
+      "reason": "native_text",
+      "page_count": 7
+    },
+    {
+      "page": 5,
+      "status": "skipped_native_text",
+      "paddle_vl_status": "skipped_native_text",
+      "native_text": true,
+      "ocr_required": false,
+      "engine": "paddleocr-vl-1.6",
+      "latency_ms": 8.61269999995784,
+      "embedded_text_chars": 1778,
+      "reason": "native_text",
+      "page_count": 7
+    },
+    {
+      "page": 6,
+      "status": "skipped_native_text",
+      "paddle_vl_status": "skipped_native_text",
+      "native_text": true,
+      "ocr_required": false,
+      "engine": "paddleocr-vl-1.6",
+      "latency_ms": 4.850299999816343,
+      "embedded_text_chars": 862,
+      "reason": "native_text",
+      "page_count": 7
+    },
+    {
+      "page": 7,
+      "status": "skipped_native_text",
+      "paddle_vl_status": "skipped_native_text",
+      "native_text": true,
+      "ocr_required": false,
+      "engine": "paddleocr-vl-1.6",
+      "latency_ms": 4.054900000028283,
+      "embedded_text_chars": 485,
+      "reason": "native_text",
+      "page_count": 7
+    }
+  ],
+  "status": "success",
+  "errors": [],
+  "latency_ms": 54.99019999979282,
+  "finished_at": "2026-10-08T12:02:03.136662+00:00",
+  "resources": {
+    "cpu_percent": 11.7,
+    "ram_used_gb": 11.08,
+    "ram_total_gb": 15.31,
+    "gpu": "NVIDIA GeForce RTX 3050 6GB Laptop GPU",
+    "vram_used_gb": 7.095,
+    "vram_total_gb": 6.0
+  }
+}

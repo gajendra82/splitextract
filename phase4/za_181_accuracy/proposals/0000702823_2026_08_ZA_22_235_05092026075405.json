@@ -1,0 +1,1119 @@
+{
+  "document_id": "0000702823_2026_08_ZA_22_235_05092026075405.png",
+  "source_file": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000702823_2026_08_ZA_22_235_05092026075405.png",
+  "source_file_exists": true,
+  "verification_status": "unverified",
+  "annotation_origin": "AI_PROPOSED",
+  "ai_generated": true,
+  "human_verified": false,
+  "rows": [
+    {
+      "row_id": "r01",
+      "row_index": 1,
+      "product_name": {
+        "raw": "ARJUNA TABLETS 60 S INDIA",
+        "normalized": "ARJUNA TABLETS 60 S INDIA",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60 S",
+        "normalized": "60 S",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "MRP",
+          "semantic": "unknown",
+          "raw": "325",
+          "normalized": 325.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Secondary Rate",
+          "semantic": "not_quantity",
+          "raw": "220.63",
+          "normalized": 220.63,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "OB (Qty)",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Primary (Qty)",
+          "semantic": "unknown",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "CB (Qty)",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Secondary Qty total",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Secondary Value",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "Ms",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r02",
+      "row_index": 2,
+      "product_name": {
+        "raw": "BONNISAN DROPS 30ml",
+        "normalized": "BONNISAN DROPS 30ml",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "30ml",
+        "normalized": "30ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "MRP",
+          "semantic": "unknown",
+          "raw": "98",
+          "normalized": 98.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Secondary Rate",
+          "semantic": "not_quantity",
+          "raw": "66.19",
+          "normalized": 66.19,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "OB (Qty)",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Primary (Qty)",
+          "semantic": "unknown",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "CB (Qty)",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Secondary Qty total",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Secondary Value",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "Ms",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r03",
+      "row_index": 3,
+      "product_name": {
+        "raw": "BONNISAN LIQUID 100ML (HINDI TEXT) INDIA",
+        "normalized": "BONNISAN LIQUID 100ML (HINDI TEXT) INDIA",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "100ML",
+        "normalized": "100ML",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "MRP",
+          "semantic": "unknown",
+          "raw": "65",
+          "normalized": 65.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Secondary Rate",
+          "semantic": "not_quantity",
+          "raw": "43.9",
+          "normalized": 43.9,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "OB (Qty)",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Primary (Qty)",
+          "semantic": "unknown",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "CB (Qty)",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Secondary Qty total",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Secondary Value",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "Ms",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r04",
+      "row_index": 4,
+      "product_name": {
+        "raw": "BONNISAN LIQUID 100ML (ORIYA TEXT) INDIA",
+        "normalized": "BONNISAN LIQUID 100ML (ORIYA TEXT) INDIA",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "100ML",
+        "normalized": "100ML",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "MRP",
+          "semantic": "unknown",
+          "raw": "70",
+          "normalized": 70.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Secondary Rate",
+          "semantic": "not_quantity",
+          "raw": "42.66",
+          "normalized": 42.66,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "OB (Qty)",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Primary (Qty)",
+          "semantic": "unknown",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "CB (Qty)",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Secondary Qty total",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Secondary Value",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "Ms",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r05",
+      "row_index": 5,
+      "product_name": {
+        "raw": "BONNISAN LIQUID 100ML (TAMIL TEXT) INDIA",
+        "normalized": "BONNISAN LIQUID 100ML (TAMIL TEXT) INDIA",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "100ML",
+        "normalized": "100ML",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "MRP",
+          "semantic": "unknown",
+          "raw": "65",
+          "normalized": 65.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Secondary Rate",
+          "semantic": "not_quantity",
+          "raw": "43.9",
+          "normalized": 43.9,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "OB (Qty)",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Primary (Qty)",
+          "semantic": "unknown",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "CB (Qty)",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Secondary Qty total",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Secondary Value",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "Ms",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r06",
+      "row_index": 6,
+      "product_name": {
+        "raw": "BONNISAN LIQUID 100ml INDIA",
+        "normalized": "BONNISAN LIQUID 100ml INDIA",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "100ml",
+        "normalized": "100ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "MRP",
+          "semantic": "unknown",
+          "raw": "89",
+          "normalized": 89.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Secondary Rate",
+          "semantic": "not_quantity",
+          "raw": "60.1",
+          "normalized": 60.1,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "OB (Qty)",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Primary (Qty)",
+          "semantic": "unknown",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "CB (Qty)",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Secondary Qty total",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Secondary Value",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "Ms",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r07",
+      "row_index": 7,
+      "product_name": {
+        "raw": "BONNISAN LIQUID 120ml",
+        "normalized": "BONNISAN LIQUID 120ml",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "120ml",
+        "normalized": "120ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "MRP",
+          "semantic": "unknown",
+          "raw": "37",
+          "normalized": 37.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Secondary Rate",
+          "semantic": "not_quantity",
+          "raw": "25",
+          "normalized": 25.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "OB (Qty)",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Primary (Qty)",
+          "semantic": "unknown",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "CB (Qty)",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Secondary Qty total",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Secondary Value",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "Ms",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r08",
+      "row_index": 8,
+      "product_name": {
+        "raw": "BONNISAN LIQUID 200ml",
+        "normalized": "BONNISAN LIQUID 200ml",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200ml",
+        "normalized": "200ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "MRP",
+          "semantic": "unknown",
+          "raw": "150",
+          "normalized": 150.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Secondary Rate",
+          "semantic": "not_quantity",
+          "raw": "101.31",
+          "normalized": 101.31,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "OB (Qty)",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Primary (Qty)",
+          "semantic": "unknown",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "CB (Qty)",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Secondary Qty total",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Secondary Value",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "Ms",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r09",
+      "row_index": 9,
+      "product_name": {
+        "raw": "BONNISAN LIQUID 200ML (HINDI TEXT) INDIA",
+        "normalized": "BONNISAN LIQUID 200ML (HINDI TEXT) INDIA",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200ML",
+        "normalized": "200ML",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "MRP",
+          "semantic": "unknown",
+          "raw": "103",
+          "normalized": 103.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Secondary Rate",
+          "semantic": "not_quantity",
+          "raw": "69.57",
+          "normalized": 69.57,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "OB (Qty)",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Primary (Qty)",
+          "semantic": "unknown",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "CB (Qty)",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Secondary Qty total",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Secondary Value",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "Ms",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r10",
+      "row_index": 10,
+      "product_name": {
+        "raw": "BONNISAN LIQUID 200ML (ORIYA TEXT) INDIA",
+        "normalized": "BONNISAN LIQUID 200ML (ORIYA TEXT) INDIA",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200ML",
+        "normalized": "200ML",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "MRP",
+          "semantic": "unknown",
+          "raw": "103",
+          "normalized": 103.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Secondary Rate",
+          "semantic": "not_quantity",
+          "raw": "69.57",
+          "normalized": 69.57,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "OB (Qty)",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Primary (Qty)",
+          "semantic": "unknown",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "CB (Qty)",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Secondary Qty total",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Secondary Value",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "Ms",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    }
+  ],
+  "headers": [],
+  "notes": [
+    "AI_PROPOSED from the original image only. Not verified. Named quantities are set only when a printed header was copied. Blank cells were not stored as zero."
+  ],
+  "failure": null,
+  "vision_model": "gemini-2.5-flash",
+  "vision_input": "original",
+  "ocr_used_as_label": false
+}

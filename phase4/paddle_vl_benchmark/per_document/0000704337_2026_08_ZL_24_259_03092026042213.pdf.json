@@ -1,0 +1,350 @@
+{
+  "document_id": "0000704337_2026_08_ZL_24_259_03092026042213.pdf",
+  "relative_path": "0000704337_2026_08_ZL_24_259_03092026042213.pdf",
+  "source_path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000704337_2026_08_ZL_24_259_03092026042213.pdf",
+  "file_type": "pdf",
+  "pdf_kind": "scanned",
+  "manifest_ocr_required": true,
+  "engine": "paddleocr-vl-1.6",
+  "model": "PaddleOCR-VL-1.6",
+  "model_version": "v1.6",
+  "started_at": "2026-10-08T12:22:26.355061+00:00",
+  "pages": [
+    {
+      "engine": "paddleocr-vl-1.6",
+      "status": "success",
+      "model": "PaddleOCR-VL-1.6",
+      "model_version": "v1.6",
+      "text": "<table><tr><td colspan=\"12\">ORDER FORM</td></tr><tr><td colspan=\"6\">From:   Lawon</td><td colspan=\"6\">To:</td></tr><tr><td colspan=\"6\"></td><td colspan=\"6\"></td></tr><tr><td colspan=\"6\"></td><td colspan=\"6\"></td></tr><tr><td colspan=\"5\">ST/CST/TIN:</td><td colspan=\"4\">Order No.:</td><td colspan=\"3\">Date:</td></tr><tr><td rowspan=\"2\">SAP Code</td><td rowspan=\"2\">Product</td><td rowspan=\"2\">Pack</td><td rowspan=\"2\">Qty.</td><td>Value</td><td></td><td rowspan=\"2\">SAP Code</td><td rowspan=\"2\">Product</td><td rowspan=\"2\">Pack</td><td rowspan=\"2\">Qty.</td><td>Value</td><td></td></tr><tr><td>Rs.</td><td>P.</td><td>Rs.</td><td></td></tr><tr><td>7002319</td><td>Aactaril Soap</td><td>75 g</td><td>80</td><td></td><td></td><td>7000325</td><td>Pitex Tablets</td><td>60s</td><td>10</td><td></td><td></td></tr><tr><td>7000004</td><td>Abana Tablets</td><td>60s</td><td></td><td></td><td></td><td>7004922</td><td>PureHands Advanced (Blue)</td><td>100 ml</td><td></td><td></td><td></td></tr><tr><td>7002487</td><td>Althea Lotion</td><td>100 ml</td><td></td><td></td><td></td><td>7000332</td><td>Purim Tablets</td><td>60s</td><td></td><td></td><td></td></tr><tr><td>7002258</td><td>Amalaki Tablets</td><td>60s</td><td></td><td></td><td></td><td>7004526</td><td>Quista active (Chocolate)</td><td>200 g</td><td></td><td></td><td></td></tr><tr><td>7002269</td><td>Bael Tablets</td><td>60s</td><td></td><td></td><td></td><td>7004528</td><td>Quista active (Milk Masala)</td><td>200 g</td><td></td><td></td><td></td></tr><tr><td>7000077</td><td>Bleiminor Anti-blemish Cream</td><td>30 ml</td><td>10</td><td></td><td></td><td>7005269</td><td>Quista DN (Milk Masala)</td><td>200 g</td><td></td><td></td><td></td></tr><tr><td>7000095</td><td>Clarina Anti-acne Cream</td><td>30 g</td><td>1</td><td></td><td></td><td>7005268</td><td>Quista DN (Vanilla)</td><td>200 g</td><td></td><td></td><td></td></tr><tr><td>7000099</td><td>Clarina Anti-acne Face Wash Gel</td><td>60 ml</td><td></td><td></td><td></td><td>7004355</td><td>Quista DN (Milk Masala)</td><td>400 g</td><td></td><td></td><td></td></tr><tr><td>7000107</td><td>Confido Tablets</td><td>60s</td><td>2</td><td></td><td></td><td>7004356</td><td>Quista DN (Vanilla)</td><td>400 g</td><td></td><td></td><td></td></tr><tr><td>7000117</td><td>Diabecon DS Tablets</td><td>60s</td><td>10</td><td></td><td></td><td>7000334</td><td>Renalka Syrup</td><td>100 ml</td><td>10</td><td></td><td></td></tr><tr><td>7000120</td><td>Diabecon Tablets</td><td>60s</td><td></td><td></td><td></td><td>7000336</td><td>Renalka Syrup</td><td>200 ml</td><td></td><td></td><td></td></tr><tr><td>7001561</td><td>Diarex Syrup</td><td>100 ml</td><td>80</td><td></td><td></td><td>7002263</td><td>Shallaki Tablets</td><td>60s</td><td>20</td><td></td><td></td></tr><tr><td>7000129</td><td>Diarex Tablets</td><td>30s</td><td></td><td></td><td></td><td>7002273</td><td>Shigru Tablets</td><td>60s</td><td></td><td></td><td></td></tr><tr><td>7002267</td><td>Hadjod Tablets</td><td>60s</td><td>20</td><td>.</td><td></td><td>7002278</td><td>Tagara Tablets</td><td>60s</td><td></td><td></td><td></td></tr><tr><td>7000176</td><td>Hairzone Solution</td><td>60 ml</td><td></td><td></td><td></td><td>7000369</td><td>Talckt Syrup</td><td>120 ml</td><td></td><td></td><td></td></tr><tr><td>7000182</td><td>Herbolax Capsules</td><td>10\u00d710s</td><td></td><td></td><td></td><td>7003025</td><td>Talckt Tablets</td><td>60s</td><td></td><td></td><td></td></tr><tr><td>7000185</td><td>Herbolax Tablets</td><td>100s</td><td>10</td><td></td><td></td><td>7000391</td><td>Tentex forte Tablets</td><td>10s</td><td></td><td></td><td></td></tr><tr><td>7000198</td><td>Himcolin Gel</td><td>30 g</td><td>1</td><td></td><td></td><td>7000974</td><td>Trikatu Syrup</td><td>200 ml</td><td></td><td></td><td></td></tr><tr><td>7002675</td><td>Kapikachhu Tablets</td><td>60s</td><td></td><td></td><td></td><td>7002266</td><td>Trikatu Tablets</td><td>60s</td><td></td><td></td><td></td></tr><tr><td>7000249</td><td>Liv.52 HB Capsules</td><td>3\u00d710s</td><td></td><td></td><td></td><td>7002274</td><td>Triphala Tablets</td><td>60s</td><td>20</td><td></td><td></td></tr><tr><td>7000257</td><td>Liv.52 Syrup</td><td>100 ml</td><td>80</td><td></td><td></td><td>7002725</td><td>Vasaka Syrup</td><td>200 ml</td><td></td><td></td><td></td></tr><tr><td>7000260</td><td>Liv.52 Syrup</td><td>200 ml</td><td></td><td></td><td></td><td>7002960</td><td>Vasaka Tablets</td><td>60s</td><td></td><td></td><td></td></tr><tr><td>7006097</td><td>Liv.52 Tablets</td><td>100s</td><td>20</td><td></td><td></td><td>7002275</td><td>Vrikshamba Tablets</td><td>60s</td><td></td><td></td><td></td></tr><tr><td>7005683</td><td>Liv.52 Sugar Free Syrup</td><td>100 ml</td><td>10</td><td></td><td></td><td>7002276</td><td>Yashhumadhu Tablets</td><td>60s</td><td></td><td></td><td></td></tr><tr><td>7006064</td><td>Liv.52 Sugar Free Syrup</td><td>200 ml</td><td>2</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>7002676</td><td>Manjishsta Tablets</td><td>60s</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>7000309</td><td>Ophthalcare Eye Drops</td><td>10 ml</td><td>5</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>7003641</td><td>Oro-T Oral Rinse</td><td>100 ml</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>7000311</td><td>Oxitard Capsules</td><td>3\u00d710s</td><td>120</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>7004386</td><td>Pilex forte Ointment</td><td>30 g</td><td>10</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>7004269</td><td>Pilex forte Tablets</td><td>2\u00d730s</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td colspan=\"8\">Booked by:</td><td colspan=\"4\">Total:</td></tr><tr><td colspan=\"8\">instructions (if any):</td><td colspan=\"4\">Customer&#x27;s signat</td></tr></table>\nThe copy to Customer: Yellow copy to Head Office: Pink copy to MR/PSO/BM.",
+      "normalized_text": "<table><tr><td colspan=\"12\">ORDER FORM</td></tr><tr><td colspan=\"6\">From: Lawon</td><td colspan=\"6\">To:</td></tr><tr><td colspan=\"6\"></td><td colspan=\"6\"></td></tr><tr><td colspan=\"6\"></td><td colspan=\"6\"></td></tr><tr><td colspan=\"5\">ST/CST/TIN:</td><td colspan=\"4\">Order No.:</td><td colspan=\"3\">Date:</td></tr><tr><td rowspan=\"2\">SAP Code</td><td rowspan=\"2\">Product</td><td rowspan=\"2\">Pack</td><td rowspan=\"2\">Qty.</td><td>Value</td><td></td><td rowspan=\"2\">SAP Code</td><td rowspan=\"2\">Product</td><td rowspan=\"2\">Pack</td><td rowspan=\"2\">Qty.</td><td>Value</td><td></td></tr><tr><td>Rs.</td><td>P.</td><td>Rs.</td><td></td></tr><tr><td>7002319</td><td>Aactaril Soap</td><td>75 g</td><td>80</td><td></td><td></td><td>7000325</td><td>Pitex Tablets</td><td>60s</td><td>10</td><td></td><td></td></tr><tr><td>7000004</td><td>Abana Tablets</td><td>60s</td><td></td><td></td><td></td><td>7004922</td><td>PureHands Advanced (Blue)</td><td>100 ml</td><td></td><td></td><td></td></tr><tr><td>7002487</td><td>Althea Lotion</td><td>100 ml</td><td></td><td></td><td></td><td>7000332</td><td>Purim Tablets</td><td>60s</td><td></td><td></td><td></td></tr><tr><td>7002258</td><td>Amalaki Tablets</td><td>60s</td><td></td><td></td><td></td><td>7004526</td><td>Quista active (Chocolate)</td><td>200 g</td><td></td><td></td><td></td></tr><tr><td>7002269</td><td>Bael Tablets</td><td>60s</td><td></td><td></td><td></td><td>7004528</td><td>Quista active (Milk Masala)</td><td>200 g</td><td></td><td></td><td></td></tr><tr><td>7000077</td><td>Bleiminor Anti-blemish Cream</td><td>30 ml</td><td>10</td><td></td><td></td><td>7005269</td><td>Quista DN (Milk Masala)</td><td>200 g</td><td></td><td></td><td></td></tr><tr><td>7000095</td><td>Clarina Anti-acne Cream</td><td>30 g</td><td>1</td><td></td><td></td><td>7005268</td><td>Quista DN (Vanilla)</td><td>200 g</td><td></td><td></td><td></td></tr><tr><td>7000099</td><td>Clarina Anti-acne Face Wash Gel</td><td>60 ml</td><td></td><td></td><td></td><td>7004355</td><td>Quista DN (Milk Masala)</td><td>400 g</td><td></td><td></td><td></td></tr><tr><td>7000107</td><td>Confido Tablets</td><td>60s</td><td>2</td><td></td><td></td><td>7004356</td><td>Quista DN (Vanilla)</td><td>400 g</td><td></td><td></td><td></td></tr><tr><td>7000117</td><td>Diabecon DS Tablets</td><td>60s</td><td>10</td><td></td><td></td><td>7000334</td><td>Renalka Syrup</td><td>100 ml</td><td>10</td><td></td><td></td></tr><tr><td>7000120</td><td>Diabecon Tablets</td><td>60s</td><td></td><td></td><td></td><td>7000336</td><td>Renalka Syrup</td><td>200 ml</td><td></td><td></td><td></td></tr><tr><td>7001561</td><td>Diarex Syrup</td><td>100 ml</td><td>80</td><td></td><td></td><td>7002263</td><td>Shallaki Tablets</td><td>60s</td><td>20</td><td></td><td></td></tr><tr><td>7000129</td><td>Diarex Tablets</td><td>30s</td><td></td><td></td><td></td><td>7002273</td><td>Shigru Tablets</td><td>60s</td><td></td><td></td><td></td></tr><tr><td>7002267</td><td>Hadjod Tablets</td><td>60s</td><td>20</td><td>.</td><td></td><td>7002278</td><td>Tagara Tablets</td><td>60s</td><td></td><td></td><td></td></tr><tr><td>7000176</td><td>Hairzone Solution</td><td>60 ml</td><td></td><td></td><td></td><td>7000369</td><td>Talckt Syrup</td><td>120 ml</td><td></td><td></td><td></td></tr><tr><td>7000182</td><td>Herbolax Capsules</td><td>10\u00d710s</td><td></td><td></td><td></td><td>7003025</td><td>Talckt Tablets</td><td>60s</td><td></td><td></td><td></td></tr><tr><td>7000185</td><td>Herbolax Tablets</td><td>100s</td><td>10</td><td></td><td></td><td>7000391</td><td>Tentex forte Tablets</td><td>10s</td><td></td><td></td><td></td></tr><tr><td>7000198</td><td>Himcolin Gel</td><td>30 g</td><td>1</td><td></td><td></td><td>7000974</td><td>Trikatu Syrup</td><td>200 ml</td><td></td><td></td><td></td></tr><tr><td>7002675</td><td>Kapikachhu Tablets</td><td>60s</td><td></td><td></td><td></td><td>7002266</td><td>Trikatu Tablets</td><td>60s</td><td></td><td></td><td></td></tr><tr><td>7000249</td><td>Liv.52 HB Capsules</td><td>3\u00d710s</td><td></td><td></td><td></td><td>7002274</td><td>Triphala Tablets</td><td>60s</td><td>20</td><td></td><td></td></tr><tr><td>7000257</td><td>Liv.52 Syrup</td><td>100 ml</td><td>80</td><td></td><td></td><td>7002725</td><td>Vasaka Syrup</td><td>200 ml</td><td></td><td></td><td></td></tr><tr><td>7000260</td><td>Liv.52 Syrup</td><td>200 ml</td><td></td><td></td><td></td><td>7002960</td><td>Vasaka Tablets</td><td>60s</td><td></td><td></td><td></td></tr><tr><td>7006097</td><td>Liv.52 Tablets</td><td>100s</td><td>20</td><td></td><td></td><td>7002275</td><td>Vrikshamba Tablets</td><td>60s</td><td></td><td></td><td></td></tr><tr><td>7005683</td><td>Liv.52 Sugar Free Syrup</td><td>100 ml</td><td>10</td><td></td><td></td><td>7002276</td><td>Yashhumadhu Tablets</td><td>60s</td><td></td><td></td><td></td></tr><tr><td>7006064</td><td>Liv.52 Sugar Free Syrup</td><td>200 ml</td><td>2</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>7002676</td><td>Manjishsta Tablets</td><td>60s</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>7000309</td><td>Ophthalcare Eye Drops</td><td>10 ml</td><td>5</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>7003641</td><td>Oro-T Oral Rinse</td><td>100 ml</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>7000311</td><td>Oxitard Capsules</td><td>3\u00d710s</td><td>120</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>7004386</td><td>Pilex forte Ointment</td><td>30 g</td><td>10</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>7004269</td><td>Pilex forte Tablets</td><td>2\u00d730s</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td colspan=\"8\">Booked by:</td><td colspan=\"4\">Total:</td></tr><tr><td colspan=\"8\">instructions (if any):</td><td colspan=\"4\">Customer&#x27;s signat</td></tr></table> The copy to Customer: Yellow copy to Head Office: Pink copy to MR/PSO/BM.",
+      "word_count": 153,
+      "line_count": 2,
+      "numeric_tokens": [
+        "12",
+        "6",
+        "6",
+        "6",
+        "6",
+        "6",
+        "6",
+        "5",
+        "4",
+        "3",
+        "2",
+        "2",
+        "2",
+        "2",
+        "2",
+        "2",
+        "2",
+        "2",
+        "7002319",
+        "75",
+        "80",
+        "7000325",
+        "10",
+        "7000004",
+        "7004922",
+        "100",
+        "7002487",
+        "100",
+        "7000332",
+        "7002258",
+        "7004526",
+        "200",
+        "7002269",
+        "7004528",
+        "200",
+        "7000077",
+        "30",
+        "10",
+        "7005269",
+        "200",
+        "7000095",
+        "30",
+        "1",
+        "7005268",
+        "200",
+        "7000099",
+        "60",
+        "7004355",
+        "400",
+        "7000107",
+        "2",
+        "7004356",
+        "400",
+        "7000117",
+        "10",
+        "7000334",
+        "100",
+        "10",
+        "7000120",
+        "7000336",
+        "200",
+        "7001561",
+        "100",
+        "80",
+        "7002263",
+        "20",
+        "7000129",
+        "7002273",
+        "7002267",
+        "20",
+        "7002278",
+        "7000176",
+        "60",
+        "7000369",
+        "120",
+        "7000182",
+        "10",
+        "7003025",
+        "7000185",
+        "10",
+        "7000391",
+        "7000198",
+        "30",
+        "1",
+        "7000974",
+        "200",
+        "7002675",
+        "7002266",
+        "7000249",
+        "3",
+        "7002274",
+        "20",
+        "7000257",
+        "100",
+        "80",
+        "7002725",
+        "200",
+        "7000260",
+        "200",
+        "7002960",
+        "7006097",
+        "20",
+        "7002275",
+        "7005683",
+        "100",
+        "10",
+        "7002276",
+        "7006064",
+        "200",
+        "2",
+        "7002676",
+        "7000309",
+        "10",
+        "5",
+        "7003641",
+        "100",
+        "7000311",
+        "3",
+        "120",
+        "7004386",
+        "30",
+        "10",
+        "7004269",
+        "2",
+        "8",
+        "4",
+        "8",
+        "4"
+      ],
+      "words": [
+        {
+          "text": "<table><tr><td colspan=\"12\">ORDER FORM</td></tr><tr><td colspan=\"6\">From:   Lawon</td><td colspan=\"6\">To:</td></tr><tr><td colspan=\"6\"></td><td colspan=\"6\"></td></tr><tr><td colspan=\"6\"></td><td colspan=\"6\"></td></tr><tr><td colspan=\"5\">ST/CST/TIN:</td><td colspan=\"4\">Order No.:</td><td colspan=\"3\">Date:</td></tr><tr><td rowspan=\"2\">SAP Code</td><td rowspan=\"2\">Product</td><td rowspan=\"2\">Pack</td><td rowspan=\"2\">Qty.</td><td>Value</td><td></td><td rowspan=\"2\">SAP Code</td><td rowspan=\"2\">Product</td><td rowspan=\"2\">Pack</td><td rowspan=\"2\">Qty.</td><td>Value</td><td></td></tr><tr><td>Rs.</td><td>P.</td><td>Rs.</td><td></td></tr><tr><td>7002319</td><td>Aactaril Soap</td><td>75 g</td><td>80</td><td></td><td></td><td>7000325</td><td>Pitex Tablets</td><td>60s</td><td>10</td><td></td><td></td></tr><tr><td>7000004</td><td>Abana Tablets</td><td>60s</td><td></td><td></td><td></td><td>7004922</td><td>PureHands Advanced (Blue)</td><td>100 ml</td><td></td><td></td><td></td></tr><tr><td>7002487</td><td>Althea Lotion</td><td>100 ml</td><td></td><td></td><td></td><td>7000332</td><td>Purim Tablets</td><td>60s</td><td></td><td></td><td></td></tr><tr><td>7002258</td><td>Amalaki Tablets</td><td>60s</td><td></td><td></td><td></td><td>7004526</td><td>Quista active (Chocolate)</td><td>200 g</td><td></td><td></td><td></td></tr><tr><td>7002269</td><td>Bael Tablets</td><td>60s</td><td></td><td></td><td></td><td>7004528</td><td>Quista active (Milk Masala)</td><td>200 g</td><td></td><td></td><td></td></tr><tr><td>7000077</td><td>Bleiminor Anti-blemish Cream</td><td>30 ml</td><td>10</td><td></td><td></td><td>7005269</td><td>Quista DN (Milk Masala)</td><td>200 g</td><td></td><td></td><td></td></tr><tr><td>7000095</td><td>Clarina Anti-acne Cream</td><td>30 g</td><td>1</td><td></td><td></td><td>7005268</td><td>Quista DN (Vanilla)</td><td>200 g</td><td></td><td></td><td></td></tr><tr><td>7000099</td><td>Clarina Anti-acne Face Wash Gel</td><td>60 ml</td><td></td><td></td><td></td><td>7004355</td><td>Quista DN (Milk Masala)</td><td>400 g</td><td></td><td></td><td></td></tr><tr><td>7000107</td><td>Confido Tablets</td><td>60s</td><td>2</td><td></td><td></td><td>7004356</td><td>Quista DN (Vanilla)</td><td>400 g</td><td></td><td></td><td></td></tr><tr><td>7000117</td><td>Diabecon DS Tablets</td><td>60s</td><td>10</td><td></td><td></td><td>7000334</td><td>Renalka Syrup</td><td>100 ml</td><td>10</td><td></td><td></td></tr><tr><td>7000120</td><td>Diabecon Tablets</td><td>60s</td><td></td><td></td><td></td><td>7000336</td><td>Renalka Syrup</td><td>200 ml</td><td></td><td></td><td></td></tr><tr><td>7001561</td><td>Diarex Syrup</td><td>100 ml</td><td>80</td><td></td><td></td><td>7002263</td><td>Shallaki Tablets</td><td>60s</td><td>20</td><td></td><td></td></tr><tr><td>7000129</td><td>Diarex Tablets</td><td>30s</td><td></td><td></td><td></td><td>7002273</td><td>Shigru Tablets</td><td>60s</td><td></td><td></td><td></td></tr><tr><td>7002267</td><td>Hadjod Tablets</td><td>60s</td><td>20</td><td>.</td><td></td><td>7002278</td><td>Tagara Tablets</td><td>60s</td><td></td><td></td><td></td></tr><tr><td>7000176</td><td>Hairzone Solution</td><td>60 ml</td><td></td><td></td><td></td><td>7000369</td><td>Talckt Syrup</td><td>120 ml</td><td></td><td></td><td></td></tr><tr><td>7000182</td><td>Herbolax Capsules</td><td>10\u00d710s</td><td></td><td></td><td></td><td>7003025</td><td>Talckt Tablets</td><td>60s</td><td></td><td></td><td></td></tr><tr><td>7000185</td><td>Herbolax Tablets</td><td>100s</td><td>10</td><td></td><td></td><td>7000391</td><td>Tentex forte Tablets</td><td>10s</td><td></td><td></td><td></td></tr><tr><td>7000198</td><td>Himcolin Gel</td><td>30 g</td><td>1</td><td></td><td></td><td>7000974</td><td>Trikatu Syrup</td><td>200 ml</td><td></td><td></td><td></td></tr><tr><td>7002675</td><td>Kapikachhu Tablets</td><td>60s</td><td></td><td></td><td></td><td>7002266</td><td>Trikatu Tablets</td><td>60s</td><td></td><td></td><td></td></tr><tr><td>7000249</td><td>Liv.52 HB Capsules</td><td>3\u00d710s</td><td></td><td></td><td></td><td>7002274</td><td>Triphala Tablets</td><td>60s</td><td>20</td><td></td><td></td></tr><tr><td>7000257</td><td>Liv.52 Syrup</td><td>100 ml</td><td>80</td><td></td><td></td><td>7002725</td><td>Vasaka Syrup</td><td>200 ml</td><td></td><td></td><td></td></tr><tr><td>7000260</td><td>Liv.52 Syrup</td><td>200 ml</td><td></td><td></td><td></td><td>7002960</td><td>Vasaka Tablets</td><td>60s</td><td></td><td></td><td></td></tr><tr><td>7006097</td><td>Liv.52 Tablets</td><td>100s</td><td>20</td><td></td><td></td><td>7002275</td><td>Vrikshamba Tablets</td><td>60s</td><td></td><td></td><td></td></tr><tr><td>7005683</td><td>Liv.52 Sugar Free Syrup</td><td>100 ml</td><td>10</td><td></td><td></td><td>7002276</td><td>Yashhumadhu Tablets</td><td>60s</td><td></td><td></td><td></td></tr><tr><td>7006064</td><td>Liv.52 Sugar Free Syrup</td><td>200 ml</td><td>2</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>7002676</td><td>Manjishsta Tablets</td><td>60s</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>7000309</td><td>Ophthalcare Eye Drops</td><td>10 ml</td><td>5</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>7003641</td><td>Oro-T Oral Rinse</td><td>100 ml</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>7000311</td><td>Oxitard Capsules</td><td>3\u00d710s</td><td>120</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>7004386</td><td>Pilex forte Ointment</td><td>30 g</td><td>10</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>7004269</td><td>Pilex forte Tablets</td><td>2\u00d730s</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td colspan=\"8\">Booked by:</td><td colspan=\"4\">Total:</td></tr><tr><td colspan=\"8\">instructions (if any):</td><td colspan=\"4\">Customer&#x27;s signat</td></tr></table>",
+          "bbox": [
+            14.0,
+            39.0,
+            1190.0,
+            1529.0
+          ],
+          "confidence": null,
+          "page": 1
+        },
+        {
+          "text": "The copy to Customer: Yellow copy to Head Office: Pink copy to MR/PSO/BM.",
+          "bbox": [
+            173.0,
+            1512.0,
+            824.0,
+            1597.0
+          ],
+          "confidence": null,
+          "page": 1
+        }
+      ],
+      "boxes": [
+        [
+          14.0,
+          39.0,
+          1190.0,
+          1529.0
+        ],
+        [
+          173.0,
+          1512.0,
+          824.0,
+          1597.0
+        ]
+      ],
+      "confidence": {
+        "mean": null,
+        "count": 0,
+        "available": false
+      },
+      "layout": {
+        "regions": [
+          {
+            "index": 0,
+            "label": "table",
+            "text": "<table><tr><td colspan=\"12\">ORDER FORM</td></tr><tr><td colspan=\"6\">From:   Lawon</td><td colspan=\"6\">To:</td></tr><tr><td colspan=\"6\"></td><td colspan=\"6\"></td></tr><tr><td colspan=\"6\"></td><td colspan=\"6\"></td></tr><tr><td colspan=\"5\">ST/CST/TIN:</td><td colspan=\"4\">Order No.:</td><td colspan=\"3\">Date:</td></tr><tr><td rowspan=\"2\">SAP Code</td><td rowspan=\"2\">Product</td><td rowspan=\"2\">Pack</td><td rowspan=\"2\">Qty.</td><td>Value</td><td></td><td rowspan=\"2\">SAP Code</td><td rowspan=\"2\">Product</td><td rowspan=\"2\">Pack</td><td rowspan=\"2\">Qty.</td><td>Value</td><td></td></tr><tr><td>Rs.</td><td>P.</td><td>Rs.</td><td></td></tr><tr><td>7002319</td><td>Aactaril Soap</td><td>75 g</td><td>80</td><td></td><td></td><td>7000325</td><td>Pitex Tablets</td><td>60s</td><td>10</td><td></td><td></td></tr><tr><td>7000004</td><td>Abana Tablets</td><td>60s</td><td></td><td></td><td></td><td>7004922</td><td>PureHands Advanced (Blue)</td><td>100 ml</td><td></td><td></td><td></td></tr><tr><td>7002487</td><td>Althea Lotion</td><td>100 ml</td><td></td><td></td><td></td><td>7000332</td><td>Purim Tablets</td><td>60s</td><td></td><td></td><td></td></tr><tr><td>7002258</td><td>Amalaki Tablets</td><td>60s</td><td></td><td></td><td></td><td>7004526</td><td>Quista active (Chocolate)</td><td>200 g</td><td></td><td></td><td></td></tr><tr><td>7002269</td><td>Bael Tablets</td><td>60s</td><td></td><td></td><td></td><td>7004528</td><td>Quista active (Milk Masala)</td><td>200 g</td><td></td><td></td><td></td></tr><tr><td>7000077</td><td>Bleiminor Anti-blemish Cream</td><td>30 ml</td><td>10</td><td></td><td></td><td>7005269</td><td>Quista DN (Milk Masala)</td><td>200 g</td><td></td><td></td><td></td></tr><tr><td>7000095</td><td>Clarina Anti-acne Cream</td><td>30 g</td><td>1</td><td></td><td></td><td>7005268</td><td>Quista DN (Vanilla)</td><td>200 g</td><td></td><td></td><td></td></tr><tr><td>7000099</td><td>Clarina Anti-acne Face Wash Gel</td><td>60 ml</td><td></td><td></td><td></td><td>7004355</td><td>Quista DN (Milk Masala)</td><td>400 g</td><td></td><td></td><td></td></tr><tr><td>7000107</td><td>Confido Tablets</td><td>60s</td><td>2</td><td></td><td></td><td>7004356</td><td>Quista DN (Vanilla)</td><td>400 g</td><td></td><td></td><td></td></tr><tr><td>7000117</td><td>Diabecon DS Tablets</td><td>60s</td><td>10</td><td></td><td></td><td>7000334</td><td>Renalka Syrup</td><td>100 ml</td><td>10</td><td></td><td></td></tr><tr><td>7000120</td><td>Diabecon Tablets</td><td>60s</td><td></td><td></td><td></td><td>7000336</td><td>Renalka Syrup</td><td>200 ml</td><td></td><td></td><td></td></tr><tr><td>7001561</td><td>Diarex Syrup</td><td>100 ml</td><td>80</td><td></td><td></td><td>7002263</td><td>Shallaki Tablets</td><td>60s</td><td>20</td><td></td><td></td></tr><tr><td>7000129</td><td>Diarex Tablets</td><td>30s</td><td></td><td></td><td></td><td>7002273</td><td>Shigru Tablets</td><td>60s</td><td></td><td></td><td></td></tr><tr><td>7002267</td><td>Hadjod Tablets</td><td>60s</td><td>20</td><td>.</td><td></td><td>7002278</td><td>Tagara Tablets</td><td>60s</td><td></td><td></td><td></td></tr><tr><td>7000176</td><td>Hairzone Solution</td><td>60 ml</td><td></td><td></td><td></td><td>7000369</td><td>Talckt Syrup</td><td>120 ml</td><td></td><td></td><td></td></tr><tr><td>7000182</td><td>Herbolax Capsules</td><td>10\u00d710s</td><td></td><td></td><td></td><td>7003025</td><td>Talckt Tablets</td><td>60s</td><td></td><td></td><td></td></tr><tr><td>7000185</td><td>Herbolax Tablets</td><td>100s</td><td>10</td><td></td><td></td><td>7000391</td><td>Tentex forte Tablets</td><td>10s</td><td></td><td></td><td></td></tr><tr><td>7000198</td><td>Himcolin Gel</td><td>30 g</td><td>1</td><td></td><td></td><td>7000974</td><td>Trikatu Syrup</td><td>200 ml</td><td></td><td></td><td></td></tr><tr><td>7002675</td><td>Kapikachhu Tablets</td><td>60s</td><td></td><td></td><td></td><td>7002266</td><td>Trikatu Tablets</td><td>60s</td><td></td><td></td><td></td></tr><tr><td>7000249</td><td>Liv.52 HB Capsules</td><td>3\u00d710s</td><td></td><td></td><td></td><td>7002274</td><td>Triphala Tablets</td><td>60s</td><td>20</td><td></td><td></td></tr><tr><td>7000257</td><td>Liv.52 Syrup</td><td>100 ml</td><td>80</td><td></td><td></td><td>7002725</td><td>Vasaka Syrup</td><td>200 ml</td><td></td><td></td><td></td></tr><tr><td>7000260</td><td>Liv.52 Syrup</td><td>200 ml</td><td></td><td></td><td></td><td>7002960</td><td>Vasaka Tablets</td><td>60s</td><td></td><td></td><td></td></tr><tr><td>7006097</td><td>Liv.52 Tablets</td><td>100s</td><td>20</td><td></td><td></td><td>7002275</td><td>Vrikshamba Tablets</td><td>60s</td><td></td><td></td><td></td></tr><tr><td>7005683</td><td>Liv.52 Sugar Free Syrup</td><td>100 ml</td><td>10</td><td></td><td></td><td>7002276</td><td>Yashhumadhu Tablets</td><td>60s</td><td></td><td></td><td></td></tr><tr><td>7006064</td><td>Liv.52 Sugar Free Syrup</td><td>200 ml</td><td>2</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>7002676</td><td>Manjishsta Tablets</td><td>60s</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>7000309</td><td>Ophthalcare Eye Drops</td><td>10 ml</td><td>5</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>7003641</td><td>Oro-T Oral Rinse</td><td>100 ml</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>7000311</td><td>Oxitard Capsules</td><td>3\u00d710s</td><td>120</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>7004386</td><td>Pilex forte Ointment</td><td>30 g</td><td>10</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>7004269</td><td>Pilex forte Tablets</td><td>2\u00d730s</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td colspan=\"8\">Booked by:</td><td colspan=\"4\">Total:</td></tr><tr><td colspan=\"8\">instructions (if any):</td><td colspan=\"4\">Customer&#x27;s signat</td></tr></table>",
+            "bbox": [
+              14.0,
+              39.0,
+              1190.0,
+              1529.0
+            ],
+            "order": 0
+          },
+          {
+            "index": 1,
+            "label": "vision_footnote",
+            "text": "The copy to Customer: Yellow copy to Head Office: Pink copy to MR/PSO/BM.",
+            "bbox": [
+              173.0,
+              1512.0,
+              824.0,
+              1597.0
+            ],
+            "order": 1
+          }
+        ],
+        "available": true
+      },
+      "tables": {
+        "items": [
+          {
+            "index": 0,
+            "label": "table",
+            "text": "<table><tr><td colspan=\"12\">ORDER FORM</td></tr><tr><td colspan=\"6\">From:   Lawon</td><td colspan=\"6\">To:</td></tr><tr><td colspan=\"6\"></td><td colspan=\"6\"></td></tr><tr><td colspan=\"6\"></td><td colspan=\"6\"></td></tr><tr><td colspan=\"5\">ST/CST/TIN:</td><td colspan=\"4\">Order No.:</td><td colspan=\"3\">Date:</td></tr><tr><td rowspan=\"2\">SAP Code</td><td rowspan=\"2\">Product</td><td rowspan=\"2\">Pack</td><td rowspan=\"2\">Qty.</td><td>Value</td><td></td><td rowspan=\"2\">SAP Code</td><td rowspan=\"2\">Product</td><td rowspan=\"2\">Pack</td><td rowspan=\"2\">Qty.</td><td>Value</td><td></td></tr><tr><td>Rs.</td><td>P.</td><td>Rs.</td><td></td></tr><tr><td>7002319</td><td>Aactaril Soap</td><td>75 g</td><td>80</td><td></td><td></td><td>7000325</td><td>Pitex Tablets</td><td>60s</td><td>10</td><td></td><td></td></tr><tr><td>7000004</td><td>Abana Tablets</td><td>60s</td><td></td><td></td><td></td><td>7004922</td><td>PureHands Advanced (Blue)</td><td>100 ml</td><td></td><td></td><td></td></tr><tr><td>7002487</td><td>Althea Lotion</td><td>100 ml</td><td></td><td></td><td></td><td>7000332</td><td>Purim Tablets</td><td>60s</td><td></td><td></td><td></td></tr><tr><td>7002258</td><td>Amalaki Tablets</td><td>60s</td><td></td><td></td><td></td><td>7004526</td><td>Quista active (Chocolate)</td><td>200 g</td><td></td><td></td><td></td></tr><tr><td>7002269</td><td>Bael Tablets</td><td>60s</td><td></td><td></td><td></td><td>7004528</td><td>Quista active (Milk Masala)</td><td>200 g</td><td></td><td></td><td></td></tr><tr><td>7000077</td><td>Bleiminor Anti-blemish Cream</td><td>30 ml</td><td>10</td><td></td><td></td><td>7005269</td><td>Quista DN (Milk Masala)</td><td>200 g</td><td></td><td></td><td></td></tr><tr><td>7000095</td><td>Clarina Anti-acne Cream</td><td>30 g</td><td>1</td><td></td><td></td><td>7005268</td><td>Quista DN (Vanilla)</td><td>200 g</td><td></td><td></td><td></td></tr><tr><td>7000099</td><td>Clarina Anti-acne Face Wash Gel</td><td>60 ml</td><td></td><td></td><td></td><td>7004355</td><td>Quista DN (Milk Masala)</td><td>400 g</td><td></td><td></td><td></td></tr><tr><td>7000107</td><td>Confido Tablets</td><td>60s</td><td>2</td><td></td><td></td><td>7004356</td><td>Quista DN (Vanilla)</td><td>400 g</td><td></td><td></td><td></td></tr><tr><td>7000117</td><td>Diabecon DS Tablets</td><td>60s</td><td>10</td><td></td><td></td><td>7000334</td><td>Renalka Syrup</td><td>100 ml</td><td>10</td><td></td><td></td></tr><tr><td>7000120</td><td>Diabecon Tablets</td><td>60s</td><td></td><td></td><td></td><td>7000336</td><td>Renalka Syrup</td><td>200 ml</td><td></td><td></td><td></td></tr><tr><td>7001561</td><td>Diarex Syrup</td><td>100 ml</td><td>80</td><td></td><td></td><td>7002263</td><td>Shallaki Tablets</td><td>60s</td><td>20</td><td></td><td></td></tr><tr><td>7000129</td><td>Diarex Tablets</td><td>30s</td><td></td><td></td><td></td><td>7002273</td><td>Shigru Tablets</td><td>60s</td><td></td><td></td><td></td></tr><tr><td>7002267</td><td>Hadjod Tablets</td><td>60s</td><td>20</td><td>.</td><td></td><td>7002278</td><td>Tagara Tablets</td><td>60s</td><td></td><td></td><td></td></tr><tr><td>7000176</td><td>Hairzone Solution</td><td>60 ml</td><td></td><td></td><td></td><td>7000369</td><td>Talckt Syrup</td><td>120 ml</td><td></td><td></td><td></td></tr><tr><td>7000182</td><td>Herbolax Capsules</td><td>10\u00d710s</td><td></td><td></td><td></td><td>7003025</td><td>Talckt Tablets</td><td>60s</td><td></td><td></td><td></td></tr><tr><td>7000185</td><td>Herbolax Tablets</td><td>100s</td><td>10</td><td></td><td></td><td>7000391</td><td>Tentex forte Tablets</td><td>10s</td><td></td><td></td><td></td></tr><tr><td>7000198</td><td>Himcolin Gel</td><td>30 g</td><td>1</td><td></td><td></td><td>7000974</td><td>Trikatu Syrup</td><td>200 ml</td><td></td><td></td><td></td></tr><tr><td>7002675</td><td>Kapikachhu Tablets</td><td>60s</td><td></td><td></td><td></td><td>7002266</td><td>Trikatu Tablets</td><td>60s</td><td></td><td></td><td></td></tr><tr><td>7000249</td><td>Liv.52 HB Capsules</td><td>3\u00d710s</td><td></td><td></td><td></td><td>7002274</td><td>Triphala Tablets</td><td>60s</td><td>20</td><td></td><td></td></tr><tr><td>7000257</td><td>Liv.52 Syrup</td><td>100 ml</td><td>80</td><td></td><td></td><td>7002725</td><td>Vasaka Syrup</td><td>200 ml</td><td></td><td></td><td></td></tr><tr><td>7000260</td><td>Liv.52 Syrup</td><td>200 ml</td><td></td><td></td><td></td><td>7002960</td><td>Vasaka Tablets</td><td>60s</td><td></td><td></td><td></td></tr><tr><td>7006097</td><td>Liv.52 Tablets</td><td>100s</td><td>20</td><td></td><td></td><td>7002275</td><td>Vrikshamba Tablets</td><td>60s</td><td></td><td></td><td></td></tr><tr><td>7005683</td><td>Liv.52 Sugar Free Syrup</td><td>100 ml</td><td>10</td><td></td><td></td><td>7002276</td><td>Yashhumadhu Tablets</td><td>60s</td><td></td><td></td><td></td></tr><tr><td>7006064</td><td>Liv.52 Sugar Free Syrup</td><td>200 ml</td><td>2</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>7002676</td><td>Manjishsta Tablets</td><td>60s</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>7000309</td><td>Ophthalcare Eye Drops</td><td>10 ml</td><td>5</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>7003641</td><td>Oro-T Oral Rinse</td><td>100 ml</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>7000311</td><td>Oxitard Capsules</td><td>3\u00d710s</td><td>120</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>7004386</td><td>Pilex forte Ointment</td><td>30 g</td><td>10</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>7004269</td><td>Pilex forte Tablets</td><td>2\u00d730s</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td colspan=\"8\">Booked by:</td><td colspan=\"4\">Total:</td></tr><tr><td colspan=\"8\">instructions (if any):</td><td colspan=\"4\">Customer&#x27;s signat</td></tr></table>",
+            "bbox": [
+              14.0,
+              39.0,
+              1190.0,
+              1529.0
+            ],
+            "html": null,
+            "cells": null
+          }
+        ],
+        "available": true,
+        "count": 1
+      },
+      "latency_ms": 130046.76849999987,
+      "image_width": 1190,
+      "image_height": 1682,
+      "device": "gpu:0",
+      "metadata": {
+        "document_id": "0000704337_2026_08_ZL_24_259_03092026042213.pdf",
+        "source_path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000704337_2026_08_ZL_24_259_03092026042213.pdf",
+        "original_width": 595.0,
+        "original_height": 841.0,
+        "processed_width": 1190,
+        "processed_height": 1682,
+        "orientation": null,
+        "preprocessing": [
+          "pymupdf_render_zoom_2.0"
+        ],
+        "page_index": 0,
+        "page_count": 1,
+        "engine": "paddleocr-vl-1.6",
+        "model": "PaddleOCR-VL-1.6",
+        "model_version": "v1.6",
+        "pipeline_version": "v1.6",
+        "device": "gpu:0",
+        "init_latency_ms": 13877.782900000057,
+        "model_loaded": true,
+        "init_error": null,
+        "available": true,
+        "status": "success",
+        "latency_ms": 130046.76849999987,
+        "image_width": 1190,
+        "image_height": 1682,
+        "word_count": 153,
+        "block_count": 2,
+        "line_count": 2,
+        "lines": [
+          {
+            "text": "<table><tr><td colspan=\"12\">ORDER FORM</td></tr><tr><td colspan=\"6\">From:   Lawon</td><td colspan=\"6\">To:</td></tr><tr><td colspan=\"6\"></td><td colspan=\"6\"></td></tr><tr><td colspan=\"6\"></td><td colspan=\"6\"></td></tr><tr><td colspan=\"5\">ST/CST/TIN:</td><td colspan=\"4\">Order No.:</td><td colspan=\"3\">Date:</td></tr><tr><td rowspan=\"2\">SAP Code</td><td rowspan=\"2\">Product</td><td rowspan=\"2\">Pack</td><td rowspan=\"2\">Qty.</td><td>Value</td><td></td><td rowspan=\"2\">SAP Code</td><td rowspan=\"2\">Product</td><td rowspan=\"2\">Pack</td><td rowspan=\"2\">Qty.</td><td>Value</td><td></td></tr><tr><td>Rs.</td><td>P.</td><td>Rs.</td><td></td></tr><tr><td>7002319</td><td>Aactaril Soap</td><td>75 g</td><td>80</td><td></td><td></td><td>7000325</td><td>Pitex Tablets</td><td>60s</td><td>10</td><td></td><td></td></tr><tr><td>7000004</td><td>Abana Tablets</td><td>60s</td><td></td><td></td><td></td><td>7004922</td><td>PureHands Advanced (Blue)</td><td>100 ml</td><td></td><td></td><td></td></tr><tr><td>7002487</td><td>Althea Lotion</td><td>100 ml</td><td></td><td></td><td></td><td>7000332</td><td>Purim Tablets</td><td>60s</td><td></td><td></td><td></td></tr><tr><td>7002258</td><td>Amalaki Tablets</td><td>60s</td><td></td><td></td><td></td><td>7004526</td><td>Quista active (Chocolate)</td><td>200 g</td><td></td><td></td><td></td></tr><tr><td>7002269</td><td>Bael Tablets</td><td>60s</td><td></td><td></td><td></td><td>7004528</td><td>Quista active (Milk Masala)</td><td>200 g</td><td></td><td></td><td></td></tr><tr><td>7000077</td><td>Bleiminor Anti-blemish Cream</td><td>30 ml</td><td>10</td><td></td><td></td><td>7005269</td><td>Quista DN (Milk Masala)</td><td>200 g</td><td></td><td></td><td></td></tr><tr><td>7000095</td><td>Clarina Anti-acne Cream</td><td>30 g</td><td>1</td><td></td><td></td><td>7005268</td><td>Quista DN (Vanilla)</td><td>200 g</td><td></td><td></td><td></td></tr><tr><td>7000099</td><td>Clarina Anti-acne Face Wash Gel</td><td>60 ml</td><td></td><td></td><td></td><td>7004355</td><td>Quista DN (Milk Masala)</td><td>400 g</td><td></td><td></td><td></td></tr><tr><td>7000107</td><td>Confido Tablets</td><td>60s</td><td>2</td><td></td><td></td><td>7004356</td><td>Quista DN (Vanilla)</td><td>400 g</td><td></td><td></td><td></td></tr><tr><td>7000117</td><td>Diabecon DS Tablets</td><td>60s</td><td>10</td><td></td><td></td><td>7000334</td><td>Renalka Syrup</td><td>100 ml</td><td>10</td><td></td><td></td></tr><tr><td>7000120</td><td>Diabecon Tablets</td><td>60s</td><td></td><td></td><td></td><td>7000336</td><td>Renalka Syrup</td><td>200 ml</td><td></td><td></td><td></td></tr><tr><td>7001561</td><td>Diarex Syrup</td><td>100 ml</td><td>80</td><td></td><td></td><td>7002263</td><td>Shallaki Tablets</td><td>60s</td><td>20</td><td></td><td></td></tr><tr><td>7000129</td><td>Diarex Tablets</td><td>30s</td><td></td><td></td><td></td><td>7002273</td><td>Shigru Tablets</td><td>60s</td><td></td><td></td><td></td></tr><tr><td>7002267</td><td>Hadjod Tablets</td><td>60s</td><td>20</td><td>.</td><td></td><td>7002278</td><td>Tagara Tablets</td><td>60s</td><td></td><td></td><td></td></tr><tr><td>7000176</td><td>Hairzone Solution</td><td>60 ml</td><td></td><td></td><td></td><td>7000369</td><td>Talckt Syrup</td><td>120 ml</td><td></td><td></td><td></td></tr><tr><td>7000182</td><td>Herbolax Capsules</td><td>10\u00d710s</td><td></td><td></td><td></td><td>7003025</td><td>Talckt Tablets</td><td>60s</td><td></td><td></td><td></td></tr><tr><td>7000185</td><td>Herbolax Tablets</td><td>100s</td><td>10</td><td></td><td></td><td>7000391</td><td>Tentex forte Tablets</td><td>10s</td><td></td><td></td><td></td></tr><tr><td>7000198</td><td>Himcolin Gel</td><td>30 g</td><td>1</td><td></td><td></td><td>7000974</td><td>Trikatu Syrup</td><td>200 ml</td><td></td><td></td><td></td></tr><tr><td>7002675</td><td>Kapikachhu Tablets</td><td>60s</td><td></td><td></td><td></td><td>7002266</td><td>Trikatu Tablets</td><td>60s</td><td></td><td></td><td></td></tr><tr><td>7000249</td><td>Liv.52 HB Capsules</td><td>3\u00d710s</td><td></td><td></td><td></td><td>7002274</td><td>Triphala Tablets</td><td>60s</td><td>20</td><td></td><td></td></tr><tr><td>7000257</td><td>Liv.52 Syrup</td><td>100 ml</td><td>80</td><td></td><td></td><td>7002725</td><td>Vasaka Syrup</td><td>200 ml</td><td></td><td></td><td></td></tr><tr><td>7000260</td><td>Liv.52 Syrup</td><td>200 ml</td><td></td><td></td><td></td><td>7002960</td><td>Vasaka Tablets</td><td>60s</td><td></td><td></td><td></td></tr><tr><td>7006097</td><td>Liv.52 Tablets</td><td>100s</td><td>20</td><td></td><td></td><td>7002275</td><td>Vrikshamba Tablets</td><td>60s</td><td></td><td></td><td></td></tr><tr><td>7005683</td><td>Liv.52 Sugar Free Syrup</td><td>100 ml</td><td>10</td><td></td><td></td><td>7002276</td><td>Yashhumadhu Tablets</td><td>60s</td><td></td><td></td><td></td></tr><tr><td>7006064</td><td>Liv.52 Sugar Free Syrup</td><td>200 ml</td><td>2</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>7002676</td><td>Manjishsta Tablets</td><td>60s</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>7000309</td><td>Ophthalcare Eye Drops</td><td>10 ml</td><td>5</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>7003641</td><td>Oro-T Oral Rinse</td><td>100 ml</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>7000311</td><td>Oxitard Capsules</td><td>3\u00d710s</td><td>120</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>7004386</td><td>Pilex forte Ointment</td><td>30 g</td><td>10</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>7004269</td><td>Pilex forte Tablets</td><td>2\u00d730s</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td colspan=\"8\">Booked by:</td><td colspan=\"4\">Total:</td></tr><tr><td colspan=\"8\">instructions (if any):</td><td colspan=\"4\">Customer&#x27;s signat</td></tr></table>",
+            "bbox": [
+              14.0,
+              39.0,
+              1190.0,
+              1529.0
+            ],
+            "label": "table",
+            "order": 0
+          },
+          {
+            "text": "The copy to Customer: Yellow copy to Head Office: Pink copy to MR/PSO/BM.",
+            "bbox": [
+              173.0,
+              1512.0,
+              824.0,
+              1597.0
+            ],
+            "label": "vision_footnote",
+            "order": 1
+          }
+        ],
+        "reading_order": [
+          0,
+          1
+        ],
+        "bbox_stats": {
+          "valid": 2,
+          "invalid": 0,
+          "total": 2
+        }
+      },
+      "error": null,
+      "error_type": null,
+      "page": 1,
+      "native_text": false,
+      "ocr_required": true,
+      "paddle_vl_status": "success",
+      "image_meta": {
+        "original_width": 595.0,
+        "original_height": 841.0,
+        "processed_width": 1190,
+        "processed_height": 1682,
+        "orientation": null,
+        "preprocessing": [
+          "pymupdf_render_zoom_2.0"
+        ],
+        "page_index": 0,
+        "page_count": 1
+      },
+      "resources": {
+        "cpu_percent": 15.1,
+        "ram_used_gb": 13.9,
+        "ram_total_gb": 15.31,
+        "gpu": "NVIDIA GeForce RTX 3050 6GB Laptop GPU",
+        "vram_used_gb": 10.908,
+        "vram_total_gb": 6.0
+      }
+    }
+  ],
+  "status": "success",
+  "errors": [],
+  "latency_ms": 130716.67530000013,
+  "finished_at": "2026-10-08T12:24:37.071674+00:00",
+  "resources": {
+    "cpu_percent": 2.5,
+    "ram_used_gb": 13.9,
+    "ram_total_gb": 15.31,
+    "gpu": "NVIDIA GeForce RTX 3050 6GB Laptop GPU",
+    "vram_used_gb": 10.908,
+    "vram_total_gb": 6.0
+  }
+}

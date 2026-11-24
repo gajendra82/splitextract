@@ -1,0 +1,141 @@
+{
+  "document_id": "0000700259_2026_08_ZL_18_379_03092026174312.jpg",
+  "method": "product_wise_stock_statement_image",
+  "layout": "product_wise_stock_statement_photo",
+  "profile": "product_wise_image",
+  "phase38_fail_count": 3,
+  "decision": "OCR_ERROR",
+  "production_code_changed": false,
+  "ocr_engine_changed": false,
+  "gemini_called": false,
+  "phase2_enabled": false,
+  "header_centers_2x": {
+    "packing": 494.0,
+    "opening": 627.5,
+    "receipts": 754.5,
+    "jun": 974.0,
+    "sales": 1097.5,
+    "closing": 1440.5,
+    "liq": 1696.5,
+    "free_header_detected": false,
+    "jul_header_detected": false
+  },
+  "rows": [
+    {
+      "product_name": "LIV SYP",
+      "packing": "200ML",
+      "class": "OCR_ERROR",
+      "printed": {
+        "opening_qty": 103,
+        "receipts_qty": 0,
+        "receipts_free": 43,
+        "jul": 37,
+        "issues_qty": 52,
+        "closing_qty": 51,
+        "identity": "103 + 0 - 52 = 51"
+      },
+      "tesseract": {
+        "tokens": ["103", "43", "3752", "51", "32"],
+        "glued_token": "3752",
+        "glued_box": {"x0": 1003, "x1": 1121, "y0": 778},
+        "note": "Jul 37 and Issues 52 merged into one word box"
+      },
+      "parser": {
+        "opening_qty": 103.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 3752.0,
+        "closing_qty": 51.0,
+        "jun_qty": 43.0,
+        "expected_closing": -3649.0,
+        "stock_identity_ok": false
+      },
+      "discrepancy": "sales_qty 3752 vs printed Issues 52",
+      "ocr_wrong": true,
+      "parser_could_recover_from_ocr": false,
+      "column_boundary_cause": false
+    },
+    {
+      "product_name": "PILEX TAB",
+      "packing": "60'S",
+      "class": "OCR_ERROR",
+      "printed": {
+        "opening_qty": 29,
+        "receipts_qty": 100,
+        "receipts_free": 30,
+        "jul": 33,
+        "issues_qty": 37,
+        "closing_qty": 92,
+        "identity": "29 + 100 - 37 = 92"
+      },
+      "tesseract": {
+        "tokens": ["29", "100", "30", "3337", "92", "92"],
+        "glued_token": "3337",
+        "glued_box": {"x0": 1003, "x1": 1121, "y0": 1044},
+        "note": "Jul 33 and Issues 37 merged into one word box"
+      },
+      "parser": {
+        "opening_qty": 29.0,
+        "receipts_qty": 100.0,
+        "sales_qty": 3337.0,
+        "closing_qty": 92.0,
+        "jun_qty": 30.0,
+        "expected_closing": -3208.0,
+        "stock_identity_ok": false
+      },
+      "discrepancy": "sales_qty 3337 vs printed Issues 37",
+      "ocr_wrong": true,
+      "parser_could_recover_from_ocr": false,
+      "column_boundary_cause": false,
+      "note": "Existing _pwss_photo_split_glued subtracts both halves; 29+100-33-37=59 != 92. Correct recovery needs Issues 37 only."
+    },
+    {
+      "product_name": "TENTAX FORTE",
+      "packing": "10'S",
+      "class": "OCR_ERROR",
+      "secondary": "PARSER_INTOLERANCE_OF_NON_DIGIT_PREFIX",
+      "printed": {
+        "opening_qty": 332,
+        "receipts_qty": 0,
+        "receipts_free": 26,
+        "jul": 50,
+        "issues_qty": 18,
+        "closing_qty": 314,
+        "identity": "332 + 0 - 18 = 314"
+      },
+      "tesseract": {
+        "tokens": ["332", "26", "50", "«18", "314", "185"],
+        "polluted_token": "«18",
+        "box": {"x0": 1093, "x1": 1121, "y0": 1204},
+        "nearest_col": "sales",
+        "note": "Issues digit present with leading U+00AB guillemet"
+      },
+      "parser": {
+        "opening_qty": 332.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 0.0,
+        "closing_qty": 314.0,
+        "jun_qty": 26.0,
+        "expected_closing": 332.0,
+        "stock_identity_ok": false
+      },
+      "discrepancy": "sales_qty 0 vs printed Issues 18; OCR token «18 discarded by pure-digit gate",
+      "ocr_wrong": true,
+      "parser_could_recover_from_ocr": true,
+      "column_boundary_cause": false
+    }
+  ],
+  "smallest_safe_next_step": {
+    "do_not": [
+      "replace Tesseract",
+      "install PaddleOCR",
+      "call Gemini",
+      "change Phase 2",
+      "change issues_expected_closing",
+      "reopen Phase 3.8 fold logic"
+    ],
+    "if_later_fix": [
+      "Optional local strip of non-digit junk on photo qty tokens after column assignment («18 -> 18)",
+      "Do not subtract glued Jul+Issues halves in the stock equation"
+    ]
+  }
+}

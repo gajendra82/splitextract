@@ -1,0 +1,372 @@
+{
+  "document_id": "0000700358_2026_08_ZL_18_8173_05092026185826.pdf",
+  "relative_path": "0000700358_2026_08_ZL_18_8173_05092026185826.pdf",
+  "source_path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700358_2026_08_ZL_18_8173_05092026185826.pdf",
+  "file_type": "pdf",
+  "pdf_kind": "scanned",
+  "manifest_ocr_required": true,
+  "engine": "paddleocr-vl-1.6",
+  "model": "PaddleOCR-VL-1.6",
+  "model_version": "v1.6",
+  "started_at": "2026-10-08T12:02:11.288872+00:00",
+  "pages": [
+    {
+      "engine": "paddleocr-vl-1.6",
+      "status": "success",
+      "model": "PaddleOCR-VL-1.6",
+      "model_version": "v1.6",
+      "text": "SAKUNIA MEDICAL AGENCY, BARIPADA\nProduct wise stock statement from 01/08/2026 to 31/08/2026\n<table><tr><td>Product Name</td><td>Packing</td><td>Opening</td><td>Receipt</td><td>Issues</td><td>Closing</td><td>Sh.Exp</td><td>Liquidation</td><td>Sales Amount</td><td>Closing Amount</td></tr><tr><td>THE HIMALAYAN ZEAL</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>AACTARIL SOAP</td><td>1X75GM</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>ABANA TABS</td><td>1x50&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>CLARINA ANTI ACNE FACE WA</td><td>1X60ML</td><td>27</td><td></td><td>15</td><td>12</td><td></td><td>49 Days</td><td>2,073.70</td><td>1,739.88</td></tr><tr><td>CLARINA CREAM</td><td>1X30GM</td><td>20</td><td></td><td>3</td><td>17</td><td></td><td>170 Days</td><td>399.58</td><td>2,360.11</td></tr><tr><td>CONFIDO TAB</td><td>1X60&#x27;S</td><td>60</td><td></td><td>16</td><td>44</td><td></td><td>132 Days</td><td>2,991.78</td><td>8,558.44</td></tr><tr><td>HAIR ZONE SOLUTION</td><td>1X60ML</td><td>17</td><td></td><td></td><td>17</td><td>17</td><td>9999 Days</td><td></td><td>4,253.74</td></tr><tr><td>HIMCOLIN GEL</td><td>1X30GM</td><td>7</td><td></td><td>1</td><td>6</td><td></td><td>60 Days</td><td>233.48</td><td>1,460.10</td></tr><tr><td>LIV-52 SYP</td><td>1x100ML</td><td>70</td><td>70</td><td>117</td><td>23</td><td></td><td>11 Days</td><td>12,604.87</td><td>2,577.38</td></tr><tr><td>LIV-52 SYP 200ML</td><td>1x200ML</td><td></td><td>560</td><td>248</td><td>312</td><td></td><td>44 Days</td><td>45,082.20</td><td>58,440.72</td></tr><tr><td>LIV-52 TABS</td><td>1x100&#x27;S</td><td>78</td><td></td><td>42</td><td>36</td><td></td><td>30 Days</td><td>7,094.66</td><td>6,339.96</td></tr><tr><td>OPTHACARE EYE DROPS</td><td>1X10ML</td><td>26</td><td></td><td>15</td><td>11</td><td></td><td>22 Days</td><td>1,213.83</td><td>906.95</td></tr><tr><td>ORO-T M/W</td><td>1X200ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>ORO-T ORAL RINSE</td><td>1X100ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>OXITARD CAPS</td><td>1X10&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>PILEX FORTE OINTMENT</td><td>1X30GM</td><td>34</td><td></td><td>27</td><td>7</td><td></td><td>5 Days</td><td>3,104.27</td><td>840.49</td></tr><tr><td>PILEX TABS</td><td>1X60&#x27;S</td><td>29</td><td></td><td>30</td><td>-1</td><td></td><td></td><td>5,419.32</td><td>-187.31</td></tr><tr><td>QUISTA ACTIVE</td><td>1X200GM</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>QUISTA DN (MILK MASALA)</td><td>1X400GM</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>QUISTA DN VANILLA FLVR</td><td>1X400GM</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>TENTEX FORTE</td><td>1x10&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td colspan=\"8\">**Liquidation is based on last three months sales</td><td>80,217.69</td><td>87,290.46</td></tr><tr><td colspan=\"8\">F.</td><td></td><td></td></tr></table>\nPage No. 1",
+      "normalized_text": "SAKUNIA MEDICAL AGENCY, BARIPADA Product wise stock statement from 01/08/2026 to 31/08/2026 <table><tr><td>Product Name</td><td>Packing</td><td>Opening</td><td>Receipt</td><td>Issues</td><td>Closing</td><td>Sh.Exp</td><td>Liquidation</td><td>Sales Amount</td><td>Closing Amount</td></tr><tr><td>THE HIMALAYAN ZEAL</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>AACTARIL SOAP</td><td>1X75GM</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>ABANA TABS</td><td>1x50&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>CLARINA ANTI ACNE FACE WA</td><td>1X60ML</td><td>27</td><td></td><td>15</td><td>12</td><td></td><td>49 Days</td><td>2,073.70</td><td>1,739.88</td></tr><tr><td>CLARINA CREAM</td><td>1X30GM</td><td>20</td><td></td><td>3</td><td>17</td><td></td><td>170 Days</td><td>399.58</td><td>2,360.11</td></tr><tr><td>CONFIDO TAB</td><td>1X60&#x27;S</td><td>60</td><td></td><td>16</td><td>44</td><td></td><td>132 Days</td><td>2,991.78</td><td>8,558.44</td></tr><tr><td>HAIR ZONE SOLUTION</td><td>1X60ML</td><td>17</td><td></td><td></td><td>17</td><td>17</td><td>9999 Days</td><td></td><td>4,253.74</td></tr><tr><td>HIMCOLIN GEL</td><td>1X30GM</td><td>7</td><td></td><td>1</td><td>6</td><td></td><td>60 Days</td><td>233.48</td><td>1,460.10</td></tr><tr><td>LIV-52 SYP</td><td>1x100ML</td><td>70</td><td>70</td><td>117</td><td>23</td><td></td><td>11 Days</td><td>12,604.87</td><td>2,577.38</td></tr><tr><td>LIV-52 SYP 200ML</td><td>1x200ML</td><td></td><td>560</td><td>248</td><td>312</td><td></td><td>44 Days</td><td>45,082.20</td><td>58,440.72</td></tr><tr><td>LIV-52 TABS</td><td>1x100&#x27;S</td><td>78</td><td></td><td>42</td><td>36</td><td></td><td>30 Days</td><td>7,094.66</td><td>6,339.96</td></tr><tr><td>OPTHACARE EYE DROPS</td><td>1X10ML</td><td>26</td><td></td><td>15</td><td>11</td><td></td><td>22 Days</td><td>1,213.83</td><td>906.95</td></tr><tr><td>ORO-T M/W</td><td>1X200ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>ORO-T ORAL RINSE</td><td>1X100ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>OXITARD CAPS</td><td>1X10&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>PILEX FORTE OINTMENT</td><td>1X30GM</td><td>34</td><td></td><td>27</td><td>7</td><td></td><td>5 Days</td><td>3,104.27</td><td>840.49</td></tr><tr><td>PILEX TABS</td><td>1X60&#x27;S</td><td>29</td><td></td><td>30</td><td>-1</td><td></td><td></td><td>5,419.32</td><td>-187.31</td></tr><tr><td>QUISTA ACTIVE</td><td>1X200GM</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>QUISTA DN (MILK MASALA)</td><td>1X400GM</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>QUISTA DN VANILLA FLVR</td><td>1X400GM</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>TENTEX FORTE</td><td>1x10&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td colspan=\"8\">**Liquidation is based on last three months sales</td><td>80,217.69</td><td>87,290.46</td></tr><tr><td colspan=\"8\">F.</td><td></td><td></td></tr></table> Page No. 1",
+      "word_count": 72,
+      "line_count": 4,
+      "numeric_tokens": [
+        "27",
+        "15",
+        "12",
+        "49",
+        "2,073.70",
+        "1,739.88",
+        "20",
+        "3",
+        "17",
+        "170",
+        "399.58",
+        "2,360.11",
+        "60",
+        "16",
+        "44",
+        "132",
+        "2,991.78",
+        "8,558.44",
+        "17",
+        "17",
+        "17",
+        "9999",
+        "4,253.74",
+        "7",
+        "1",
+        "6",
+        "60",
+        "233.48",
+        "1,460.10",
+        "70",
+        "70",
+        "117",
+        "23",
+        "11",
+        "12,604.87",
+        "2,577.38",
+        "560",
+        "248",
+        "312",
+        "44",
+        "45,082.20",
+        "58,440.72",
+        "78",
+        "42",
+        "36",
+        "30",
+        "7,094.66",
+        "6,339.96",
+        "26",
+        "15",
+        "11",
+        "22",
+        "1,213.83",
+        "906.95",
+        "34",
+        "27",
+        "7",
+        "5",
+        "3,104.27",
+        "840.49",
+        "29",
+        "30",
+        "5,419.32",
+        "8",
+        "80,217.69",
+        "87,290.46",
+        "8",
+        "1"
+      ],
+      "words": [
+        {
+          "text": "SAKUNIA MEDICAL AGENCY, BARIPADA",
+          "bbox": [
+            27.0,
+            55.0,
+            433.0,
+            78.0
+          ],
+          "confidence": null,
+          "page": 1
+        },
+        {
+          "text": "Product wise stock statement from 01/08/2026 to 31/08/2026",
+          "bbox": [
+            27.0,
+            81.0,
+            604.0,
+            103.0
+          ],
+          "confidence": null,
+          "page": 1
+        },
+        {
+          "text": "<table><tr><td>Product Name</td><td>Packing</td><td>Opening</td><td>Receipt</td><td>Issues</td><td>Closing</td><td>Sh.Exp</td><td>Liquidation</td><td>Sales Amount</td><td>Closing Amount</td></tr><tr><td>THE HIMALAYAN ZEAL</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>AACTARIL SOAP</td><td>1X75GM</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>ABANA TABS</td><td>1x50&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>CLARINA ANTI ACNE FACE WA</td><td>1X60ML</td><td>27</td><td></td><td>15</td><td>12</td><td></td><td>49 Days</td><td>2,073.70</td><td>1,739.88</td></tr><tr><td>CLARINA CREAM</td><td>1X30GM</td><td>20</td><td></td><td>3</td><td>17</td><td></td><td>170 Days</td><td>399.58</td><td>2,360.11</td></tr><tr><td>CONFIDO TAB</td><td>1X60&#x27;S</td><td>60</td><td></td><td>16</td><td>44</td><td></td><td>132 Days</td><td>2,991.78</td><td>8,558.44</td></tr><tr><td>HAIR ZONE SOLUTION</td><td>1X60ML</td><td>17</td><td></td><td></td><td>17</td><td>17</td><td>9999 Days</td><td></td><td>4,253.74</td></tr><tr><td>HIMCOLIN GEL</td><td>1X30GM</td><td>7</td><td></td><td>1</td><td>6</td><td></td><td>60 Days</td><td>233.48</td><td>1,460.10</td></tr><tr><td>LIV-52 SYP</td><td>1x100ML</td><td>70</td><td>70</td><td>117</td><td>23</td><td></td><td>11 Days</td><td>12,604.87</td><td>2,577.38</td></tr><tr><td>LIV-52 SYP 200ML</td><td>1x200ML</td><td></td><td>560</td><td>248</td><td>312</td><td></td><td>44 Days</td><td>45,082.20</td><td>58,440.72</td></tr><tr><td>LIV-52 TABS</td><td>1x100&#x27;S</td><td>78</td><td></td><td>42</td><td>36</td><td></td><td>30 Days</td><td>7,094.66</td><td>6,339.96</td></tr><tr><td>OPTHACARE EYE DROPS</td><td>1X10ML</td><td>26</td><td></td><td>15</td><td>11</td><td></td><td>22 Days</td><td>1,213.83</td><td>906.95</td></tr><tr><td>ORO-T M/W</td><td>1X200ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>ORO-T ORAL RINSE</td><td>1X100ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>OXITARD CAPS</td><td>1X10&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>PILEX FORTE OINTMENT</td><td>1X30GM</td><td>34</td><td></td><td>27</td><td>7</td><td></td><td>5 Days</td><td>3,104.27</td><td>840.49</td></tr><tr><td>PILEX TABS</td><td>1X60&#x27;S</td><td>29</td><td></td><td>30</td><td>-1</td><td></td><td></td><td>5,419.32</td><td>-187.31</td></tr><tr><td>QUISTA ACTIVE</td><td>1X200GM</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>QUISTA DN (MILK MASALA)</td><td>1X400GM</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>QUISTA DN VANILLA FLVR</td><td>1X400GM</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>TENTEX FORTE</td><td>1x10&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td colspan=\"8\">**Liquidation is based on last three months sales</td><td>80,217.69</td><td>87,290.46</td></tr><tr><td colspan=\"8\">F.</td><td></td><td></td></tr></table>",
+          "bbox": [
+            25.0,
+            103.0,
+            1197.0,
+            752.0
+          ],
+          "confidence": null,
+          "page": 1
+        },
+        {
+          "text": "Page No. 1",
+          "bbox": [
+            29.0,
+            1483.0,
+            119.0,
+            1503.0
+          ],
+          "confidence": null,
+          "page": 1
+        }
+      ],
+      "boxes": [
+        [
+          27.0,
+          55.0,
+          433.0,
+          78.0
+        ],
+        [
+          27.0,
+          81.0,
+          604.0,
+          103.0
+        ],
+        [
+          25.0,
+          103.0,
+          1197.0,
+          752.0
+        ],
+        [
+          29.0,
+          1483.0,
+          119.0,
+          1503.0
+        ]
+      ],
+      "confidence": {
+        "mean": null,
+        "count": 0,
+        "available": false
+      },
+      "layout": {
+        "regions": [
+          {
+            "index": 0,
+            "label": "paragraph_title",
+            "text": "SAKUNIA MEDICAL AGENCY, BARIPADA",
+            "bbox": [
+              27.0,
+              55.0,
+              433.0,
+              78.0
+            ],
+            "order": 0
+          },
+          {
+            "index": 1,
+            "label": "figure_title",
+            "text": "Product wise stock statement from 01/08/2026 to 31/08/2026",
+            "bbox": [
+              27.0,
+              81.0,
+              604.0,
+              103.0
+            ],
+            "order": 1
+          },
+          {
+            "index": 2,
+            "label": "table",
+            "text": "<table><tr><td>Product Name</td><td>Packing</td><td>Opening</td><td>Receipt</td><td>Issues</td><td>Closing</td><td>Sh.Exp</td><td>Liquidation</td><td>Sales Amount</td><td>Closing Amount</td></tr><tr><td>THE HIMALAYAN ZEAL</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>AACTARIL SOAP</td><td>1X75GM</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>ABANA TABS</td><td>1x50&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>CLARINA ANTI ACNE FACE WA</td><td>1X60ML</td><td>27</td><td></td><td>15</td><td>12</td><td></td><td>49 Days</td><td>2,073.70</td><td>1,739.88</td></tr><tr><td>CLARINA CREAM</td><td>1X30GM</td><td>20</td><td></td><td>3</td><td>17</td><td></td><td>170 Days</td><td>399.58</td><td>2,360.11</td></tr><tr><td>CONFIDO TAB</td><td>1X60&#x27;S</td><td>60</td><td></td><td>16</td><td>44</td><td></td><td>132 Days</td><td>2,991.78</td><td>8,558.44</td></tr><tr><td>HAIR ZONE SOLUTION</td><td>1X60ML</td><td>17</td><td></td><td></td><td>17</td><td>17</td><td>9999 Days</td><td></td><td>4,253.74</td></tr><tr><td>HIMCOLIN GEL</td><td>1X30GM</td><td>7</td><td></td><td>1</td><td>6</td><td></td><td>60 Days</td><td>233.48</td><td>1,460.10</td></tr><tr><td>LIV-52 SYP</td><td>1x100ML</td><td>70</td><td>70</td><td>117</td><td>23</td><td></td><td>11 Days</td><td>12,604.87</td><td>2,577.38</td></tr><tr><td>LIV-52 SYP 200ML</td><td>1x200ML</td><td></td><td>560</td><td>248</td><td>312</td><td></td><td>44 Days</td><td>45,082.20</td><td>58,440.72</td></tr><tr><td>LIV-52 TABS</td><td>1x100&#x27;S</td><td>78</td><td></td><td>42</td><td>36</td><td></td><td>30 Days</td><td>7,094.66</td><td>6,339.96</td></tr><tr><td>OPTHACARE EYE DROPS</td><td>1X10ML</td><td>26</td><td></td><td>15</td><td>11</td><td></td><td>22 Days</td><td>1,213.83</td><td>906.95</td></tr><tr><td>ORO-T M/W</td><td>1X200ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>ORO-T ORAL RINSE</td><td>1X100ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>OXITARD CAPS</td><td>1X10&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>PILEX FORTE OINTMENT</td><td>1X30GM</td><td>34</td><td></td><td>27</td><td>7</td><td></td><td>5 Days</td><td>3,104.27</td><td>840.49</td></tr><tr><td>PILEX TABS</td><td>1X60&#x27;S</td><td>29</td><td></td><td>30</td><td>-1</td><td></td><td></td><td>5,419.32</td><td>-187.31</td></tr><tr><td>QUISTA ACTIVE</td><td>1X200GM</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>QUISTA DN (MILK MASALA)</td><td>1X400GM</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>QUISTA DN VANILLA FLVR</td><td>1X400GM</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>TENTEX FORTE</td><td>1x10&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td colspan=\"8\">**Liquidation is based on last three months sales</td><td>80,217.69</td><td>87,290.46</td></tr><tr><td colspan=\"8\">F.</td><td></td><td></td></tr></table>",
+            "bbox": [
+              25.0,
+              103.0,
+              1197.0,
+              752.0
+            ],
+            "order": 2
+          },
+          {
+            "index": 3,
+            "label": "number",
+            "text": "Page No. 1",
+            "bbox": [
+              29.0,
+              1483.0,
+              119.0,
+              1503.0
+            ],
+            "order": 3
+          }
+        ],
+        "available": true
+      },
+      "tables": {
+        "items": [
+          {
+            "index": 2,
+            "label": "table",
+            "text": "<table><tr><td>Product Name</td><td>Packing</td><td>Opening</td><td>Receipt</td><td>Issues</td><td>Closing</td><td>Sh.Exp</td><td>Liquidation</td><td>Sales Amount</td><td>Closing Amount</td></tr><tr><td>THE HIMALAYAN ZEAL</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>AACTARIL SOAP</td><td>1X75GM</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>ABANA TABS</td><td>1x50&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>CLARINA ANTI ACNE FACE WA</td><td>1X60ML</td><td>27</td><td></td><td>15</td><td>12</td><td></td><td>49 Days</td><td>2,073.70</td><td>1,739.88</td></tr><tr><td>CLARINA CREAM</td><td>1X30GM</td><td>20</td><td></td><td>3</td><td>17</td><td></td><td>170 Days</td><td>399.58</td><td>2,360.11</td></tr><tr><td>CONFIDO TAB</td><td>1X60&#x27;S</td><td>60</td><td></td><td>16</td><td>44</td><td></td><td>132 Days</td><td>2,991.78</td><td>8,558.44</td></tr><tr><td>HAIR ZONE SOLUTION</td><td>1X60ML</td><td>17</td><td></td><td></td><td>17</td><td>17</td><td>9999 Days</td><td></td><td>4,253.74</td></tr><tr><td>HIMCOLIN GEL</td><td>1X30GM</td><td>7</td><td></td><td>1</td><td>6</td><td></td><td>60 Days</td><td>233.48</td><td>1,460.10</td></tr><tr><td>LIV-52 SYP</td><td>1x100ML</td><td>70</td><td>70</td><td>117</td><td>23</td><td></td><td>11 Days</td><td>12,604.87</td><td>2,577.38</td></tr><tr><td>LIV-52 SYP 200ML</td><td>1x200ML</td><td></td><td>560</td><td>248</td><td>312</td><td></td><td>44 Days</td><td>45,082.20</td><td>58,440.72</td></tr><tr><td>LIV-52 TABS</td><td>1x100&#x27;S</td><td>78</td><td></td><td>42</td><td>36</td><td></td><td>30 Days</td><td>7,094.66</td><td>6,339.96</td></tr><tr><td>OPTHACARE EYE DROPS</td><td>1X10ML</td><td>26</td><td></td><td>15</td><td>11</td><td></td><td>22 Days</td><td>1,213.83</td><td>906.95</td></tr><tr><td>ORO-T M/W</td><td>1X200ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>ORO-T ORAL RINSE</td><td>1X100ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>OXITARD CAPS</td><td>1X10&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>PILEX FORTE OINTMENT</td><td>1X30GM</td><td>34</td><td></td><td>27</td><td>7</td><td></td><td>5 Days</td><td>3,104.27</td><td>840.49</td></tr><tr><td>PILEX TABS</td><td>1X60&#x27;S</td><td>29</td><td></td><td>30</td><td>-1</td><td></td><td></td><td>5,419.32</td><td>-187.31</td></tr><tr><td>QUISTA ACTIVE</td><td>1X200GM</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>QUISTA DN (MILK MASALA)</td><td>1X400GM</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>QUISTA DN VANILLA FLVR</td><td>1X400GM</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>TENTEX FORTE</td><td>1x10&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td colspan=\"8\">**Liquidation is based on last three months sales</td><td>80,217.69</td><td>87,290.46</td></tr><tr><td colspan=\"8\">F.</td><td></td><td></td></tr></table>",
+            "bbox": [
+              25.0,
+              103.0,
+              1197.0,
+              752.0
+            ],
+            "html": null,
+            "cells": null
+          }
+        ],
+        "available": true,
+        "count": 1
+      },
+      "latency_ms": 81129.59509999996,
+      "image_width": 1224,
+      "image_height": 1584,
+      "device": "gpu:0",
+      "metadata": {
+        "document_id": "0000700358_2026_08_ZL_18_8173_05092026185826.pdf",
+        "source_path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700358_2026_08_ZL_18_8173_05092026185826.pdf",
+        "original_width": 612.0,
+        "original_height": 792.0,
+        "processed_width": 1224,
+        "processed_height": 1584,
+        "orientation": null,
+        "preprocessing": [
+          "pymupdf_render_zoom_2.0"
+        ],
+        "page_index": 0,
+        "page_count": 1,
+        "engine": "paddleocr-vl-1.6",
+        "model": "PaddleOCR-VL-1.6",
+        "model_version": "v1.6",
+        "pipeline_version": "v1.6",
+        "device": "gpu:0",
+        "init_latency_ms": 13877.782900000057,
+        "model_loaded": true,
+        "init_error": null,
+        "available": true,
+        "status": "success",
+        "latency_ms": 81129.59509999996,
+        "image_width": 1224,
+        "image_height": 1584,
+        "word_count": 72,
+        "block_count": 4,
+        "line_count": 4,
+        "lines": [
+          {
+            "text": "SAKUNIA MEDICAL AGENCY, BARIPADA",
+            "bbox": [
+              27.0,
+              55.0,
+              433.0,
+              78.0
+            ],
+            "label": "paragraph_title",
+            "order": 0
+          },
+          {
+            "text": "Product wise stock statement from 01/08/2026 to 31/08/2026",
+            "bbox": [
+              27.0,
+              81.0,
+              604.0,
+              103.0
+            ],
+            "label": "figure_title",
+            "order": 1
+          },
+          {
+            "text": "<table><tr><td>Product Name</td><td>Packing</td><td>Opening</td><td>Receipt</td><td>Issues</td><td>Closing</td><td>Sh.Exp</td><td>Liquidation</td><td>Sales Amount</td><td>Closing Amount</td></tr><tr><td>THE HIMALAYAN ZEAL</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>AACTARIL SOAP</td><td>1X75GM</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>ABANA TABS</td><td>1x50&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>CLARINA ANTI ACNE FACE WA</td><td>1X60ML</td><td>27</td><td></td><td>15</td><td>12</td><td></td><td>49 Days</td><td>2,073.70</td><td>1,739.88</td></tr><tr><td>CLARINA CREAM</td><td>1X30GM</td><td>20</td><td></td><td>3</td><td>17</td><td></td><td>170 Days</td><td>399.58</td><td>2,360.11</td></tr><tr><td>CONFIDO TAB</td><td>1X60&#x27;S</td><td>60</td><td></td><td>16</td><td>44</td><td></td><td>132 Days</td><td>2,991.78</td><td>8,558.44</td></tr><tr><td>HAIR ZONE SOLUTION</td><td>1X60ML</td><td>17</td><td></td><td></td><td>17</td><td>17</td><td>9999 Days</td><td></td><td>4,253.74</td></tr><tr><td>HIMCOLIN GEL</td><td>1X30GM</td><td>7</td><td></td><td>1</td><td>6</td><td></td><td>60 Days</td><td>233.48</td><td>1,460.10</td></tr><tr><td>LIV-52 SYP</td><td>1x100ML</td><td>70</td><td>70</td><td>117</td><td>23</td><td></td><td>11 Days</td><td>12,604.87</td><td>2,577.38</td></tr><tr><td>LIV-52 SYP 200ML</td><td>1x200ML</td><td></td><td>560</td><td>248</td><td>312</td><td></td><td>44 Days</td><td>45,082.20</td><td>58,440.72</td></tr><tr><td>LIV-52 TABS</td><td>1x100&#x27;S</td><td>78</td><td></td><td>42</td><td>36</td><td></td><td>30 Days</td><td>7,094.66</td><td>6,339.96</td></tr><tr><td>OPTHACARE EYE DROPS</td><td>1X10ML</td><td>26</td><td></td><td>15</td><td>11</td><td></td><td>22 Days</td><td>1,213.83</td><td>906.95</td></tr><tr><td>ORO-T M/W</td><td>1X200ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>ORO-T ORAL RINSE</td><td>1X100ML</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>OXITARD CAPS</td><td>1X10&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>PILEX FORTE OINTMENT</td><td>1X30GM</td><td>34</td><td></td><td>27</td><td>7</td><td></td><td>5 Days</td><td>3,104.27</td><td>840.49</td></tr><tr><td>PILEX TABS</td><td>1X60&#x27;S</td><td>29</td><td></td><td>30</td><td>-1</td><td></td><td></td><td>5,419.32</td><td>-187.31</td></tr><tr><td>QUISTA ACTIVE</td><td>1X200GM</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>QUISTA DN (MILK MASALA)</td><td>1X400GM</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>QUISTA DN VANILLA FLVR</td><td>1X400GM</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>TENTEX FORTE</td><td>1x10&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td colspan=\"8\">**Liquidation is based on last three months sales</td><td>80,217.69</td><td>87,290.46</td></tr><tr><td colspan=\"8\">F.</td><td></td><td></td></tr></table>",
+            "bbox": [
+              25.0,
+              103.0,
+              1197.0,
+              752.0
+            ],
+            "label": "table",
+            "order": 2
+          },
+          {
+            "text": "Page No. 1",
+            "bbox": [
+              29.0,
+              1483.0,
+              119.0,
+              1503.0
+            ],
+            "label": "number",
+            "order": 3
+          }
+        ],
+        "reading_order": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "bbox_stats": {
+          "valid": 4,
+          "invalid": 0,
+          "total": 4
+        }
+      },
+      "error": null,
+      "error_type": null,
+      "page": 1,
+      "native_text": false,
+      "ocr_required": true,
+      "paddle_vl_status": "success",
+      "image_meta": {
+        "original_width": 612.0,
+        "original_height": 792.0,
+        "processed_width": 1224,
+        "processed_height": 1584,
+        "orientation": null,
+        "preprocessing": [
+          "pymupdf_render_zoom_2.0"
+        ],
+        "page_index": 0,
+        "page_count": 1
+      },
+      "resources": {
+        "cpu_percent": 4.1,
+        "ram_used_gb": 13.56,
+        "ram_total_gb": 15.31,
+        "gpu": "NVIDIA GeForce RTX 3050 6GB Laptop GPU",
+        "vram_used_gb": 8.875,
+        "vram_total_gb": 6.0
+      }
+    }
+  ],
+  "status": "success",
+  "errors": [],
+  "latency_ms": 81367.20220000006,
+  "finished_at": "2026-10-08T12:03:32.655377+00:00",
+  "resources": {
+    "cpu_percent": 1.2,
+    "ram_used_gb": 13.56,
+    "ram_total_gb": 15.31,
+    "gpu": "NVIDIA GeForce RTX 3050 6GB Laptop GPU",
+    "vram_used_gb": 8.875,
+    "vram_total_gb": 6.0
+  }
+}

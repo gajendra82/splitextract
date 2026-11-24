@@ -858,7 +858,7 @@ TOTAL
         self.assertEqual(eve["sales_qty"], 4.0)
         self.assertEqual(eve["closing_qty"], 13.0)
         pure = by_name["PUREHANDS"]
-        self.assertEqual(pure["packing"], "500ML")
+        self.assertEqual(pure["packing"], "500 ML")
         self.assertEqual(pure["opening_qty"], 0.0)
         # Single-line Mahajan sample must not set stacked flag
         single = _parse_opbal_receipt_issue_statement(

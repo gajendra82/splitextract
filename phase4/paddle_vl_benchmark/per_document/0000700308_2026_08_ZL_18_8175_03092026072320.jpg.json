@@ -1,0 +1,306 @@
+{
+  "document_id": "0000700308_2026_08_ZL_18_8175_03092026072320.jpg",
+  "relative_path": "0000700308_2026_08_ZL_18_8175_03092026072320.jpg",
+  "source_path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700308_2026_08_ZL_18_8175_03092026072320.jpg",
+  "file_type": "image",
+  "pdf_kind": null,
+  "manifest_ocr_required": true,
+  "engine": "paddleocr-vl-1.6",
+  "model": "PaddleOCR-VL-1.6",
+  "model_version": "v1.6",
+  "started_at": "2026-10-08T13:13:27.175284+00:00",
+  "pages": [
+    {
+      "engine": "paddleocr-vl-1.6",
+      "status": "success",
+      "model": "PaddleOCR-VL-1.6",
+      "model_version": "v1.6",
+      "text": "MOHAN PHARMACEUTICALS, KESINGA\nProduct wise stock statement from 01/07/2024 to 30/07/2024\n<table><tr><td rowspan=\"2\">Product Name</td><td rowspan=\"2\">Packing</td><td rowspan=\"2\">Opening</td><td rowspan=\"2\">Receipt</td><td colspan=\"3\">Goods</td><td>Stocks from</td></tr><tr><td>Issues Repl.</td><td>Issue</td><td>Closing</td><td>Liquidation</td></tr><tr><td>THE HIMALAYA (ZEST)</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>BRESOL-TAB</td><td>60&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>CYSTONE-TAB</td><td>60&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>DIABECON-TAB</td><td>60&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>GASEX-SYP</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIMCOCID-SYP</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>LIV-52 DS TAB</td><td>60&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>LIV-52 SYP</td><td>100ML</td><td>70</td><td>6</td><td>64</td><td></td><td>142 Days</td><td></td></tr><tr><td>LIV-52 SYP</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>RUMALAYA-CREAM</td><td>30GM</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>RUMALAYA-FORTE TAB</td><td>30&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>TENTEX FORTE TAB</td><td>10&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>TENTEX-ROYAL CAP</td><td>10&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>Total sales in this period :</td><td></td><td>554.00</td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>Total closing stock (Sales value) :</td><td></td><td>5,933.00</td><td></td><td></td><td></td><td></td><td></td></tr><tr><td colspan=\"8\">**Liquidation is based on last three months sales</td></tr></table>",
+      "normalized_text": "MOHAN PHARMACEUTICALS, KESINGA Product wise stock statement from 01/07/2024 to 30/07/2024 <table><tr><td rowspan=\"2\">Product Name</td><td rowspan=\"2\">Packing</td><td rowspan=\"2\">Opening</td><td rowspan=\"2\">Receipt</td><td colspan=\"3\">Goods</td><td>Stocks from</td></tr><tr><td>Issues Repl.</td><td>Issue</td><td>Closing</td><td>Liquidation</td></tr><tr><td>THE HIMALAYA (ZEST)</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>BRESOL-TAB</td><td>60&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>CYSTONE-TAB</td><td>60&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>DIABECON-TAB</td><td>60&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>GASEX-SYP</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIMCOCID-SYP</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>LIV-52 DS TAB</td><td>60&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>LIV-52 SYP</td><td>100ML</td><td>70</td><td>6</td><td>64</td><td></td><td>142 Days</td><td></td></tr><tr><td>LIV-52 SYP</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>RUMALAYA-CREAM</td><td>30GM</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>RUMALAYA-FORTE TAB</td><td>30&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>TENTEX FORTE TAB</td><td>10&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>TENTEX-ROYAL CAP</td><td>10&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>Total sales in this period :</td><td></td><td>554.00</td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>Total closing stock (Sales value) :</td><td></td><td>5,933.00</td><td></td><td></td><td></td><td></td><td></td></tr><tr><td colspan=\"8\">**Liquidation is based on last three months sales</td></tr></table>",
+      "word_count": 49,
+      "line_count": 3,
+      "numeric_tokens": [
+        "2",
+        "2",
+        "2",
+        "2",
+        "3",
+        "60",
+        "60",
+        "60",
+        "60",
+        "70",
+        "6",
+        "64",
+        "142",
+        "30",
+        "10",
+        "10",
+        "554.00",
+        "5,933.00",
+        "8"
+      ],
+      "words": [
+        {
+          "text": "MOHAN PHARMACEUTICALS, KESINGA",
+          "bbox": [
+            30.0,
+            586.0,
+            862.0,
+            633.0
+          ],
+          "confidence": null,
+          "page": 1
+        },
+        {
+          "text": "Product wise stock statement from 01/07/2024 to 30/07/2024",
+          "bbox": [
+            34.0,
+            638.0,
+            1252.0,
+            685.0
+          ],
+          "confidence": null,
+          "page": 1
+        },
+        {
+          "text": "<table><tr><td rowspan=\"2\">Product Name</td><td rowspan=\"2\">Packing</td><td rowspan=\"2\">Opening</td><td rowspan=\"2\">Receipt</td><td colspan=\"3\">Goods</td><td>Stocks from</td></tr><tr><td>Issues Repl.</td><td>Issue</td><td>Closing</td><td>Liquidation</td></tr><tr><td>THE HIMALAYA (ZEST)</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>BRESOL-TAB</td><td>60&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>CYSTONE-TAB</td><td>60&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>DIABECON-TAB</td><td>60&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>GASEX-SYP</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIMCOCID-SYP</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>LIV-52 DS TAB</td><td>60&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>LIV-52 SYP</td><td>100ML</td><td>70</td><td>6</td><td>64</td><td></td><td>142 Days</td><td></td></tr><tr><td>LIV-52 SYP</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>RUMALAYA-CREAM</td><td>30GM</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>RUMALAYA-FORTE TAB</td><td>30&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>TENTEX FORTE TAB</td><td>10&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>TENTEX-ROYAL CAP</td><td>10&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>Total sales in this period :</td><td></td><td>554.00</td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>Total closing stock (Sales value) :</td><td></td><td>5,933.00</td><td></td><td></td><td></td><td></td><td></td></tr><tr><td colspan=\"8\">**Liquidation is based on last three months sales</td></tr></table>",
+          "bbox": [
+            0.0,
+            684.0,
+            2447.0,
+            1709.0
+          ],
+          "confidence": null,
+          "page": 1
+        }
+      ],
+      "boxes": [
+        [
+          30.0,
+          586.0,
+          862.0,
+          633.0
+        ],
+        [
+          34.0,
+          638.0,
+          1252.0,
+          685.0
+        ],
+        [
+          0.0,
+          684.0,
+          2447.0,
+          1709.0
+        ]
+      ],
+      "confidence": {
+        "mean": null,
+        "count": 0,
+        "available": false
+      },
+      "layout": {
+        "regions": [
+          {
+            "index": 0,
+            "label": "image",
+            "text": "",
+            "bbox": [
+              0.0,
+              7.0,
+              2447.0,
+              490.0
+            ],
+            "order": 0
+          },
+          {
+            "index": 1,
+            "label": "paragraph_title",
+            "text": "MOHAN PHARMACEUTICALS, KESINGA",
+            "bbox": [
+              30.0,
+              586.0,
+              862.0,
+              633.0
+            ],
+            "order": 1
+          },
+          {
+            "index": 2,
+            "label": "text",
+            "text": "Product wise stock statement from 01/07/2024 to 30/07/2024",
+            "bbox": [
+              34.0,
+              638.0,
+              1252.0,
+              685.0
+            ],
+            "order": 2
+          },
+          {
+            "index": 3,
+            "label": "table",
+            "text": "<table><tr><td rowspan=\"2\">Product Name</td><td rowspan=\"2\">Packing</td><td rowspan=\"2\">Opening</td><td rowspan=\"2\">Receipt</td><td colspan=\"3\">Goods</td><td>Stocks from</td></tr><tr><td>Issues Repl.</td><td>Issue</td><td>Closing</td><td>Liquidation</td></tr><tr><td>THE HIMALAYA (ZEST)</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>BRESOL-TAB</td><td>60&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>CYSTONE-TAB</td><td>60&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>DIABECON-TAB</td><td>60&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>GASEX-SYP</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIMCOCID-SYP</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>LIV-52 DS TAB</td><td>60&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>LIV-52 SYP</td><td>100ML</td><td>70</td><td>6</td><td>64</td><td></td><td>142 Days</td><td></td></tr><tr><td>LIV-52 SYP</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>RUMALAYA-CREAM</td><td>30GM</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>RUMALAYA-FORTE TAB</td><td>30&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>TENTEX FORTE TAB</td><td>10&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>TENTEX-ROYAL CAP</td><td>10&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>Total sales in this period :</td><td></td><td>554.00</td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>Total closing stock (Sales value) :</td><td></td><td>5,933.00</td><td></td><td></td><td></td><td></td><td></td></tr><tr><td colspan=\"8\">**Liquidation is based on last three months sales</td></tr></table>",
+            "bbox": [
+              0.0,
+              684.0,
+              2447.0,
+              1709.0
+            ],
+            "order": 3
+          },
+          {
+            "index": 4,
+            "label": "image",
+            "text": "",
+            "bbox": [
+              0.0,
+              2241.0,
+              2447.0,
+              3257.0
+            ],
+            "order": 4
+          }
+        ],
+        "available": true
+      },
+      "tables": {
+        "items": [
+          {
+            "index": 3,
+            "label": "table",
+            "text": "<table><tr><td rowspan=\"2\">Product Name</td><td rowspan=\"2\">Packing</td><td rowspan=\"2\">Opening</td><td rowspan=\"2\">Receipt</td><td colspan=\"3\">Goods</td><td>Stocks from</td></tr><tr><td>Issues Repl.</td><td>Issue</td><td>Closing</td><td>Liquidation</td></tr><tr><td>THE HIMALAYA (ZEST)</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>BRESOL-TAB</td><td>60&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>CYSTONE-TAB</td><td>60&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>DIABECON-TAB</td><td>60&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>GASEX-SYP</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIMCOCID-SYP</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>LIV-52 DS TAB</td><td>60&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>LIV-52 SYP</td><td>100ML</td><td>70</td><td>6</td><td>64</td><td></td><td>142 Days</td><td></td></tr><tr><td>LIV-52 SYP</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>RUMALAYA-CREAM</td><td>30GM</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>RUMALAYA-FORTE TAB</td><td>30&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>TENTEX FORTE TAB</td><td>10&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>TENTEX-ROYAL CAP</td><td>10&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>Total sales in this period :</td><td></td><td>554.00</td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>Total closing stock (Sales value) :</td><td></td><td>5,933.00</td><td></td><td></td><td></td><td></td><td></td></tr><tr><td colspan=\"8\">**Liquidation is based on last three months sales</td></tr></table>",
+            "bbox": [
+              0.0,
+              684.0,
+              2447.0,
+              1709.0
+            ],
+            "html": null,
+            "cells": null
+          }
+        ],
+        "available": true,
+        "count": 1
+      },
+      "latency_ms": 69067.02169999972,
+      "image_width": 2448,
+      "image_height": 3264,
+      "device": "gpu:0",
+      "metadata": {
+        "document_id": "0000700308_2026_08_ZL_18_8175_03092026072320.jpg",
+        "source_path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700308_2026_08_ZL_18_8175_03092026072320.jpg",
+        "original_width": 3264,
+        "original_height": 2448,
+        "processed_width": 2448,
+        "processed_height": 3264,
+        "orientation": 6,
+        "preprocessing": [
+          "exif_transpose",
+          "rgb"
+        ],
+        "engine": "paddleocr-vl-1.6",
+        "model": "PaddleOCR-VL-1.6",
+        "model_version": "v1.6",
+        "pipeline_version": "v1.6",
+        "device": "gpu:0",
+        "init_latency_ms": 12079.41050000045,
+        "model_loaded": true,
+        "init_error": null,
+        "available": true,
+        "status": "success",
+        "latency_ms": 69067.02169999972,
+        "image_width": 2448,
+        "image_height": 3264,
+        "word_count": 49,
+        "block_count": 3,
+        "line_count": 3,
+        "lines": [
+          {
+            "text": "MOHAN PHARMACEUTICALS, KESINGA",
+            "bbox": [
+              30.0,
+              586.0,
+              862.0,
+              633.0
+            ],
+            "label": "paragraph_title",
+            "order": 1
+          },
+          {
+            "text": "Product wise stock statement from 01/07/2024 to 30/07/2024",
+            "bbox": [
+              34.0,
+              638.0,
+              1252.0,
+              685.0
+            ],
+            "label": "text",
+            "order": 2
+          },
+          {
+            "text": "<table><tr><td rowspan=\"2\">Product Name</td><td rowspan=\"2\">Packing</td><td rowspan=\"2\">Opening</td><td rowspan=\"2\">Receipt</td><td colspan=\"3\">Goods</td><td>Stocks from</td></tr><tr><td>Issues Repl.</td><td>Issue</td><td>Closing</td><td>Liquidation</td></tr><tr><td>THE HIMALAYA (ZEST)</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>BRESOL-TAB</td><td>60&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>CYSTONE-TAB</td><td>60&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>DIABECON-TAB</td><td>60&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>GASEX-SYP</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>HIMCOCID-SYP</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>LIV-52 DS TAB</td><td>60&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>LIV-52 SYP</td><td>100ML</td><td>70</td><td>6</td><td>64</td><td></td><td>142 Days</td><td></td></tr><tr><td>LIV-52 SYP</td><td>200ML</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>RUMALAYA-CREAM</td><td>30GM</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>RUMALAYA-FORTE TAB</td><td>30&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>TENTEX FORTE TAB</td><td>10&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>TENTEX-ROYAL CAP</td><td>10&#x27;S</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>Total sales in this period :</td><td></td><td>554.00</td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>Total closing stock (Sales value) :</td><td></td><td>5,933.00</td><td></td><td></td><td></td><td></td><td></td></tr><tr><td colspan=\"8\">**Liquidation is based on last three months sales</td></tr></table>",
+            "bbox": [
+              0.0,
+              684.0,
+              2447.0,
+              1709.0
+            ],
+            "label": "table",
+            "order": 3
+          }
+        ],
+        "reading_order": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "bbox_stats": {
+          "valid": 3,
+          "invalid": 0,
+          "total": 3
+        }
+      },
+      "error": null,
+      "error_type": null,
+      "page": 1,
+      "native_text": false,
+      "ocr_required": true,
+      "paddle_vl_status": "success",
+      "image_meta": {
+        "original_width": 3264,
+        "original_height": 2448,
+        "processed_width": 2448,
+        "processed_height": 3264,
+        "orientation": 6,
+        "preprocessing": [
+          "exif_transpose",
+          "rgb"
+        ]
+      },
+      "resources": {
+        "cpu_percent": 2.3,
+        "ram_used_gb": 10.98,
+        "ram_total_gb": 15.31,
+        "gpu": "NVIDIA GeForce RTX 3050 6GB Laptop GPU",
+        "vram_used_gb": 7.974,
+        "vram_total_gb": 6.0
+      }
+    }
+  ],
+  "status": "success",
+  "errors": [],
+  "latency_ms": 70953.22260000012,
+  "finished_at": "2026-10-08T13:14:38.129275+00:00",
+  "resources": {
+    "cpu_percent": 3.1,
+    "ram_used_gb": 10.98,
+    "ram_total_gb": 15.31,
+    "gpu": "NVIDIA GeForce RTX 3050 6GB Laptop GPU",
+    "vram_used_gb": 7.974,
+    "vram_total_gb": 6.0
+  }
+}

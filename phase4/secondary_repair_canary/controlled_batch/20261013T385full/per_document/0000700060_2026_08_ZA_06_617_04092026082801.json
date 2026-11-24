@@ -1,0 +1,8 @@
+{
+  "document_id": "0000700060_2026_08_ZA_06_617_04092026082801.png",
+  "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000700060_2026_08_ZA_06_617_04092026082801.png",
+  "status": "error",
+  "sha256": "4f12dd22e26cbadd8daff0a5957ec988e50002ff859635fd97698bbadf32f022",
+  "error": "primary OCR timeout 0000700060_2026_08_ZA_06_617_04092026082801.png after 600s",
+  "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\scripts\\run_secondary_repair_controlled_batch.py\", line 398, in _primary_ocr_once\n    payload = fut.result(timeout=timeout_sec)\n              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Python312\\Lib\\concurrent\\futures\\_base.py\", line 458, in result\n    raise TimeoutError()\nTimeoutError\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File \"C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\scripts\\run_secondary_repair_controlled_batch.py\", line 715, in run_batch\n    primary = _primary_ocr_once(path, primary_cache)\n              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\scripts\\run_secondary_repair_controlled_batch.py\", line 409, in _primary_ocr_once\n    raise TimeoutError(\nTimeoutError: primary OCR timeout 0000700060_2026_08_ZA_06_617_04092026082801.png after 600s\n"
+}

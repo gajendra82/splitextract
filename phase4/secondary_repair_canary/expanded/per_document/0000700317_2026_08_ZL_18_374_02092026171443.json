@@ -1,0 +1,368 @@
+{
+  "document_id": "0000700317_2026_08_ZL_18_374_02092026171443.pdf",
+  "role": "compatible_ssa_like",
+  "source_path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700317_2026_08_ZL_18_374_02092026171443.pdf",
+  "off": {
+    "correct_count": 20,
+    "field_count": 20,
+    "silent_wrong_count": 0,
+    "missing_count": 0,
+    "secondary_ocr_ms": 4.2,
+    "pipeline_helper_ms": 3.9,
+    "text_sha": "b6321092b26f4922",
+    "repair_report": {
+      "document_id": "0000700317_2026_08_ZL_18_374_02092026171443.pdf",
+      "repairs": [],
+      "unresolved": [
+        {
+          "reason": "secondary_repair_disabled"
+        }
+      ]
+    }
+  },
+  "on": {
+    "correct_count": 20,
+    "field_count": 20,
+    "silent_wrong_count": 0,
+    "missing_count": 0,
+    "secondary_ocr_ms": 704.5,
+    "pipeline_helper_ms": 690.0,
+    "text_sha": "b6321092b26f4922",
+    "repair_report": {
+      "document_id": "0000700317_2026_08_ZL_18_374_02092026171443.pdf",
+      "repairs": [],
+      "unresolved": [
+        {
+          "reason": "total_footer_layout_not_himalaya_qty"
+        }
+      ]
+    },
+    "pipeline_text_matches": true
+  },
+  "deltas": [],
+  "repair_types_on": [],
+  "matches_off": [
+    {
+      "field_id": "vendor",
+      "expected_raw": "NAYAN PHARMACEUTICAL AGENCIES",
+      "predicted_raw": "NAYAN PHARMACEUTICAL AGENCIES",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_open",
+      "expected_raw": "Opening",
+      "predicted_raw": "Opening",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_issues",
+      "expected_raw": "Issues",
+      "predicted_raw": "Issues",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_close",
+      "expected_raw": "Closing",
+      "predicted_raw": "Closing",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "clar_op",
+      "expected_raw": "90",
+      "predicted_raw": "90",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "clar_cl",
+      "expected_raw": "90",
+      "predicted_raw": "90",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "him_op",
+      "expected_raw": "17",
+      "predicted_raw": "17",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "him_iss",
+      "expected_raw": "3",
+      "predicted_raw": "3",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "him_cl",
+      "expected_raw": "14",
+      "predicted_raw": "14",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "livtab_op",
+      "expected_raw": "80",
+      "predicted_raw": "80",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "livtab_iss",
+      "expected_raw": "12",
+      "predicted_raw": "12",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "livtab_cl",
+      "expected_raw": "68",
+      "predicted_raw": "68",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv200_op",
+      "expected_raw": "51",
+      "predicted_raw": "51",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv200_iss",
+      "expected_raw": "49",
+      "predicted_raw": "49",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv200_cl",
+      "expected_raw": "2",
+      "predicted_raw": "2",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "pilex_op",
+      "expected_raw": "114",
+      "predicted_raw": "114",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "pilex_iss",
+      "expected_raw": "48",
+      "predicted_raw": "48",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "pilex_cl",
+      "expected_raw": "66",
+      "predicted_raw": "66",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tot_sales",
+      "expected_raw": "22973.00",
+      "predicted_raw": "22,973.00",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tot_close",
+      "expected_raw": "89086.00",
+      "predicted_raw": "89,086.00",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    }
+  ],
+  "matches_on": [
+    {
+      "field_id": "vendor",
+      "expected_raw": "NAYAN PHARMACEUTICAL AGENCIES",
+      "predicted_raw": "NAYAN PHARMACEUTICAL AGENCIES",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_open",
+      "expected_raw": "Opening",
+      "predicted_raw": "Opening",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_issues",
+      "expected_raw": "Issues",
+      "predicted_raw": "Issues",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_close",
+      "expected_raw": "Closing",
+      "predicted_raw": "Closing",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "clar_op",
+      "expected_raw": "90",
+      "predicted_raw": "90",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "clar_cl",
+      "expected_raw": "90",
+      "predicted_raw": "90",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "him_op",
+      "expected_raw": "17",
+      "predicted_raw": "17",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "him_iss",
+      "expected_raw": "3",
+      "predicted_raw": "3",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "him_cl",
+      "expected_raw": "14",
+      "predicted_raw": "14",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "livtab_op",
+      "expected_raw": "80",
+      "predicted_raw": "80",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "livtab_iss",
+      "expected_raw": "12",
+      "predicted_raw": "12",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "livtab_cl",
+      "expected_raw": "68",
+      "predicted_raw": "68",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv200_op",
+      "expected_raw": "51",
+      "predicted_raw": "51",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv200_iss",
+      "expected_raw": "49",
+      "predicted_raw": "49",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv200_cl",
+      "expected_raw": "2",
+      "predicted_raw": "2",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "pilex_op",
+      "expected_raw": "114",
+      "predicted_raw": "114",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "pilex_iss",
+      "expected_raw": "48",
+      "predicted_raw": "48",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "pilex_cl",
+      "expected_raw": "66",
+      "predicted_raw": "66",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tot_sales",
+      "expected_raw": "22973.00",
+      "predicted_raw": "22,973.00",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tot_close",
+      "expected_raw": "89086.00",
+      "predicted_raw": "89,086.00",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    }
+  ]
+}

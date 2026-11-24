@@ -1,0 +1,76 @@
+{
+  "engine": "paddleocr-vl-1.6",
+  "model": "PaddleOCR-VL-1.6",
+  "model_version": "v1.6",
+  "manifest": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\phase3_eval\\selection.json",
+  "environment": {
+    "os": "Windows 11",
+    "python": "3.12.6",
+    "venv": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\.venvs\\paddleocr_vl",
+    "dataset": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August",
+    "device": "gpu:0",
+    "paddle": "3.2.1",
+    "paddleocr": "3.7.0",
+    "paddlex": "3.7.2",
+    "cuda_compiled": true,
+    "gpu": "NVIDIA GeForce RTX 3050 6GB Laptop GPU",
+    "vram_gb": 6.0,
+    "cpu": "AMD64 Family 25 Model 68 Stepping 1, AuthenticAMD",
+    "ram_gb": 15.31,
+    "vl_rec_model": "PaddleOCR-VL-1.6-0.9B",
+    "layout_model": "PP-DocLayoutV3",
+    "resource_snapshot": {
+      "cpu_percent": 8.3,
+      "ram_used_gb": 9.84,
+      "ram_total_gb": 15.31,
+      "gpu": "NVIDIA GeForce RTX 3050 6GB Laptop GPU",
+      "vram_used_gb": 7.095,
+      "vram_total_gb": 6.0
+    },
+    "init_latency_ms": 12079.44099999986
+  },
+  "documents": 50,
+  "pages": 93,
+  "native_text_pages_skipped": 53,
+  "ocr_required_pages": 40,
+  "successful_pages": 38,
+  "failed_pages": 2,
+  "timeout_pages": 0,
+  "average_latency_ms": 116131.64428157895,
+  "median_latency_ms": 108633.70295000004,
+  "cold_start_latency_ms": 5870.848799999976,
+  "warm_latency_ms": 119111.66578108109,
+  "init_latency_ms": 12079.44099999986,
+  "total_benchmark_ms": 1200183.8808000002,
+  "average_text_length": 5050.9473684210525,
+  "average_word_count": 103.86842105263158,
+  "numeric_token_statistics": {
+    "pages_with_numeric_tokens": 38,
+    "total_numeric_tokens": 8235,
+    "average_per_success_page": 216.71052631578948,
+    "median_per_success_page": 139.5
+  },
+  "confidence_statistics": {
+    "pages_with_confidence": 0,
+    "mean": null,
+    "median": null,
+    "note": "PaddleOCR-VL block confidence is often unavailable; do not invent."
+  },
+  "bounding_box_statistics": {
+    "valid": 191,
+    "invalid": 0,
+    "total": 191
+  },
+  "table_layout_evidence": {
+    "pages_with_layout_regions": 38,
+    "pages_with_tables": 37,
+    "available": true
+  },
+  "known_difficult_documents": [],
+  "document_status_counts": {
+    "success": 47,
+    "skipped_native_text": 1,
+    "error": 2
+  },
+  "generated_at": "2026-10-08T13:21:47.656770+00:00"
+}

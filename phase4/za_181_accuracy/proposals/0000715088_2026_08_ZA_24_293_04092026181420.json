@@ -1,0 +1,1039 @@
+{
+  "document_id": "0000715088_2026_08_ZA_24_293_04092026181420.png",
+  "source_file": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000715088_2026_08_ZA_24_293_04092026181420.png",
+  "source_file_exists": true,
+  "verification_status": "unverified",
+  "annotation_origin": "AI_PROPOSED",
+  "ai_generated": true,
+  "human_verified": false,
+  "rows": [
+    {
+      "row_id": "r01",
+      "row_index": 1,
+      "product_name": {
+        "raw": "BONNISAN LIQUID 100ml INDIA",
+        "normalized": "BONNISAN LIQUID 100ml INDIA",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "MRP",
+          "semantic": "unknown",
+          "raw": "89",
+          "normalized": 89.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Secondary Rate",
+          "semantic": "not_quantity",
+          "raw": "60.1",
+          "normalized": 60.1,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "OB (Qty)",
+          "semantic": "opening_qty",
+          "raw": "8",
+          "normalized": 8.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Primary (Qty)",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "CB (Qty)",
+          "semantic": "closing_qty",
+          "raw": "8",
+          "normalized": 8.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Secondary Qty total",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Secondary Value",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r02",
+      "row_index": 2,
+      "product_name": {
+        "raw": "CYSTONE FORTE TABS (FC) 30 S IND",
+        "normalized": "CYSTONE FORTE TABS (FC) 30 S IND",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "MRP",
+          "semantic": "unknown",
+          "raw": "159",
+          "normalized": 159.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Secondary Rate",
+          "semantic": "not_quantity",
+          "raw": "107.39",
+          "normalized": 107.39,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "OB (Qty)",
+          "semantic": "opening_qty",
+          "raw": "45",
+          "normalized": 45.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Primary (Qty)",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "CB (Qty)",
+          "semantic": "closing_qty",
+          "raw": "25",
+          "normalized": 25.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Secondary Qty total",
+          "semantic": "unknown",
+          "raw": "20",
+          "normalized": 20.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Secondary Value",
+          "semantic": "not_quantity",
+          "raw": "2147.8",
+          "normalized": 2147.8,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r03",
+      "row_index": 3,
+      "product_name": {
+        "raw": "CYSTONE SYRUP 200ml",
+        "normalized": "CYSTONE SYRUP 200ml",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "MRP",
+          "semantic": "unknown",
+          "raw": "271",
+          "normalized": 271.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Secondary Rate",
+          "semantic": "not_quantity",
+          "raw": "183.04",
+          "normalized": 183.04,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "OB (Qty)",
+          "semantic": "opening_qty",
+          "raw": "15",
+          "normalized": 15.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Primary (Qty)",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "CB (Qty)",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Secondary Qty total",
+          "semantic": "unknown",
+          "raw": "15",
+          "normalized": 15.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Secondary Value",
+          "semantic": "not_quantity",
+          "raw": "2745.6",
+          "normalized": 2745.6,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r04",
+      "row_index": 4,
+      "product_name": {
+        "raw": "EVECARE SYRUP 200ml",
+        "normalized": "EVECARE SYRUP 200ml",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "MRP",
+          "semantic": "unknown",
+          "raw": "215",
+          "normalized": 215.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Secondary Rate",
+          "semantic": "not_quantity",
+          "raw": "145.21",
+          "normalized": 145.21,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "OB (Qty)",
+          "semantic": "opening_qty",
+          "raw": "45",
+          "normalized": 45.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Primary (Qty)",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "CB (Qty)",
+          "semantic": "closing_qty",
+          "raw": "35",
+          "normalized": 35.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Secondary Qty total",
+          "semantic": "unknown",
+          "raw": "10",
+          "normalized": 10.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Secondary Value",
+          "semantic": "not_quantity",
+          "raw": "1452.1",
+          "normalized": 1452.1,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r05",
+      "row_index": 5,
+      "product_name": {
+        "raw": "EVECARE SYRUP 400ml",
+        "normalized": "EVECARE SYRUP 400ml",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "MRP",
+          "semantic": "unknown",
+          "raw": "328",
+          "normalized": 328.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Secondary Rate",
+          "semantic": "not_quantity",
+          "raw": "221.54",
+          "normalized": 221.54,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "OB (Qty)",
+          "semantic": "opening_qty",
+          "raw": "15",
+          "normalized": 15.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Primary (Qty)",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "CB (Qty)",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Secondary Qty total",
+          "semantic": "unknown",
+          "raw": "15",
+          "normalized": 15.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Secondary Value",
+          "semantic": "not_quantity",
+          "raw": "3323.1",
+          "normalized": 3323.1,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r06",
+      "row_index": 6,
+      "product_name": {
+        "raw": "HIORA K MOUTH WASH 150ml INDIA",
+        "normalized": "HIORA K MOUTH WASH 150ml INDIA",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "MRP",
+          "semantic": "unknown",
+          "raw": "140",
+          "normalized": 140.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Secondary Rate",
+          "semantic": "not_quantity",
+          "raw": "84.15",
+          "normalized": 84.15,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "OB (Qty)",
+          "semantic": "opening_qty",
+          "raw": "20",
+          "normalized": 20.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Primary (Qty)",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "CB (Qty)",
+          "semantic": "closing_qty",
+          "raw": "20",
+          "normalized": 20.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Secondary Qty total",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Secondary Value",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r07",
+      "row_index": 7,
+      "product_name": {
+        "raw": "HIORA K TOOTHPASTE 100g",
+        "normalized": "HIORA K TOOTHPASTE 100g",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "MRP",
+          "semantic": "unknown",
+          "raw": "160",
+          "normalized": 160.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Secondary Rate",
+          "semantic": "not_quantity",
+          "raw": "108.06",
+          "normalized": 108.06,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "OB (Qty)",
+          "semantic": "opening_qty",
+          "raw": "65",
+          "normalized": 65.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Primary (Qty)",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "CB (Qty)",
+          "semantic": "closing_qty",
+          "raw": "55",
+          "normalized": 55.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Secondary Qty total",
+          "semantic": "unknown",
+          "raw": "10",
+          "normalized": 10.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Secondary Value",
+          "semantic": "not_quantity",
+          "raw": "1080.6",
+          "normalized": 1080.6,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r08",
+      "row_index": 8,
+      "product_name": {
+        "raw": "HIORA K TOOTHPASTE 50g",
+        "normalized": "HIORA K TOOTHPASTE 50g",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "MRP",
+          "semantic": "unknown",
+          "raw": "106",
+          "normalized": 106.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Secondary Rate",
+          "semantic": "not_quantity",
+          "raw": "71.59",
+          "normalized": 71.59,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "OB (Qty)",
+          "semantic": "opening_qty",
+          "raw": "34",
+          "normalized": 34.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Primary (Qty)",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "CB (Qty)",
+          "semantic": "closing_qty",
+          "raw": "30",
+          "normalized": 30.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Secondary Qty total",
+          "semantic": "unknown",
+          "raw": "4",
+          "normalized": 4.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Secondary Value",
+          "semantic": "not_quantity",
+          "raw": "286.36",
+          "normalized": 286.36,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r09",
+      "row_index": 9,
+      "product_name": {
+        "raw": "LIV.52 DS SYRUP 100ml",
+        "normalized": "LIV.52 DS SYRUP 100ml",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "MRP",
+          "semantic": "unknown",
+          "raw": "225",
+          "normalized": 225.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Secondary Rate",
+          "semantic": "not_quantity",
+          "raw": "151.96",
+          "normalized": 151.96,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "OB (Qty)",
+          "semantic": "opening_qty",
+          "raw": "45",
+          "normalized": 45.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Primary (Qty)",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "CB (Qty)",
+          "semantic": "closing_qty",
+          "raw": "35",
+          "normalized": 35.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Secondary Qty total",
+          "semantic": "unknown",
+          "raw": "10",
+          "normalized": 10.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Secondary Value",
+          "semantic": "not_quantity",
+          "raw": "1519.6",
+          "normalized": 1519.6,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r10",
+      "row_index": 10,
+      "product_name": {
+        "raw": "LIV.52 DS SYRUP 200ML IND",
+        "normalized": "LIV.52 DS SYRUP 200ML IND",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "MRP",
+          "semantic": "unknown",
+          "raw": "351",
+          "normalized": 351.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Secondary Rate",
+          "semantic": "not_quantity",
+          "raw": "237.07",
+          "normalized": 237.07,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "OB (Qty)",
+          "semantic": "opening_qty",
+          "raw": "55",
+          "normalized": 55.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Primary (Qty)",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "CB (Qty)",
+          "semantic": "closing_qty",
+          "raw": "45",
+          "normalized": 45.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Secondary Qty total",
+          "semantic": "unknown",
+          "raw": "10",
+          "normalized": 10.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Secondary Value",
+          "semantic": "not_quantity",
+          "raw": "2370.7",
+          "normalized": 2370.7,
+          "status": "uncertain"
+        }
+      ]
+    }
+  ],
+  "headers": [],
+  "notes": [
+    "AI_PROPOSED from the original image only. Not verified. Named quantities are set only when a printed header was copied. Blank cells were not stored as zero."
+  ],
+  "failure": null,
+  "vision_model": "gemini-2.5-flash",
+  "vision_input": "downscaled_2048",
+  "ocr_used_as_label": false
+}

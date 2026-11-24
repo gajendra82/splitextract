@@ -1,0 +1,21 @@
+{
+  "day4_baseline": {
+    "ran": 1259,
+    "skipped": 159,
+    "failures": 0,
+    "errors": 0,
+    "duration_s": 152.413
+  },
+  "day5_final": {
+    "ran": 1268,
+    "skipped": 159,
+    "failures": 0,
+    "errors": 0,
+    "duration_s": 153.269
+  },
+  "delta_ran": 9,
+  "delta_skipped": 0,
+  "new_tests": "tests/test_day5_final_audit.py (9 tests)",
+  "p0_fix": "sales_tesseract_slot swallowed body exceptions into a second yield; deadline cleanup RuntimeError",
+  "suite_ok": true
+}

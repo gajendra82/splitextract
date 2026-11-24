@@ -1,0 +1,208 @@
+{
+  "file": "0000702744_2026_08_ZL_22_410_02092026071330.jpg",
+  "path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000702744_2026_08_ZL_22_410_02092026071330.jpg",
+  "format": "gemini_extraction_fallback",
+  "api_method": "gemini_extraction_fallback",
+  "status": "FAIL",
+  "expected_rows": 23,
+  "extracted_rows": 0,
+  "matched_rows": 0,
+  "missing_rows": [
+    {
+      "product": "AACTARIL SOAP = @ ABANA TAB ALTHEA LOTION AMALAKI CAPS BAEL TAB @",
+      "opening_qty": 33,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "SLEMINOR CREAM ANTI ACNE CLARINA fe)",
+      "opening_qty": 96,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "CONFIDO TAB",
+      "opening_qty": 100,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "DIABECON DS TAB",
+      "opening_qty": 63,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "DIABECON TAB @ SYURP DIAREX",
+      "opening_qty": 51,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "DIAREX TAB",
+      "opening_qty": 60,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "HADJOD TABS @",
+      "opening_qty": 30,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "HAIR ZONE SOLU HEAL LIP 10GM 10",
+      "opening_qty": 96,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "HERBOLAX CAP p HERBOLAX TAB",
+      "opening_qty": 42,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "HIMCOLIN GEL KAPIKACHHU CAPS",
+      "opening_qty": 55,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "LIV 52 HB CAP LIV 52 SF SYP",
+      "opening_qty": 350,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "LIV-52 SYP",
+      "opening_qty": 29,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "iiv-52 syP",
+      "opening_qty": 24,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "LIV-52 TAB OPTHACARE E/E 2 DROP",
+      "opening_qty": 56,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "ORO-T ORAL RINSE 10°",
+      "opening_qty": 84,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "OXITARD CAPSULES",
+      "opening_qty": 200,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "cae , i ae ae ‘AB TAB 60’",
+      "opening_qty": 179,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "PILEX",
+      "opening_qty": 50,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": ") om ol ae a QUISTA ACTIVE (MIL 200 QUISTA DN (MILK MA 200 ) QUISTA DN VENILLA 400 RENALKA SYP 100 RENALKA SYP 200 y 60 S",
+      "opening_qty": 31,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "se ot TAGARA (VALERIAN) 60’ » Be",
+      "opening_qty": 27,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "He 120 TAB",
+      "opening_qty": 40,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "er ee 10 ) heals 200",
+      "opening_qty": 56,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "oe te TRIPHALA SYP 200 . TRIPHALA TAB 60).",
+      "opening_qty": 62,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    }
+  ],
+  "extra_rows": [],
+  "duplicates": [],
+  "mismatches": [],
+  "ocr_review": [],
+  "accounting": [],
+  "confidence": "medium",
+  "notes": [
+    "OCR used tesseract psm 6."
+  ],
+  "result_key": "0000702744_2026_08_ZL_22_410_02092026071330",
+  "unavailable_fields": {},
+  "formula_checked": "none"
+}

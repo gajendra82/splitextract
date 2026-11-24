@@ -1,0 +1,4569 @@
+{
+  "document_id": "0000715797_2026_08_ZA_12_8165_02092026163733.jpg",
+  "source_file": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000715797_2026_08_ZA_12_8165_02092026163733.jpg",
+  "source_file_exists": true,
+  "verification_status": "unverified",
+  "annotation_origin": "AI_PROPOSED",
+  "ai_generated": true,
+  "human_verified": false,
+  "rows": [
+    {
+      "row_id": "r01",
+      "row_index": 1,
+      "product_name": {
+        "raw": "Arjuna tablets",
+        "normalized": "Arjuna tablets",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60s",
+        "normalized": "60s",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "60",
+          "normalized": 60.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r02",
+      "row_index": 2,
+      "product_name": {
+        "raw": "Liv.52 DS syrup",
+        "normalized": "Liv.52 DS syrup",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200 ml",
+        "normalized": "200 ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "30+30=60",
+          "normalized": null,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r03",
+      "row_index": 3,
+      "product_name": {
+        "raw": "Bonnisan drops",
+        "normalized": "Bonnisan drops",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "30 ml",
+        "normalized": "30 ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "13",
+          "normalized": 13.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r04",
+      "row_index": 4,
+      "product_name": {
+        "raw": "Liv.52 DS tablets",
+        "normalized": "Liv.52 DS tablets",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60s",
+        "normalized": "60s",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "1248 (20)+20=40",
+          "normalized": null,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r05",
+      "row_index": 5,
+      "product_name": {
+        "raw": "Bonnisan liquid",
+        "normalized": "Bonnisan liquid",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "100 ml",
+        "normalized": "100 ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "20",
+          "normalized": 20.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r06",
+      "row_index": 6,
+      "product_name": {
+        "raw": "Liv.52 DS syrup (Sugar-free)",
+        "normalized": "Liv.52 DS syrup (Sugar-free)",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "100 ml",
+        "normalized": "100 ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "7",
+          "normalized": 7.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r07",
+      "row_index": 7,
+      "product_name": {
+        "raw": "Bonnisan liquid",
+        "normalized": "Bonnisan liquid",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200 ml",
+        "normalized": "200 ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "27",
+          "normalized": 27.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r08",
+      "row_index": 8,
+      "product_name": {
+        "raw": "Liv.52 DS syrup (Sugar-free)",
+        "normalized": "Liv.52 DS syrup (Sugar-free)",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200 ml",
+        "normalized": "200 ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "200",
+          "normalized": 200.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r09",
+      "row_index": 9,
+      "product_name": {
+        "raw": "Bonnispaz drops",
+        "normalized": "Bonnispaz drops",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "15 ml",
+        "normalized": "15 ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "42",
+          "normalized": 42.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": "144",
+          "normalized": 144.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r10",
+      "row_index": 10,
+      "product_name": {
+        "raw": "Lukol syrup",
+        "normalized": "Lukol syrup",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200 ml",
+        "normalized": "200 ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "5",
+          "normalized": 5.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r11",
+      "row_index": 11,
+      "product_name": {
+        "raw": "Bresol syrup",
+        "normalized": "Bresol syrup",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200 ml",
+        "normalized": "200 ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "20",
+          "normalized": 20.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r12",
+      "row_index": 12,
+      "product_name": {
+        "raw": "Lukol tablets",
+        "normalized": "Lukol tablets",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60s",
+        "normalized": "60s",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "7",
+          "normalized": 7.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r13",
+      "row_index": 13,
+      "product_name": {
+        "raw": "Bresol tablets",
+        "normalized": "Bresol tablets",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60s",
+        "normalized": "60s",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "3",
+          "normalized": 3.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r14",
+      "row_index": 14,
+      "product_name": {
+        "raw": "Menosan tablets",
+        "normalized": "Menosan tablets",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "30s",
+        "normalized": "30s",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "39",
+          "normalized": 39.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r15",
+      "row_index": 15,
+      "product_name": {
+        "raw": "Bresol-NS saline nasal solution",
+        "normalized": "Bresol-NS saline nasal solution",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "10 ml",
+        "normalized": "10 ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "20",
+          "normalized": 20.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r16",
+      "row_index": 16,
+      "product_name": {
+        "raw": "Mentat syrup",
+        "normalized": "Mentat syrup",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200 ml",
+        "normalized": "200 ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r17",
+      "row_index": 17,
+      "product_name": {
+        "raw": "Cystone forte tablets",
+        "normalized": "Cystone forte tablets",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "2x30s",
+        "normalized": "2x30s",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r18",
+      "row_index": 18,
+      "product_name": {
+        "raw": "Mentat tablets",
+        "normalized": "Mentat tablets",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60s",
+        "normalized": "60s",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "30+200=230",
+          "normalized": null,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r19",
+      "row_index": 19,
+      "product_name": {
+        "raw": "Cystone syrup",
+        "normalized": "Cystone syrup",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200 ml",
+        "normalized": "200 ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "40+28",
+          "normalized": null,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r20",
+      "row_index": 20,
+      "product_name": {
+        "raw": "Mentat gummies",
+        "normalized": "Mentat gummies",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "30s",
+        "normalized": "30s",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r21",
+      "row_index": 21,
+      "product_name": {
+        "raw": "Cystone tablets",
+        "normalized": "Cystone tablets",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60s",
+        "normalized": "60s",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r22",
+      "row_index": 22,
+      "product_name": {
+        "raw": "Mentat DS syrup (Sugar-free)",
+        "normalized": "Mentat DS syrup (Sugar-free)",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "100 ml",
+        "normalized": "100 ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r23",
+      "row_index": 23,
+      "product_name": {
+        "raw": "Cystone-SF liquid",
+        "normalized": "Cystone-SF liquid",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200 ml",
+        "normalized": "200 ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "25",
+          "normalized": 25.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r24",
+      "row_index": 24,
+      "product_name": {
+        "raw": "Meshashringi tablets",
+        "normalized": "Meshashringi tablets",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60s",
+        "normalized": "60s",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r25",
+      "row_index": 25,
+      "product_name": {
+        "raw": "Evecare capsules",
+        "normalized": "Evecare capsules",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "30s",
+        "normalized": "30s",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "66",
+          "normalized": 66.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r26",
+      "row_index": 26,
+      "product_name": {
+        "raw": "Methi tablets",
+        "normalized": "Methi tablets",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60s",
+        "normalized": "60s",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r27",
+      "row_index": 27,
+      "product_name": {
+        "raw": "Evecare syrup",
+        "normalized": "Evecare syrup",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200 ml",
+        "normalized": "200 ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "50",
+          "normalized": 50.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r28",
+      "row_index": 28,
+      "product_name": {
+        "raw": "Platenza syrup",
+        "normalized": "Platenza syrup",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "100 ml",
+        "normalized": "100 ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "40",
+          "normalized": 40.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r29",
+      "row_index": 29,
+      "product_name": {
+        "raw": "Evecare syrup",
+        "normalized": "Evecare syrup",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "400 ml",
+        "normalized": "400 ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "8+12",
+          "normalized": null,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": "20",
+          "normalized": 20.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r30",
+      "row_index": 30,
+      "product_name": {
+        "raw": "Platenza tablets",
+        "normalized": "Platenza tablets",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "3x20s",
+        "normalized": "3x20s",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "35",
+          "normalized": 35.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r31",
+      "row_index": 31,
+      "product_name": {
+        "raw": "Evecare forte liquid",
+        "normalized": "Evecare forte liquid",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200 ml",
+        "normalized": "200 ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "84",
+          "normalized": 84.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r32",
+      "row_index": 32,
+      "product_name": {
+        "raw": "Punarnava tablets",
+        "normalized": "Punarnava tablets",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60s",
+        "normalized": "60s",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "1 case",
+          "normalized": null,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r33",
+      "row_index": 33,
+      "product_name": {
+        "raw": "Evecare forte tablets",
+        "normalized": "Evecare forte tablets",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "3x10s",
+        "normalized": "3x10s",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "84",
+          "normalized": 84.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r34",
+      "row_index": 34,
+      "product_name": {
+        "raw": "PureHands Advanced (Blue)",
+        "normalized": "PureHands Advanced (Blue)",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "500 ml",
+        "normalized": "500 ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "10",
+          "normalized": 10.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r35",
+      "row_index": 35,
+      "product_name": {
+        "raw": "Florasante capsules",
+        "normalized": "Florasante capsules",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "10s",
+        "normalized": "10s",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "28",
+          "normalized": 28.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r36",
+      "row_index": 36,
+      "product_name": {
+        "raw": "Quista kidz (Chocolate)",
+        "normalized": "Quista kidz (Chocolate)",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200 g",
+        "normalized": "200 g",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "10",
+          "normalized": 10.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r37",
+      "row_index": 37,
+      "product_name": {
+        "raw": "Geriforte syrup",
+        "normalized": "Geriforte syrup",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200 ml",
+        "normalized": "200 ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "84",
+          "normalized": 84.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r38",
+      "row_index": 38,
+      "product_name": {
+        "raw": "Quista kidz (Vanilla)",
+        "normalized": "Quista kidz (Vanilla)",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200 g",
+        "normalized": "200 g",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r39",
+      "row_index": 39,
+      "product_name": {
+        "raw": "Geriforte tablets",
+        "normalized": "Geriforte tablets",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60s",
+        "normalized": "60s",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "40",
+          "normalized": 40.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r40",
+      "row_index": 40,
+      "product_name": {
+        "raw": "Reosto tablets",
+        "normalized": "Reosto tablets",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "30s",
+        "normalized": "30s",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "1 case",
+          "normalized": null,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r41",
+      "row_index": 41,
+      "product_name": {
+        "raw": "Haridra tablets",
+        "normalized": "Haridra tablets",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60s",
+        "normalized": "60s",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r42",
+      "row_index": 42,
+      "product_name": {
+        "raw": "Septilin syrup",
+        "normalized": "Septilin syrup",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200 ml",
+        "normalized": "200 ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "25",
+          "normalized": 25.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r43",
+      "row_index": 43,
+      "product_name": {
+        "raw": "Himcospaz capsules",
+        "normalized": "Himcospaz capsules",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "10s",
+        "normalized": "10s",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r44",
+      "row_index": 44,
+      "product_name": {
+        "raw": "Septilin tablets",
+        "normalized": "Septilin tablets",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60s",
+        "normalized": "60s",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "48",
+          "normalized": 48.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r45",
+      "row_index": 45,
+      "product_name": {
+        "raw": "Himplasia tablets",
+        "normalized": "Himplasia tablets",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "2x30s",
+        "normalized": "2x30s",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "50",
+          "normalized": 50.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r46",
+      "row_index": 46,
+      "product_name": {
+        "raw": "Septilin gummies",
+        "normalized": "Septilin gummies",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "30s",
+        "normalized": "30s",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r47",
+      "row_index": 47,
+      "product_name": {
+        "raw": "HiOra-D toothpaste",
+        "normalized": "HiOra-D toothpaste",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "100 g",
+        "normalized": "100 g",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "35",
+          "normalized": 35.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r48",
+      "row_index": 48,
+      "product_name": {
+        "raw": "Serpina tablets",
+        "normalized": "Serpina tablets",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "100s",
+        "normalized": "100s",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r49",
+      "row_index": 49,
+      "product_name": {
+        "raw": "HiOra-GA gel",
+        "normalized": "HiOra-GA gel",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "15 ml",
+        "normalized": "15 ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r50",
+      "row_index": 50,
+      "product_name": {
+        "raw": "Shatavari tablets",
+        "normalized": "Shatavari tablets",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60s",
+        "normalized": "60s",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r51",
+      "row_index": 51,
+      "product_name": {
+        "raw": "HiOra-K mouthwash",
+        "normalized": "HiOra-K mouthwash",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "150 ml",
+        "normalized": "150 ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "10+100=110",
+          "normalized": null,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r52",
+      "row_index": 52,
+      "product_name": {
+        "raw": "Shuddha-Guggulu tablets",
+        "normalized": "Shuddha-Guggulu tablets",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60s",
+        "normalized": "60s",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r53",
+      "row_index": 53,
+      "product_name": {
+        "raw": "HiOra-K toothpaste",
+        "normalized": "HiOra-K toothpaste",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "100 g",
+        "normalized": "100 g",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "25",
+          "normalized": 25.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r54",
+      "row_index": 54,
+      "product_name": {
+        "raw": "Speman tablets",
+        "normalized": "Speman tablets",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60s",
+        "normalized": "60s",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "39+50=89",
+          "normalized": null,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r55",
+      "row_index": 55,
+      "product_name": {
+        "raw": "HiOra-K toothpaste",
+        "normalized": "HiOra-K toothpaste",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "50 g",
+        "normalized": "50 g",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "25",
+          "normalized": 25.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r56",
+      "row_index": 56,
+      "product_name": {
+        "raw": "Styplon tablets",
+        "normalized": "Styplon tablets",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "30s",
+        "normalized": "30s",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r57",
+      "row_index": 57,
+      "product_name": {
+        "raw": "HiOra-SG gel",
+        "normalized": "HiOra-SG gel",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "10 g",
+        "normalized": "10 g",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r58",
+      "row_index": 58,
+      "product_name": {
+        "raw": "V-Gel",
+        "normalized": "V-Gel",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "30 g",
+        "normalized": "30 g",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r59",
+      "row_index": 59,
+      "product_name": {
+        "raw": "Immusante tablets",
+        "normalized": "Immusante tablets",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "20s",
+        "normalized": "20s",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r60",
+      "row_index": 60,
+      "product_name": {
+        "raw": "galactogua 20gm",
+        "normalized": "galactogua 20gm",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "10",
+          "normalized": 10.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": "10",
+          "normalized": 10.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r61",
+      "row_index": 61,
+      "product_name": {
+        "raw": "Karela tablets",
+        "normalized": "Karela tablets",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60s",
+        "normalized": "60s",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r62",
+      "row_index": 62,
+      "product_name": {
+        "raw": "Lasuna tablets",
+        "normalized": "Lasuna tablets",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60s",
+        "normalized": "60s",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r63",
+      "row_index": 63,
+      "product_name": {
+        "raw": "Liv.52 drops",
+        "normalized": "Liv.52 drops",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60 ml",
+        "normalized": "60 ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "15",
+          "normalized": 15.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r64",
+      "row_index": 64,
+      "product_name": {
+        "raw": "Liv.52 drops",
+        "normalized": "Liv.52 drops",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "100 ml",
+        "normalized": "100 ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "5+10 (80)",
+          "normalized": null,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r65",
+      "row_index": 65,
+      "product_name": {
+        "raw": "Liv.52 DS syrup",
+        "normalized": "Liv.52 DS syrup",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "100 ml",
+        "normalized": "100 ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Qty.",
+          "semantic": "unknown",
+          "raw": "50",
+          "normalized": 50.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Value Rs.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Value P.",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    }
+  ],
+  "headers": [],
+  "notes": [
+    "AI_PROPOSED from the original image only. Not verified. Named quantities are set only when a printed header was copied. Blank cells were not stored as zero."
+  ],
+  "failure": null,
+  "vision_model": "gemini-2.5-flash",
+  "vision_input": "original",
+  "ocr_used_as_label": false
+}

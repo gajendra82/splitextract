@@ -1,0 +1,96 @@
+{
+  "file": "0000702878_2026_08_ZL_22_411_02092026054946.jpeg",
+  "path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000702878_2026_08_ZL_22_411_02092026054946.jpeg",
+  "format": "gemini_extraction_fallback",
+  "api_method": "gemini_extraction_fallback",
+  "status": "FAIL",
+  "expected_rows": 9,
+  "extracted_rows": 0,
+  "matched_rows": 0,
+  "missing_rows": [
+    {
+      "product": "ABANA TAB",
+      "opening_qty": 80,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "CHIROPEX CREAM CONFIDO",
+      "opening_qty": 0,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "DIABECON DS TAB",
+      "opening_qty": 60,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "DIABECON TAB",
+      "opening_qty": 6,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "HIMCOLIN GEL LIV 52 SYP",
+      "opening_qty": 110,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "LIV 52 TAB",
+      "opening_qty": 9,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "OPTHACARE EYE PILEX FORTE OIN PILEX FORTE TAB PILEX TAB",
+      "opening_qty": 0,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "PURIM TAB",
+      "opening_qty": 0,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "TENTEX FORTE TAB",
+      "opening_qty": 20,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    }
+  ],
+  "extra_rows": [],
+  "duplicates": [],
+  "mismatches": [],
+  "ocr_review": [],
+  "accounting": [],
+  "confidence": "medium",
+  "notes": [
+    "OCR used tesseract psm 6."
+  ],
+  "result_key": "0000702878_2026_08_ZL_22_411_02092026054946",
+  "unavailable_fields": {},
+  "formula_checked": "none"
+}

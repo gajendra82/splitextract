@@ -1,0 +1,38 @@
+{
+  "document_id": "0000700398_2026_08_ZL_18_377_01092026063708.pdf",
+  "relative_path": "0000700398_2026_08_ZL_18_377_01092026063708.pdf",
+  "source_path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700398_2026_08_ZL_18_377_01092026063708.pdf",
+  "file_type": "pdf",
+  "pdf_kind": "digital",
+  "manifest_ocr_required": false,
+  "engine": "paddleocr-vl-1.6",
+  "model": "PaddleOCR-VL-1.6",
+  "model_version": "v1.6",
+  "started_at": "2026-10-08T12:02:03.626968+00:00",
+  "pages": [
+    {
+      "page": 1,
+      "status": "skipped_native_text",
+      "paddle_vl_status": "skipped_native_text",
+      "native_text": true,
+      "ocr_required": false,
+      "engine": "paddleocr-vl-1.6",
+      "latency_ms": 4.595600000129707,
+      "embedded_text_chars": 1064,
+      "reason": "native_text",
+      "page_count": 1
+    }
+  ],
+  "status": "success",
+  "errors": [],
+  "latency_ms": 26.212199999918084,
+  "finished_at": "2026-10-08T12:02:03.652393+00:00",
+  "resources": {
+    "cpu_percent": 10.0,
+    "ram_used_gb": 11.07,
+    "ram_total_gb": 15.31,
+    "gpu": "NVIDIA GeForce RTX 3050 6GB Laptop GPU",
+    "vram_used_gb": 7.095,
+    "vram_total_gb": 6.0
+  }
+}

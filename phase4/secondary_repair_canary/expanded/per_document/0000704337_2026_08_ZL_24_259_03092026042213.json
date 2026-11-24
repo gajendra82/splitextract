@@ -1,0 +1,240 @@
+{
+  "document_id": "0000704337_2026_08_ZL_24_259_03092026042213.pdf",
+  "role": "ordinary",
+  "source_path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000704337_2026_08_ZL_24_259_03092026042213.pdf",
+  "off": {
+    "correct_count": 12,
+    "field_count": 12,
+    "silent_wrong_count": 0,
+    "missing_count": 0,
+    "secondary_ocr_ms": 6.4,
+    "pipeline_helper_ms": 7.1,
+    "text_sha": "5044c40489d6aa09",
+    "repair_report": {
+      "document_id": "0000704337_2026_08_ZL_24_259_03092026042213.pdf",
+      "repairs": [],
+      "unresolved": [
+        {
+          "reason": "secondary_repair_disabled"
+        }
+      ]
+    }
+  },
+  "on": {
+    "correct_count": 12,
+    "field_count": 12,
+    "silent_wrong_count": 0,
+    "missing_count": 0,
+    "secondary_ocr_ms": 1520.6,
+    "pipeline_helper_ms": 1486.2,
+    "text_sha": "5044c40489d6aa09",
+    "repair_report": {
+      "document_id": "0000704337_2026_08_ZL_24_259_03092026042213.pdf",
+      "repairs": [],
+      "unresolved": [
+        {
+          "reason": "total_footer_layout_not_himalaya_qty"
+        }
+      ]
+    },
+    "pipeline_text_matches": true
+  },
+  "deltas": [],
+  "repair_types_on": [],
+  "matches_off": [
+    {
+      "field_id": "h_order",
+      "expected_raw": "ORDER FORM",
+      "predicted_raw": "ORDER FORM",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_qty",
+      "expected_raw": "Qty.",
+      "predicted_raw": "Qty.",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "aact_qty",
+      "expected_raw": "80",
+      "predicted_raw": "80",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "clar_qty",
+      "expected_raw": "1",
+      "predicted_raw": "1",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "conf_qty",
+      "expected_raw": "2",
+      "predicted_raw": "2",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "diab_qty",
+      "expected_raw": "10",
+      "predicted_raw": "10",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv_syp_qty",
+      "expected_raw": "80",
+      "predicted_raw": "80",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv_tab_qty",
+      "expected_raw": "20",
+      "predicted_raw": "20",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "oph_qty",
+      "expected_raw": "5",
+      "predicted_raw": "5",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "oxi_qty",
+      "expected_raw": "120",
+      "predicted_raw": "120",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "pilex_oint_qty",
+      "expected_raw": "10",
+      "predicted_raw": "10",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "pilex_tab_qty",
+      "expected_raw": "10",
+      "predicted_raw": "10",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    }
+  ],
+  "matches_on": [
+    {
+      "field_id": "h_order",
+      "expected_raw": "ORDER FORM",
+      "predicted_raw": "ORDER FORM",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_qty",
+      "expected_raw": "Qty.",
+      "predicted_raw": "Qty.",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "aact_qty",
+      "expected_raw": "80",
+      "predicted_raw": "80",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "clar_qty",
+      "expected_raw": "1",
+      "predicted_raw": "1",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "conf_qty",
+      "expected_raw": "2",
+      "predicted_raw": "2",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "diab_qty",
+      "expected_raw": "10",
+      "predicted_raw": "10",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv_syp_qty",
+      "expected_raw": "80",
+      "predicted_raw": "80",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv_tab_qty",
+      "expected_raw": "20",
+      "predicted_raw": "20",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "oph_qty",
+      "expected_raw": "5",
+      "predicted_raw": "5",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "oxi_qty",
+      "expected_raw": "120",
+      "predicted_raw": "120",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "pilex_oint_qty",
+      "expected_raw": "10",
+      "predicted_raw": "10",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "pilex_tab_qty",
+      "expected_raw": "10",
+      "predicted_raw": "10",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    }
+  ]
+}

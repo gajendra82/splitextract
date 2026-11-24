@@ -1,0 +1,8 @@
+{
+  "document_id": "0000728222_2026_08_ZA_24_292_04092026151723.jpg",
+  "sha256": "fc8f5a91643b98cdad99d14647c4443cfcdc79b19f766318d3021634863cba23",
+  "engine": "paddleocr-vl-1.6",
+  "text": "<table><tr><td>MEDICINE MART</td><td>7000000</td><td>BOONIKAN ILODS 100ml</td><td>98</td><td>661.65</td><td>1.00</td><td>0.0</td></tr></table>\nAnkur Ko Bread",
+  "text_len": 157,
+  "status": "success"
+}

@@ -1,0 +1,150 @@
+{
+  "title": "SalesExtractionOutput",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "header": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "stockist_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "stockist_address": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "company_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "period_from": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "period_to": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "report_title": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "line_items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "fixed": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "product_name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "product_code": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "packing": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "opening_qty": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "receipts_qty": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "sales_qty": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "closing_qty": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "opening_value": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "receipts_value": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "sales_value": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "closing_value": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              }
+            }
+          },
+          "dynamic": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "fixed"
+        ]
+      }
+    },
+    "totals": {
+      "type": "object",
+      "additionalProperties": {
+        "type": [
+          "number",
+          "null"
+        ]
+      }
+    },
+    "dynamic": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  }
+}

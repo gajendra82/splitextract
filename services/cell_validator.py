@@ -99,25 +99,38 @@ def validate_critical_cells(
 ) -> CellValidationReport:
     """Validate critical quantities against no-guessing + geometry rules."""
     report = CellValidationReport()
-    report.column_report = column_report_for_result(
-        result, headers=column_headers, cells=column_cells
-    )
-    if report.column_report.has_column_confusion:
-        report.issues.append(
-            CellIssue(
-                field="column_mapping",
-                category="COLUMN_CONFUSION",
-                message="ambiguous or shifted column mapping",
-            )
+    extra = ((result.get("totals") or {}).get("extra") or {})
+    method = str(extra.get("extraction_method") or "")
+    skip_spatial = method == "vl_html_table_parse"
+    if skip_spatial:
+        # Headers are explicit in VL HTML; spatial geometry N/A.
+        from services.column_geometry import ColumnMappingReport
+
+        report.column_report = ColumnMappingReport(
+            issues=[],
+            layout_id=method or "vl_html_table_parse",
+            mapping_confidence=1.0,
         )
-    if report.column_report.ambiguous_fields:
-        report.issues.append(
-            CellIssue(
-                field="column_mapping",
-                category="AMBIGUOUS_MAPPING",
-                message=",".join(report.column_report.ambiguous_fields),
-            )
+    else:
+        report.column_report = column_report_for_result(
+            result, headers=column_headers, cells=column_cells
         )
+        if report.column_report.has_column_confusion:
+            report.issues.append(
+                CellIssue(
+                    field="column_mapping",
+                    category="COLUMN_CONFUSION",
+                    message="ambiguous or shifted column mapping",
+                )
+            )
+        if report.column_report.ambiguous_fields:
+            report.issues.append(
+                CellIssue(
+                    field="column_mapping",
+                    category="AMBIGUOUS_MAPPING",
+                    message=",".join(report.column_report.ambiguous_fields),
+                )
+            )
 
     if unverified_ocr_fallback:
         report.issues.append(
@@ -137,7 +150,7 @@ def validate_critical_cells(
         )
 
     if ocr_evidence:
-        report.issues.extend(_ocr_page_issues(ocr_evidence))
+        report.issues.extend(_ocr_page_issues(ocr_evidence, result=result))
 
     items = _line_items(result)
     for item in items:
@@ -275,7 +288,17 @@ def _numeric_cell_issue(
     return None
 
 
-def _ocr_page_issues(ocr_evidence: Dict[str, Any]) -> List[CellIssue]:
+def _ocr_page_issues(
+    ocr_evidence: Dict[str, Any],
+    *,
+    result: Optional[Dict[str, Any]] = None,
+) -> List[CellIssue]:
+    """Flag empty/failed OCR pages — unless VL table HTML evidence exists."""
+    from services.source_evidence import has_valid_source_evidence
+
+    if has_valid_source_evidence(extraction_result=result):
+        return []
+
     issues: List[CellIssue] = []
     pages = ocr_evidence.get("pages") if isinstance(ocr_evidence, dict) else None
     if not isinstance(pages, list):

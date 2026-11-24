@@ -1,0 +1,396 @@
+{
+  "document_id": "0000701851_2026_08_ZL_20_302_03092026134940.jpg",
+  "role": "compatible_himalaya_qty",
+  "source_path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000701851_2026_08_ZL_20_302_03092026134940.jpg",
+  "off": {
+    "correct_count": 22,
+    "field_count": 22,
+    "silent_wrong_count": 0,
+    "missing_count": 0,
+    "secondary_ocr_ms": 5.4,
+    "pipeline_helper_ms": 5.9,
+    "text_sha": "11b37f2b7cfa7795",
+    "repair_report": {
+      "document_id": "0000701851_2026_08_ZL_20_302_03092026134940.jpg",
+      "repairs": [],
+      "unresolved": [
+        {
+          "reason": "secondary_repair_disabled"
+        }
+      ]
+    }
+  },
+  "on": {
+    "correct_count": 22,
+    "field_count": 22,
+    "silent_wrong_count": 0,
+    "missing_count": 0,
+    "secondary_ocr_ms": 1508.8,
+    "pipeline_helper_ms": 1524.3,
+    "text_sha": "11b37f2b7cfa7795",
+    "repair_report": {
+      "document_id": "0000701851_2026_08_ZL_20_302_03092026134940.jpg",
+      "repairs": [],
+      "unresolved": []
+    },
+    "pipeline_text_matches": true
+  },
+  "deltas": [],
+  "repair_types_on": [],
+  "matches_off": [
+    {
+      "field_id": "vendor",
+      "expected_raw": "HINDUSTAN DRUG SUPPLIERS",
+      "predicted_raw": "HINDUSTAN DRUG SUPPLIERS",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_op",
+      "expected_raw": "Op.Bal. Qty.",
+      "predicted_raw": "Op.Bal. Qty.",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_iss",
+      "expected_raw": "Issue Qty.",
+      "predicted_raw": "Issue Qty.",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_cl",
+      "expected_raw": "Closing Balance",
+      "predicted_raw": "Closing Balance",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "aact_op",
+      "expected_raw": "5",
+      "predicted_raw": "5",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "aact_rec",
+      "expected_raw": "72",
+      "predicted_raw": "72",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "aact_tot",
+      "expected_raw": "77",
+      "predicted_raw": "77",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "aact_cl",
+      "expected_raw": "77",
+      "predicted_raw": "77",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "abana_op",
+      "expected_raw": "71",
+      "predicted_raw": "71",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "abana_iss",
+      "expected_raw": "4",
+      "predicted_raw": "4",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "abana_cl",
+      "expected_raw": "67",
+      "predicted_raw": "67",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "livhb_op",
+      "expected_raw": "80",
+      "predicted_raw": "80",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "livhb_rec",
+      "expected_raw": "84",
+      "predicted_raw": "84",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "livhb_iss",
+      "expected_raw": "75",
+      "predicted_raw": "75",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "livhb_cl",
+      "expected_raw": "89",
+      "predicted_raw": "89",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv200_op",
+      "expected_raw": "120",
+      "predicted_raw": "120",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv200_rec",
+      "expected_raw": "525",
+      "predicted_raw": "525",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv200_iss",
+      "expected_raw": "441",
+      "predicted_raw": "441",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv200_cl",
+      "expected_raw": "204",
+      "predicted_raw": "204",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tent_op",
+      "expected_raw": "180",
+      "predicted_raw": "180",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tent_iss",
+      "expected_raw": "65",
+      "predicted_raw": "65",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tent_cl",
+      "expected_raw": "115",
+      "predicted_raw": "115",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    }
+  ],
+  "matches_on": [
+    {
+      "field_id": "vendor",
+      "expected_raw": "HINDUSTAN DRUG SUPPLIERS",
+      "predicted_raw": "HINDUSTAN DRUG SUPPLIERS",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_op",
+      "expected_raw": "Op.Bal. Qty.",
+      "predicted_raw": "Op.Bal. Qty.",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_iss",
+      "expected_raw": "Issue Qty.",
+      "predicted_raw": "Issue Qty.",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_cl",
+      "expected_raw": "Closing Balance",
+      "predicted_raw": "Closing Balance",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "aact_op",
+      "expected_raw": "5",
+      "predicted_raw": "5",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "aact_rec",
+      "expected_raw": "72",
+      "predicted_raw": "72",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "aact_tot",
+      "expected_raw": "77",
+      "predicted_raw": "77",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "aact_cl",
+      "expected_raw": "77",
+      "predicted_raw": "77",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "abana_op",
+      "expected_raw": "71",
+      "predicted_raw": "71",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "abana_iss",
+      "expected_raw": "4",
+      "predicted_raw": "4",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "abana_cl",
+      "expected_raw": "67",
+      "predicted_raw": "67",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "livhb_op",
+      "expected_raw": "80",
+      "predicted_raw": "80",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "livhb_rec",
+      "expected_raw": "84",
+      "predicted_raw": "84",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "livhb_iss",
+      "expected_raw": "75",
+      "predicted_raw": "75",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "livhb_cl",
+      "expected_raw": "89",
+      "predicted_raw": "89",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv200_op",
+      "expected_raw": "120",
+      "predicted_raw": "120",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv200_rec",
+      "expected_raw": "525",
+      "predicted_raw": "525",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv200_iss",
+      "expected_raw": "441",
+      "predicted_raw": "441",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv200_cl",
+      "expected_raw": "204",
+      "predicted_raw": "204",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tent_op",
+      "expected_raw": "180",
+      "predicted_raw": "180",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tent_iss",
+      "expected_raw": "65",
+      "predicted_raw": "65",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tent_cl",
+      "expected_raw": "115",
+      "predicted_raw": "115",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    }
+  ]
+}

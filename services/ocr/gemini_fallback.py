@@ -17,9 +17,18 @@ from services.ocr.base import OCREngine, OCRResult
 logger = logging.getLogger(__name__)
 
 _PROMPT = (
-    "Transcribe this document image into plain text. Keep the printed line breaks. "
-    "Copy only text that is visible. Do not calculate missing numbers and do not "
-    "treat a blank cell as zero. Return only the transcription."
+    "Transcribe this stock/sales statement image into plain text only.\n"
+    "Rules:\n"
+    "- First copy header banners (stockist, company, period) as printed.\n"
+    "- Then emit the table as pipe-separated rows with EXACTLY the same "
+    "number of columns on every row as the header row.\n"
+    "- Header example: Product Name|Pack|LstSL|Open|Recd.|Sales|Close|Order|Pend\n"
+    "- Preserve EVERY printed column header. Keep empty/dashed cells as '-' "
+    "(never omit a cell; never shift later values left into another column).\n"
+    "- Copy only visible text and numbers. Do not invent, calculate, round, "
+    "or reconcile quantities. Never write 0 for a blank/dashed cell.\n"
+    "- Do not classify stockist vs company and do not add commentary.\n"
+    "Return only the transcription."
 )
 
 
@@ -47,6 +56,63 @@ def _response_text(response: Any) -> str:
     content = (candidates[0] or {}).get("content") or {}
     parts = content.get("parts") or [{}]
     return str((parts[0] or {}).get("text") or "")
+
+
+def validate_pipe_table_alignment(text: str) -> dict:
+    """Check pipe-separated table rows keep a stable column count.
+
+    Does not invent missing cells. Flags ambiguous rows when a data row's
+    column count differs from the header (shifted empties).
+    """
+    import re
+
+    lines = [ln.strip() for ln in str(text or "").splitlines() if ln.strip()]
+    pipe_rows = [ln for ln in lines if ln.count("|") >= 2]
+    meta: dict = {
+        "pipe_table_detected": bool(pipe_rows),
+        "column_alignment_ok": True,
+        "ambiguous_rows": [],
+        "expected_columns": None,
+        "checked_rows": 0,
+    }
+    if not pipe_rows:
+        # Free-text fallback: detect likely qty-token undercount vs header words.
+        header = next(
+            (
+                ln
+                for ln in lines
+                if re.search(r"(?i)\bopen\b", ln)
+                and re.search(r"(?i)\b(?:recd|sales|close)\b", ln)
+            ),
+            None,
+        )
+        if not header:
+            meta["column_alignment_ok"] = False
+            meta["reason"] = "no_pipe_table_or_header"
+            return meta
+        expected = len(re.findall(r"[A-Za-z][A-Za-z./]*", header))
+        meta["expected_columns"] = expected
+        meta["column_alignment_ok"] = False
+        meta["reason"] = "non_pipe_transcription_unverified"
+        return meta
+
+    header_cols = [c.strip() for c in pipe_rows[0].split("|")]
+    expected = len(header_cols)
+    meta["expected_columns"] = expected
+    for index, row in enumerate(pipe_rows[1:], start=2):
+        cols = [c.strip() for c in row.split("|")]
+        meta["checked_rows"] += 1
+        if len(cols) != expected:
+            meta["column_alignment_ok"] = False
+            meta["ambiguous_rows"].append(
+                {
+                    "line": index,
+                    "columns": len(cols),
+                    "expected": expected,
+                    "preview": row[:120],
+                }
+            )
+    return meta
 
 
 def _default_invoke(image_bytes: bytes, timeout: float) -> str:
@@ -150,16 +216,28 @@ class GeminiOCRFallback(OCREngine):
                 engine=self.name,
                 metadata={**base, "status": "error", "error": "empty_output"},
             )
+        alignment = validate_pipe_table_alignment(cleaned)
+        meta = {
+            **base,
+            "status": "success",
+            "model": os.getenv("VISION_MODEL", "gemini-2.5-flash-lite"),
+            "source": "gemini_ocr_fallback",
+            "column_alignment": alignment,
+        }
+        if not alignment.get("column_alignment_ok"):
+            meta["column_alignment_ambiguous"] = True
+            meta["unverified_fallback"] = True
+            logger.warning(
+                "gemini OCR column alignment ambiguous page=%s ambiguous_rows=%s reason=%s",
+                page,
+                len(alignment.get("ambiguous_rows") or []),
+                alignment.get("reason"),
+            )
         return OCRResult(
             text=cleaned,
             words=[],
             confidence=None,
             page=page,
             engine=self.name,
-            metadata={
-                **base,
-                "status": "success",
-                "model": os.getenv("VISION_MODEL", "gemini-2.5-flash-lite"),
-                "source": "gemini_ocr_fallback",
-            },
+            metadata=meta,
         )

@@ -1,0 +1,1158 @@
+{
+  "engine": "paddleocr-vl-1.6",
+  "documents": 20,
+  "before_gate": {
+    "verified_fields": 388,
+    "correct_fields": 385,
+    "field_accuracy": 0.9922680412371134,
+    "numeric_accuracy": 0.9935897435897436,
+    "quantity_accuracy": 0.9930555555555556,
+    "price_accuracy": 1.0,
+    "date_accuracy": 1.0,
+    "batch_accuracy": null,
+    "header_accuracy": 0.9824561403508771,
+    "table_column_accuracy": 0.9935275080906149,
+    "text_accuracy": 0.9868421052631579,
+    "precision": 1.0,
+    "recall": 0.9922680412371134,
+    "f1": 0.9961190168175938,
+    "silent_wrong_rate": 0.0,
+    "silent_wrong_count": 0,
+    "silent_wrong_denominator_verified_fields": 388,
+    "accepted_field_silent_wrong_rate": 0.0,
+    "accepted_field_silent_wrong_count": 0,
+    "accepted_field_denominator": 385,
+    "explicit_unresolved_rate": 0.0,
+    "missing_value_rate": 0.007731958762886598,
+    "critical_error_rate": 0.005154639175257732,
+    "by_type_prf": {
+      "numeric": {
+        "precision": 1.0,
+        "recall": 0.9935897435897436,
+        "f1": 0.9967845659163987,
+        "n": 312
+      },
+      "text": {
+        "precision": 1.0,
+        "recall": 0.9868421052631579,
+        "f1": 0.9933774834437086,
+        "n": 76
+      },
+      "table": {
+        "precision": 1.0,
+        "recall": 0.9935275080906149,
+        "f1": 0.9967532467532468,
+        "n": 309
+      }
+    },
+    "error_type_counts": {
+      "MISSING": 3
+    }
+  },
+  "after_gate": {
+    "verified_fields": 388,
+    "correct_fields": 385,
+    "field_accuracy": 0.9922680412371134,
+    "numeric_accuracy": 0.9935897435897436,
+    "quantity_accuracy": 0.9930555555555556,
+    "price_accuracy": 1.0,
+    "date_accuracy": 1.0,
+    "batch_accuracy": null,
+    "header_accuracy": 0.9824561403508771,
+    "table_column_accuracy": 0.9935275080906149,
+    "text_accuracy": 0.9868421052631579,
+    "precision": 1.0,
+    "recall": 0.9922680412371134,
+    "f1": 0.9961190168175938,
+    "silent_wrong_rate": 0.0,
+    "silent_wrong_count": 0,
+    "silent_wrong_denominator_verified_fields": 388,
+    "accepted_field_silent_wrong_rate": 0.0,
+    "accepted_field_silent_wrong_count": 0,
+    "accepted_field_denominator": 385,
+    "explicit_unresolved_rate": 0.0,
+    "missing_value_rate": 0.007731958762886598,
+    "critical_error_rate": 0.005154639175257732,
+    "by_type_prf": {
+      "numeric": {
+        "precision": 1.0,
+        "recall": 0.9935897435897436,
+        "f1": 0.9967845659163987,
+        "n": 312
+      },
+      "text": {
+        "precision": 1.0,
+        "recall": 0.9868421052631579,
+        "f1": 0.9933774834437086,
+        "n": 76
+      },
+      "table": {
+        "precision": 1.0,
+        "recall": 0.9935275080906149,
+        "f1": 0.9967532467532468,
+        "n": 309
+      }
+    },
+    "error_type_counts": {
+      "MISSING": 3
+    }
+  },
+  "gated_former_silent_wrong": 0,
+  "remaining_silent_wrong": 0,
+  "per_document": [
+    {
+      "document_id": "0000700084_2026_08_ZL_06_8236_03092026155136.pdf",
+      "status": "FULLY_CORRECT",
+      "n_fields": 15,
+      "correct": 15,
+      "metrics": {
+        "verified_fields": 15,
+        "correct_fields": 15,
+        "field_accuracy": 1.0,
+        "numeric_accuracy": 1.0,
+        "quantity_accuracy": 1.0,
+        "price_accuracy": 1.0,
+        "date_accuracy": 1.0,
+        "batch_accuracy": null,
+        "header_accuracy": 1.0,
+        "table_column_accuracy": 1.0,
+        "text_accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "silent_wrong_rate": 0.0,
+        "silent_wrong_count": 0,
+        "silent_wrong_denominator_verified_fields": 15,
+        "accepted_field_silent_wrong_rate": 0.0,
+        "accepted_field_silent_wrong_count": 0,
+        "accepted_field_denominator": 15,
+        "explicit_unresolved_rate": 0.0,
+        "missing_value_rate": 0.0,
+        "critical_error_rate": 0.0,
+        "by_type_prf": {
+          "numeric": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 11
+          },
+          "text": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 4
+          },
+          "table": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 10
+          }
+        },
+        "error_type_counts": {}
+      }
+    },
+    {
+      "document_id": "0000700124_2026_08_ZL_06_521_02092026204703.pdf",
+      "status": "PARTIALLY_CORRECT",
+      "n_fields": 12,
+      "correct": 11,
+      "metrics": {
+        "verified_fields": 12,
+        "correct_fields": 11,
+        "field_accuracy": 0.9166666666666666,
+        "numeric_accuracy": 1.0,
+        "quantity_accuracy": 1.0,
+        "price_accuracy": null,
+        "date_accuracy": null,
+        "batch_accuracy": null,
+        "header_accuracy": 0.6666666666666666,
+        "table_column_accuracy": 1.0,
+        "text_accuracy": 0.75,
+        "precision": 1.0,
+        "recall": 0.9166666666666666,
+        "f1": 0.9565217391304348,
+        "silent_wrong_rate": 0.0,
+        "silent_wrong_count": 0,
+        "silent_wrong_denominator_verified_fields": 12,
+        "accepted_field_silent_wrong_rate": 0.0,
+        "accepted_field_silent_wrong_count": 0,
+        "accepted_field_denominator": 11,
+        "explicit_unresolved_rate": 0.0,
+        "missing_value_rate": 0.08333333333333333,
+        "critical_error_rate": 0.0,
+        "by_type_prf": {
+          "numeric": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 8
+          },
+          "text": {
+            "precision": 1.0,
+            "recall": 0.75,
+            "f1": 0.8571428571428571,
+            "n": 4
+          },
+          "table": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 8
+          }
+        },
+        "error_type_counts": {
+          "MISSING": 1
+        }
+      }
+    },
+    {
+      "document_id": "0000700209_2026_08_ZL_18_374_04092026060313.pdf",
+      "status": "PARTIALLY_CORRECT",
+      "n_fields": 16,
+      "correct": 14,
+      "metrics": {
+        "verified_fields": 16,
+        "correct_fields": 14,
+        "field_accuracy": 0.875,
+        "numeric_accuracy": 0.8461538461538461,
+        "quantity_accuracy": 0.8461538461538461,
+        "price_accuracy": null,
+        "date_accuracy": null,
+        "batch_accuracy": null,
+        "header_accuracy": 1.0,
+        "table_column_accuracy": 0.8461538461538461,
+        "text_accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 0.875,
+        "f1": 0.9333333333333333,
+        "silent_wrong_rate": 0.0,
+        "silent_wrong_count": 0,
+        "silent_wrong_denominator_verified_fields": 16,
+        "accepted_field_silent_wrong_rate": 0.0,
+        "accepted_field_silent_wrong_count": 0,
+        "accepted_field_denominator": 14,
+        "explicit_unresolved_rate": 0.0,
+        "missing_value_rate": 0.125,
+        "critical_error_rate": 0.125,
+        "by_type_prf": {
+          "numeric": {
+            "precision": 1.0,
+            "recall": 0.8461538461538461,
+            "f1": 0.9166666666666666,
+            "n": 13
+          },
+          "text": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 3
+          },
+          "table": {
+            "precision": 1.0,
+            "recall": 0.8461538461538461,
+            "f1": 0.9166666666666666,
+            "n": 13
+          }
+        },
+        "error_type_counts": {
+          "MISSING": 2
+        }
+      }
+    },
+    {
+      "document_id": "0000700275_2026_08_ZL_18_374_04092026171615.pdf",
+      "status": "FULLY_CORRECT",
+      "n_fields": 21,
+      "correct": 21,
+      "metrics": {
+        "verified_fields": 21,
+        "correct_fields": 21,
+        "field_accuracy": 1.0,
+        "numeric_accuracy": 1.0,
+        "quantity_accuracy": 1.0,
+        "price_accuracy": null,
+        "date_accuracy": null,
+        "batch_accuracy": null,
+        "header_accuracy": 1.0,
+        "table_column_accuracy": 1.0,
+        "text_accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "silent_wrong_rate": 0.0,
+        "silent_wrong_count": 0,
+        "silent_wrong_denominator_verified_fields": 21,
+        "accepted_field_silent_wrong_rate": 0.0,
+        "accepted_field_silent_wrong_count": 0,
+        "accepted_field_denominator": 21,
+        "explicit_unresolved_rate": 0.0,
+        "missing_value_rate": 0.0,
+        "critical_error_rate": 0.0,
+        "by_type_prf": {
+          "numeric": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 17
+          },
+          "text": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 4
+          },
+          "table": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 17
+          }
+        },
+        "error_type_counts": {}
+      }
+    },
+    {
+      "document_id": "0000700308_2026_08_ZL_18_8175_03092026072320.jpg",
+      "status": "FULLY_CORRECT",
+      "n_fields": 9,
+      "correct": 9,
+      "metrics": {
+        "verified_fields": 9,
+        "correct_fields": 9,
+        "field_accuracy": 1.0,
+        "numeric_accuracy": 1.0,
+        "quantity_accuracy": 1.0,
+        "price_accuracy": 1.0,
+        "date_accuracy": null,
+        "batch_accuracy": null,
+        "header_accuracy": 1.0,
+        "table_column_accuracy": 1.0,
+        "text_accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "silent_wrong_rate": 0.0,
+        "silent_wrong_count": 0,
+        "silent_wrong_denominator_verified_fields": 9,
+        "accepted_field_silent_wrong_rate": 0.0,
+        "accepted_field_silent_wrong_count": 0,
+        "accepted_field_denominator": 9,
+        "explicit_unresolved_rate": 0.0,
+        "missing_value_rate": 0.0,
+        "critical_error_rate": 0.0,
+        "by_type_prf": {
+          "numeric": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 5
+          },
+          "text": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 4
+          },
+          "table": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 5
+          }
+        },
+        "error_type_counts": {}
+      }
+    },
+    {
+      "document_id": "0000700317_2026_08_ZL_18_374_02092026171443.pdf",
+      "status": "FULLY_CORRECT",
+      "n_fields": 20,
+      "correct": 20,
+      "metrics": {
+        "verified_fields": 20,
+        "correct_fields": 20,
+        "field_accuracy": 1.0,
+        "numeric_accuracy": 1.0,
+        "quantity_accuracy": 1.0,
+        "price_accuracy": 1.0,
+        "date_accuracy": null,
+        "batch_accuracy": null,
+        "header_accuracy": 1.0,
+        "table_column_accuracy": 1.0,
+        "text_accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "silent_wrong_rate": 0.0,
+        "silent_wrong_count": 0,
+        "silent_wrong_denominator_verified_fields": 20,
+        "accepted_field_silent_wrong_rate": 0.0,
+        "accepted_field_silent_wrong_count": 0,
+        "accepted_field_denominator": 20,
+        "explicit_unresolved_rate": 0.0,
+        "missing_value_rate": 0.0,
+        "critical_error_rate": 0.0,
+        "by_type_prf": {
+          "numeric": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 16
+          },
+          "text": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 4
+          },
+          "table": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 16
+          }
+        },
+        "error_type_counts": {}
+      }
+    },
+    {
+      "document_id": "0000700346_2026_08_ZL_18_8189_05092026025159.pdf",
+      "status": "FULLY_CORRECT",
+      "n_fields": 18,
+      "correct": 18,
+      "metrics": {
+        "verified_fields": 18,
+        "correct_fields": 18,
+        "field_accuracy": 1.0,
+        "numeric_accuracy": 1.0,
+        "quantity_accuracy": 1.0,
+        "price_accuracy": null,
+        "date_accuracy": null,
+        "batch_accuracy": null,
+        "header_accuracy": 1.0,
+        "table_column_accuracy": 1.0,
+        "text_accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "silent_wrong_rate": 0.0,
+        "silent_wrong_count": 0,
+        "silent_wrong_denominator_verified_fields": 18,
+        "accepted_field_silent_wrong_rate": 0.0,
+        "accepted_field_silent_wrong_count": 0,
+        "accepted_field_denominator": 18,
+        "explicit_unresolved_rate": 0.0,
+        "missing_value_rate": 0.0,
+        "critical_error_rate": 0.0,
+        "by_type_prf": {
+          "numeric": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 14
+          },
+          "text": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 4
+          },
+          "table": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 14
+          }
+        },
+        "error_type_counts": {}
+      }
+    },
+    {
+      "document_id": "0000700358_2026_08_ZL_18_8173_05092026185826.pdf",
+      "status": "FULLY_CORRECT",
+      "n_fields": 21,
+      "correct": 21,
+      "metrics": {
+        "verified_fields": 21,
+        "correct_fields": 21,
+        "field_accuracy": 1.0,
+        "numeric_accuracy": 1.0,
+        "quantity_accuracy": 1.0,
+        "price_accuracy": 1.0,
+        "date_accuracy": null,
+        "batch_accuracy": null,
+        "header_accuracy": 1.0,
+        "table_column_accuracy": 1.0,
+        "text_accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "silent_wrong_rate": 0.0,
+        "silent_wrong_count": 0,
+        "silent_wrong_denominator_verified_fields": 21,
+        "accepted_field_silent_wrong_rate": 0.0,
+        "accepted_field_silent_wrong_count": 0,
+        "accepted_field_denominator": 21,
+        "explicit_unresolved_rate": 0.0,
+        "missing_value_rate": 0.0,
+        "critical_error_rate": 0.0,
+        "by_type_prf": {
+          "numeric": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 17
+          },
+          "text": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 4
+          },
+          "table": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 17
+          }
+        },
+        "error_type_counts": {}
+      }
+    },
+    {
+      "document_id": "0000700364_2026_08_ZL_18_8173_05092026190156.pdf",
+      "status": "FULLY_CORRECT",
+      "n_fields": 20,
+      "correct": 20,
+      "metrics": {
+        "verified_fields": 20,
+        "correct_fields": 20,
+        "field_accuracy": 1.0,
+        "numeric_accuracy": 1.0,
+        "quantity_accuracy": 1.0,
+        "price_accuracy": null,
+        "date_accuracy": null,
+        "batch_accuracy": null,
+        "header_accuracy": 1.0,
+        "table_column_accuracy": 1.0,
+        "text_accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "silent_wrong_rate": 0.0,
+        "silent_wrong_count": 0,
+        "silent_wrong_denominator_verified_fields": 20,
+        "accepted_field_silent_wrong_rate": 0.0,
+        "accepted_field_silent_wrong_count": 0,
+        "accepted_field_denominator": 20,
+        "explicit_unresolved_rate": 0.0,
+        "missing_value_rate": 0.0,
+        "critical_error_rate": 0.0,
+        "by_type_prf": {
+          "numeric": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 16
+          },
+          "text": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 4
+          },
+          "table": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 16
+          }
+        },
+        "error_type_counts": {}
+      }
+    },
+    {
+      "document_id": "0000700406_2026_08_ZL_10_384_05092026140711.jpg",
+      "status": "FULLY_CORRECT",
+      "n_fields": 35,
+      "correct": 35,
+      "metrics": {
+        "verified_fields": 35,
+        "correct_fields": 35,
+        "field_accuracy": 1.0,
+        "numeric_accuracy": 1.0,
+        "quantity_accuracy": 1.0,
+        "price_accuracy": 1.0,
+        "date_accuracy": 1.0,
+        "batch_accuracy": null,
+        "header_accuracy": 1.0,
+        "table_column_accuracy": 1.0,
+        "text_accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "silent_wrong_rate": 0.0,
+        "silent_wrong_count": 0,
+        "silent_wrong_denominator_verified_fields": 35,
+        "accepted_field_silent_wrong_rate": 0.0,
+        "accepted_field_silent_wrong_count": 0,
+        "accepted_field_denominator": 35,
+        "explicit_unresolved_rate": 0.0,
+        "missing_value_rate": 0.0,
+        "critical_error_rate": 0.0,
+        "by_type_prf": {
+          "numeric": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 31
+          },
+          "text": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 4
+          },
+          "table": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 30
+          }
+        },
+        "error_type_counts": {}
+      }
+    },
+    {
+      "document_id": "0000700434_2026_08_ZL_10_386_05092026034503.jpg",
+      "status": "FULLY_CORRECT",
+      "n_fields": 23,
+      "correct": 23,
+      "metrics": {
+        "verified_fields": 23,
+        "correct_fields": 23,
+        "field_accuracy": 1.0,
+        "numeric_accuracy": 1.0,
+        "quantity_accuracy": 1.0,
+        "price_accuracy": null,
+        "date_accuracy": null,
+        "batch_accuracy": null,
+        "header_accuracy": 1.0,
+        "table_column_accuracy": 1.0,
+        "text_accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "silent_wrong_rate": 0.0,
+        "silent_wrong_count": 0,
+        "silent_wrong_denominator_verified_fields": 23,
+        "accepted_field_silent_wrong_rate": 0.0,
+        "accepted_field_silent_wrong_count": 0,
+        "accepted_field_denominator": 23,
+        "explicit_unresolved_rate": 0.0,
+        "missing_value_rate": 0.0,
+        "critical_error_rate": 0.0,
+        "by_type_prf": {
+          "numeric": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 19
+          },
+          "text": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 4
+          },
+          "table": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 19
+          }
+        },
+        "error_type_counts": {}
+      }
+    },
+    {
+      "document_id": "0000700835_2026_08_ZL_25_447_03092026105819.jpeg",
+      "status": "FULLY_CORRECT",
+      "n_fields": 29,
+      "correct": 29,
+      "metrics": {
+        "verified_fields": 29,
+        "correct_fields": 29,
+        "field_accuracy": 1.0,
+        "numeric_accuracy": 1.0,
+        "quantity_accuracy": 1.0,
+        "price_accuracy": null,
+        "date_accuracy": null,
+        "batch_accuracy": null,
+        "header_accuracy": 1.0,
+        "table_column_accuracy": 1.0,
+        "text_accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "silent_wrong_rate": 0.0,
+        "silent_wrong_count": 0,
+        "silent_wrong_denominator_verified_fields": 29,
+        "accepted_field_silent_wrong_rate": 0.0,
+        "accepted_field_silent_wrong_count": 0,
+        "accepted_field_denominator": 29,
+        "explicit_unresolved_rate": 0.0,
+        "missing_value_rate": 0.0,
+        "critical_error_rate": 0.0,
+        "by_type_prf": {
+          "numeric": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 24
+          },
+          "text": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 5
+          },
+          "table": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 24
+          }
+        },
+        "error_type_counts": {}
+      }
+    },
+    {
+      "document_id": "0000701012_2026_08_ZL_11_423_03092026183736.jpg",
+      "status": "FULLY_CORRECT",
+      "n_fields": 14,
+      "correct": 14,
+      "metrics": {
+        "verified_fields": 14,
+        "correct_fields": 14,
+        "field_accuracy": 1.0,
+        "numeric_accuracy": 1.0,
+        "quantity_accuracy": 1.0,
+        "price_accuracy": 1.0,
+        "date_accuracy": null,
+        "batch_accuracy": null,
+        "header_accuracy": 1.0,
+        "table_column_accuracy": 1.0,
+        "text_accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "silent_wrong_rate": 0.0,
+        "silent_wrong_count": 0,
+        "silent_wrong_denominator_verified_fields": 14,
+        "accepted_field_silent_wrong_rate": 0.0,
+        "accepted_field_silent_wrong_count": 0,
+        "accepted_field_denominator": 14,
+        "explicit_unresolved_rate": 0.0,
+        "missing_value_rate": 0.0,
+        "critical_error_rate": 0.0,
+        "by_type_prf": {
+          "numeric": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 11
+          },
+          "text": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 3
+          },
+          "table": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 11
+          }
+        },
+        "error_type_counts": {}
+      }
+    },
+    {
+      "document_id": "0000701078_2026_08_ZL_03_362_05092026080346.jpeg",
+      "status": "FULLY_CORRECT",
+      "n_fields": 18,
+      "correct": 18,
+      "metrics": {
+        "verified_fields": 18,
+        "correct_fields": 18,
+        "field_accuracy": 1.0,
+        "numeric_accuracy": 1.0,
+        "quantity_accuracy": 1.0,
+        "price_accuracy": null,
+        "date_accuracy": null,
+        "batch_accuracy": null,
+        "header_accuracy": 1.0,
+        "table_column_accuracy": 1.0,
+        "text_accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "silent_wrong_rate": 0.0,
+        "silent_wrong_count": 0,
+        "silent_wrong_denominator_verified_fields": 18,
+        "accepted_field_silent_wrong_rate": 0.0,
+        "accepted_field_silent_wrong_count": 0,
+        "accepted_field_denominator": 18,
+        "explicit_unresolved_rate": 0.0,
+        "missing_value_rate": 0.0,
+        "critical_error_rate": 0.0,
+        "by_type_prf": {
+          "numeric": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 15
+          },
+          "text": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 3
+          },
+          "table": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 15
+          }
+        },
+        "error_type_counts": {}
+      }
+    },
+    {
+      "document_id": "0000701151_2026_08_ZL_14_361_03092026025650.jpg",
+      "status": "FULLY_CORRECT",
+      "n_fields": 19,
+      "correct": 19,
+      "metrics": {
+        "verified_fields": 19,
+        "correct_fields": 19,
+        "field_accuracy": 1.0,
+        "numeric_accuracy": 1.0,
+        "quantity_accuracy": 1.0,
+        "price_accuracy": null,
+        "date_accuracy": null,
+        "batch_accuracy": null,
+        "header_accuracy": 1.0,
+        "table_column_accuracy": 1.0,
+        "text_accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "silent_wrong_rate": 0.0,
+        "silent_wrong_count": 0,
+        "silent_wrong_denominator_verified_fields": 19,
+        "accepted_field_silent_wrong_rate": 0.0,
+        "accepted_field_silent_wrong_count": 0,
+        "accepted_field_denominator": 19,
+        "explicit_unresolved_rate": 0.0,
+        "missing_value_rate": 0.0,
+        "critical_error_rate": 0.0,
+        "by_type_prf": {
+          "numeric": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 15
+          },
+          "text": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 4
+          },
+          "table": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 15
+          }
+        },
+        "error_type_counts": {}
+      }
+    },
+    {
+      "document_id": "0000701275_2026_08_ZL_03_360_02092026152716.jpg",
+      "status": "FULLY_CORRECT",
+      "n_fields": 24,
+      "correct": 24,
+      "metrics": {
+        "verified_fields": 24,
+        "correct_fields": 24,
+        "field_accuracy": 1.0,
+        "numeric_accuracy": 1.0,
+        "quantity_accuracy": 1.0,
+        "price_accuracy": null,
+        "date_accuracy": 1.0,
+        "batch_accuracy": null,
+        "header_accuracy": 1.0,
+        "table_column_accuracy": 1.0,
+        "text_accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "silent_wrong_rate": 0.0,
+        "silent_wrong_count": 0,
+        "silent_wrong_denominator_verified_fields": 24,
+        "accepted_field_silent_wrong_rate": 0.0,
+        "accepted_field_silent_wrong_count": 0,
+        "accepted_field_denominator": 24,
+        "explicit_unresolved_rate": 0.0,
+        "missing_value_rate": 0.0,
+        "critical_error_rate": 0.0,
+        "by_type_prf": {
+          "numeric": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 20
+          },
+          "text": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 4
+          },
+          "table": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 19
+          }
+        },
+        "error_type_counts": {}
+      }
+    },
+    {
+      "document_id": "0000701851_2026_08_ZL_20_302_03092026134940.jpg",
+      "status": "FULLY_CORRECT",
+      "n_fields": 22,
+      "correct": 22,
+      "metrics": {
+        "verified_fields": 22,
+        "correct_fields": 22,
+        "field_accuracy": 1.0,
+        "numeric_accuracy": 1.0,
+        "quantity_accuracy": 1.0,
+        "price_accuracy": null,
+        "date_accuracy": null,
+        "batch_accuracy": null,
+        "header_accuracy": 1.0,
+        "table_column_accuracy": 1.0,
+        "text_accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "silent_wrong_rate": 0.0,
+        "silent_wrong_count": 0,
+        "silent_wrong_denominator_verified_fields": 22,
+        "accepted_field_silent_wrong_rate": 0.0,
+        "accepted_field_silent_wrong_count": 0,
+        "accepted_field_denominator": 22,
+        "explicit_unresolved_rate": 0.0,
+        "missing_value_rate": 0.0,
+        "critical_error_rate": 0.0,
+        "by_type_prf": {
+          "numeric": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 18
+          },
+          "text": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 4
+          },
+          "table": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 18
+          }
+        },
+        "error_type_counts": {}
+      }
+    },
+    {
+      "document_id": "0000701864_2026_08_ZL_20_5015_03092026091037.jpg",
+      "status": "FULLY_CORRECT",
+      "n_fields": 20,
+      "correct": 20,
+      "metrics": {
+        "verified_fields": 20,
+        "correct_fields": 20,
+        "field_accuracy": 1.0,
+        "numeric_accuracy": 1.0,
+        "quantity_accuracy": 1.0,
+        "price_accuracy": null,
+        "date_accuracy": null,
+        "batch_accuracy": null,
+        "header_accuracy": 1.0,
+        "table_column_accuracy": 1.0,
+        "text_accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "silent_wrong_rate": 0.0,
+        "silent_wrong_count": 0,
+        "silent_wrong_denominator_verified_fields": 20,
+        "accepted_field_silent_wrong_rate": 0.0,
+        "accepted_field_silent_wrong_count": 0,
+        "accepted_field_denominator": 20,
+        "explicit_unresolved_rate": 0.0,
+        "missing_value_rate": 0.0,
+        "critical_error_rate": 0.0,
+        "by_type_prf": {
+          "numeric": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 16
+          },
+          "text": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 4
+          },
+          "table": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 16
+          }
+        },
+        "error_type_counts": {}
+      }
+    },
+    {
+      "document_id": "0000701904_2026_08_ZL_20_8227_05092026154848.jpg",
+      "status": "FULLY_CORRECT",
+      "n_fields": 20,
+      "correct": 20,
+      "metrics": {
+        "verified_fields": 20,
+        "correct_fields": 20,
+        "field_accuracy": 1.0,
+        "numeric_accuracy": 1.0,
+        "quantity_accuracy": 1.0,
+        "price_accuracy": 1.0,
+        "date_accuracy": null,
+        "batch_accuracy": null,
+        "header_accuracy": 1.0,
+        "table_column_accuracy": 1.0,
+        "text_accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "silent_wrong_rate": 0.0,
+        "silent_wrong_count": 0,
+        "silent_wrong_denominator_verified_fields": 20,
+        "accepted_field_silent_wrong_rate": 0.0,
+        "accepted_field_silent_wrong_count": 0,
+        "accepted_field_denominator": 20,
+        "explicit_unresolved_rate": 0.0,
+        "missing_value_rate": 0.0,
+        "critical_error_rate": 0.0,
+        "by_type_prf": {
+          "numeric": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 16
+          },
+          "text": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 4
+          },
+          "table": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 16
+          }
+        },
+        "error_type_counts": {}
+      }
+    },
+    {
+      "document_id": "0000704337_2026_08_ZL_24_259_03092026042213.pdf",
+      "status": "FULLY_CORRECT",
+      "n_fields": 12,
+      "correct": 12,
+      "metrics": {
+        "verified_fields": 12,
+        "correct_fields": 12,
+        "field_accuracy": 1.0,
+        "numeric_accuracy": 1.0,
+        "quantity_accuracy": 1.0,
+        "price_accuracy": null,
+        "date_accuracy": null,
+        "batch_accuracy": null,
+        "header_accuracy": 1.0,
+        "table_column_accuracy": 1.0,
+        "text_accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "silent_wrong_rate": 0.0,
+        "silent_wrong_count": 0,
+        "silent_wrong_denominator_verified_fields": 12,
+        "accepted_field_silent_wrong_rate": 0.0,
+        "accepted_field_silent_wrong_count": 0,
+        "accepted_field_denominator": 12,
+        "explicit_unresolved_rate": 0.0,
+        "missing_value_rate": 0.0,
+        "critical_error_rate": 0.0,
+        "by_type_prf": {
+          "numeric": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 10
+          },
+          "text": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 2
+          },
+          "table": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 10
+          }
+        },
+        "error_type_counts": {}
+      }
+    }
+  ],
+  "baseline_reference": {
+    "source": "phase4/ground_truth_50/summary_20.json",
+    "silent_wrong_rate": 0.10824742268041238,
+    "field_accuracy": 0.8762886597938144,
+    "error_type_counts": {
+      "MISSING": 6,
+      "COLUMN_CONFUSION": 42
+    }
+  },
+  "note": "Reuses phase4/paddle_vl_benchmark evidence. Fields with COLUMN_CONFUSION/NUMERIC_* are flagged unresolved by the production gate and excluded from accepted-field silent-wrong."
+}

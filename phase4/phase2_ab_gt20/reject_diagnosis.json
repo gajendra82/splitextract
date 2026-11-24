@@ -1,0 +1,1644 @@
+{
+  "documents": [
+    {
+      "document_id": "0000700084_2026_08_ZL_06_8236_03092026155136.pdf",
+      "phase2_status": "unresolved",
+      "failure_type": "STOCK_IDENTITY_FAILURE",
+      "strategy": "targeted_stock_extraction",
+      "failing_row_count": 0,
+      "allowed_count": 3,
+      "prompt_chars": 1580,
+      "prompt_has_product_names": false,
+      "prompt_has_stock_words": true,
+      "prompt_excerpt": "Read only the supplied evidence for this one row.\nCopy each visible value exactly as it is printed.\nDo not calculate a missing quantity.\nDo not infer a value from arithmetic.\nDo not reconcile a contradictory printed value.\nDo not use a neighboring row to fill a missing value.\nDo not use a stock identity equation to fill a missing value.\nReturn null when a value is not visible or not readable.\nA printed zero is 0. A blank cell, a dash, or a missing cell is null.\nDo not turn a missing number into zero.\nPut every printed column that is not in the column mapping into dynamic, using the printed header as the key.\nDo not rename an unmapped column into a canonical quantity field.\nNo column mapping was supplied. Leave canonical quantity fields null unless that field is explicitly mapped. Put each printed column in dynamic under its printed header.\nProduct rows:\nCONFIDO TAB.\nLIV 52 SYP. 200\nLIV 52 TAB.\nValidation context for the attached page or row image. Read the printed cell. Do not calculate a replacement quantity.\nCONFIDO TAB. | extracted opening=8 receipt=0.0 total=null issue=40 closing=68 | validation_error=stock identity failed\nLIV 52 SYP. 200 | extracted opening=110 receipt=0.0 tot",
+      "failing_rows": [],
+      "log_analysis": [
+        {
+          "attempt": 1,
+          "parsed": true,
+          "accepted": false,
+          "returned_count": 3,
+          "exact_allowed_matches": 3,
+          "non_exact": 0,
+          "empty_product_name": 0,
+          "all_null_qty_rows": 0,
+          "partial_qty_rows": 3,
+          "matched_sample": [
+            {
+              "name": "CONFIDO TAB.",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": "40.0",
+                "stock_out": null,
+                "closing": null
+              }
+            },
+            {
+              "name": "LIV 52 SYP. 200",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": "100.0",
+                "stock_out": null,
+                "closing": null
+              }
+            },
+            {
+              "name": "LIV 52 TAB.",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": "70.0",
+                "stock_out": null,
+                "closing": null
+              }
+            }
+          ],
+          "unmatched_sample": []
+        },
+        {
+          "attempt": 2,
+          "parsed": true,
+          "accepted": false,
+          "returned_count": 3,
+          "exact_allowed_matches": 3,
+          "non_exact": 0,
+          "empty_product_name": 0,
+          "all_null_qty_rows": 0,
+          "partial_qty_rows": 3,
+          "matched_sample": [
+            {
+              "name": "CONFIDO TAB.",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": "40.0",
+                "stock_out": null,
+                "closing": null
+              }
+            },
+            {
+              "name": "LIV 52 SYP. 200",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": "100.0",
+                "stock_out": null,
+                "closing": null
+              }
+            },
+            {
+              "name": "LIV 52 TAB.",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": "70.0",
+                "stock_out": null,
+                "closing": null
+              }
+            }
+          ],
+          "unmatched_sample": []
+        }
+      ]
+    },
+    {
+      "document_id": "0000700124_2026_08_ZL_06_521_02092026204703.pdf",
+      "phase2_status": "unresolved",
+      "failure_type": "EMPTY_OUTPUT",
+      "strategy": "structured_reread",
+      "failing_row_count": 0,
+      "allowed_count": null,
+      "prompt_chars": 283,
+      "prompt_has_product_names": false,
+      "prompt_has_stock_words": true,
+      "prompt_excerpt": "Re-read this secondary sales statement. Return JSON matching the schema. Use null when a value is not printed. Use 0 only when the document prints zero. Do not invent products. Update only fields that failed validation; leave correct values unchanged.\nNo product rows were extracted.",
+      "failing_rows": [],
+      "log_analysis": [
+        {
+          "attempt": 1,
+          "parsed": false,
+          "accepted": false,
+          "returned_count": 0,
+          "exact_allowed_matches": 0,
+          "non_exact": 0,
+          "empty_product_name": 0,
+          "all_null_qty_rows": 0,
+          "partial_qty_rows": 0,
+          "matched_sample": [],
+          "unmatched_sample": []
+        },
+        {
+          "attempt": 2,
+          "parsed": false,
+          "accepted": false,
+          "returned_count": 0,
+          "exact_allowed_matches": 0,
+          "non_exact": 0,
+          "empty_product_name": 0,
+          "all_null_qty_rows": 0,
+          "partial_qty_rows": 0,
+          "matched_sample": [],
+          "unmatched_sample": []
+        }
+      ]
+    },
+    {
+      "document_id": "0000700209_2026_08_ZL_18_374_04092026060313.pdf",
+      "phase2_status": "unresolved",
+      "failure_type": "STOCK_IDENTITY_FAILURE",
+      "strategy": "targeted_stock_extraction",
+      "failing_row_count": 0,
+      "allowed_count": 5,
+      "prompt_chars": 1849,
+      "prompt_has_product_names": false,
+      "prompt_has_stock_words": true,
+      "prompt_excerpt": "Read only the supplied evidence for this one row.\nCopy each visible value exactly as it is printed.\nDo not calculate a missing quantity.\nDo not infer a value from arithmetic.\nDo not reconcile a contradictory printed value.\nDo not use a neighboring row to fill a missing value.\nDo not use a stock identity equation to fill a missing value.\nReturn null when a value is not visible or not readable.\nA printed zero is 0. A blank cell, a dash, or a missing cell is null.\nDo not turn a missing number into zero.\nPut every printed column that is not in the column mapping into dynamic, using the printed header as the key.\nDo not rename an unmapped column into a canonical quantity field.\nNo column mapping was supplied. Leave canonical quantity fields null unless that field is explicitly mapped. Put each printed column in dynamic under its printed header.\nProduct rows:\nCLARINA ANTI ACNE KIT\nCONFIDO TAB\nDIABECON DS TABS\nDIABECON TABS\nPILEX FOTE tabs\nValidation context for the attached page or row image. Read the printed cell. Do not calculate a replacement quantity.\nCLARINA ANTI ACNE KIT | extracted opening=1 receipt=0 total=null issue=0 closing=0 | validation_error=stock identity failed\nCONFIDO TA",
+      "failing_rows": [],
+      "log_analysis": [
+        {
+          "attempt": 1,
+          "parsed": true,
+          "accepted": false,
+          "returned_count": 5,
+          "exact_allowed_matches": 5,
+          "non_exact": 0,
+          "empty_product_name": 0,
+          "all_null_qty_rows": 0,
+          "partial_qty_rows": 5,
+          "matched_sample": [
+            {
+              "name": "CLARINA ANTI ACNE KIT",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": "0.0",
+                "stock_out": null,
+                "closing": null
+              }
+            },
+            {
+              "name": "CONFIDO TAB",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": "0.0",
+                "stock_out": null,
+                "closing": null
+              }
+            },
+            {
+              "name": "DIABECON DS TABS",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": "0.0",
+                "stock_out": null,
+                "closing": null
+              }
+            },
+            {
+              "name": "DIABECON TABS",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": "0.0",
+                "stock_out": null,
+                "closing": null
+              }
+            },
+            {
+              "name": "PILEX FOTE tabs",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": "20.0",
+                "stock_out": null,
+                "closing": null
+              }
+            }
+          ],
+          "unmatched_sample": []
+        },
+        {
+          "attempt": 2,
+          "parsed": true,
+          "accepted": false,
+          "returned_count": 5,
+          "exact_allowed_matches": 5,
+          "non_exact": 0,
+          "empty_product_name": 0,
+          "all_null_qty_rows": 0,
+          "partial_qty_rows": 5,
+          "matched_sample": [
+            {
+              "name": "CLARINA ANTI ACNE KIT",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": "0.0",
+                "stock_out": null,
+                "closing": null
+              }
+            },
+            {
+              "name": "CONFIDO TAB",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": "0.0",
+                "stock_out": null,
+                "closing": null
+              }
+            },
+            {
+              "name": "DIABECON DS TABS",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": "0.0",
+                "stock_out": null,
+                "closing": null
+              }
+            },
+            {
+              "name": "DIABECON TABS",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": "0.0",
+                "stock_out": null,
+                "closing": null
+              }
+            },
+            {
+              "name": "PILEX FOTE tabs",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": "20.0",
+                "stock_out": null,
+                "closing": null
+              }
+            }
+          ],
+          "unmatched_sample": []
+        }
+      ]
+    },
+    {
+      "document_id": "0000700275_2026_08_ZL_18_374_04092026171615.pdf",
+      "phase2_status": "unresolved",
+      "failure_type": "STOCK_IDENTITY_FAILURE",
+      "strategy": "targeted_stock_extraction",
+      "failing_row_count": 0,
+      "allowed_count": 14,
+      "prompt_chars": 3247,
+      "prompt_has_product_names": false,
+      "prompt_has_stock_words": true,
+      "prompt_excerpt": "Read only the supplied evidence for this one row.\nCopy each visible value exactly as it is printed.\nDo not calculate a missing quantity.\nDo not infer a value from arithmetic.\nDo not reconcile a contradictory printed value.\nDo not use a neighboring row to fill a missing value.\nDo not use a stock identity equation to fill a missing value.\nReturn null when a value is not visible or not readable.\nA printed zero is 0. A blank cell, a dash, or a missing cell is null.\nDo not turn a missing number into zero.\nPut every printed column that is not in the column mapping into dynamic, using the printed header as the key.\nDo not rename an unmapped column into a canonical quantity field.\nNo column mapping was supplied. Leave canonical quantity fields null unless that field is explicitly mapped. Put each printed column in dynamic under its printed header.\nProduct rows:\nABANA TAB\nCONFIDO TAB\nDIBECON-DS TABS\nHIMCOLIN GEL\nLIV-52 HB CAPSULES\nLIV-52 SYRUP\nLIV-52 SYRUP\nLIV-52 TAB\nLIV-52 SYRUP(S F )\nOPTHACARE EYE DROP\nORO-T ORAL RINSE\nPILEX FORTE OINTMENT\nPILEX TAB\nRENALKA SYRUP\nTALEKT TABLETS\nValidation context for the attached page or row image. Read the printed cell. Do not calculate a replacement qua",
+      "failing_rows": [],
+      "log_analysis": [
+        {
+          "attempt": 1,
+          "parsed": true,
+          "accepted": false,
+          "returned_count": 15,
+          "exact_allowed_matches": 15,
+          "non_exact": 0,
+          "empty_product_name": 0,
+          "all_null_qty_rows": 15,
+          "partial_qty_rows": 0,
+          "matched_sample": [
+            {
+              "name": "ABANA TAB",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": null,
+                "stock_out": null,
+                "closing": null
+              }
+            },
+            {
+              "name": "CONFIDO TAB",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": null,
+                "stock_out": null,
+                "closing": null
+              }
+            },
+            {
+              "name": "DIBECON-DS TABS",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": null,
+                "stock_out": null,
+                "closing": null
+              }
+            },
+            {
+              "name": "HIMCOLIN GEL",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": null,
+                "stock_out": null,
+                "closing": null
+              }
+            },
+            {
+              "name": "LIV-52 HB CAPSULES",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": null,
+                "stock_out": null,
+                "closing": null
+              }
+            }
+          ],
+          "unmatched_sample": []
+        },
+        {
+          "attempt": 2,
+          "parsed": true,
+          "accepted": false,
+          "returned_count": 15,
+          "exact_allowed_matches": 15,
+          "non_exact": 0,
+          "empty_product_name": 0,
+          "all_null_qty_rows": 15,
+          "partial_qty_rows": 0,
+          "matched_sample": [
+            {
+              "name": "ABANA TAB",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": null,
+                "stock_out": null,
+                "closing": null
+              }
+            },
+            {
+              "name": "CONFIDO TAB",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": null,
+                "stock_out": null,
+                "closing": null
+              }
+            },
+            {
+              "name": "DIBECON-DS TABS",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": null,
+                "stock_out": null,
+                "closing": null
+              }
+            },
+            {
+              "name": "HIMCOLIN GEL",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": null,
+                "stock_out": null,
+                "closing": null
+              }
+            },
+            {
+              "name": "LIV-52 HB CAPSULES",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": null,
+                "stock_out": null,
+                "closing": null
+              }
+            }
+          ],
+          "unmatched_sample": []
+        }
+      ]
+    },
+    {
+      "document_id": "0000700308_2026_08_ZL_18_8175_03092026072320.jpg",
+      "phase2_status": "unresolved",
+      "failure_type": "STOCK_IDENTITY_FAILURE",
+      "strategy": "targeted_stock_extraction",
+      "failing_row_count": 0,
+      "allowed_count": 1,
+      "prompt_chars": 1303,
+      "prompt_has_product_names": false,
+      "prompt_has_stock_words": true,
+      "prompt_excerpt": "Read only the supplied evidence for this one row.\nCopy each visible value exactly as it is printed.\nDo not calculate a missing quantity.\nDo not infer a value from arithmetic.\nDo not reconcile a contradictory printed value.\nDo not use a neighboring row to fill a missing value.\nDo not use a stock identity equation to fill a missing value.\nReturn null when a value is not visible or not readable.\nA printed zero is 0. A blank cell, a dash, or a missing cell is null.\nDo not turn a missing number into zero.\nPut every printed column that is not in the column mapping into dynamic, using the printed header as the key.\nDo not rename an unmapped column into a canonical quantity field.\nNo column mapping was supplied. Leave canonical quantity fields null unless that field is explicitly mapped. Put each printed column in dynamic under its printed header.\nProduct rows:\nLIV-52 SYP\nValidation context for the attached page or row image. Read the printed cell. Do not calculate a replacement quantity.\nLIV-52 SYP | extracted opening=70 receipt=6 total=null issue=0.0 closing=0.0 | validation_error=stock identity failed\nReturn corrected fields only. Put evidence (printed header and the text you read), con",
+      "failing_rows": [],
+      "log_analysis": [
+        {
+          "attempt": 1,
+          "parsed": true,
+          "accepted": false,
+          "returned_count": 1,
+          "exact_allowed_matches": 1,
+          "non_exact": 0,
+          "empty_product_name": 0,
+          "all_null_qty_rows": 0,
+          "partial_qty_rows": 1,
+          "matched_sample": [
+            {
+              "name": "LIV-52 SYP",
+              "vals": {
+                "opening": null,
+                "receipts": "6.0",
+                "sales": "64.0",
+                "stock_out": null,
+                "closing": null
+              }
+            }
+          ],
+          "unmatched_sample": []
+        },
+        {
+          "attempt": 2,
+          "parsed": true,
+          "accepted": false,
+          "returned_count": 1,
+          "exact_allowed_matches": 1,
+          "non_exact": 0,
+          "empty_product_name": 0,
+          "all_null_qty_rows": 0,
+          "partial_qty_rows": 1,
+          "matched_sample": [
+            {
+              "name": "LIV-52 SYP",
+              "vals": {
+                "opening": null,
+                "receipts": "6.0",
+                "sales": "64.0",
+                "stock_out": null,
+                "closing": null
+              }
+            }
+          ],
+          "unmatched_sample": []
+        }
+      ]
+    },
+    {
+      "document_id": "0000700317_2026_08_ZL_18_374_02092026171443.pdf",
+      "phase2_status": "unresolved",
+      "failure_type": "STOCK_IDENTITY_FAILURE",
+      "strategy": "targeted_stock_extraction",
+      "failing_row_count": 0,
+      "allowed_count": 9,
+      "prompt_chars": 2555,
+      "prompt_has_product_names": false,
+      "prompt_has_stock_words": true,
+      "prompt_excerpt": "Read only the supplied evidence for this one row.\nCopy each visible value exactly as it is printed.\nDo not calculate a missing quantity.\nDo not infer a value from arithmetic.\nDo not reconcile a contradictory printed value.\nDo not use a neighboring row to fill a missing value.\nDo not use a stock identity equation to fill a missing value.\nReturn null when a value is not visible or not readable.\nA printed zero is 0. A blank cell, a dash, or a missing cell is null.\nDo not turn a missing number into zero.\nPut every printed column that is not in the column mapping into dynamic, using the printed header as the key.\nDo not rename an unmapped column into a canonical quantity field.\nNo column mapping was supplied. Leave canonical quantity fields null unless that field is explicitly mapped. Put each printed column in dynamic under its printed header.\nProduct rows:\nCONFIDO TABLET\nHIMCOLIN GEL\nLIV 52 TABS\nLIV-52 HB CAPS\nLIV-52 SYP.\nLIV-52 SYP.\nOPTHACARE EYE DROP\nPILEX FORTE ONIT\nPILEX TABS\nTENTEX FORTE TABS\nValidation context for the attached page or row image. Read the printed cell. Do not calculate a replacement quantity.\nCONFIDO TABLET | extracted opening=90 receipt=0.0 total=null issue=0.0 ",
+      "failing_rows": [],
+      "log_analysis": [
+        {
+          "attempt": 1,
+          "parsed": true,
+          "accepted": false,
+          "returned_count": 10,
+          "exact_allowed_matches": 10,
+          "non_exact": 0,
+          "empty_product_name": 0,
+          "all_null_qty_rows": 10,
+          "partial_qty_rows": 0,
+          "matched_sample": [
+            {
+              "name": "CONFIDO TABLET",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": null,
+                "stock_out": null,
+                "closing": null
+              }
+            },
+            {
+              "name": "HIMCOLIN GEL",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": null,
+                "stock_out": null,
+                "closing": null
+              }
+            },
+            {
+              "name": "LIV 52 TABS",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": null,
+                "stock_out": null,
+                "closing": null
+              }
+            },
+            {
+              "name": "LIV-52 HB CAPS",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": null,
+                "stock_out": null,
+                "closing": null
+              }
+            },
+            {
+              "name": "LIV-52 SYP.",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": null,
+                "stock_out": null,
+                "closing": null
+              }
+            }
+          ],
+          "unmatched_sample": []
+        },
+        {
+          "attempt": 2,
+          "parsed": true,
+          "accepted": false,
+          "returned_count": 10,
+          "exact_allowed_matches": 10,
+          "non_exact": 0,
+          "empty_product_name": 0,
+          "all_null_qty_rows": 10,
+          "partial_qty_rows": 0,
+          "matched_sample": [
+            {
+              "name": "CONFIDO TABLET",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": null,
+                "stock_out": null,
+                "closing": null
+              }
+            },
+            {
+              "name": "HIMCOLIN GEL",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": null,
+                "stock_out": null,
+                "closing": null
+              }
+            },
+            {
+              "name": "LIV 52 TABS",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": null,
+                "stock_out": null,
+                "closing": null
+              }
+            },
+            {
+              "name": "LIV-52 HB CAPS",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": null,
+                "stock_out": null,
+                "closing": null
+              }
+            },
+            {
+              "name": "LIV-52 SYP.",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": null,
+                "stock_out": null,
+                "closing": null
+              }
+            }
+          ],
+          "unmatched_sample": []
+        }
+      ]
+    },
+    {
+      "document_id": "0000700346_2026_08_ZL_18_8189_05092026025159.pdf",
+      "phase2_status": "unresolved",
+      "failure_type": "EMPTY_OUTPUT",
+      "strategy": "structured_reread",
+      "failing_row_count": 0,
+      "allowed_count": null,
+      "prompt_chars": 283,
+      "prompt_has_product_names": false,
+      "prompt_has_stock_words": true,
+      "prompt_excerpt": "Re-read this secondary sales statement. Return JSON matching the schema. Use null when a value is not printed. Use 0 only when the document prints zero. Do not invent products. Update only fields that failed validation; leave correct values unchanged.\nNo product rows were extracted.",
+      "failing_rows": [],
+      "log_analysis": [
+        {
+          "attempt": 1,
+          "parsed": false,
+          "accepted": false,
+          "returned_count": 0,
+          "exact_allowed_matches": 0,
+          "non_exact": 0,
+          "empty_product_name": 0,
+          "all_null_qty_rows": 0,
+          "partial_qty_rows": 0,
+          "matched_sample": [],
+          "unmatched_sample": []
+        },
+        {
+          "attempt": 2,
+          "parsed": false,
+          "accepted": false,
+          "returned_count": 0,
+          "exact_allowed_matches": 0,
+          "non_exact": 0,
+          "empty_product_name": 0,
+          "all_null_qty_rows": 0,
+          "partial_qty_rows": 0,
+          "matched_sample": [],
+          "unmatched_sample": []
+        }
+      ]
+    },
+    {
+      "document_id": "0000700358_2026_08_ZL_18_8173_05092026185826.pdf",
+      "phase2_status": "unresolved",
+      "failure_type": "STOCK_IDENTITY_FAILURE",
+      "strategy": "targeted_stock_extraction",
+      "failing_row_count": 0,
+      "allowed_count": 10,
+      "prompt_chars": 2566,
+      "prompt_has_product_names": false,
+      "prompt_has_stock_words": true,
+      "prompt_excerpt": "Read only the supplied evidence for this one row.\nCopy each visible value exactly as it is printed.\nDo not calculate a missing quantity.\nDo not infer a value from arithmetic.\nDo not reconcile a contradictory printed value.\nDo not use a neighboring row to fill a missing value.\nDo not use a stock identity equation to fill a missing value.\nReturn null when a value is not visible or not readable.\nA printed zero is 0. A blank cell, a dash, or a missing cell is null.\nDo not turn a missing number into zero.\nPut every printed column that is not in the column mapping into dynamic, using the printed header as the key.\nDo not rename an unmapped column into a canonical quantity field.\nNo column mapping was supplied. Leave canonical quantity fields null unless that field is explicitly mapped. Put each printed column in dynamic under its printed header.\nProduct rows:\nCLARINA ANTI ACNE FACE WA\nCLARINA CREAM\nCONFIDO TAB\nHIMCOLIN GEL\nLIV-52 SYP\nLIV-52 SYP 200ML\nLIV-52 TABS\nOPTHACARE EYE DROPS\nPILEX FORTE OINTMENT\nPILEX TABS\nValidation context for the attached page or row image. Read the printed cell. Do not calculate a replacement quantity.\nCLARINA ANTI ACNE FACE WA | extracted opening=27 receipt=0",
+      "failing_rows": [],
+      "log_analysis": [
+        {
+          "attempt": 1,
+          "parsed": true,
+          "accepted": false,
+          "returned_count": 10,
+          "exact_allowed_matches": 10,
+          "non_exact": 0,
+          "empty_product_name": 0,
+          "all_null_qty_rows": 10,
+          "partial_qty_rows": 0,
+          "matched_sample": [
+            {
+              "name": "CLARINA ANTI ACNE FACE WA",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": null,
+                "stock_out": null,
+                "closing": null
+              }
+            },
+            {
+              "name": "CLARINA CREAM",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": null,
+                "stock_out": null,
+                "closing": null
+              }
+            },
+            {
+              "name": "CONFIDO TAB",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": null,
+                "stock_out": null,
+                "closing": null
+              }
+            },
+            {
+              "name": "HIMCOLIN GEL",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": null,
+                "stock_out": null,
+                "closing": null
+              }
+            },
+            {
+              "name": "LIV-52 SYP",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": null,
+                "stock_out": null,
+                "closing": null
+              }
+            }
+          ],
+          "unmatched_sample": []
+        },
+        {
+          "attempt": 2,
+          "parsed": true,
+          "accepted": false,
+          "returned_count": 10,
+          "exact_allowed_matches": 10,
+          "non_exact": 0,
+          "empty_product_name": 0,
+          "all_null_qty_rows": 10,
+          "partial_qty_rows": 0,
+          "matched_sample": [
+            {
+              "name": "CLARINA ANTI ACNE FACE WA",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": null,
+                "stock_out": null,
+                "closing": null
+              }
+            },
+            {
+              "name": "CLARINA CREAM",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": null,
+                "stock_out": null,
+                "closing": null
+              }
+            },
+            {
+              "name": "CONFIDO TAB",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": null,
+                "stock_out": null,
+                "closing": null
+              }
+            },
+            {
+              "name": "HIMCOLIN GEL",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": null,
+                "stock_out": null,
+                "closing": null
+              }
+            },
+            {
+              "name": "LIV-52 SYP",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": null,
+                "stock_out": null,
+                "closing": null
+              }
+            }
+          ],
+          "unmatched_sample": []
+        }
+      ]
+    },
+    {
+      "document_id": "0000700406_2026_08_ZL_10_384_05092026140711.jpg",
+      "phase2_status": "unresolved",
+      "failure_type": "STOCK_IDENTITY_FAILURE",
+      "strategy": "targeted_stock_extraction",
+      "failing_row_count": 0,
+      "allowed_count": 20,
+      "prompt_chars": 3555,
+      "prompt_has_product_names": false,
+      "prompt_has_stock_words": true,
+      "prompt_excerpt": "Read only the supplied evidence for this one row.\nCopy each visible value exactly as it is printed.\nDo not calculate a missing quantity.\nDo not infer a value from arithmetic.\nDo not reconcile a contradictory printed value.\nDo not use a neighboring row to fill a missing value.\nDo not use a stock identity equation to fill a missing value.\nReturn null when a value is not visible or not readable.\nA printed zero is 0. A blank cell, a dash, or a missing cell is null.\nDo not turn a missing number into zero.\nPut every printed column that is not in the column mapping into dynamic, using the printed header as the key.\nDo not rename an unmapped column into a canonical quantity field.\nNo column mapping was supplied. Leave canonical quantity fields null unless that field is explicitly mapped. Put each printed column in dynamic under its printed header.\nProduct rows:\n8\n9\n10\n11\n12\n13\n14\n15\n16\n17\n18\n19\n20\n21\n22\n23\n24\n25\n26\n27\nValidation context for the attached page or row image. Read the printed cell. Do not calculate a replacement quantity.\n8 | extracted opening=7575 receipt=3107.2 total=null issue=0 closing=256.6 | validation_error=stock identity failed\n9 | extracted opening=30 receipt=3397.06 ",
+      "failing_rows": [],
+      "log_analysis": [
+        {
+          "attempt": 1,
+          "parsed": true,
+          "accepted": false,
+          "returned_count": 20,
+          "exact_allowed_matches": 0,
+          "non_exact": 20,
+          "empty_product_name": 20,
+          "all_null_qty_rows": 0,
+          "partial_qty_rows": 20,
+          "matched_sample": [],
+          "unmatched_sample": [
+            {
+              "name": "",
+              "vals": {
+                "opening": "40.0",
+                "receipts": "0.0",
+                "sales": "3.0",
+                "stock_out": null,
+                "closing": null
+              },
+              "fuzzy_failing": null
+            },
+            {
+              "name": "",
+              "vals": {
+                "opening": "29.0",
+                "receipts": "0.0",
+                "sales": "0.0",
+                "stock_out": null,
+                "closing": null
+              },
+              "fuzzy_failing": null
+            },
+            {
+              "name": "",
+              "vals": {
+                "opening": "50.0",
+                "receipts": "0.0",
+                "sales": "0.0",
+                "stock_out": null,
+                "closing": null
+              },
+              "fuzzy_failing": null
+            },
+            {
+              "name": "",
+              "vals": {
+                "opening": "70.0",
+                "receipts": "0.0",
+                "sales": "1.0",
+                "stock_out": null,
+                "closing": null
+              },
+              "fuzzy_failing": null
+            },
+            {
+              "name": "",
+              "vals": {
+                "opening": "43.0",
+                "receipts": "0.0",
+                "sales": "0.0",
+                "stock_out": null,
+                "closing": null
+              },
+              "fuzzy_failing": null
+            }
+          ]
+        },
+        {
+          "attempt": 2,
+          "parsed": true,
+          "accepted": false,
+          "returned_count": 20,
+          "exact_allowed_matches": 0,
+          "non_exact": 20,
+          "empty_product_name": 20,
+          "all_null_qty_rows": 0,
+          "partial_qty_rows": 20,
+          "matched_sample": [],
+          "unmatched_sample": [
+            {
+              "name": "",
+              "vals": {
+                "opening": "40.0",
+                "receipts": "0.0",
+                "sales": "3.0",
+                "stock_out": null,
+                "closing": null
+              },
+              "fuzzy_failing": null
+            },
+            {
+              "name": "",
+              "vals": {
+                "opening": "29.0",
+                "receipts": "0.0",
+                "sales": "0.0",
+                "stock_out": null,
+                "closing": null
+              },
+              "fuzzy_failing": null
+            },
+            {
+              "name": "",
+              "vals": {
+                "opening": "50.0",
+                "receipts": "0.0",
+                "sales": "0.0",
+                "stock_out": null,
+                "closing": null
+              },
+              "fuzzy_failing": null
+            },
+            {
+              "name": "",
+              "vals": {
+                "opening": "70.0",
+                "receipts": "0.0",
+                "sales": "1.0",
+                "stock_out": null,
+                "closing": null
+              },
+              "fuzzy_failing": null
+            },
+            {
+              "name": "",
+              "vals": {
+                "opening": "43.0",
+                "receipts": "0.0",
+                "sales": "0.0",
+                "stock_out": null,
+                "closing": null
+              },
+              "fuzzy_failing": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "document_id": "0000700434_2026_08_ZL_10_386_05092026034503.jpg",
+      "phase2_status": "unresolved",
+      "failure_type": "STOCK_IDENTITY_FAILURE",
+      "strategy": "targeted_stock_extraction",
+      "failing_row_count": 0,
+      "allowed_count": 2,
+      "prompt_chars": 1449,
+      "prompt_has_product_names": false,
+      "prompt_has_stock_words": true,
+      "prompt_excerpt": "Read only the supplied evidence for this one row.\nCopy each visible value exactly as it is printed.\nDo not calculate a missing quantity.\nDo not infer a value from arithmetic.\nDo not reconcile a contradictory printed value.\nDo not use a neighboring row to fill a missing value.\nDo not use a stock identity equation to fill a missing value.\nReturn null when a value is not visible or not readable.\nA printed zero is 0. A blank cell, a dash, or a missing cell is null.\nDo not turn a missing number into zero.\nPut every printed column that is not in the column mapping into dynamic, using the printed header as the key.\nDo not rename an unmapped column into a canonical quantity field.\nNo column mapping was supplied. Leave canonical quantity fields null unless that field is explicitly mapped. Put each printed column in dynamic under its printed header.\nProduct rows:\nOpening Val.:\nSales :\nValidation context for the attached page or row image. Read the printed cell. Do not calculate a replacement quantity.\nOpening Val.: | extracted opening=0.0 receipt=0.0 total=null issue=8644.82 closing=0 | validation_error=stock identity failed\nSales : | extracted opening=0.0 receipt=0.0 total=null issue=15001.",
+      "failing_rows": [],
+      "log_analysis": [
+        {
+          "attempt": 1,
+          "parsed": true,
+          "accepted": false,
+          "returned_count": 55,
+          "exact_allowed_matches": 0,
+          "non_exact": 55,
+          "empty_product_name": 0,
+          "all_null_qty_rows": 0,
+          "partial_qty_rows": 55,
+          "matched_sample": [],
+          "unmatched_sample": [
+            {
+              "name": "AACTARIL SOAP 75GM",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": "0.0",
+                "stock_out": null,
+                "closing": null
+              },
+              "fuzzy_failing": null
+            },
+            {
+              "name": "ABANA TAB  $ ^{{*}} $",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": "0.0",
+                "stock_out": null,
+                "closing": null
+              },
+              "fuzzy_failing": null
+            },
+            {
+              "name": "ALTHEA LOTION",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": "0.0",
+                "stock_out": null,
+                "closing": null
+              },
+              "fuzzy_failing": null
+            },
+            {
+              "name": "AMALAKI TAB",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": "0.0",
+                "stock_out": null,
+                "closing": null
+              },
+              "fuzzy_failing": null
+            },
+            {
+              "name": "BLEMINOR ANTI BLEMIS",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": "0.0",
+                "stock_out": null,
+                "closing": null
+              },
+              "fuzzy_failing": null
+            }
+          ]
+        },
+        {
+          "attempt": 2,
+          "parsed": true,
+          "accepted": false,
+          "returned_count": 55,
+          "exact_allowed_matches": 0,
+          "non_exact": 55,
+          "empty_product_name": 0,
+          "all_null_qty_rows": 0,
+          "partial_qty_rows": 55,
+          "matched_sample": [],
+          "unmatched_sample": [
+            {
+              "name": "AACTARIL SOAP 75GM",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": "0.0",
+                "stock_out": null,
+                "closing": null
+              },
+              "fuzzy_failing": null
+            },
+            {
+              "name": "ABANA TAB  $ ^{{*}} $",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": "0.0",
+                "stock_out": null,
+                "closing": null
+              },
+              "fuzzy_failing": null
+            },
+            {
+              "name": "ALTHEA LOTION",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": "0.0",
+                "stock_out": null,
+                "closing": null
+              },
+              "fuzzy_failing": null
+            },
+            {
+              "name": "AMALAKI TAB",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": "0.0",
+                "stock_out": null,
+                "closing": null
+              },
+              "fuzzy_failing": null
+            },
+            {
+              "name": "BLEMINOR ANTI BLEMIS",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": "0.0",
+                "stock_out": null,
+                "closing": null
+              },
+              "fuzzy_failing": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "document_id": "0000701012_2026_08_ZL_11_423_03092026183736.jpg",
+      "phase2_status": "unresolved",
+      "failure_type": "STOCK_IDENTITY_FAILURE",
+      "strategy": "targeted_stock_extraction",
+      "failing_row_count": 0,
+      "allowed_count": 33,
+      "prompt_chars": 5777,
+      "prompt_has_product_names": false,
+      "prompt_has_stock_words": true,
+      "prompt_excerpt": "Read only the supplied evidence for this one row.\nCopy each visible value exactly as it is printed.\nDo not calculate a missing quantity.\nDo not infer a value from arithmetic.\nDo not reconcile a contradictory printed value.\nDo not use a neighboring row to fill a missing value.\nDo not use a stock identity equation to fill a missing value.\nReturn null when a value is not visible or not readable.\nA printed zero is 0. A blank cell, a dash, or a missing cell is null.\nDo not turn a missing number into zero.\nPut every printed column that is not in the column mapping into dynamic, using the printed header as the key.\nDo not rename an unmapped column into a canonical quantity field.\nNo column mapping was supplied. Leave canonical quantity fields null unless that field is explicitly mapped. Put each printed column in dynamic under its printed header.\nProduct rows:\nAACTARIL SOAP 75G\nABANA TABLETS\nBLEMINOR CREAM\nCLARINA CREAM\nCLARINA FACE WASH GEL#\nCONFIDO\nDIABECON DS TAB\nDIABECON TAB\nHADJOD CAP\nHAIR ZONE SOLUTION 60ML\nHERBOLAX CAP\nHIMCOLIN GEL\nKAPIKACHHU CAP\nLIV 52 HB CAPS\nLIV 52 SYRUP 100ML\nLIV 52 SYRUP 100ML SUG FR\nLIV 52 SYRUP 200ML\nLIV 52 TAB\nMANJISHTHA TAB\nOPHTHACARE EYE DROP\nOXITARD CAP ",
+      "failing_rows": [],
+      "log_analysis": [
+        {
+          "attempt": 1,
+          "parsed": true,
+          "accepted": false,
+          "returned_count": 33,
+          "exact_allowed_matches": 33,
+          "non_exact": 0,
+          "empty_product_name": 0,
+          "all_null_qty_rows": 0,
+          "partial_qty_rows": 33,
+          "matched_sample": [
+            {
+              "name": "AACTARIL SOAP 75G",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": "8.0",
+                "stock_out": null,
+                "closing": null
+              }
+            },
+            {
+              "name": "ABANA TABLETS",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": "3.0",
+                "stock_out": null,
+                "closing": null
+              }
+            },
+            {
+              "name": "BLEMINOR CREAM",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": "12.0",
+                "stock_out": null,
+                "closing": null
+              }
+            },
+            {
+              "name": "CLARINA CREAM",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": "6.0",
+                "stock_out": null,
+                "closing": null
+              }
+            },
+            {
+              "name": "CLARINA FACE WASH GEL#",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": "8.0",
+                "stock_out": null,
+                "closing": null
+              }
+            }
+          ],
+          "unmatched_sample": []
+        },
+        {
+          "attempt": 2,
+          "parsed": true,
+          "accepted": false,
+          "returned_count": 33,
+          "exact_allowed_matches": 33,
+          "non_exact": 0,
+          "empty_product_name": 0,
+          "all_null_qty_rows": 0,
+          "partial_qty_rows": 33,
+          "matched_sample": [
+            {
+              "name": "AACTARIL SOAP 75G",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": "8.0",
+                "stock_out": null,
+                "closing": null
+              }
+            },
+            {
+              "name": "ABANA TABLETS",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": "3.0",
+                "stock_out": null,
+                "closing": null
+              }
+            },
+            {
+              "name": "BLEMINOR CREAM",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": "12.0",
+                "stock_out": null,
+                "closing": null
+              }
+            },
+            {
+              "name": "CLARINA CREAM",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": "6.0",
+                "stock_out": null,
+                "closing": null
+              }
+            },
+            {
+              "name": "CLARINA FACE WASH GEL#",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": "8.0",
+                "stock_out": null,
+                "closing": null
+              }
+            }
+          ],
+          "unmatched_sample": []
+        }
+      ]
+    },
+    {
+      "document_id": "0000701078_2026_08_ZL_03_362_05092026080346.jpeg",
+      "phase2_status": "unresolved",
+      "failure_type": "STOCK_IDENTITY_FAILURE",
+      "strategy": "targeted_stock_extraction",
+      "failing_row_count": 0,
+      "allowed_count": 3,
+      "prompt_chars": 1567,
+      "prompt_has_product_names": false,
+      "prompt_has_stock_words": true,
+      "prompt_excerpt": "Read only the supplied evidence for this one row.\nCopy each visible value exactly as it is printed.\nDo not calculate a missing quantity.\nDo not infer a value from arithmetic.\nDo not reconcile a contradictory printed value.\nDo not use a neighboring row to fill a missing value.\nDo not use a stock identity equation to fill a missing value.\nReturn null when a value is not visible or not readable.\nA printed zero is 0. A blank cell, a dash, or a missing cell is null.\nDo not turn a missing number into zero.\nPut every printed column that is not in the column mapping into dynamic, using the printed header as the key.\nDo not rename an unmapped column into a canonical quantity field.\nNo column mapping was supplied. Leave canonical quantity fields null unless that field is explicitly mapped. Put each printed column in dynamic under its printed header.\nProduct rows:\nAACTARIL SOAP\nRENALKA SYP\nTALEKT CAPS.\nValidation context for the attached page or row image. Read the printed cell. Do not calculate a replacement quantity.\nAACTARIL SOAP | extracted opening=82 receipt=0 total=null issue=13 closing=89 | validation_error=stock identity failed\nRENALKA SYP | extracted opening=83 receipt=56 total=null ",
+      "failing_rows": [],
+      "log_analysis": [
+        {
+          "attempt": 1,
+          "parsed": true,
+          "accepted": false,
+          "returned_count": 3,
+          "exact_allowed_matches": 3,
+          "non_exact": 0,
+          "empty_product_name": 0,
+          "all_null_qty_rows": 0,
+          "partial_qty_rows": 3,
+          "matched_sample": [
+            {
+              "name": "AACTARIL SOAP",
+              "vals": {
+                "opening": null,
+                "receipts": "0.0",
+                "sales": "13.0",
+                "stock_out": null,
+                "closing": null
+              }
+            },
+            {
+              "name": "RENALKA SYP",
+              "vals": {
+                "opening": null,
+                "receipts": "56.0",
+                "sales": "13.0",
+                "stock_out": null,
+                "closing": null
+              }
+            },
+            {
+              "name": "TALEKT CAPS.",
+              "vals": {
+                "opening": null,
+                "receipts": "0.0",
+                "sales": "0.0",
+                "stock_out": null,
+                "closing": null
+              }
+            }
+          ],
+          "unmatched_sample": []
+        },
+        {
+          "attempt": 2,
+          "parsed": true,
+          "accepted": false,
+          "returned_count": 3,
+          "exact_allowed_matches": 3,
+          "non_exact": 0,
+          "empty_product_name": 0,
+          "all_null_qty_rows": 0,
+          "partial_qty_rows": 3,
+          "matched_sample": [
+            {
+              "name": "AACTARIL SOAP",
+              "vals": {
+                "opening": null,
+                "receipts": "0.0",
+                "sales": "13.0",
+                "stock_out": null,
+                "closing": null
+              }
+            },
+            {
+              "name": "RENALKA SYP",
+              "vals": {
+                "opening": null,
+                "receipts": "56.0",
+                "sales": "13.0",
+                "stock_out": null,
+                "closing": null
+              }
+            },
+            {
+              "name": "TALEKT CAPS.",
+              "vals": {
+                "opening": null,
+                "receipts": "0.0",
+                "sales": "0.0",
+                "stock_out": null,
+                "closing": null
+              }
+            }
+          ],
+          "unmatched_sample": []
+        }
+      ]
+    },
+    {
+      "document_id": "0000701275_2026_08_ZL_03_360_02092026152716.jpg",
+      "phase2_status": "unresolved",
+      "failure_type": "STOCK_IDENTITY_FAILURE",
+      "strategy": "targeted_stock_extraction",
+      "failing_row_count": 0,
+      "allowed_count": 19,
+      "prompt_chars": 3947,
+      "prompt_has_product_names": false,
+      "prompt_has_stock_words": true,
+      "prompt_excerpt": "Read only the supplied evidence for this one row.\nCopy each visible value exactly as it is printed.\nDo not calculate a missing quantity.\nDo not infer a value from arithmetic.\nDo not reconcile a contradictory printed value.\nDo not use a neighboring row to fill a missing value.\nDo not use a stock identity equation to fill a missing value.\nReturn null when a value is not visible or not readable.\nA printed zero is 0. A blank cell, a dash, or a missing cell is null.\nDo not turn a missing number into zero.\nPut every printed column that is not in the column mapping into dynamic, using the printed header as the key.\nDo not rename an unmapped column into a canonical quantity field.\nNo column mapping was supplied. Leave canonical quantity fields null unless that field is explicitly mapped. Put each printed column in dynamic under its printed header.\nProduct rows:\nAACTARIL SOAP\nABANA TABLET\nCLARINA CREAM\nCLARINA FACE WASH\nCONFIDO TAB\nDIABECON TAB\nHAIR ZONE SOLUTION\nHIMCOLIN OINTMENT\nLIV 52 100 ML SUGA\nLIV 52 H B CAP\nLIV 52 SUGAR FREE\nLIV 52 SYP\nLIV 52 SYP\nLIV 52 TAB\nOPHTHACARE EYE DRO\nORO-T ORAL RINSE\nPILEX FORTE OINT\nPILEX FORTE TAB\nPILEX TAB\nTENTEX FORTE TAB\nValidation context for the attac",
+      "failing_rows": [],
+      "log_analysis": [
+        {
+          "attempt": 1,
+          "parsed": true,
+          "accepted": false,
+          "returned_count": 20,
+          "exact_allowed_matches": 20,
+          "non_exact": 0,
+          "empty_product_name": 0,
+          "all_null_qty_rows": 0,
+          "partial_qty_rows": 20,
+          "matched_sample": [
+            {
+              "name": "AACTARIL SOAP",
+              "vals": {
+                "opening": null,
+                "receipts": "72.0",
+                "sales": "0.0",
+                "stock_out": null,
+                "closing": null
+              }
+            },
+            {
+              "name": "ABANA TABLET",
+              "vals": {
+                "opening": null,
+                "receipts": "100.0",
+                "sales": "3.0",
+                "stock_out": null,
+                "closing": null
+              }
+            },
+            {
+              "name": "CLARINA CREAM",
+              "vals": {
+                "opening": null,
+                "receipts": "79.0",
+                "sales": "2.0",
+                "stock_out": null,
+                "closing": null
+              }
+            },
+            {
+              "name": "CLARINA FACE WASH",
+              "vals": {
+                "opening": null,
+                "receipts": "48.0",
+                "sales": "0.0",
+                "stock_out": null,
+                "closing": null
+              }
+            },
+            {
+              "name": "CONFIDO TAB",
+              "vals": {
+                "opening": null,
+                "receipts": "272.0",
+                "sales": "10.0",
+                "stock_out": null,
+                "closing": null
+              }
+            }
+          ],
+          "unmatched_sample": []
+        },
+        {
+          "attempt": 2,
+          "parsed": true,
+          "accepted": false,
+          "returned_count": 20,
+          "exact_allowed_matches": 20,
+          "non_exact": 0,
+          "empty_product_name": 0,
+          "all_null_qty_rows": 0,
+          "partial_qty_rows": 20,
+          "matched_sample": [
+            {
+              "name": "AACTARIL SOAP",
+              "vals": {
+                "opening": null,
+                "receipts": "72.0",
+                "sales": "0.0",
+                "stock_out": null,
+                "closing": null
+              }
+            },
+            {
+              "name": "ABANA TABLET",
+              "vals": {
+                "opening": null,
+                "receipts": "100.0",
+                "sales": "3.0",
+                "stock_out": null,
+                "closing": null
+              }
+            },
+            {
+              "name": "CLARINA CREAM",
+              "vals": {
+                "opening": null,
+                "receipts": "79.0",
+                "sales": "2.0",
+                "stock_out": null,
+                "closing": null
+              }
+            },
+            {
+              "name": "CLARINA FACE WASH",
+              "vals": {
+                "opening": null,
+                "receipts": "48.0",
+                "sales": "0.0",
+                "stock_out": null,
+                "closing": null
+              }
+            },
+            {
+              "name": "CONFIDO TAB",
+              "vals": {
+                "opening": null,
+                "receipts": "272.0",
+                "sales": "10.0",
+                "stock_out": null,
+                "closing": null
+              }
+            }
+          ],
+          "unmatched_sample": []
+        }
+      ]
+    },
+    {
+      "document_id": "0000701904_2026_08_ZL_20_8227_05092026154848.jpg",
+      "phase2_status": "unresolved",
+      "failure_type": "EMPTY_OUTPUT",
+      "strategy": "structured_reread",
+      "failing_row_count": 0,
+      "allowed_count": null,
+      "prompt_chars": 283,
+      "prompt_has_product_names": false,
+      "prompt_has_stock_words": true,
+      "prompt_excerpt": "Re-read this secondary sales statement. Return JSON matching the schema. Use null when a value is not printed. Use 0 only when the document prints zero. Do not invent products. Update only fields that failed validation; leave correct values unchanged.\nNo product rows were extracted.",
+      "failing_rows": [],
+      "log_analysis": [
+        {
+          "attempt": 1,
+          "parsed": false,
+          "accepted": false,
+          "returned_count": 0,
+          "exact_allowed_matches": 0,
+          "non_exact": 0,
+          "empty_product_name": 0,
+          "all_null_qty_rows": 0,
+          "partial_qty_rows": 0,
+          "matched_sample": [],
+          "unmatched_sample": []
+        },
+        {
+          "attempt": 2,
+          "parsed": false,
+          "accepted": false,
+          "returned_count": 0,
+          "exact_allowed_matches": 0,
+          "non_exact": 0,
+          "empty_product_name": 0,
+          "all_null_qty_rows": 0,
+          "partial_qty_rows": 0,
+          "matched_sample": [],
+          "unmatched_sample": []
+        }
+      ]
+    },
+    {
+      "document_id": "0000704337_2026_08_ZL_24_259_03092026042213.pdf",
+      "phase2_status": "recovered",
+      "failure_type": "EMPTY_OUTPUT",
+      "strategy": "structured_reread",
+      "failing_row_count": 0,
+      "allowed_count": null,
+      "prompt_chars": 283,
+      "prompt_has_product_names": false,
+      "prompt_has_stock_words": true,
+      "prompt_excerpt": "Re-read this secondary sales statement. Return JSON matching the schema. Use null when a value is not printed. Use 0 only when the document prints zero. Do not invent products. Update only fields that failed validation; leave correct values unchanged.\nNo product rows were extracted.",
+      "failing_rows": [],
+      "log_analysis": [
+        {
+          "attempt": 1,
+          "parsed": true,
+          "accepted": true,
+          "returned_count": 55,
+          "exact_allowed_matches": 0,
+          "non_exact": 55,
+          "empty_product_name": 0,
+          "all_null_qty_rows": 40,
+          "partial_qty_rows": 15,
+          "matched_sample": [],
+          "unmatched_sample": [
+            {
+              "name": "Aactaril Soap",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": null,
+                "stock_out": null,
+                "closing": null
+              },
+              "fuzzy_failing": null
+            },
+            {
+              "name": "Pitex Tablets",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": null,
+                "stock_out": null,
+                "closing": null
+              },
+              "fuzzy_failing": null
+            },
+            {
+              "name": "PureHands Advanced (Blue)",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": null,
+                "stock_out": null,
+                "closing": null
+              },
+              "fuzzy_failing": null
+            },
+            {
+              "name": "Purim Tablets",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": null,
+                "stock_out": null,
+                "closing": null
+              },
+              "fuzzy_failing": null
+            },
+            {
+              "name": "Quista active (Chocolate)",
+              "vals": {
+                "opening": null,
+                "receipts": null,
+                "sales": null,
+                "stock_out": null,
+                "closing": null
+              },
+              "fuzzy_failing": null
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

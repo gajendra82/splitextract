@@ -1,0 +1,29 @@
+{
+  "document_id": "0000718946_2026_08_ZA_12_466_03092026093948.jpg",
+  "path": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000718946_2026_08_ZA_12_466_03092026093948.jpg",
+  "status": "complete",
+  "sha256": "5c16dcef80d6ac797ad94b9af0eef5ee1cbcea65e0116135d89b46acf60ef925",
+  "cohort": "ordinary",
+  "primary_engine": "paddleocr-vl-1.6",
+  "primary_text_len": 6274,
+  "primary_ms": 159279.7219000022,
+  "off_ms": 38.746800000808435,
+  "on_ms": 7028.11020000081,
+  "overlay_on": null,
+  "di_override_on": true,
+  "deltas": [],
+  "off_line_item_count": 0,
+  "on_line_item_count": 0,
+  "off_totals": {
+    "opening_qty": null,
+    "closing_qty": null,
+    "sales_qty": null,
+    "receipts_qty": null
+  },
+  "on_totals": {
+    "opening_qty": null,
+    "closing_qty": null,
+    "sales_qty": null,
+    "receipts_qty": null
+  }
+}

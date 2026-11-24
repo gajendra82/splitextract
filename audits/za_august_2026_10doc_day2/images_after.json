@@ -1,0 +1,118 @@
+[
+  {
+    "file": "0000701478_2026_08_ZA_01_224_08092026054726.jpg",
+    "seconds": 38.099,
+    "rows": 2,
+    "method": "gemini_extraction_fallback",
+    "decision": "UNRESOLVED",
+    "reason": "insufficient_source_evidence",
+    "verified": false,
+    "fail_count": 0,
+    "grounding": {
+      "status": "insufficient_source_evidence",
+      "reader": "ocr_text",
+      "compared_rows": 0,
+      "discrepancy_count": 0,
+      "blank_read_as_zero": 0,
+      "blocks_verification": true
+    },
+    "watched": [
+      {
+        "product": "HIM ZANDRA",
+        "op": 0.0,
+        "rcpt": 0.0,
+        "sale": 0.0,
+        "close": 0.0,
+        "total": null
+      },
+      {
+        "product": "SPEMAN Tab",
+        "op": 0.0,
+        "rcpt": 0.0,
+        "sale": 0.0,
+        "close": 0.0,
+        "total": null
+      }
+    ]
+  },
+  {
+    "file": "0000733955_2026_08_ZA_04_286_05092026143428.jpeg",
+    "seconds": 69.106,
+    "rows": 27,
+    "method": "gemini_vision",
+    "decision": "UNRESOLVED",
+    "reason": "insufficient_source_evidence",
+    "verified": false,
+    "fail_count": 22,
+    "grounding": {
+      "status": "insufficient_source_evidence",
+      "reader": "ocr_text",
+      "compared_rows": 0,
+      "discrepancy_count": 0,
+      "blank_read_as_zero": 0,
+      "blocks_verification": true
+    },
+    "watched": [
+      {
+        "product": "HIMALATA ZANDRA",
+        "op": 123.0,
+        "rcpt": 0.0,
+        "sale": 38.0,
+        "close": 67.0,
+        "total": null
+      },
+      {
+        "product": "CYSTONE TAB",
+        "op": 349.0,
+        "rcpt": 0.0,
+        "sale": 114.0,
+        "close": 47.0,
+        "total": null
+      }
+    ]
+  },
+  {
+    "file": "0000727190_2026_08_ZA_06_333_04092026081416.png",
+    "seconds": 28.915,
+    "rows": 23,
+    "method": "zandra_stock_sale_vision",
+    "decision": "UNRESOLVED",
+    "reason": "insufficient_source_evidence",
+    "verified": false,
+    "fail_count": 9,
+    "grounding": {
+      "status": "insufficient_source_evidence",
+      "reader": "ocr_text",
+      "compared_rows": 0,
+      "discrepancy_count": 0,
+      "blank_read_as_zero": 0,
+      "blocks_verification": true
+    },
+    "watched": [
+      {
+        "product": "HIORA SG GEL",
+        "op": 5.0,
+        "rcpt": 50.0,
+        "sale": 1.0,
+        "close": 54.0,
+        "total": null
+      },
+      {
+        "product": "LASUNA TAB 60'S",
+        "op": 13.0,
+        "rcpt": 0.0,
+        "sale": 0.0,
+        "close": 13.0,
+        "total": null
+      },
+      {
+        "product": "SPEMAN TABS",
+        "op": 0.0,
+        "rcpt": 0.0,
+        "sale": 0.0,
+        "close": 0.0,
+        "total": null
+      }
+    ]
+  }
+]

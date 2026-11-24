@@ -1,0 +1,290 @@
+{
+  "document_id": "0000700379_2026_08_ZL_18_375_05092026174136.PDF",
+  "relative_path": "0000700379_2026_08_ZL_18_375_05092026174136.PDF",
+  "source_path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700379_2026_08_ZL_18_375_05092026174136.PDF",
+  "file_type": "pdf",
+  "pdf_kind": "digital",
+  "manifest_ocr_required": false,
+  "engine": "paddleocr-vl-1.6",
+  "model": "PaddleOCR-VL-1.6",
+  "model_version": "v1.6",
+  "started_at": "2026-10-08T12:02:04.611108+00:00",
+  "pages": [
+    {
+      "engine": "paddleocr-vl-1.6",
+      "status": "success",
+      "model": "PaddleOCR-VL-1.6",
+      "model_version": "v1.6",
+      "text": "<table><tr><td>TOTAL</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0.00</td></tr><tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr></table>\n*****",
+      "normalized_text": "<table><tr><td>TOTAL</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0.00</td></tr><tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr></table> *****",
+      "word_count": 2,
+      "line_count": 2,
+      "numeric_tokens": [
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0.00"
+      ],
+      "words": [
+        {
+          "text": "<table><tr><td>TOTAL</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0.00</td></tr><tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr></table>",
+          "bbox": [
+            66.0,
+            220.0,
+            1190.0,
+            319.0
+          ],
+          "confidence": null,
+          "page": 1
+        },
+        {
+          "text": "*****",
+          "bbox": [
+            70.0,
+            333.0,
+            112.0,
+            351.0
+          ],
+          "confidence": null,
+          "page": 1
+        }
+      ],
+      "boxes": [
+        [
+          66.0,
+          220.0,
+          1190.0,
+          319.0
+        ],
+        [
+          70.0,
+          333.0,
+          112.0,
+          351.0
+        ]
+      ],
+      "confidence": {
+        "mean": null,
+        "count": 0,
+        "available": false
+      },
+      "layout": {
+        "regions": [
+          {
+            "index": 0,
+            "label": "table",
+            "text": "<table><tr><td>TOTAL</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0.00</td></tr><tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr></table>",
+            "bbox": [
+              66.0,
+              220.0,
+              1190.0,
+              319.0
+            ],
+            "order": 0
+          },
+          {
+            "index": 1,
+            "label": "text",
+            "text": "*****",
+            "bbox": [
+              70.0,
+              333.0,
+              112.0,
+              351.0
+            ],
+            "order": 1
+          }
+        ],
+        "available": true
+      },
+      "tables": {
+        "items": [
+          {
+            "index": 0,
+            "label": "table",
+            "text": "<table><tr><td>TOTAL</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0.00</td></tr><tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr></table>",
+            "bbox": [
+              66.0,
+              220.0,
+              1190.0,
+              319.0
+            ],
+            "html": null,
+            "cells": null
+          }
+        ],
+        "available": true,
+        "count": 1
+      },
+      "latency_ms": 5870.848799999976,
+      "image_width": 1190,
+      "image_height": 1684,
+      "device": "gpu:0",
+      "metadata": {
+        "document_id": "0000700379_2026_08_ZL_18_375_05092026174136.PDF",
+        "source_path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700379_2026_08_ZL_18_375_05092026174136.PDF",
+        "original_width": 595.0,
+        "original_height": 842.0,
+        "processed_width": 1190,
+        "processed_height": 1684,
+        "orientation": null,
+        "preprocessing": [
+          "pymupdf_render_zoom_2.0"
+        ],
+        "page_index": 0,
+        "page_count": 6,
+        "engine": "paddleocr-vl-1.6",
+        "model": "PaddleOCR-VL-1.6",
+        "model_version": "v1.6",
+        "pipeline_version": "v1.6",
+        "device": "gpu:0",
+        "init_latency_ms": 13877.782900000057,
+        "model_loaded": true,
+        "init_error": null,
+        "available": true,
+        "status": "success",
+        "latency_ms": 5870.848799999976,
+        "image_width": 1190,
+        "image_height": 1684,
+        "word_count": 2,
+        "block_count": 2,
+        "line_count": 2,
+        "lines": [
+          {
+            "text": "<table><tr><td>TOTAL</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0.00</td></tr><tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr></table>",
+            "bbox": [
+              66.0,
+              220.0,
+              1190.0,
+              319.0
+            ],
+            "label": "table",
+            "order": 0
+          },
+          {
+            "text": "*****",
+            "bbox": [
+              70.0,
+              333.0,
+              112.0,
+              351.0
+            ],
+            "label": "text",
+            "order": 1
+          }
+        ],
+        "reading_order": [
+          0,
+          1
+        ],
+        "bbox_stats": {
+          "valid": 2,
+          "invalid": 0,
+          "total": 2
+        }
+      },
+      "error": null,
+      "error_type": null,
+      "page": 1,
+      "native_text": false,
+      "ocr_required": true,
+      "paddle_vl_status": "success",
+      "image_meta": {
+        "original_width": 595.0,
+        "original_height": 842.0,
+        "processed_width": 1190,
+        "processed_height": 1684,
+        "orientation": null,
+        "preprocessing": [
+          "pymupdf_render_zoom_2.0"
+        ],
+        "page_index": 0,
+        "page_count": 6
+      },
+      "resources": {
+        "cpu_percent": 5.8,
+        "ram_used_gb": 11.95,
+        "ram_total_gb": 15.31,
+        "gpu": "NVIDIA GeForce RTX 3050 6GB Laptop GPU",
+        "vram_used_gb": 7.095,
+        "vram_total_gb": 6.0
+      }
+    },
+    {
+      "page": 2,
+      "status": "skipped_native_text",
+      "paddle_vl_status": "skipped_native_text",
+      "native_text": true,
+      "ocr_required": false,
+      "engine": "paddleocr-vl-1.6",
+      "latency_ms": 4.158000000188622,
+      "embedded_text_chars": 410,
+      "reason": "native_text",
+      "page_count": 6
+    },
+    {
+      "page": 3,
+      "status": "skipped_native_text",
+      "paddle_vl_status": "skipped_native_text",
+      "native_text": true,
+      "ocr_required": false,
+      "engine": "paddleocr-vl-1.6",
+      "latency_ms": 3.4373999999388616,
+      "embedded_text_chars": 432,
+      "reason": "native_text",
+      "page_count": 6
+    },
+    {
+      "page": 4,
+      "status": "skipped_native_text",
+      "paddle_vl_status": "skipped_native_text",
+      "native_text": true,
+      "ocr_required": false,
+      "engine": "paddleocr-vl-1.6",
+      "latency_ms": 3.276400000004287,
+      "embedded_text_chars": 366,
+      "reason": "native_text",
+      "page_count": 6
+    },
+    {
+      "page": 5,
+      "status": "skipped_native_text",
+      "paddle_vl_status": "skipped_native_text",
+      "native_text": true,
+      "ocr_required": false,
+      "engine": "paddleocr-vl-1.6",
+      "latency_ms": 4.770900000039546,
+      "embedded_text_chars": 857,
+      "reason": "native_text",
+      "page_count": 6
+    },
+    {
+      "page": 6,
+      "status": "skipped_native_text",
+      "paddle_vl_status": "skipped_native_text",
+      "native_text": true,
+      "ocr_required": false,
+      "engine": "paddleocr-vl-1.6",
+      "latency_ms": 1.8474000000878732,
+      "embedded_text_chars": 52,
+      "reason": "native_text",
+      "page_count": 6
+    }
+  ],
+  "status": "success",
+  "errors": [],
+  "latency_ms": 6098.777100000007,
+  "finished_at": "2026-10-08T12:02:10.709715+00:00",
+  "resources": {
+    "cpu_percent": 2.5,
+    "ram_used_gb": 11.95,
+    "ram_total_gb": 15.31,
+    "gpu": "NVIDIA GeForce RTX 3050 6GB Laptop GPU",
+    "vram_used_gb": 7.095,
+    "vram_total_gb": 6.0
+  }
+}

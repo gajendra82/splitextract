@@ -1,0 +1,7059 @@
+{
+  "document_id": "0000700082_2026_08_ZA_06_467_04092026082339.png",
+  "source_file": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000700082_2026_08_ZA_06_467_04092026082339.png",
+  "source_file_exists": true,
+  "verification_status": "unverified",
+  "annotation_origin": "AI_PROPOSED",
+  "ai_generated": true,
+  "human_verified": false,
+  "rows": [
+    {
+      "row_id": "r01",
+      "row_index": 1,
+      "product_name": {
+        "raw": "NA TAB 60CAP",
+        "normalized": "NA TAB 60CAP",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "59",
+          "normalized": 59.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "12105.96",
+          "normalized": 12105.96,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "3",
+          "normalized": 3.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "729",
+          "normalized": 729.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "56",
+          "normalized": 56.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "11490.4",
+          "normalized": 11490.4,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r02",
+      "row_index": 2,
+      "product_name": {
+        "raw": "NISAN DROPS 30ML",
+        "normalized": "NISAN DROPS 30ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "36",
+          "normalized": 36.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "2382.84",
+          "normalized": 2382.84,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "6",
+          "normalized": 6.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "446.47",
+          "normalized": 446.47,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "30",
+          "normalized": 30.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "1985.7",
+          "normalized": 1985.7,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r03",
+      "row_index": 3,
+      "product_name": {
+        "raw": "NISAN SYP 100ML 100ML",
+        "normalized": "NISAN SYP 100ML 100ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "49",
+          "normalized": 49.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "2797.66",
+          "normalized": 2797.66,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "12",
+          "normalized": 12.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "802.76",
+          "normalized": 802.76,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "37",
+          "normalized": 37.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "2112.52",
+          "normalized": 2112.52,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r04",
+      "row_index": 4,
+      "product_name": {
+        "raw": "NISAN SYP 200ML 200ML",
+        "normalized": "NISAN SYP 200ML 200ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "14",
+          "normalized": 14.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "1276.5",
+          "normalized": 1276.5,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "5",
+          "normalized": 5.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "561.11",
+          "normalized": 561.11,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "9",
+          "normalized": 9.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "820.61",
+          "normalized": 820.61,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r05",
+      "row_index": 5,
+      "product_name": {
+        "raw": "VISPAZ DROP 15ML",
+        "normalized": "VISPAZ DROP 15ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "47",
+          "normalized": 47.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "2666.78",
+          "normalized": 2666.78,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "3",
+          "normalized": 3.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "189.89",
+          "normalized": 189.89,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "44",
+          "normalized": 44.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "2496.56",
+          "normalized": 2496.56,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r06",
+      "row_index": 6,
+      "product_name": {
+        "raw": "IMI SYP 200ML",
+        "normalized": "IMI SYP 200ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r07",
+      "row_index": 7,
+      "product_name": {
+        "raw": "OL NS 10ML",
+        "normalized": "OL NS 10ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "16",
+          "normalized": 16.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "810.4",
+          "normalized": 810.4,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "1",
+          "normalized": 1.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "55.43",
+          "normalized": 55.43,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "15",
+          "normalized": 15.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "759.75",
+          "normalized": 759.75,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r08",
+      "row_index": 8,
+      "product_name": {
+        "raw": "OL SYP 200ML 200ML",
+        "normalized": "OL SYP 200ML 200ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "50",
+          "normalized": 50.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "6897.48",
+          "normalized": 6897.48,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "3",
+          "normalized": 3.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "480.75",
+          "normalized": 480.75,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "47",
+          "normalized": 47.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "6483.63",
+          "normalized": 6483.63,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r09",
+      "row_index": 9,
+      "product_name": {
+        "raw": "OL SYRUP 100ML 100ML",
+        "normalized": "OL SYRUP 100ML 100ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r10",
+      "row_index": 10,
+      "product_name": {
+        "raw": "OL TAB 60TAB",
+        "normalized": "OL TAB 60TAB",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "43",
+          "normalized": 43.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "7202.93",
+          "normalized": 7202.93,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "18",
+          "normalized": 18.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "3363.49",
+          "normalized": 3363.49,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "25",
+          "normalized": 25.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "4187.75",
+          "normalized": 4187.75,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r11",
+      "row_index": 11,
+      "product_name": {
+        "raw": "ONE FORTE TAB 30TAB",
+        "normalized": "ONE FORTE TAB 30TAB",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "5",
+          "normalized": 5.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "536.95",
+          "normalized": 536.95,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "56",
+          "normalized": 56.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "6013.84",
+          "normalized": 6013.84,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "6",
+          "normalized": 6.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "721.39",
+          "normalized": 721.39,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "55",
+          "normalized": 55.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "5906.45",
+          "normalized": 5906.45,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r12",
+      "row_index": 12,
+      "product_name": {
+        "raw": "ONE SF SYP 200ML",
+        "normalized": "ONE SF SYP 200ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r13",
+      "row_index": 13,
+      "product_name": {
+        "raw": "ONE SYP 200ML 200ML",
+        "normalized": "ONE SYP 200ML 200ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "16",
+          "normalized": 16.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "2928.64",
+          "normalized": 2928.64,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "28",
+          "normalized": 28.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "5125.12",
+          "normalized": 5125.12,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "24",
+          "normalized": 24.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "4885.31",
+          "normalized": 4885.31,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "20",
+          "normalized": 20.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "3660.8",
+          "normalized": 3660.8,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r14",
+      "row_index": 14,
+      "product_name": {
+        "raw": "ONE TAB 60TAB",
+        "normalized": "ONE TAB 60TAB",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "50",
+          "normalized": 50.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "8206.5",
+          "normalized": 8206.5,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "100",
+          "normalized": 100.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "16413",
+          "normalized": 16413.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "57",
+          "normalized": 57.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "10370.61",
+          "normalized": 10370.61,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "93",
+          "normalized": 93.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "15264.09",
+          "normalized": 15264.09,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r15",
+      "row_index": 15,
+      "product_name": {
+        "raw": "OF SYP 100ML",
+        "normalized": "OF SYP 100ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r16",
+      "row_index": 16,
+      "product_name": {
+        "raw": "GEL 30G",
+        "normalized": "GEL 30G",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r17",
+      "row_index": 17,
+      "product_name": {
+        "raw": "ARE 200ML SY 200ML",
+        "normalized": "ARE 200ML SY 200ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "39",
+          "normalized": 39.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "5266.77",
+          "normalized": 5266.77,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "25",
+          "normalized": 25.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "4059.94",
+          "normalized": 4059.94,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "14",
+          "normalized": 14.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "1890.64",
+          "normalized": 1890.64,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r18",
+      "row_index": 18,
+      "product_name": {
+        "raw": "ARE 400ML SY 400ML",
+        "normalized": "ARE 400ML SY 400ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "4",
+          "normalized": 4.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "780.12",
+          "normalized": 780.12,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "4",
+          "normalized": 4.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "780.12",
+          "normalized": 780.12,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r19",
+      "row_index": 19,
+      "product_name": {
+        "raw": "ARE CAP 30CAP",
+        "normalized": "ARE CAP 30CAP",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "39",
+          "normalized": 39.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "6401.07",
+          "normalized": 6401.07,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "36",
+          "normalized": 36.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "6658.37",
+          "normalized": 6658.37,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "3",
+          "normalized": 3.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "492.39",
+          "normalized": 492.39,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r20",
+      "row_index": 20,
+      "product_name": {
+        "raw": "ARE FORTE SYP 200ML",
+        "normalized": "ARE FORTE SYP 200ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "33",
+          "normalized": 33.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "5327.17",
+          "normalized": 5327.17,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "12",
+          "normalized": 12.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "2339.62",
+          "normalized": 2339.62,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "21",
+          "normalized": 21.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "3390.02",
+          "normalized": 3390.02,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r21",
+      "row_index": 21,
+      "product_name": {
+        "raw": "ARE FORTE TAB 1*10 S",
+        "normalized": "ARE FORTE TAB 1*10 S",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "23",
+          "normalized": 23.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "1386.93",
+          "normalized": 1386.93,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "23",
+          "normalized": 23.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "1386.93",
+          "normalized": 1386.93,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r22",
+      "row_index": 22,
+      "product_name": {
+        "raw": "ASANTE CAP 10S",
+        "normalized": "ASANTE CAP 10S",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r23",
+      "row_index": 23,
+      "product_name": {
+        "raw": "CTOSURE GRANULES ELAICH",
+        "normalized": "CTOSURE GRANULES ELAICH",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "12",
+          "normalized": 12.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "3193.56",
+          "normalized": 3193.56,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "5",
+          "normalized": 5.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "1501",
+          "normalized": 1501.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "7",
+          "normalized": 7.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "1862.91",
+          "normalized": 1862.91,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r24",
+      "row_index": 24,
+      "product_name": {
+        "raw": "FORT SYP 200ML",
+        "normalized": "FORT SYP 200ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "8",
+          "normalized": 8.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "811.8",
+          "normalized": 811.8,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "8",
+          "normalized": 8.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "811.8",
+          "normalized": 811.8,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r25",
+      "row_index": 25,
+      "product_name": {
+        "raw": "FORT TAB 100T",
+        "normalized": "FORT TAB 100T",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "44",
+          "normalized": 44.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "4533.12",
+          "normalized": 4533.12,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "44",
+          "normalized": 44.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "4533.12",
+          "normalized": 4533.12,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r26",
+      "row_index": 26,
+      "product_name": {
+        "raw": "DRA CAP 60TAB",
+        "normalized": "DRA CAP 60TAB",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r27",
+      "row_index": 27,
+      "product_name": {
+        "raw": "OSPAZ SOFT CAP 10CAP",
+        "normalized": "OSPAZ SOFT CAP 10CAP",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r28",
+      "row_index": 28,
+      "product_name": {
+        "raw": "LASIA TAB 30TAB",
+        "normalized": "LASIA TAB 30TAB",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "98",
+          "normalized": 98.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "15406.65",
+          "normalized": 15406.65,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "98",
+          "normalized": 98.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "15406.65",
+          "normalized": 15406.65,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r29",
+      "row_index": 29,
+      "product_name": {
+        "raw": "A DIABETIC TOOTH PASTE 100",
+        "normalized": "A DIABETIC TOOTH PASTE 100",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "14",
+          "normalized": 14.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "1214.78",
+          "normalized": 1214.78,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "14",
+          "normalized": 14.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "1214.78",
+          "normalized": 1214.78,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r30",
+      "row_index": 30,
+      "product_name": {
+        "raw": "A GA GEL 15ML",
+        "normalized": "A GA GEL 15ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "40",
+          "normalized": 40.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "2782.8",
+          "normalized": 2782.8,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "1",
+          "normalized": 1.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "76.91",
+          "normalized": 76.91,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "39",
+          "normalized": 39.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "2713.23",
+          "normalized": 2713.23,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r31",
+      "row_index": 31,
+      "product_name": {
+        "raw": "AK MOUTHWASH 150ML",
+        "normalized": "AK MOUTHWASH 150ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "10",
+          "normalized": 10.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "841.5",
+          "normalized": 841.5,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "2",
+          "normalized": 2.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "184.14",
+          "normalized": 184.14,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "8",
+          "normalized": 8.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "673.2",
+          "normalized": 673.2,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r32",
+      "row_index": 32,
+      "product_name": {
+        "raw": "AK TOOTHPASTE 100G 100G",
+        "normalized": "AK TOOTHPASTE 100G 100G",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "41",
+          "normalized": 41.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "4430.46",
+          "normalized": 4430.46,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "25",
+          "normalized": 25.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "2902.81",
+          "normalized": 2902.81,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "16",
+          "normalized": 16.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "1728.96",
+          "normalized": 1728.96,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r33",
+      "row_index": 33,
+      "product_name": {
+        "raw": "AK TOOTHPASTE 50G 50G",
+        "normalized": "AK TOOTHPASTE 50G 50G",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "40",
+          "normalized": 40.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "2663.15",
+          "normalized": 2663.15,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "5",
+          "normalized": 5.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "400.89",
+          "normalized": 400.89,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "35",
+          "normalized": 35.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "2330.26",
+          "normalized": 2330.26,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r34",
+      "row_index": 34,
+      "product_name": {
+        "raw": "A MOUTH WASH (REG) 150ML",
+        "normalized": "A MOUTH WASH (REG) 150ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r35",
+      "row_index": 35,
+      "product_name": {
+        "raw": "A PAIN GEL 6X10GM BLISTER",
+        "normalized": "A PAIN GEL 6X10GM BLISTER",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r36",
+      "row_index": 36,
+      "product_name": {
+        "raw": "A SG GEL 10G",
+        "normalized": "A SG GEL 10G",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "40",
+          "normalized": 40.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "3026",
+          "normalized": 3026.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "7",
+          "normalized": 7.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "579.46",
+          "normalized": 579.46,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "33",
+          "normalized": 33.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "2496.45",
+          "normalized": 2496.45,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r37",
+      "row_index": 37,
+      "product_name": {
+        "raw": "A TOOTHPASTE 100G-INDIA",
+        "normalized": "A TOOTHPASTE 100G-INDIA",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r38",
+      "row_index": 38,
+      "product_name": {
+        "raw": "A TOOTHPASTE 50G 50G",
+        "normalized": "A TOOTHPASTE 50G 50G",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r39",
+      "row_index": 39,
+      "product_name": {
+        "raw": "SANTE TAB 20TAB",
+        "normalized": "SANTE TAB 20TAB",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r40",
+      "row_index": 40,
+      "product_name": {
+        "raw": "JATE WASH 100ML 100ML",
+        "normalized": "JATE WASH 100ML 100ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r41",
+      "row_index": 41,
+      "product_name": {
+        "raw": "LA TAB 60TAB",
+        "normalized": "LA TAB 60TAB",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "21",
+          "normalized": 21.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "4276.86",
+          "normalized": 4276.86,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "11",
+          "normalized": 11.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "2486.96",
+          "normalized": 2486.96,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "10",
+          "normalized": 10.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "2036.6",
+          "normalized": 2036.6,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r42",
+      "row_index": 42,
+      "product_name": {
+        "raw": "NA TAB 60CAP",
+        "normalized": "NA TAB 60CAP",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "17",
+          "normalized": 17.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "3276.75",
+          "normalized": 3276.75,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "9",
+          "normalized": 9.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "1930.1",
+          "normalized": 1930.1,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "8",
+          "normalized": 8.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "1542",
+          "normalized": 1542.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r43",
+      "row_index": 43,
+      "product_name": {
+        "raw": "DROP 100ML 100ML",
+        "normalized": "DROP 100ML 100ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r44",
+      "row_index": 44,
+      "product_name": {
+        "raw": "DROP 60ML 60ML",
+        "normalized": "DROP 60ML 60ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "2",
+          "normalized": 2.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "195.88",
+          "normalized": 195.88,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "100",
+          "normalized": 100.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "9794",
+          "normalized": 9794.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "3",
+          "normalized": 3.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "285.64",
+          "normalized": 285.64,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "99",
+          "normalized": 99.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "9696.06",
+          "normalized": 9696.06,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r45",
+      "row_index": 45,
+      "product_name": {
+        "raw": "DS 100ML SY 100ML",
+        "normalized": "DS 100ML SY 100ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "70",
+          "normalized": 70.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "10637.2",
+          "normalized": 10637.2,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "38",
+          "normalized": 38.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "6427.01",
+          "normalized": 6427.01,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "32",
+          "normalized": 32.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "4862.72",
+          "normalized": 4862.72,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r46",
+      "row_index": 46,
+      "product_name": {
+        "raw": "DS 200ML SY 200ML",
+        "normalized": "DS 200ML SY 200ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "42",
+          "normalized": 42.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "9658.24",
+          "normalized": 9658.24,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "32",
+          "normalized": 32.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "8434.68",
+          "normalized": 8434.68,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "10",
+          "normalized": 10.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "2299.58",
+          "normalized": 2299.58,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r47",
+      "row_index": 47,
+      "product_name": {
+        "raw": "DS SUGAR FREE 100ML",
+        "normalized": "DS SUGAR FREE 100ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r48",
+      "row_index": 48,
+      "product_name": {
+        "raw": "DS SUGAR FREE 200ML",
+        "normalized": "DS SUGAR FREE 200ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "22",
+          "normalized": 22.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "4760.91",
+          "normalized": 4760.91,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "4",
+          "normalized": 4.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "1064.36",
+          "normalized": 1064.36,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "18",
+          "normalized": 18.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "3895.29",
+          "normalized": 3895.29,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r49",
+      "row_index": 49,
+      "product_name": {
+        "raw": "DS TAB 60TAB",
+        "normalized": "DS TAB 60TAB",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "46",
+          "normalized": 46.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "8730.8",
+          "normalized": 8730.8,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "100",
+          "normalized": 100.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "18410.6",
+          "normalized": 18410.6,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "52",
+          "normalized": 52.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "10929.61",
+          "normalized": 10929.61,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "94",
+          "normalized": 94.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "17841.2",
+          "normalized": 17841.2,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r50",
+      "row_index": 50,
+      "product_name": {
+        "raw": "L SYP 200ML",
+        "normalized": "L SYP 200ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "19",
+          "normalized": 19.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "3002.95",
+          "normalized": 3002.95,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "1",
+          "normalized": 1.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "178.28",
+          "normalized": 178.28,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "18",
+          "normalized": 18.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "2844.9",
+          "normalized": 2844.9,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r51",
+      "row_index": 51,
+      "product_name": {
+        "raw": "IL TAB 60TAB",
+        "normalized": "IL TAB 60TAB",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "19",
+          "normalized": 19.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "3246.72",
+          "normalized": 3246.72,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "50",
+          "normalized": 50.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "8544",
+          "normalized": 8544.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "19",
+          "normalized": 19.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "3585.12",
+          "normalized": 3585.12,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "50",
+          "normalized": 50.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "8544",
+          "normalized": 8544.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r52",
+      "row_index": 52,
+      "product_name": {
+        "raw": "DSON 30TAB",
+        "normalized": "DSON 30TAB",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "29",
+          "normalized": 29.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "3622.97",
+          "normalized": 3622.97,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "29",
+          "normalized": 29.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "3622.97",
+          "normalized": 3622.97,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r53",
+      "row_index": 53,
+      "product_name": {
+        "raw": "AT DS SYP 100ML",
+        "normalized": "AT DS SYP 100ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "7",
+          "normalized": 7.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "853.23",
+          "normalized": 853.23,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "1",
+          "normalized": 1.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "133.37",
+          "normalized": 133.37,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "6",
+          "normalized": 6.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "731.34",
+          "normalized": 731.34,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r54",
+      "row_index": 54,
+      "product_name": {
+        "raw": "AT SYP 200ML",
+        "normalized": "AT SYP 200ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "8",
+          "normalized": 8.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "1388.64",
+          "normalized": 1388.64,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "1",
+          "normalized": 1.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "192.28",
+          "normalized": 192.28,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "7",
+          "normalized": 7.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "1215.06",
+          "normalized": 1215.06,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r55",
+      "row_index": 55,
+      "product_name": {
+        "raw": "AT TAB 60TAB",
+        "normalized": "AT TAB 60TAB",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "65",
+          "normalized": 65.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "8591.9",
+          "normalized": 8591.9,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "100",
+          "normalized": 100.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "13218.3",
+          "normalized": 13218.3,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "46",
+          "normalized": 46.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "7101.65",
+          "normalized": 7101.65,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "119",
+          "normalized": 119.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "15729.78",
+          "normalized": 15729.78,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r56",
+      "row_index": 56,
+      "product_name": {
+        "raw": "HASHIRINGI CAP 60TAB",
+        "normalized": "HASHIRINGI CAP 60TAB",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r57",
+      "row_index": 57,
+      "product_name": {
+        "raw": "II TABLETS 60TAB",
+        "normalized": "II TABLETS 60TAB",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r58",
+      "row_index": 58,
+      "product_name": {
+        "raw": "SYP 200ML",
+        "normalized": "SYP 200ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r59",
+      "row_index": 59,
+      "product_name": {
+        "raw": "OLAX SUSP.120ML 120ML",
+        "normalized": "OLAX SUSP.120ML 120ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r60",
+      "row_index": 60,
+      "product_name": {
+        "raw": "OLAX CAP 10CAP",
+        "normalized": "OLAX CAP 10CAP",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r61",
+      "row_index": 61,
+      "product_name": {
+        "raw": "ENZA SYP 100ML",
+        "normalized": "ENZA SYP 100ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "68",
+          "normalized": 68.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "12033.28",
+          "normalized": 12033.28,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "56",
+          "normalized": 56.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "9909.76",
+          "normalized": 9909.76,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "76",
+          "normalized": 76.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "14645.77",
+          "normalized": 14645.77,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "48",
+          "normalized": 48.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "8494.08",
+          "normalized": 8494.08,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r62",
+      "row_index": 62,
+      "product_name": {
+        "raw": "ENZA TAB 20TAB",
+        "normalized": "ENZA TAB 20TAB",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "156",
+          "normalized": 156.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "20119.63",
+          "normalized": 20119.63,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "85",
+          "normalized": 85.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "12709.43",
+          "normalized": 12709.43,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "71",
+          "normalized": 71.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "9157.01",
+          "normalized": 9157.01,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r63",
+      "row_index": 63,
+      "product_name": {
+        "raw": "RNAVA CAP 60CAP",
+        "normalized": "RNAVA CAP 60CAP",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r64",
+      "row_index": 64,
+      "product_name": {
+        "raw": "HANDS 50ML",
+        "normalized": "HANDS 50ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENIN G STOCK",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTI TY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIV E VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTI TY",
+          "semantic": "sales_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSI NG STOCK",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSIN VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    }
+  ],
+  "headers": [],
+  "notes": [
+    "AI_PROPOSED from the original image only. Not verified. Named quantities are set only when a printed header was copied. Blank cells were not stored as zero."
+  ],
+  "failure": null,
+  "vision_model": "gemini-2.5-flash",
+  "vision_input": "original",
+  "ocr_used_as_label": false
+}

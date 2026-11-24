@@ -1,0 +1,492 @@
+{
+  "engine": "paddleocr-vl-1.6",
+  "confidence": null,
+  "metadata": {
+    "engine": "paddleocr-vl-1.6",
+    "model": "PaddleOCR-VL-1.6",
+    "model_version": "v1.6",
+    "available": true,
+    "status": "success",
+    "latency_ms": 60193.799699998635,
+    "image_width": 1000,
+    "image_height": 1600,
+    "word_count": 80,
+    "line_count": 9,
+    "numeric_tokens": [
+      "10",
+      "38",
+      "3",
+      "1",
+      "70",
+      "30",
+      "100",
+      "26",
+      "104",
+      "200",
+      "2",
+      "5",
+      "4",
+      "1",
+      "200",
+      "3",
+      "6",
+      "6",
+      "0",
+      "0",
+      "160",
+      "40",
+      "1",
+      "4",
+      "0",
+      "0",
+      "100",
+      "20",
+      "29",
+      "56",
+      "14",
+      "71",
+      "6",
+      "75",
+      "98",
+      "160",
+      "108",
+      "150",
+      "6",
+      "110",
+      "31",
+      "160",
+      "41",
+      "150",
+      "30",
+      "24",
+      "24",
+      "0",
+      "0",
+      "60",
+      "30",
+      "4",
+      "50",
+      "17",
+      "37",
+      "10",
+      "10",
+      "3",
+      "1",
+      "2",
+      "25,091.69",
+      "2",
+      "5",
+      "16,574.03",
+      "35,609.11",
+      "2",
+      "5",
+      "11,917.17",
+      "35,975.98",
+      "7",
+      "0.00",
+      "2"
+    ],
+    "normalized_text": "10:38 Tue, 3 Nov 63010331.PDF OM PHARMA Stock & Sales from 01/10/2026 to 31/10/2026 for : HIMALAYA WELLNESS COMPANY (DIV.: HIM-OTX-DIVI) Page : 1 <table><tr><td>Product Name</td><td>Pack</td><td>LstSL</td><td>Open</td><td>RecD.</td><td>Sales</td><td>Close</td><td>Order</td><td>Pend</td></tr><tr><td>GASEX TABLETS</td><td>100TAB</td><td>70</td><td>30</td><td>100</td><td>26</td><td>104</td><td>-104</td><td>- #</td></tr><tr><td>HIMCOCID-SF(MINT FLAVOUR)</td><td>200 ML</td><td>2</td><td>5</td><td>-</td><td>4</td><td>1</td><td>-1</td><td>-</td></tr><tr><td>HIMCOCID-SF(SAUNF FLAVOUR)</td><td>200 ML</td><td>3</td><td>6</td><td>-</td><td>6</td><td>0</td><td>0</td><td>-</td></tr><tr><td>KOFLET LOZENGES(160+40)</td><td>1 TAB</td><td>4</td><td>-</td><td>-</td><td>-</td><td>0</td><td>0</td><td>-</td></tr><tr><td>KOFLET SYRUP</td><td>100 ML</td><td>20</td><td>29</td><td>56</td><td>14</td><td>71</td><td>-71</td><td>- #</td></tr><tr><td>KOFLET-H GINGER</td><td>6 TAB</td><td>75</td><td>98</td><td>160</td><td>108</td><td>150</td><td>-150</td><td>- #</td></tr><tr><td>KOFLET-H ORANGE</td><td>6 TAB</td><td>110</td><td>31</td><td>160</td><td>41</td><td>150</td><td>-150</td><td>- #</td></tr><tr><td>RUMALAYA FORTE TABLETS</td><td>30 TAB</td><td>-</td><td>24</td><td>-</td><td>24</td><td>0</td><td>0</td><td>-</td></tr><tr><td>RUMALAYA LINIMENT</td><td>60 ML</td><td>30</td><td>4</td><td>50</td><td>17</td><td>37</td><td>-37</td><td>- #</td></tr><tr><td>TENTEXT ROYAL CAPSULES</td><td>10 CAP</td><td>10</td><td>3</td><td>-</td><td>1</td><td>2</td><td>-2</td><td>- #</td></tr><tr><td>Last Month Sales</td><td>25,091.69</td><td colspan=\"2\">Open. Value</td><td colspan=\"5\">16,574.03</td></tr><tr><td>Receipt Value</td><td>35,609.11</td><td colspan=\"2\">Sales Value</td><td colspan=\"5\">11,917.17</td></tr><tr><td>Closing Value</td><td>35,975.98</td><td colspan=\"7\">[Order Value +0.00 -34262.84 ]</td></tr></table> * - Near Expiry Product, # - Scheme On Product 2% \u2160\u2160\u2160",
+    "boxes": [
+      [
+        24.0,
+        12.0,
+        187.0,
+        34.0
+      ],
+      [
+        78.0,
+        64.0,
+        244.0,
+        89.0
+      ],
+      [
+        81.0,
+        212.0,
+        159.0,
+        229.0
+      ],
+      [
+        81.0,
+        230.0,
+        861.0,
+        251.0
+      ],
+      [
+        888.0,
+        231.0,
+        971.0,
+        251.0
+      ],
+      [
+        80.0,
+        259.0,
+        717.0,
+        570.0
+      ],
+      [
+        86.0,
+        583.0,
+        466.0,
+        602.0
+      ],
+      [
+        930.0,
+        1450.0,
+        961.0,
+        1480.0
+      ],
+      [
+        574.0,
+        1556.0,
+        600.0,
+        1583.0
+      ]
+    ],
+    "layout": {
+      "regions": [
+        {
+          "index": 0,
+          "label": "header",
+          "text": "10:38 Tue, 3 Nov",
+          "bbox": [
+            24.0,
+            12.0,
+            187.0,
+            34.0
+          ],
+          "order": 0
+        },
+        {
+          "index": 1,
+          "label": "header_image",
+          "text": "",
+          "bbox": [
+            196.0,
+            11.0,
+            222.0,
+            35.0
+          ],
+          "order": 1
+        },
+        {
+          "index": 2,
+          "label": "header_image",
+          "text": "",
+          "bbox": [
+            33.0,
+            65.0,
+            56.0,
+            89.0
+          ],
+          "order": 2
+        },
+        {
+          "index": 3,
+          "label": "header_image",
+          "text": "",
+          "bbox": [
+            878.0,
+            10.0,
+            976.0,
+            34.0
+          ],
+          "order": 3
+        },
+        {
+          "index": 4,
+          "label": "header",
+          "text": "63010331.PDF",
+          "bbox": [
+            78.0,
+            64.0,
+            244.0,
+            89.0
+          ],
+          "order": 4
+        },
+        {
+          "index": 5,
+          "label": "header_image",
+          "text": "",
+          "bbox": [
+            837.0,
+            62.0,
+            969.0,
+            94.0
+          ],
+          "order": 5
+        },
+        {
+          "index": 6,
+          "label": "figure_title",
+          "text": "OM PHARMA",
+          "bbox": [
+            81.0,
+            212.0,
+            159.0,
+            229.0
+          ],
+          "order": 6
+        },
+        {
+          "index": 7,
+          "label": "text",
+          "text": "Stock & Sales from 01/10/2026 to 31/10/2026 for : HIMALAYA WELLNESS COMPANY (DIV.: HIM-OTX-DIVI)",
+          "bbox": [
+            81.0,
+            230.0,
+            861.0,
+            251.0
+          ],
+          "order": 7
+        },
+        {
+          "index": 8,
+          "label": "number",
+          "text": "Page : 1",
+          "bbox": [
+            888.0,
+            231.0,
+            971.0,
+            251.0
+          ],
+          "order": 8
+        },
+        {
+          "index": 9,
+          "label": "table",
+          "text": "<table><tr><td>Product Name</td><td>Pack</td><td>LstSL</td><td>Open</td><td>RecD.</td><td>Sales</td><td>Close</td><td>Order</td><td>Pend</td></tr><tr><td>GASEX TABLETS</td><td>100TAB</td><td>70</td><td>30</td><td>100</td><td>26</td><td>104</td><td>-104</td><td>- #</td></tr><tr><td>HIMCOCID-SF(MINT FLAVOUR)</td><td>200 ML</td><td>2</td><td>5</td><td>-</td><td>4</td><td>1</td><td>-1</td><td>-</td></tr><tr><td>HIMCOCID-SF(SAUNF FLAVOUR)</td><td>200 ML</td><td>3</td><td>6</td><td>-</td><td>6</td><td>0</td><td>0</td><td>-</td></tr><tr><td>KOFLET LOZENGES(160+40)</td><td>1 TAB</td><td>4</td><td>-</td><td>-</td><td>-</td><td>0</td><td>0</td><td>-</td></tr><tr><td>KOFLET SYRUP</td><td>100 ML</td><td>20</td><td>29</td><td>56</td><td>14</td><td>71</td><td>-71</td><td>- #</td></tr><tr><td>KOFLET-H GINGER</td><td>6 TAB</td><td>75</td><td>98</td><td>160</td><td>108</td><td>150</td><td>-150</td><td>- #</td></tr><tr><td>KOFLET-H ORANGE</td><td>6 TAB</td><td>110</td><td>31</td><td>160</td><td>41</td><td>150</td><td>-150</td><td>- #</td></tr><tr><td>RUMALAYA FORTE TABLETS</td><td>30 TAB</td><td>-</td><td>24</td><td>-</td><td>24</td><td>0</td><td>0</td><td>-</td></tr><tr><td>RUMALAYA LINIMENT</td><td>60 ML</td><td>30</td><td>4</td><td>50</td><td>17</td><td>37</td><td>-37</td><td>- #</td></tr><tr><td>TENTEXT ROYAL CAPSULES</td><td>10 CAP</td><td>10</td><td>3</td><td>-</td><td>1</td><td>2</td><td>-2</td><td>- #</td></tr><tr><td>Last Month Sales</td><td>25,091.69</td><td colspan=\"2\">Open. Value</td><td colspan=\"5\">16,574.03</td></tr><tr><td>Receipt Value</td><td>35,609.11</td><td colspan=\"2\">Sales Value</td><td colspan=\"5\">11,917.17</td></tr><tr><td>Closing Value</td><td>35,975.98</td><td colspan=\"7\">[Order Value +0.00 -34262.84 ]</td></tr></table>",
+          "bbox": [
+            80.0,
+            259.0,
+            717.0,
+            570.0
+          ],
+          "order": 9
+        },
+        {
+          "index": 10,
+          "label": "vision_footnote",
+          "text": "* - Near Expiry Product, # - Scheme On Product",
+          "bbox": [
+            86.0,
+            583.0,
+            466.0,
+            602.0
+          ],
+          "order": 10
+        },
+        {
+          "index": 11,
+          "label": "number",
+          "text": "2%",
+          "bbox": [
+            930.0,
+            1450.0,
+            961.0,
+            1480.0
+          ],
+          "order": 11
+        },
+        {
+          "index": 12,
+          "label": "number",
+          "text": "\u2160\u2160\u2160",
+          "bbox": [
+            574.0,
+            1556.0,
+            600.0,
+            1583.0
+          ],
+          "order": 12
+        }
+      ],
+      "available": true
+    },
+    "tables": {
+      "items": [
+        {
+          "index": 9,
+          "label": "table",
+          "text": "<table><tr><td>Product Name</td><td>Pack</td><td>LstSL</td><td>Open</td><td>RecD.</td><td>Sales</td><td>Close</td><td>Order</td><td>Pend</td></tr><tr><td>GASEX TABLETS</td><td>100TAB</td><td>70</td><td>30</td><td>100</td><td>26</td><td>104</td><td>-104</td><td>- #</td></tr><tr><td>HIMCOCID-SF(MINT FLAVOUR)</td><td>200 ML</td><td>2</td><td>5</td><td>-</td><td>4</td><td>1</td><td>-1</td><td>-</td></tr><tr><td>HIMCOCID-SF(SAUNF FLAVOUR)</td><td>200 ML</td><td>3</td><td>6</td><td>-</td><td>6</td><td>0</td><td>0</td><td>-</td></tr><tr><td>KOFLET LOZENGES(160+40)</td><td>1 TAB</td><td>4</td><td>-</td><td>-</td><td>-</td><td>0</td><td>0</td><td>-</td></tr><tr><td>KOFLET SYRUP</td><td>100 ML</td><td>20</td><td>29</td><td>56</td><td>14</td><td>71</td><td>-71</td><td>- #</td></tr><tr><td>KOFLET-H GINGER</td><td>6 TAB</td><td>75</td><td>98</td><td>160</td><td>108</td><td>150</td><td>-150</td><td>- #</td></tr><tr><td>KOFLET-H ORANGE</td><td>6 TAB</td><td>110</td><td>31</td><td>160</td><td>41</td><td>150</td><td>-150</td><td>- #</td></tr><tr><td>RUMALAYA FORTE TABLETS</td><td>30 TAB</td><td>-</td><td>24</td><td>-</td><td>24</td><td>0</td><td>0</td><td>-</td></tr><tr><td>RUMALAYA LINIMENT</td><td>60 ML</td><td>30</td><td>4</td><td>50</td><td>17</td><td>37</td><td>-37</td><td>- #</td></tr><tr><td>TENTEXT ROYAL CAPSULES</td><td>10 CAP</td><td>10</td><td>3</td><td>-</td><td>1</td><td>2</td><td>-2</td><td>- #</td></tr><tr><td>Last Month Sales</td><td>25,091.69</td><td colspan=\"2\">Open. Value</td><td colspan=\"5\">16,574.03</td></tr><tr><td>Receipt Value</td><td>35,609.11</td><td colspan=\"2\">Sales Value</td><td colspan=\"5\">11,917.17</td></tr><tr><td>Closing Value</td><td>35,975.98</td><td colspan=\"7\">[Order Value +0.00 -34262.84 ]</td></tr></table>",
+          "bbox": [
+            80.0,
+            259.0,
+            717.0,
+            570.0
+          ],
+          "html": null,
+          "cells": null
+        }
+      ],
+      "available": true,
+      "count": 1
+    },
+    "confidence": {
+      "mean": null,
+      "count": 0,
+      "available": false
+    },
+    "device": "gpu:0",
+    "backend": "subprocess",
+    "error": null,
+    "error_type": null,
+    "pipeline_version": "v1.6",
+    "python_executable": null,
+    "timeout_s": 300.0,
+    "init_latency_ms": 21775.656300000264,
+    "model_loaded": true,
+    "init_error": null,
+    "image_prep": {
+      "downscaled": false,
+      "max_side": 2048,
+      "orig_width": 1000,
+      "orig_height": 1600
+    },
+    "pipeline_flags": {
+      "use_doc_orientation_classify": false,
+      "use_doc_unwarping": false,
+      "use_chart_recognition": false,
+      "use_layout_detection": true
+    },
+    "block_count": 9,
+    "lines": [
+      {
+        "text": "10:38 Tue, 3 Nov",
+        "bbox": [
+          24.0,
+          12.0,
+          187.0,
+          34.0
+        ],
+        "label": "header",
+        "order": 0
+      },
+      {
+        "text": "63010331.PDF",
+        "bbox": [
+          78.0,
+          64.0,
+          244.0,
+          89.0
+        ],
+        "label": "header",
+        "order": 4
+      },
+      {
+        "text": "OM PHARMA",
+        "bbox": [
+          81.0,
+          212.0,
+          159.0,
+          229.0
+        ],
+        "label": "figure_title",
+        "order": 6
+      },
+      {
+        "text": "Stock & Sales from 01/10/2026 to 31/10/2026 for : HIMALAYA WELLNESS COMPANY (DIV.: HIM-OTX-DIVI)",
+        "bbox": [
+          81.0,
+          230.0,
+          861.0,
+          251.0
+        ],
+        "label": "text",
+        "order": 7
+      },
+      {
+        "text": "Page : 1",
+        "bbox": [
+          888.0,
+          231.0,
+          971.0,
+          251.0
+        ],
+        "label": "number",
+        "order": 8
+      },
+      {
+        "text": "<table><tr><td>Product Name</td><td>Pack</td><td>LstSL</td><td>Open</td><td>RecD.</td><td>Sales</td><td>Close</td><td>Order</td><td>Pend</td></tr><tr><td>GASEX TABLETS</td><td>100TAB</td><td>70</td><td>30</td><td>100</td><td>26</td><td>104</td><td>-104</td><td>- #</td></tr><tr><td>HIMCOCID-SF(MINT FLAVOUR)</td><td>200 ML</td><td>2</td><td>5</td><td>-</td><td>4</td><td>1</td><td>-1</td><td>-</td></tr><tr><td>HIMCOCID-SF(SAUNF FLAVOUR)</td><td>200 ML</td><td>3</td><td>6</td><td>-</td><td>6</td><td>0</td><td>0</td><td>-</td></tr><tr><td>KOFLET LOZENGES(160+40)</td><td>1 TAB</td><td>4</td><td>-</td><td>-</td><td>-</td><td>0</td><td>0</td><td>-</td></tr><tr><td>KOFLET SYRUP</td><td>100 ML</td><td>20</td><td>29</td><td>56</td><td>14</td><td>71</td><td>-71</td><td>- #</td></tr><tr><td>KOFLET-H GINGER</td><td>6 TAB</td><td>75</td><td>98</td><td>160</td><td>108</td><td>150</td><td>-150</td><td>- #</td></tr><tr><td>KOFLET-H ORANGE</td><td>6 TAB</td><td>110</td><td>31</td><td>160</td><td>41</td><td>150</td><td>-150</td><td>- #</td></tr><tr><td>RUMALAYA FORTE TABLETS</td><td>30 TAB</td><td>-</td><td>24</td><td>-</td><td>24</td><td>0</td><td>0</td><td>-</td></tr><tr><td>RUMALAYA LINIMENT</td><td>60 ML</td><td>30</td><td>4</td><td>50</td><td>17</td><td>37</td><td>-37</td><td>- #</td></tr><tr><td>TENTEXT ROYAL CAPSULES</td><td>10 CAP</td><td>10</td><td>3</td><td>-</td><td>1</td><td>2</td><td>-2</td><td>- #</td></tr><tr><td>Last Month Sales</td><td>25,091.69</td><td colspan=\"2\">Open. Value</td><td colspan=\"5\">16,574.03</td></tr><tr><td>Receipt Value</td><td>35,609.11</td><td colspan=\"2\">Sales Value</td><td colspan=\"5\">11,917.17</td></tr><tr><td>Closing Value</td><td>35,975.98</td><td colspan=\"7\">[Order Value +0.00 -34262.84 ]</td></tr></table>",
+        "bbox": [
+          80.0,
+          259.0,
+          717.0,
+          570.0
+        ],
+        "label": "table",
+        "order": 9
+      },
+      {
+        "text": "* - Near Expiry Product, # - Scheme On Product",
+        "bbox": [
+          86.0,
+          583.0,
+          466.0,
+          602.0
+        ],
+        "label": "vision_footnote",
+        "order": 10
+      },
+      {
+        "text": "2%",
+        "bbox": [
+          930.0,
+          1450.0,
+          961.0,
+          1480.0
+        ],
+        "label": "number",
+        "order": 11
+      },
+      {
+        "text": "\u2160\u2160\u2160",
+        "bbox": [
+          574.0,
+          1556.0,
+          600.0,
+          1583.0
+        ],
+        "label": "number",
+        "order": 12
+      }
+    ],
+    "reading_order": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "bbox_stats": {
+      "valid": 9,
+      "invalid": 0,
+      "total": 9
+    },
+    "raw_keys": [
+      "doc_preprocessor_res",
+      "height",
+      "imgs_in_doc",
+      "input_path",
+      "layout_det_res",
+      "model_settings",
+      "page_count",
+      "page_index",
+      "parsing_res_list",
+      "spotting_res",
+      "table_res_list",
+      "width"
+    ]
+  },
+  "text_len": 1957,
+  "seconds": 97.52
+}

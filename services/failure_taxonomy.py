@@ -58,18 +58,24 @@ def classify_failure(
         return FailureType.SCHEMA_INVALID
     if "empty_line_items" in reasons or checks.get("rows") is False:
         return FailureType.EMPTY_OUTPUT
-    if "unverified_ocr_fallback" in reasons or checks.get("ocr_verified") is False:
-        return FailureType.UNVERIFIED_OCR_FALLBACK
+    # Prefer stock-identity recovery when rows exist — unverified OCR alone
+    # must not zero out Phase 2 attempts while quantities are wrong.
+    if "stock_identity_failure" in reasons or checks.get("stock_identity") is False:
+        return FailureType.STOCK_IDENTITY_FAILURE
     if "column_confusion" in reasons or checks.get("column_mapping") is False:
         return FailureType.COLUMN_CONFUSION
     if "ambiguous_mapping" in reasons:
         return FailureType.AMBIGUOUS_MAPPING
     if "numeric_character_confusion" in reasons:
         return FailureType.NUMERIC_CHARACTER_CONFUSION
+    if "empty_ocr_page" in reasons or "truncated_cell" in reasons:
+        return FailureType.OCR_REQUIRED
+    if "unverified_ocr_fallback" in reasons or checks.get("ocr_verified") is False:
+        return FailureType.UNVERIFIED_OCR_FALLBACK
+    if "insufficient_source_evidence" in reasons or checks.get("source_evidence") is False:
+        return FailureType.LOW_TEXT_EVIDENCE
     if "cell_validation_failure" in reasons or checks.get("cell_validation") is False:
         return FailureType.CELL_VALIDATION_FAILURE
-    if "stock_identity_failure" in reasons or checks.get("stock_identity") is False:
-        return FailureType.STOCK_IDENTITY_FAILURE
     if "duplicate_rows" in reasons or checks.get("duplicates") is False:
         return FailureType.DUPLICATE_ROWS
     if reasons & _MISSING_FIELD_REASONS:

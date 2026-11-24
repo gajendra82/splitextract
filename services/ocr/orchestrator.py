@@ -14,9 +14,10 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
 from services.ocr.base import OCREngine, OCRResult
+from services.ocr.bounded import OcrExecutionTimeout, call_bounded, ocr_execution_timeout_s
 from services.ocr.gemini_fallback import GeminiOCRFallback
 from services.ocr.paddle_engine import PaddleEngine
-from services.ocr.paddle_vl_engine import PaddleVLEngine
+from services.ocr.paddle_vl_engine import PaddleVLEngine, paddle_init_blocked
 from services.ocr.surya_engine import SuryaEngine
 from services.ocr.tesseract_engine import TesseractEngine
 
@@ -138,12 +139,17 @@ class OCROrchestrator:
         )
         if primary_engine is None or not primary_engine.available():
             primary = _error_result(primary_name, page, f"primary_ocr_unavailable:{primary_name}")
+        elif paddle_init_blocked() and str(primary_name).startswith("paddleocr-vl"):
+            primary = _error_result(primary_name, page, paddle_init_blocked() or "paddle_init_failed")
+            primary.metadata["persistent_init_failure"] = True
         else:
-            try:
-                primary = primary_engine.recognize(image_bytes, page=page, metadata=metadata)
-            except Exception as exc:
-                logger.warning("ocr_primary_exception engine=%s error=%s", primary_name, exc)
-                primary = _error_result(primary_name, page, str(exc))
+            primary = _recognize_bounded(
+                primary_engine,
+                image_bytes,
+                page=page,
+                metadata=metadata,
+                label=primary_name,
+            )
         bundle.primary = primary
         bundle.engines_used.append(primary.engine or primary_name)
         reason = _unusable_reason(primary)
@@ -183,11 +189,13 @@ class OCROrchestrator:
             return bundle
 
         logger.info("ocr_fallback from=%s to=%s reason=%s", primary_name, fallback_name, reason)
-        try:
-            fallback_result = fallback.recognize(image_bytes, page=page, metadata=metadata)
-        except Exception as exc:
-            logger.warning("ocr_fallback_exception engine=%s error=%s", fallback_name, exc)
-            fallback_result = _error_result(fallback_name, page, str(exc))
+        fallback_result = _recognize_bounded(
+            fallback,
+            image_bytes,
+            page=page,
+            metadata=metadata,
+            label=fallback_name,
+        )
         bundle.secondary = primary
         bundle.primary = fallback_result
         bundle.engines_used.append(fallback_result.engine or fallback_name)
@@ -212,6 +220,79 @@ class OCROrchestrator:
             bundle.metadata["error"],
         )
         return bundle
+
+
+def ocr_readiness(settings: Optional[OCRSettings] = None) -> Dict[str, Any]:
+    """Whether the configured primary engine can be called.
+
+    This does not load Paddle or run a page. A persistent init failure, a
+    missing runtime, or ``available() is False`` means the engine is not usable.
+    """
+    chosen = settings or ocr_settings()
+    name = (chosen.primary_engine or _DEFAULT_PRIMARY).strip().lower() or _DEFAULT_PRIMARY
+    try:
+        if paddle_init_blocked() and name.startswith("paddleocr-vl"):
+            return {
+                "engine": name,
+                "usable": False,
+                "reason": paddle_init_blocked() or "paddle_init_failed",
+            }
+        engine = _readiness_engine(name)
+        if engine is None:
+            return {"engine": name, "usable": False, "reason": f"unknown_ocr_engine:{name}"}
+        usable = bool(engine.available())
+        reason = None
+        if not usable:
+            reason = getattr(engine, "_init_error", None) or f"primary_ocr_unavailable:{name}"
+        return {"engine": name, "usable": usable, "reason": reason}
+    except Exception as exc:
+        return {"engine": name, "usable": False, "reason": str(exc)}
+
+
+def _readiness_engine(name: str) -> Optional[OCREngine]:
+    if name in {"paddleocr-vl", "paddleocr-vl-1.6", "paddle_vl"}:
+        return PaddleVLEngine()
+    if name == "tesseract":
+        return TesseractEngine()
+    if name == "paddle":
+        return PaddleEngine()
+    if name in {"surya", "surya-2", "surya_2"}:
+        return SuryaEngine()
+    if name == "gemini":
+        return GeminiOCRFallback()
+    return None
+
+
+def _recognize_bounded(
+    engine: OCREngine,
+    image_bytes: bytes,
+    *,
+    page: int,
+    metadata: Optional[Dict[str, Any]],
+    label: str,
+) -> OCRResult:
+    try:
+        return call_bounded(
+            lambda: engine.recognize(image_bytes, page=page, metadata=metadata),
+            ocr_execution_timeout_s(),
+            label=label or "ocr",
+        )
+    except OcrExecutionTimeout as exc:
+        logger.warning("ocr_timeout engine=%s timeout_s=%s", label, exc.timeout_s)
+        if "paddle" in str(label):
+            try:
+                from services.ocr.paddle_vl_engine import kill_paddle_vl_serve
+
+                kill_paddle_vl_serve()
+            except Exception:
+                logger.warning("ocr_timeout_kill_failed engine=%s", label, exc_info=True)
+        result = _error_result(label, page, "ocr_timeout")
+        result.metadata["provider_error"] = True
+        result.metadata["timeout_s"] = exc.timeout_s
+        return result
+    except Exception as exc:
+        logger.warning("ocr_exception engine=%s error=%s", label, exc)
+        return _error_result(label, page, str(exc))
 
 
 def _error_result(engine: str, page: int, error: str) -> OCRResult:

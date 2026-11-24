@@ -1,9 +1,15 @@
-"""Tesseract adapter over the existing gated pytesseract path."""
+"""Tesseract adapter over native pytesseract (not the primary-OCR shim).
+
+Recovery and diagnostics need real Tesseract text. Routing through
+``_a2z_tesseract`` / ``PrimaryOCRPytesseractShim`` would call PaddleOCR-VL
+when VL is primary and defeat the Tesseract recovery step.
+"""
 
 from __future__ import annotations
 
 import io
 import logging
+import os
 from typing import Any, Dict, Optional
 
 from services.ocr.base import OCREngine, OCRResult, OCRWord
@@ -11,14 +17,36 @@ from services.ocr.base import OCREngine, OCRResult, OCRWord
 logger = logging.getLogger(__name__)
 
 
+def _page_segmentation_mode() -> int:
+    """Read the optional Tesseract PSM; keep the existing mode as default."""
+    raw = (os.getenv("TESSERACT_PSM") or "6").strip()
+    try:
+        mode = int(raw)
+    except (TypeError, ValueError):
+        return 6
+    return mode if 0 <= mode <= 13 else 6
+
+
+def _native_pytesseract():
+    """Return pytesseract configured with TESSERACT_CMD, without the VL shim."""
+    import pytesseract
+
+    cmd = os.getenv("TESSERACT_CMD", "").strip()
+    if cmd:
+        pytesseract.pytesseract.tesseract_cmd = cmd
+    elif os.name == "nt":
+        win_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+        if os.path.exists(win_cmd):
+            pytesseract.pytesseract.tesseract_cmd = win_cmd
+    return pytesseract
+
+
 class TesseractEngine(OCREngine):
     name = "tesseract"
 
     def available(self) -> bool:
         try:
-            from services.sales_statement_extractor import _a2z_tesseract
-
-            _a2z_tesseract()
+            _native_pytesseract()
             return True
         except Exception:
             return False
@@ -32,12 +60,12 @@ class TesseractEngine(OCREngine):
     ) -> OCRResult:
         from PIL import Image
 
-        from services.sales_statement_extractor import _a2z_tesseract
-
-        pytesseract = _a2z_tesseract()
+        pytesseract = _native_pytesseract()
         image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+        psm = _page_segmentation_mode()
+        config = f"--psm {psm}"
         data = pytesseract.image_to_data(
-            image, config="--psm 6", output_type=pytesseract.Output.DICT
+            image, config=config, output_type=pytesseract.Output.DICT
         )
         words = []
         confidences = []
@@ -68,12 +96,17 @@ class TesseractEngine(OCREngine):
                     page=page,
                 )
             )
-        text = pytesseract.image_to_string(image, config="--psm 6") or ""
+        text = pytesseract.image_to_string(image, config=config) or ""
+        if not str(text).strip() and words:
+            # Geometry path succeeded; assemble line text rather than inventing.
+            text = " ".join(w.text for w in words if w.text)
         mean_conf = (
             sum(confidences) / len(confidences) if confidences else None
         )
         meta = dict(metadata or {})
         meta["word_count"] = len(words)
+        meta["page_segmentation_mode"] = psm
+        meta["ocr_source"] = "tesseract"
         return OCRResult(
             text=text,
             words=words,

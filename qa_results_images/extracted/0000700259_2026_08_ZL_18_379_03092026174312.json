@@ -1,0 +1,392 @@
+{
+  "source_file": "0000700259_2026_08_ZL_18_379_03092026174312.jpg",
+  "source_format": "jpg",
+  "stockist_name": "GUPTESWAR PHARMACEUTICALS, JEYPORE",
+  "stockist_address": null,
+  "company_name": "THE HIMALAYA DRUG CO.(ZEAL)",
+  "period_from": "2026-08-01",
+  "period_to": "2026-08-31",
+  "report_title": "Product wise stock statement",
+  "line_items": [
+    {
+      "product_code": null,
+      "product_name": "BLEMINOR CR",
+      "packing": "30",
+      "opening_qty": 17.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": null,
+      "closing_qty": 17.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "liquidation_days": 128.0,
+        "expected_closing": 17.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "CLARINA ANTIACNE CREAM",
+      "packing": "30GM",
+      "opening_qty": 18.0,
+      "opening_value": null,
+      "receipts_qty": 2.0,
+      "receipts_value": null,
+      "sales_qty": 8.0,
+      "sales_value": null,
+      "closing_qty": 10.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "receipts_free": 2.0,
+        "liquidation_days": 60.0,
+        "expected_closing": 12.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "CLARINA ANTI ACNE FACE WA",
+      "packing": "60ML",
+      "opening_qty": 39.0,
+      "opening_value": null,
+      "receipts_qty": 8.0,
+      "receipts_value": null,
+      "sales_qty": 3.0,
+      "sales_value": null,
+      "closing_qty": 39.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "receipts_free": 8.0,
+        "liquidation_days": 319.0,
+        "expected_closing": 44.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "DIABECON DS",
+      "packing": "60'S",
+      "opening_qty": 50.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 3.0,
+      "sales_value": null,
+      "closing_qty": 47.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "liquidation_days": 470.0,
+        "expected_closing": 47.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "DIABECON TAB",
+      "packing": "60'S",
+      "opening_qty": 31.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 6.0,
+      "sales_value": null,
+      "closing_qty": 31.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "liquidation_days": 254.0,
+        "expected_closing": 25.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "HAIR ZONE SOLU",
+      "packing": "60ML",
+      "opening_qty": 26.0,
+      "opening_value": null,
+      "receipts_qty": 1.0,
+      "receipts_value": null,
+      "sales_qty": 6.0,
+      "sales_value": null,
+      "closing_qty": 20.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "receipts_free": 1.0,
+        "liquidation_days": 171.0,
+        "expected_closing": 21.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "HIMCOLIN CREAM",
+      "packing": "30GM",
+      "opening_qty": 29.0,
+      "opening_value": null,
+      "receipts_qty": 7.0,
+      "receipts_value": null,
+      "sales_qty": 18.0,
+      "sales_value": null,
+      "closing_qty": 17.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "receipts_free": 7.0,
+        "sales_free": 12.0,
+        "liquidation_days": 61.0,
+        "expected_closing": 18.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV SYP",
+      "packing": "100ML",
+      "opening_qty": 83.0,
+      "opening_value": null,
+      "receipts_qty": 34.0,
+      "receipts_value": null,
+      "sales_qty": 77.0,
+      "sales_value": null,
+      "closing_qty": 21.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "receipts_free": 34.0,
+        "sales_free": 62.0,
+        "liquidation_days": 19.0,
+        "expected_closing": 40.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV SYP",
+      "packing": "200ML",
+      "opening_qty": 103.0,
+      "opening_value": null,
+      "receipts_qty": 43.0,
+      "receipts_value": null,
+      "sales_qty": 3752.0,
+      "sales_value": null,
+      "closing_qty": 51.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "receipts_free": 43.0,
+        "liquidation_days": 32.0,
+        "expected_closing": -3606.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV TAB",
+      "packing": "100'S",
+      "opening_qty": 36.0,
+      "opening_value": null,
+      "receipts_qty": 168.0,
+      "receipts_value": null,
+      "sales_qty": 16.0,
+      "sales_value": null,
+      "closing_qty": 123.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "receipts_free": 68.0,
+        "sales_free": 13.0,
+        "liquidation_days": 145.0,
+        "expected_closing": 188.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "OPTHACARE EYE DROP",
+      "packing": "10ML",
+      "opening_qty": 43.0,
+      "opening_value": null,
+      "receipts_qty": 27.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": null,
+      "closing_qty": 43.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "receipts_free": 27.0,
+        "liquidation_days": 1.0,
+        "expected_closing": 70.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ORO-T ORAL RINSE",
+      "packing": "100ML",
+      "opening_qty": 33.0,
+      "opening_value": null,
+      "receipts_qty": 3.0,
+      "receipts_value": null,
+      "sales_qty": 6.0,
+      "sales_value": null,
+      "closing_qty": 33.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "receipts_free": 3.0,
+        "liquidation_days": 233.0,
+        "expected_closing": 30.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PILEX FORTE OINT",
+      "packing": "30GM",
+      "opening_qty": 10.0,
+      "opening_value": null,
+      "receipts_qty": 130.0,
+      "receipts_value": null,
+      "sales_qty": 46.0,
+      "sales_value": null,
+      "closing_qty": 100.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "receipts_free": 20.0,
+        "sales_free": 20.0,
+        "liquidation_days": 162.0,
+        "expected_closing": 94.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PILEX TAB",
+      "packing": "60'S",
+      "opening_qty": 29.0,
+      "opening_value": null,
+      "receipts_qty": 130.0,
+      "receipts_value": null,
+      "sales_qty": 3337.0,
+      "sales_value": null,
+      "closing_qty": 92.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "receipts_free": 30.0,
+        "liquidation_days": 92.0,
+        "expected_closing": -3178.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "RENALKA",
+      "packing": "100ML",
+      "opening_qty": 15.0,
+      "opening_value": null,
+      "receipts_qty": 3.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": null,
+      "closing_qty": 15.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "receipts_free": 3.0,
+        "liquidation_days": 104.0,
+        "expected_closing": 18.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "RENALKA SYP",
+      "packing": "200ML",
+      "opening_qty": 18.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": null,
+      "closing_qty": 18.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "liquidation_days": 9999.0,
+        "expected_closing": 18.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "TENTAX FORTE",
+      "packing": "10'S",
+      "opening_qty": 332.0,
+      "opening_value": null,
+      "receipts_qty": 26.0,
+      "receipts_value": null,
+      "sales_qty": 50.0,
+      "sales_value": null,
+      "closing_qty": 314.0,
+      "closing_value": 0.0,
+      "extra": {
+        "layout": "product_wise_stock_statement_photo",
+        "receipts_free": 26.0,
+        "liquidation_days": 185.0,
+        "expected_closing": 308.0,
+        "stock_identity_ok": false
+      }
+    }
+  ],
+  "totals": {
+    "sales_value": 36624.0,
+    "closing_value": 144261.0,
+    "extra": {
+      "extraction_method": "product_wise_stock_statement_image",
+      "layout": "product_wise_stock_statement_photo",
+      "statement_count": 1,
+      "total_row_source": "product_wise_stock_statement_footer",
+      "line_sales_value_sum": 0.0,
+      "line_closing_value_sum": 0.0,
+      "sales_qty": 7328.0,
+      "closing_qty": 991.0,
+      "stock_identity_kind": "product_wise_stock_statement_image",
+      "stock_identity_formula": "opening + receipt(+free) - issues(+free/goods) = closing; liquidation days excluded",
+      "opening_qty": 912.0,
+      "receipts_qty": 582.0,
+      "stock_identity_fail_count": 14,
+      "stock_validation": {
+        "opening_qty": 912.0,
+        "receipts_qty": 582.0,
+        "sales_qty": 7328.0,
+        "calculated_closing": -5834.0,
+        "extracted_closing": 991.0,
+        "sales_value": 36624.0,
+        "closing_value": 144261.0,
+        "is_valid": false
+      },
+      "extraction_quality": {
+        "quality": "good",
+        "score": 100,
+        "reasons": [],
+        "threshold": 75.0
+      },
+      "gemini_fallback": "not_called"
+    },
+    "opening_qty": 912.0,
+    "receipts_qty": 582.0,
+    "sales_qty": 7328.0,
+    "closing_qty": 991.0
+  }
+}

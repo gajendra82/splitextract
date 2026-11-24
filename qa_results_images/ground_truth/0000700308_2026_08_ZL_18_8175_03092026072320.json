@@ -1,0 +1,151 @@
+{
+  "source_file": "0000700308_2026_08_ZL_18_8175_03092026072320.jpg",
+  "format": "Product wise stock statement",
+  "confidence": "medium",
+  "source": "ocr",
+  "formula": "none",
+  "present_fields": [
+    "product_name",
+    "opening_qty",
+    "receipts_qty",
+    "closing_qty"
+  ],
+  "absent_fields": [
+    "product_code",
+    "opening_value",
+    "receipts_value",
+    "sales_qty",
+    "sales_value",
+    "closing_value"
+  ],
+  "columns": [
+    "product_name",
+    "packing",
+    "opening_qty",
+    "receipts_qty",
+    "closing_qty"
+  ],
+  "line_items": [
+    {
+      "product_code": null,
+      "product_name": "(ZEST) BRESOL-TAB CYSTONE-TAB DIABEGON-TAB GASEX-SYP HIMCOGID-SYP LIV-52 DS TAB",
+      "packing": null,
+      "opening_qty": null,
+      "opening_value": null,
+      "receipts_qty": null,
+      "receipts_value": null,
+      "sales_qty": null,
+      "sales_value": null,
+      "closing_qty": 64.0,
+      "closing_value": null
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV-52 SYP",
+      "packing": "100ML",
+      "opening_qty": null,
+      "opening_value": null,
+      "receipts_qty": 70.0,
+      "receipts_value": null,
+      "sales_qty": null,
+      "sales_value": null,
+      "closing_qty": null,
+      "closing_value": null
+    },
+    {
+      "product_code": null,
+      "product_name": "LiV-52 SYP RUMALAYA-CREAM : RUMALAYA-FORTE TAB TENTEX FORTE TAB TENTEX-ROYAL CAP Total sales in this period :",
+      "packing": null,
+      "opening_qty": 554.0,
+      "opening_value": null,
+      "receipts_qty": null,
+      "receipts_value": null,
+      "sales_qty": null,
+      "sales_value": null,
+      "closing_qty": null,
+      "closing_value": null
+    },
+    {
+      "product_code": null,
+      "product_name": "stock",
+      "packing": "value) :",
+      "opening_qty": 5933.0,
+      "opening_value": null,
+      "receipts_qty": null,
+      "receipts_value": null,
+      "sales_qty": null,
+      "sales_value": null,
+      "closing_qty": null,
+      "closing_value": null
+    },
+    {
+      "product_code": null,
+      "product_name": "‘| is based on last iqudation",
+      "packing": "AY",
+      "opening_qty": null,
+      "opening_value": null,
+      "receipts_qty": 2.0,
+      "receipts_value": null,
+      "sales_qty": null,
+      "sales_value": null,
+      "closing_qty": null,
+      "closing_value": null
+    },
+    {
+      "product_code": null,
+      "product_name": "han ff OA” 8 et 6 gn te Gop Sian Asc = 5 29287",
+      "packing": "SOG. 2 2 2 Aaa Aan:",
+      "opening_qty": 7.0,
+      "opening_value": null,
+      "receipts_qty": 2.0,
+      "receipts_value": null,
+      "sales_qty": null,
+      "sales_value": null,
+      "closing_qty": null,
+      "closing_value": null
+    },
+    {
+      "product_code": null,
+      "product_name": ".- 42 aa Ratha * saan + :",
+      "packing": "0 De a=",
+      "opening_qty": null,
+      "opening_value": null,
+      "receipts_qty": 2.0,
+      "receipts_value": null,
+      "sales_qty": null,
+      "sales_value": null,
+      "closing_qty": null,
+      "closing_value": null
+    },
+    {
+      "product_code": null,
+      "product_name": "FASE A IRE»",
+      "packing": "7,93",
+      "opening_qty": null,
+      "opening_value": null,
+      "receipts_qty": 2.0,
+      "receipts_value": null,
+      "sales_qty": null,
+      "sales_value": null,
+      "closing_qty": null,
+      "closing_value": null
+    },
+    {
+      "product_code": null,
+      "product_name": "Bee ee? OS 2S ee 6e DiS ee = * % %,. ‘4 > 4 at pe Se",
+      "packing": "pap A. a",
+      "opening_qty": null,
+      "opening_value": null,
+      "receipts_qty": 228.0,
+      "receipts_value": null,
+      "sales_qty": null,
+      "sales_value": null,
+      "closing_qty": null,
+      "closing_value": null
+    }
+  ],
+  "notes": [
+    "OCR used tesseract psm 6."
+  ],
+  "partial": false
+}

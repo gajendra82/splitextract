@@ -1,0 +1,416 @@
+{
+  "document_id": "0000700434_2026_08_ZL_10_386_05092026034503.jpg",
+  "role": "compatible_ssa_like",
+  "source_path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700434_2026_08_ZL_10_386_05092026034503.jpg",
+  "off": {
+    "correct_count": 23,
+    "field_count": 23,
+    "silent_wrong_count": 0,
+    "missing_count": 0,
+    "secondary_ocr_ms": 29.1,
+    "pipeline_helper_ms": 14.5,
+    "text_sha": "b45a1ba5df795375",
+    "repair_report": {
+      "document_id": "0000700434_2026_08_ZL_10_386_05092026034503.jpg",
+      "repairs": [],
+      "unresolved": [
+        {
+          "reason": "secondary_repair_disabled"
+        }
+      ]
+    }
+  },
+  "on": {
+    "correct_count": 23,
+    "field_count": 23,
+    "silent_wrong_count": 0,
+    "missing_count": 0,
+    "secondary_ocr_ms": 2405.2,
+    "pipeline_helper_ms": 2311.9,
+    "text_sha": "b45a1ba5df795375",
+    "repair_report": {
+      "document_id": "0000700434_2026_08_ZL_10_386_05092026034503.jpg",
+      "repairs": [],
+      "unresolved": [
+        {
+          "reason": "total_footer_layout_not_himalaya_qty"
+        }
+      ]
+    },
+    "pipeline_text_matches": true
+  },
+  "deltas": [],
+  "repair_types_on": [],
+  "matches_off": [
+    {
+      "field_id": "vendor",
+      "expected_raw": "DK PHARMA",
+      "predicted_raw": "DK PHARMA",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_op",
+      "expected_raw": "Op.",
+      "predicted_raw": "Op.",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_sale",
+      "expected_raw": "Sale",
+      "predicted_raw": "Sale",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_bal",
+      "expected_raw": "Bal.",
+      "predicted_raw": "Bal.",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "conf_op",
+      "expected_raw": "98",
+      "predicted_raw": "98",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "conf_sale",
+      "expected_raw": "4",
+      "predicted_raw": "4",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "conf_bal",
+      "expected_raw": "94",
+      "predicted_raw": "94",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "him_op",
+      "expected_raw": "39",
+      "predicted_raw": "39",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "him_sale",
+      "expected_raw": "5",
+      "predicted_raw": "5",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "him_bal",
+      "expected_raw": "34",
+      "predicted_raw": "34",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv100_op",
+      "expected_raw": "24",
+      "predicted_raw": "24",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv100_pur",
+      "expected_raw": "70",
+      "predicted_raw": "70",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv100_sale",
+      "expected_raw": "16",
+      "predicted_raw": "16",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv100_bal",
+      "expected_raw": "78",
+      "predicted_raw": "78",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "pilex_oint_op",
+      "expected_raw": "26",
+      "predicted_raw": "26",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "pilex_oint_sale",
+      "expected_raw": "20",
+      "predicted_raw": "20",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "pilex_oint_bal",
+      "expected_raw": "6",
+      "predicted_raw": "6",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "pilex_tab_op",
+      "expected_raw": "49",
+      "predicted_raw": "49",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "pilex_tab_sale",
+      "expected_raw": "18",
+      "predicted_raw": "18",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "pilex_tab_bal",
+      "expected_raw": "31",
+      "predicted_raw": "31",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "oph_op",
+      "expected_raw": "51",
+      "predicted_raw": "51",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "oph_sale",
+      "expected_raw": "4",
+      "predicted_raw": "4",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "oph_bal",
+      "expected_raw": "47",
+      "predicted_raw": "47",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    }
+  ],
+  "matches_on": [
+    {
+      "field_id": "vendor",
+      "expected_raw": "DK PHARMA",
+      "predicted_raw": "DK PHARMA",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_op",
+      "expected_raw": "Op.",
+      "predicted_raw": "Op.",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_sale",
+      "expected_raw": "Sale",
+      "predicted_raw": "Sale",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_bal",
+      "expected_raw": "Bal.",
+      "predicted_raw": "Bal.",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "conf_op",
+      "expected_raw": "98",
+      "predicted_raw": "98",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "conf_sale",
+      "expected_raw": "4",
+      "predicted_raw": "4",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "conf_bal",
+      "expected_raw": "94",
+      "predicted_raw": "94",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "him_op",
+      "expected_raw": "39",
+      "predicted_raw": "39",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "him_sale",
+      "expected_raw": "5",
+      "predicted_raw": "5",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "him_bal",
+      "expected_raw": "34",
+      "predicted_raw": "34",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv100_op",
+      "expected_raw": "24",
+      "predicted_raw": "24",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv100_pur",
+      "expected_raw": "70",
+      "predicted_raw": "70",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv100_sale",
+      "expected_raw": "16",
+      "predicted_raw": "16",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv100_bal",
+      "expected_raw": "78",
+      "predicted_raw": "78",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "pilex_oint_op",
+      "expected_raw": "26",
+      "predicted_raw": "26",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "pilex_oint_sale",
+      "expected_raw": "20",
+      "predicted_raw": "20",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "pilex_oint_bal",
+      "expected_raw": "6",
+      "predicted_raw": "6",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "pilex_tab_op",
+      "expected_raw": "49",
+      "predicted_raw": "49",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "pilex_tab_sale",
+      "expected_raw": "18",
+      "predicted_raw": "18",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "pilex_tab_bal",
+      "expected_raw": "31",
+      "predicted_raw": "31",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "oph_op",
+      "expected_raw": "51",
+      "predicted_raw": "51",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "oph_sale",
+      "expected_raw": "4",
+      "predicted_raw": "4",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "oph_bal",
+      "expected_raw": "47",
+      "predicted_raw": "47",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    }
+  ]
+}

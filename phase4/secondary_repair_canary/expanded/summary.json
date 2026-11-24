@@ -1,0 +1,330 @@
+{
+  "decision": "EXPANDED CANARY PASS",
+  "baseline": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\phase4\\secondary_repair_canary\\CANARY_REPORT.md",
+  "preflight": {
+    "unset_enabled": false,
+    "false_enabled": false,
+    "noop_when_off": true,
+    "baseline_report_exists": true,
+    "pass": true
+  },
+  "stop_reasons": [],
+  "totals": {
+    "fields_off_correct": 380,
+    "fields_on_correct": 385,
+    "fields_total": 388,
+    "verified_corrections": 5,
+    "incorrect_repairs": 0,
+    "regressions": 0,
+    "unchanged_fields": 383,
+    "unresolved_missing_on": 3,
+    "docs_with_repairs": 3,
+    "secondary_ocr_ms_sum_on": 57562.7,
+    "secondary_ocr_ms_sum_off": 156.80000000000004,
+    "docs_evaluated": 20,
+    "flag_restored_off": true
+  },
+  "document_ids": [
+    "0000700084_2026_08_ZL_06_8236_03092026155136.pdf",
+    "0000700124_2026_08_ZL_06_521_02092026204703.pdf",
+    "0000700209_2026_08_ZL_18_374_04092026060313.pdf",
+    "0000700275_2026_08_ZL_18_374_04092026171615.pdf",
+    "0000700308_2026_08_ZL_18_8175_03092026072320.jpg",
+    "0000700317_2026_08_ZL_18_374_02092026171443.pdf",
+    "0000700346_2026_08_ZL_18_8189_05092026025159.pdf",
+    "0000700358_2026_08_ZL_18_8173_05092026185826.pdf",
+    "0000700364_2026_08_ZL_18_8173_05092026190156.pdf",
+    "0000700406_2026_08_ZL_10_384_05092026140711.jpg",
+    "0000700434_2026_08_ZL_10_386_05092026034503.jpg",
+    "0000700835_2026_08_ZL_25_447_03092026105819.jpeg",
+    "0000701012_2026_08_ZL_11_423_03092026183736.jpg",
+    "0000701078_2026_08_ZL_03_362_05092026080346.jpeg",
+    "0000701151_2026_08_ZL_14_361_03092026025650.jpg",
+    "0000701275_2026_08_ZL_03_360_02092026152716.jpg",
+    "0000701851_2026_08_ZL_20_302_03092026134940.jpg",
+    "0000701864_2026_08_ZL_20_5015_03092026091037.jpg",
+    "0000701904_2026_08_ZL_20_8227_05092026154848.jpg",
+    "0000704337_2026_08_ZL_24_259_03092026042213.pdf"
+  ],
+  "documents": [
+    {
+      "document_id": "0000700084_2026_08_ZL_06_8236_03092026155136.pdf",
+      "role": "ordinary",
+      "off_correct": "15/15",
+      "on_correct": "15/15",
+      "deltas": [],
+      "repair_types_on": [],
+      "secondary_ocr_ms_off": 10.0,
+      "secondary_ocr_ms_on": 4340.9,
+      "pipeline_helper_ms_on": 3944.0
+    },
+    {
+      "document_id": "0000700124_2026_08_ZL_06_521_02092026204703.pdf",
+      "role": "negative_unresolved",
+      "off_correct": "11/12",
+      "on_correct": "11/12",
+      "deltas": [],
+      "repair_types_on": [],
+      "secondary_ocr_ms_off": 11.0,
+      "secondary_ocr_ms_on": 3730.4,
+      "pipeline_helper_ms_on": 3800.6
+    },
+    {
+      "document_id": "0000700209_2026_08_ZL_18_374_04092026060313.pdf",
+      "role": "negative_unresolved",
+      "off_correct": "14/16",
+      "on_correct": "14/16",
+      "deltas": [],
+      "repair_types_on": [],
+      "secondary_ocr_ms_off": 11.4,
+      "secondary_ocr_ms_on": 3503.6,
+      "pipeline_helper_ms_on": 3517.5
+    },
+    {
+      "document_id": "0000700275_2026_08_ZL_18_374_04092026171615.pdf",
+      "role": "repair_liv",
+      "off_correct": "20/21",
+      "on_correct": "21/21",
+      "deltas": [
+        {
+          "field_id": "liv100_cl",
+          "expected": "37",
+          "off_pred": "162",
+          "on_pred": "37",
+          "off_correct": false,
+          "on_correct": true,
+          "off_error": "WRONG_VALUE",
+          "on_error": null
+        }
+      ],
+      "repair_types_on": [
+        "liv_printed_closing_ocr"
+      ],
+      "secondary_ocr_ms_off": 7.8,
+      "secondary_ocr_ms_on": 3923.7,
+      "pipeline_helper_ms_on": 3890.0
+    },
+    {
+      "document_id": "0000700308_2026_08_ZL_18_8175_03092026072320.jpg",
+      "role": "compatible_ssa_like",
+      "off_correct": "9/9",
+      "on_correct": "9/9",
+      "deltas": [],
+      "repair_types_on": [],
+      "secondary_ocr_ms_off": 2.3,
+      "secondary_ocr_ms_on": 6656.3,
+      "pipeline_helper_ms_on": 6580.3
+    },
+    {
+      "document_id": "0000700317_2026_08_ZL_18_374_02092026171443.pdf",
+      "role": "compatible_ssa_like",
+      "off_correct": "20/20",
+      "on_correct": "20/20",
+      "deltas": [],
+      "repair_types_on": [],
+      "secondary_ocr_ms_off": 4.2,
+      "secondary_ocr_ms_on": 704.5,
+      "pipeline_helper_ms_on": 690.0
+    },
+    {
+      "document_id": "0000700346_2026_08_ZL_18_8189_05092026025159.pdf",
+      "role": "ordinary",
+      "off_correct": "18/18",
+      "on_correct": "18/18",
+      "deltas": [],
+      "repair_types_on": [],
+      "secondary_ocr_ms_off": 10.6,
+      "secondary_ocr_ms_on": 3186.4,
+      "pipeline_helper_ms_on": 3339.4
+    },
+    {
+      "document_id": "0000700358_2026_08_ZL_18_8173_05092026185826.pdf",
+      "role": "compatible_ssa_like",
+      "off_correct": "21/21",
+      "on_correct": "21/21",
+      "deltas": [],
+      "repair_types_on": [],
+      "secondary_ocr_ms_off": 3.5,
+      "secondary_ocr_ms_on": 1170.5,
+      "pipeline_helper_ms_on": 1165.0
+    },
+    {
+      "document_id": "0000700364_2026_08_ZL_18_8173_05092026190156.pdf",
+      "role": "compatible_himalaya_qty",
+      "off_correct": "20/20",
+      "on_correct": "20/20",
+      "deltas": [],
+      "repair_types_on": [],
+      "secondary_ocr_ms_off": 4.7,
+      "secondary_ocr_ms_on": 1521.8,
+      "pipeline_helper_ms_on": 1454.2
+    },
+    {
+      "document_id": "0000700406_2026_08_ZL_10_384_05092026140711.jpg",
+      "role": "ordinary",
+      "off_correct": "35/35",
+      "on_correct": "35/35",
+      "deltas": [],
+      "repair_types_on": [],
+      "secondary_ocr_ms_off": 4.2,
+      "secondary_ocr_ms_on": 1339.4,
+      "pipeline_helper_ms_on": 1322.3
+    },
+    {
+      "document_id": "0000700434_2026_08_ZL_10_386_05092026034503.jpg",
+      "role": "compatible_ssa_like",
+      "off_correct": "23/23",
+      "on_correct": "23/23",
+      "deltas": [],
+      "repair_types_on": [],
+      "secondary_ocr_ms_off": 29.1,
+      "secondary_ocr_ms_on": 2405.2,
+      "pipeline_helper_ms_on": 2311.9
+    },
+    {
+      "document_id": "0000700835_2026_08_ZL_25_447_03092026105819.jpeg",
+      "role": "compatible_himalaya_qty",
+      "off_correct": "29/29",
+      "on_correct": "29/29",
+      "deltas": [],
+      "repair_types_on": [],
+      "secondary_ocr_ms_off": 3.8,
+      "secondary_ocr_ms_on": 943.5,
+      "pipeline_helper_ms_on": 979.4
+    },
+    {
+      "document_id": "0000701012_2026_08_ZL_11_423_03092026183736.jpg",
+      "role": "ordinary",
+      "off_correct": "14/14",
+      "on_correct": "14/14",
+      "deltas": [],
+      "repair_types_on": [],
+      "secondary_ocr_ms_off": 5.7,
+      "secondary_ocr_ms_on": 2128.0,
+      "pipeline_helper_ms_on": 2243.3
+    },
+    {
+      "document_id": "0000701078_2026_08_ZL_03_362_05092026080346.jpeg",
+      "role": "repair_himalaya",
+      "off_correct": "16/18",
+      "on_correct": "18/18",
+      "deltas": [
+        {
+          "field_id": "aact_close",
+          "expected": "69",
+          "off_pred": "89",
+          "on_pred": "69",
+          "off_correct": false,
+          "on_correct": true,
+          "off_error": "WRONG_VALUE",
+          "on_error": null
+        },
+        {
+          "field_id": "talekt_exp",
+          "expected": "12",
+          "off_pred": "0",
+          "on_pred": "12",
+          "off_correct": false,
+          "on_correct": true,
+          "off_error": "WRONG_VALUE",
+          "on_error": null
+        }
+      ],
+      "repair_types_on": [
+        "himalaya_row_anchor_ocr"
+      ],
+      "secondary_ocr_ms_off": 11.4,
+      "secondary_ocr_ms_on": 10163.7,
+      "pipeline_helper_ms_on": 9991.0
+    },
+    {
+      "document_id": "0000701151_2026_08_ZL_14_361_03092026025650.jpg",
+      "role": "repair_total_footer",
+      "off_correct": "17/19",
+      "on_correct": "19/19",
+      "deltas": [
+        {
+          "field_id": "tot_cl",
+          "expected": "775274",
+          "off_pred": null,
+          "on_pred": "775274",
+          "off_correct": false,
+          "on_correct": true,
+          "off_error": "MISSING",
+          "on_error": null
+        },
+        {
+          "field_id": "tot_op",
+          "expected": "834578",
+          "off_pred": null,
+          "on_pred": "834578",
+          "off_correct": false,
+          "on_correct": true,
+          "off_error": "MISSING",
+          "on_error": null
+        }
+      ],
+      "repair_types_on": [
+        "total_footer_ocr"
+      ],
+      "secondary_ocr_ms_off": 6.6,
+      "secondary_ocr_ms_on": 2171.4,
+      "pipeline_helper_ms_on": 2272.9
+    },
+    {
+      "document_id": "0000701275_2026_08_ZL_03_360_02092026152716.jpg",
+      "role": "ordinary",
+      "off_correct": "24/24",
+      "on_correct": "24/24",
+      "deltas": [],
+      "repair_types_on": [],
+      "secondary_ocr_ms_off": 5.3,
+      "secondary_ocr_ms_on": 1788.3,
+      "pipeline_helper_ms_on": 1830.4
+    },
+    {
+      "document_id": "0000701851_2026_08_ZL_20_302_03092026134940.jpg",
+      "role": "compatible_himalaya_qty",
+      "off_correct": "22/22",
+      "on_correct": "22/22",
+      "deltas": [],
+      "repair_types_on": [],
+      "secondary_ocr_ms_off": 5.4,
+      "secondary_ocr_ms_on": 1508.8,
+      "pipeline_helper_ms_on": 1524.3
+    },
+    {
+      "document_id": "0000701864_2026_08_ZL_20_5015_03092026091037.jpg",
+      "role": "compatible_himalaya_qty",
+      "off_correct": "20/20",
+      "on_correct": "20/20",
+      "deltas": [],
+      "repair_types_on": [],
+      "secondary_ocr_ms_off": 3.0,
+      "secondary_ocr_ms_on": 1429.7,
+      "pipeline_helper_ms_on": 1379.7
+    },
+    {
+      "document_id": "0000701904_2026_08_ZL_20_8227_05092026154848.jpg",
+      "role": "ordinary",
+      "off_correct": "20/20",
+      "on_correct": "20/20",
+      "deltas": [],
+      "repair_types_on": [],
+      "secondary_ocr_ms_off": 10.4,
+      "secondary_ocr_ms_on": 3426.0,
+      "pipeline_helper_ms_on": 3317.5
+    },
+    {
+      "document_id": "0000704337_2026_08_ZL_24_259_03092026042213.pdf",
+      "role": "ordinary",
+      "off_correct": "12/12",
+      "on_correct": "12/12",
+      "deltas": [],
+      "repair_types_on": [],
+      "secondary_ocr_ms_off": 6.4,
+      "secondary_ocr_ms_on": 1520.6,
+      "pipeline_helper_ms_on": 1486.2
+    }
+  ]
+}

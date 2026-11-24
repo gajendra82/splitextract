@@ -1,0 +1,467 @@
+{
+  "decision": "READY WITH DOCUMENTED LIMITATIONS",
+  "decision_code": "B",
+  "closed": true,
+  "timestamp_utc": "2026-11-03T06:14:31.442313+00:00",
+  "head": "cc0bd73",
+  "hardware": {
+    "python": "3.12.6",
+    "cwd": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract",
+    "timestamp_utc": "2026-11-03T05:40:02.740096+00:00",
+    "rss_mb": 20.2,
+    "vram_mb": 132.0,
+    "cpu_count": 12,
+    "sales_deadline_s": 600,
+    "phase2": "false",
+    "secondary_repair": "false",
+    "ram_gb": 15.31,
+    "gpu": "NVIDIA GeForce RTX 3050 6GB Laptop GPU, 6144 MiB, 551.76"
+  },
+  "documents": [
+    {
+      "label": "xlsx",
+      "file": "0000711172_2026_08_ZA_30_313_04092026034007.xlsx",
+      "seconds": 1.749,
+      "rows": 16,
+      "status": "VERIFIED",
+      "reason": "schema_evidence_business_ok",
+      "verified": true,
+      "method": "item_pack_sreturn_others",
+      "within_deadline": true,
+      "di_override": false,
+      "di_ocr_override": false,
+      "grounding": {
+        "status": "checked",
+        "reader": "spreadsheet_cells",
+        "compared_rows": 16,
+        "discrepancy_count": 0,
+        "blank_read_as_zero": 0,
+        "blocks_verification": false
+      },
+      "timings": {
+        "route": 0.0,
+        "evidence": 0.0001,
+        "ocr_policy": 0.0001,
+        "layout": 0.0002,
+        "strategy": 0.0002,
+        "extraction": 1.3099,
+        "phase1": 1.627,
+        "validation_stack": 1.627,
+        "verification": 1.6271,
+        "recovery": 1.6271,
+        "decision": 1.6271,
+        "total": 1.6271
+      },
+      "ocr_page_count": null
+    },
+    {
+      "label": "xls",
+      "file": "0000700848_2026_08_ZA_30_578_05092026144147.XLS",
+      "seconds": 0.264,
+      "rows": 20,
+      "status": "VERIFIED",
+      "reason": "schema_evidence_business_ok",
+      "verified": true,
+      "method": "",
+      "within_deadline": true,
+      "di_override": false,
+      "di_ocr_override": false,
+      "grounding": {
+        "status": "checked",
+        "reader": "spreadsheet_cells",
+        "compared_rows": 20,
+        "discrepancy_count": 0,
+        "blank_read_as_zero": 0,
+        "blocks_verification": false
+      },
+      "timings": {
+        "route": 0.0001,
+        "evidence": 0.0001,
+        "ocr_policy": 0.0001,
+        "layout": 0.0002,
+        "strategy": 0.0002,
+        "extraction": 0.2455,
+        "phase1": 0.2642,
+        "validation_stack": 0.2642,
+        "verification": 0.2642,
+        "recovery": 0.2642,
+        "decision": 0.2643,
+        "total": 0.2643
+      },
+      "ocr_page_count": null
+    },
+    {
+      "label": "docx",
+      "file": "0000713511_2026_08_ZA_24_255_07092026171904.docx",
+      "seconds": 0.419,
+      "rows": 55,
+      "status": "VERIFIED",
+      "reason": "schema_evidence_business_ok",
+      "verified": true,
+      "method": "sale_closing_analysis_docx",
+      "within_deadline": true,
+      "di_override": false,
+      "di_ocr_override": false,
+      "grounding": {
+        "status": "checked",
+        "reader": "docx_paragraphs",
+        "compared_rows": 55,
+        "discrepancy_count": 0,
+        "blank_read_as_zero": 0,
+        "blocks_verification": false
+      },
+      "timings": {
+        "route": 0.0001,
+        "evidence": 0.0001,
+        "ocr_policy": 0.0001,
+        "layout": 0.0002,
+        "strategy": 0.0002,
+        "extraction": 0.3359,
+        "phase1": 0.4185,
+        "validation_stack": 0.4185,
+        "verification": 0.4186,
+        "recovery": 0.4186,
+        "decision": 0.4186,
+        "total": 0.4186
+      },
+      "ocr_page_count": null
+    },
+    {
+      "label": "txt",
+      "file": "0000732705_2026_08_ZA_24_270_04092026051409.TXT",
+      "seconds": 0.011,
+      "rows": 20,
+      "status": "VERIFIED",
+      "reason": "schema_evidence_business_ok",
+      "verified": true,
+      "method": "pro_age_opening_pur_sale_closing",
+      "within_deadline": true,
+      "di_override": false,
+      "di_ocr_override": false,
+      "grounding": {
+        "status": "checked",
+        "reader": "delimited_text",
+        "compared_rows": 20,
+        "discrepancy_count": 0,
+        "blank_read_as_zero": 0,
+        "blocks_verification": false
+      },
+      "timings": {
+        "route": 0.0001,
+        "evidence": 0.0001,
+        "ocr_policy": 0.0001,
+        "layout": 0.0001,
+        "strategy": 0.0002,
+        "extraction": 0.0022,
+        "phase1": 0.0108,
+        "validation_stack": 0.0108,
+        "verification": 0.0108,
+        "recovery": 0.0108,
+        "decision": 0.0108,
+        "total": 0.0108
+      },
+      "ocr_page_count": null
+    },
+    {
+      "label": "html",
+      "file": "0000734246_2026_08_ZA_13_249_06092026162117.html",
+      "seconds": 0.288,
+      "rows": 44,
+      "status": "UNRESOLVED",
+      "reason": "stock_identity_failure",
+      "verified": false,
+      "method": "medivision_op_wsale_html",
+      "within_deadline": true,
+      "di_override": false,
+      "di_ocr_override": false,
+      "grounding": {
+        "status": "checked",
+        "reader": "html_table",
+        "compared_rows": 44,
+        "discrepancy_count": 0,
+        "blank_read_as_zero": 0,
+        "blocks_verification": false
+      },
+      "timings": {
+        "route": 0.0,
+        "evidence": 0.0001,
+        "ocr_policy": 0.0001,
+        "layout": 0.0001,
+        "strategy": 0.0001,
+        "extraction": 0.2152,
+        "phase1": 0.2878,
+        "validation_stack": 0.2878,
+        "verification": 0.2878,
+        "recovery": 0.2879,
+        "decision": 0.2879,
+        "total": 0.2879
+      },
+      "ocr_page_count": null
+    },
+    {
+      "label": "digital_pdf",
+      "file": "0000734513_2026_08_ZA_13_704_06092026081229.pdf",
+      "seconds": 0.425,
+      "rows": 49,
+      "status": "UNRESOLVED",
+      "reason": "stock_identity_failure",
+      "verified": false,
+      "method": "medivision_op_scm_pdf",
+      "within_deadline": true,
+      "di_override": false,
+      "di_ocr_override": false,
+      "grounding": {
+        "status": "checked",
+        "reader": "pdf_header_positions",
+        "compared_rows": 49,
+        "discrepancy_count": 0,
+        "blank_read_as_zero": 0,
+        "blocks_verification": false
+      },
+      "timings": {
+        "route": 0.2217,
+        "evidence": 0.2218,
+        "ocr_policy": 0.2218,
+        "layout": 0.2218,
+        "strategy": 0.2218,
+        "extraction": 0.3109,
+        "phase1": 0.4247,
+        "validation_stack": 0.4247,
+        "verification": 0.4247,
+        "recovery": 0.4247,
+        "decision": 0.4247,
+        "total": 0.4248
+      },
+      "ocr_page_count": null
+    },
+    {
+      "label": "scanned_pdf_1page",
+      "file": "0000700124_2026_08_ZL_06_521_02092026204703.pdf",
+      "seconds": 276.394,
+      "rows": 0,
+      "status": "UNRESOLVED",
+      "reason": "insufficient_source_evidence",
+      "verified": false,
+      "method": "di_ocr_html_override",
+      "within_deadline": true,
+      "di_override": true,
+      "di_ocr_override": true,
+      "grounding": {
+        "status": "insufficient_source_evidence",
+        "reader": null,
+        "compared_rows": 0,
+        "discrepancy_count": 0,
+        "blank_read_as_zero": 0,
+        "blocks_verification": false
+      },
+      "timings": {
+        "route": 0.0012,
+        "evidence": 0.0012,
+        "ocr_policy": 276.3619,
+        "layout": 276.362,
+        "strategy": 276.362,
+        "extraction": 276.3776,
+        "phase1": 276.378,
+        "validation_stack": 276.3934,
+        "verification": 276.3935,
+        "recovery": 276.3936,
+        "decision": 276.3936,
+        "total": 276.3937
+      },
+      "ocr_page_count": 1
+    },
+    {
+      "label": "image_png",
+      "file": "0000727190_2026_08_ZA_06_333_04092026081416.png",
+      "seconds": 109.487,
+      "rows": 25,
+      "status": "UNRESOLVED",
+      "reason": "identity_profile_unknown",
+      "verified": false,
+      "method": "di_ocr_html_override",
+      "within_deadline": true,
+      "di_override": true,
+      "di_ocr_override": true,
+      "grounding": {
+        "status": "checked",
+        "reader": "ocr_text",
+        "compared_rows": 24,
+        "discrepancy_count": 44,
+        "blank_read_as_zero": 0,
+        "blocks_verification": false
+      },
+      "timings": {
+        "route": 0.0,
+        "evidence": 0.0005,
+        "ocr_policy": 109.4452,
+        "layout": 109.4452,
+        "strategy": 109.4452,
+        "extraction": 109.452,
+        "phase1": 109.4763,
+        "validation_stack": 109.4866,
+        "verification": 109.4866,
+        "recovery": 109.4867,
+        "decision": 109.4867,
+        "total": 109.4867
+      },
+      "ocr_page_count": 1
+    },
+    {
+      "label": "multipage_scanned_2p",
+      "file": "0000700037_2026_08_ZA_06_609_04092026172645.pdf",
+      "seconds": 343.238,
+      "rows": 0,
+      "status": "UNRESOLVED",
+      "reason": "insufficient_source_evidence",
+      "verified": false,
+      "method": "di_ocr_html_override",
+      "within_deadline": true,
+      "di_override": true,
+      "di_ocr_override": true,
+      "grounding": {
+        "status": "insufficient_source_evidence",
+        "reader": null,
+        "compared_rows": 0,
+        "discrepancy_count": 0,
+        "blank_read_as_zero": 0,
+        "blocks_verification": false
+      },
+      "timings": {
+        "route": 0.0017,
+        "evidence": 0.0018,
+        "ocr_policy": 343.1776,
+        "layout": 343.1777,
+        "strategy": 343.1777,
+        "extraction": 343.2023,
+        "phase1": 343.2028,
+        "validation_stack": 343.2368,
+        "verification": 343.2369,
+        "recovery": 343.2371,
+        "decision": 343.2371,
+        "total": 343.2371
+      },
+      "ocr_page_count": 2
+    }
+  ],
+  "multipage_live": {
+    "file": "0000700037_2026_08_ZA_06_609_04092026172645.pdf",
+    "pages": 2,
+    "seconds": 343.238,
+    "rows": 0,
+    "status": "UNRESOLVED",
+    "reason": "insufficient_source_evidence",
+    "verified": false,
+    "within_deadline": true,
+    "native_text_chars": [
+      0,
+      0
+    ]
+  },
+  "schema": {
+    "cases": {
+      "predefined": {
+        "schema_class": "predefined",
+        "verified": false,
+        "verification_status": "UNRESOLVED",
+        "schema_errors": [],
+        "document_equal": true,
+        "fixed_is_none": false
+      },
+      "hybrid": {
+        "schema_class": "hybrid",
+        "verified": false,
+        "verification_status": "UNRESOLVED",
+        "schema_errors": [
+          "line_items[0].sales_qty: invalid numeric value for sales_qty: 'not-a-number'"
+        ],
+        "document_equal": true,
+        "fixed_is_none": false
+      },
+      "fully_dynamic": {
+        "schema_class": "fully_dynamic",
+        "verified": false,
+        "verification_status": "UNRESOLVED",
+        "schema_errors": [],
+        "document_equal": true,
+        "fixed_is_none": true
+      },
+      "rejects_unknown_fixed": true,
+      "rejects_nan": true
+    },
+    "api": {
+      "predefined": {
+        "has_invoices": true,
+        "verified_false": false,
+        "dynamic_preserved": true,
+        "response_bytes": 3016
+      },
+      "hybrid": {
+        "has_invoices": true,
+        "verified_false": false,
+        "dynamic_preserved": true,
+        "response_bytes": 3282
+      },
+      "fully_dynamic": {
+        "has_invoices": false,
+        "verified_false": true,
+        "dynamic_preserved": true,
+        "response_bytes": 795
+      }
+    },
+    "errors": [],
+    "passed": true
+  },
+  "grounding_critical_count": 0,
+  "reliability_passed": true,
+  "multipage_override_probe": {
+    "seen_pages": [
+      1,
+      2,
+      3
+    ],
+    "page_order_ok": true,
+    "no_drop": true,
+    "result_ok": true,
+    "verified": null,
+    "observability_engines": [
+      "fake",
+      "fake",
+      "fake"
+    ]
+  },
+  "regression": {
+    "day4_baseline": {
+      "ran": 1259,
+      "skipped": 159,
+      "failures": 0,
+      "errors": 0,
+      "duration_s": 152.413
+    },
+    "day5_final": {
+      "ran": 1268,
+      "skipped": 159,
+      "failures": 0,
+      "errors": 0,
+      "duration_s": 153.269
+    },
+    "delta_ran": 9,
+    "delta_skipped": 0,
+    "new_tests": "tests/test_day5_final_audit.py (9 tests)",
+    "p0_fix": "sales_tesseract_slot swallowed body exceptions into a second yield; deadline cleanup RuntimeError",
+    "suite_ok": true
+  },
+  "files_modified": [
+    {
+      "path": "services/sales_extraction_runtime.py",
+      "reason": "Fix sales_tesseract_slot so deadline/body exceptions propagate without a second yield"
+    },
+    {
+      "path": "tests/test_day5_final_audit.py",
+      "reason": "Day 5 deadline, multipage, schema, reliability regression tests"
+    },
+    {
+      "path": "scripts/day5_final_audit.py",
+      "reason": "End-to-end audit harness writing audits/day5_final artifacts"
+    }
+  ]
+}

@@ -1,0 +1,4933 @@
+{
+  "document_id": "0000718799_2026_08_ZA_12_390_04092026165053.jpg",
+  "source_file": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000718799_2026_08_ZA_12_390_04092026165053.jpg",
+  "source_file_exists": true,
+  "verification_status": "unverified",
+  "annotation_origin": "AI_PROPOSED",
+  "ai_generated": true,
+  "human_verified": false,
+  "rows": [
+    {
+      "row_id": "r01",
+      "row_index": 1,
+      "product_name": {
+        "raw": "Arjuna tablets",
+        "normalized": "Arjuna tablets",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60s",
+        "normalized": "60s",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7002259",
+          "normalized": 7002259.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r02",
+      "row_index": 2,
+      "product_name": {
+        "raw": "Bonnisan drops",
+        "normalized": "Bonnisan drops",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "30 ml",
+        "normalized": "30 ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7000080",
+          "normalized": 7000080.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "6",
+          "normalized": 6.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r03",
+      "row_index": 3,
+      "product_name": {
+        "raw": "Bonnisan liquid",
+        "normalized": "Bonnisan liquid",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "100 ml",
+        "normalized": "100 ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7001338",
+          "normalized": 7001338.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "22",
+          "normalized": 22.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "44",
+          "normalized": 44.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r04",
+      "row_index": 4,
+      "product_name": {
+        "raw": "Bonnisan liquid",
+        "normalized": "Bonnisan liquid",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200 ml",
+        "normalized": "200 ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7000084",
+          "normalized": 7000084.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "9",
+          "normalized": 9.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "28",
+          "normalized": 28.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r05",
+      "row_index": 5,
+      "product_name": {
+        "raw": "Bonnispaz drops",
+        "normalized": "Bonnispaz drops",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "15 ml",
+        "normalized": "15 ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7000087",
+          "normalized": 7000087.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "4",
+          "normalized": 4.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r06",
+      "row_index": 6,
+      "product_name": {
+        "raw": "Bresol syrup",
+        "normalized": "Bresol syrup",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200 ml",
+        "normalized": "200 ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7002534",
+          "normalized": 7002534.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "7",
+          "normalized": 7.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "29",
+          "normalized": 29.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r07",
+      "row_index": 7,
+      "product_name": {
+        "raw": "Bresol tablets",
+        "normalized": "Bresol tablets",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60s",
+        "normalized": "60s",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7000094",
+          "normalized": 7000094.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "3",
+          "normalized": 3.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "4",
+          "normalized": 4.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r08",
+      "row_index": 8,
+      "product_name": {
+        "raw": "Bresol-NS saline nasal solution",
+        "normalized": "Bresol-NS saline nasal solution",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "10 ml",
+        "normalized": "10 ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7003189",
+          "normalized": 7003189.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "19",
+          "normalized": 19.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "111",
+          "normalized": 111.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r09",
+      "row_index": 9,
+      "product_name": {
+        "raw": "Cystone forte tablets",
+        "normalized": "Cystone forte tablets",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "2x30s",
+        "normalized": "2x30s",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7003058",
+          "normalized": 7003058.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "11",
+          "normalized": 11.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "33",
+          "normalized": 33.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r10",
+      "row_index": 10,
+      "product_name": {
+        "raw": "Cystone syrup",
+        "normalized": "Cystone syrup",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200 ml",
+        "normalized": "200 ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7000111",
+          "normalized": 7000111.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "2",
+          "normalized": 2.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "6",
+          "normalized": 6.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r11",
+      "row_index": 11,
+      "product_name": {
+        "raw": "Cystone tablets",
+        "normalized": "Cystone tablets",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60s",
+        "normalized": "60s",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7000114",
+          "normalized": 7000114.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "21",
+          "normalized": 21.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "29",
+          "normalized": 29.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r12",
+      "row_index": 12,
+      "product_name": {
+        "raw": "Cystone-SF liquid",
+        "normalized": "Cystone-SF liquid",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200 ml",
+        "normalized": "200 ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7004178",
+          "normalized": 7004178.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r13",
+      "row_index": 13,
+      "product_name": {
+        "raw": "Evecare capsules",
+        "normalized": "Evecare capsules",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "30s",
+        "normalized": "30s",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7000132",
+          "normalized": 7000132.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "2",
+          "normalized": 2.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "2",
+          "normalized": 2.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r14",
+      "row_index": 14,
+      "product_name": {
+        "raw": "Evecare syrup",
+        "normalized": "Evecare syrup",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200 ml",
+        "normalized": "200 ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7000136",
+          "normalized": 7000136.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "26",
+          "normalized": 26.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "58",
+          "normalized": 58.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r15",
+      "row_index": 15,
+      "product_name": {
+        "raw": "Evecare syrup",
+        "normalized": "Evecare syrup",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "400 ml",
+        "normalized": "400 ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7000137",
+          "normalized": 7000137.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "2",
+          "normalized": 2.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "10",
+          "normalized": 10.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r16",
+      "row_index": 16,
+      "product_name": {
+        "raw": "Evecare forte liquid",
+        "normalized": "Evecare forte liquid",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200 ml",
+        "normalized": "200 ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7003318",
+          "normalized": 7003318.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "7",
+          "normalized": 7.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "24",
+          "normalized": 24.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r17",
+      "row_index": 17,
+      "product_name": {
+        "raw": "Evecare forte tablets",
+        "normalized": "Evecare forte tablets",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "3x10s",
+        "normalized": "3x10s",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7003490",
+          "normalized": 7003490.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "8",
+          "normalized": 8.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "37",
+          "normalized": 37.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r18",
+      "row_index": 18,
+      "product_name": {
+        "raw": "Florasante capsules",
+        "normalized": "Florasante capsules",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "10s",
+        "normalized": "10s",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7005232",
+          "normalized": 7005232.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "10",
+          "normalized": 10.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r19",
+      "row_index": 19,
+      "product_name": {
+        "raw": "Geriforte syrup",
+        "normalized": "Geriforte syrup",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200 ml",
+        "normalized": "200 ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7000166",
+          "normalized": 7000166.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "7",
+          "normalized": 7.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "8",
+          "normalized": 8.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r20",
+      "row_index": 20,
+      "product_name": {
+        "raw": "Geriforte tablets",
+        "normalized": "Geriforte tablets",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60s",
+        "normalized": "60s",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7005621",
+          "normalized": 7005621.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r21",
+      "row_index": 21,
+      "product_name": {
+        "raw": "Haridra tablets",
+        "normalized": "Haridra tablets",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60s",
+        "normalized": "60s",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7003668",
+          "normalized": 7003668.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r22",
+      "row_index": 22,
+      "product_name": {
+        "raw": "Himplasia tablets",
+        "normalized": "Himplasia tablets",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "2x30s",
+        "normalized": "2x30s",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7005591",
+          "normalized": 7005591.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "6",
+          "normalized": 6.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "50",
+          "normalized": 50.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r23",
+      "row_index": 23,
+      "product_name": {
+        "raw": "HiOra-D toothpaste",
+        "normalized": "HiOra-D toothpaste",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "100 g",
+        "normalized": "100 g",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7005811",
+          "normalized": 7005811.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r24",
+      "row_index": 24,
+      "product_name": {
+        "raw": "HiOra-GA gel",
+        "normalized": "HiOra-GA gel",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "15 ml",
+        "normalized": "15 ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7000210",
+          "normalized": 7000210.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "7",
+          "normalized": 7.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "35",
+          "normalized": 35.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r25",
+      "row_index": 25,
+      "product_name": {
+        "raw": "HiOra-K mouthwash",
+        "normalized": "HiOra-K mouthwash",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "150 ml",
+        "normalized": "150 ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7001520",
+          "normalized": 7001520.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "4",
+          "normalized": 4.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r26",
+      "row_index": 26,
+      "product_name": {
+        "raw": "HiOra-K toothpaste",
+        "normalized": "HiOra-K toothpaste",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "100 g",
+        "normalized": "100 g",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7000212",
+          "normalized": 7000212.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "2",
+          "normalized": 2.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "18",
+          "normalized": 18.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r27",
+      "row_index": 27,
+      "product_name": {
+        "raw": "HiOra-K toothpaste",
+        "normalized": "HiOra-K toothpaste",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "50 g",
+        "normalized": "50 g",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7000214",
+          "normalized": 7000214.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r28",
+      "row_index": 28,
+      "product_name": {
+        "raw": "HiOra-SG gel",
+        "normalized": "HiOra-SG gel",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "10 g",
+        "normalized": "10 g",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7000219",
+          "normalized": 7000219.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "22",
+          "normalized": 22.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "28",
+          "normalized": 28.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r29",
+      "row_index": 29,
+      "product_name": {
+        "raw": "Immusante tablets",
+        "normalized": "Immusante tablets",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "3x20s",
+        "normalized": "3x20s",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7002488",
+          "normalized": 7002488.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "60",
+          "normalized": 60.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "108",
+          "normalized": 108.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r30",
+      "row_index": 30,
+      "product_name": {
+        "raw": "Karela tablets",
+        "normalized": "Karela tablets",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60s",
+        "normalized": "60s",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7002270",
+          "normalized": 7002270.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r31",
+      "row_index": 31,
+      "product_name": {
+        "raw": "Lasuna tablets",
+        "normalized": "Lasuna tablets",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60s",
+        "normalized": "60s",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7002262",
+          "normalized": 7002262.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r32",
+      "row_index": 32,
+      "product_name": {
+        "raw": "Liv.52 drops",
+        "normalized": "Liv.52 drops",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60 ml",
+        "normalized": "60 ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7000251",
+          "normalized": 7000251.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "12",
+          "normalized": 12.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "64",
+          "normalized": 64.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r33",
+      "row_index": 33,
+      "product_name": {
+        "raw": "Liv.52 drops",
+        "normalized": "Liv.52 drops",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "100 ml",
+        "normalized": "100 ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7001340",
+          "normalized": 7001340.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r34",
+      "row_index": 34,
+      "product_name": {
+        "raw": "Liv.52 DS syrup",
+        "normalized": "Liv.52 DS syrup",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "100 ml",
+        "normalized": "100 ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7000253",
+          "normalized": 7000253.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "22",
+          "normalized": 22.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "78",
+          "normalized": 78.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r35",
+      "row_index": 35,
+      "product_name": {
+        "raw": "Liv.52 DS syrup",
+        "normalized": "Liv.52 DS syrup",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200 ml",
+        "normalized": "200 ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7002239",
+          "normalized": 7002239.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "80",
+          "normalized": 80.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "65",
+          "normalized": 65.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r36",
+      "row_index": 36,
+      "product_name": {
+        "raw": "Liv.52 DS tablets",
+        "normalized": "Liv.52 DS tablets",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60s",
+        "normalized": "60s",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7000256",
+          "normalized": 7000256.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "550",
+          "normalized": 550.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "154",
+          "normalized": 154.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r37",
+      "row_index": 37,
+      "product_name": {
+        "raw": "Liv.52 DS syrup (Sugar-free)",
+        "normalized": "Liv.52 DS syrup (Sugar-free)",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "100 ml",
+        "normalized": "100 ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7005682",
+          "normalized": 7005682.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r38",
+      "row_index": 38,
+      "product_name": {
+        "raw": "Liv.52 DS syrup (Sugar-free)",
+        "normalized": "Liv.52 DS syrup (Sugar-free)",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200 ml",
+        "normalized": "200 ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7006065",
+          "normalized": 7006065.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "30",
+          "normalized": 30.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r39",
+      "row_index": 39,
+      "product_name": {
+        "raw": "Lukol syrup",
+        "normalized": "Lukol syrup",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200 ml",
+        "normalized": "200 ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7001730",
+          "normalized": 7001730.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "71",
+          "normalized": 71.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "55",
+          "normalized": 55.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r40",
+      "row_index": 40,
+      "product_name": {
+        "raw": "Lukol tablets",
+        "normalized": "Lukol tablets",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60s",
+        "normalized": "60s",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7000269",
+          "normalized": 7000269.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "28",
+          "normalized": 28.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "77",
+          "normalized": 77.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r41",
+      "row_index": 41,
+      "product_name": {
+        "raw": "Menosan tablets",
+        "normalized": "Menosan tablets",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "30s",
+        "normalized": "30s",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7000276",
+          "normalized": 7000276.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r42",
+      "row_index": 42,
+      "product_name": {
+        "raw": "Mentat syrup",
+        "normalized": "Mentat syrup",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200 ml",
+        "normalized": "200 ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7000283",
+          "normalized": 7000283.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "3",
+          "normalized": 3.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "15",
+          "normalized": 15.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r43",
+      "row_index": 43,
+      "product_name": {
+        "raw": "Mentat tablets",
+        "normalized": "Mentat tablets",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60s",
+        "normalized": "60s",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7000288",
+          "normalized": 7000288.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "5",
+          "normalized": 5.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r44",
+      "row_index": 44,
+      "product_name": {
+        "raw": "Mentat gummies",
+        "normalized": "Mentat gummies",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "30s",
+        "normalized": "30s",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7005605",
+          "normalized": 7005605.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r45",
+      "row_index": 45,
+      "product_name": {
+        "raw": "Mentat DS syrup (Sugar-free)",
+        "normalized": "Mentat DS syrup (Sugar-free)",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "100 ml",
+        "normalized": "100 ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7000279",
+          "normalized": 7000279.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r46",
+      "row_index": 46,
+      "product_name": {
+        "raw": "Meshashringi tablets",
+        "normalized": "Meshashringi tablets",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60s",
+        "normalized": "60s",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7002271",
+          "normalized": 7002271.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r47",
+      "row_index": 47,
+      "product_name": {
+        "raw": "Platenza syrup",
+        "normalized": "Platenza syrup",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "100 ml",
+        "normalized": "100 ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7004702",
+          "normalized": 7004702.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "21",
+          "normalized": 21.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "35",
+          "normalized": 35.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r48",
+      "row_index": 48,
+      "product_name": {
+        "raw": "Platenza tablets",
+        "normalized": "Platenza tablets",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "3x20s",
+        "normalized": "3x20s",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7003449",
+          "normalized": 7003449.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "10",
+          "normalized": 10.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "70",
+          "normalized": 70.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r49",
+      "row_index": 49,
+      "product_name": {
+        "raw": "Punarnava tablets",
+        "normalized": "Punarnava tablets",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60s",
+        "normalized": "60s",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7002674",
+          "normalized": 7002674.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r50",
+      "row_index": 50,
+      "product_name": {
+        "raw": "PureHands Advanced (Blue)",
+        "normalized": "PureHands Advanced (Blue)",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "500 ml",
+        "normalized": "500 ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7003738",
+          "normalized": 7003738.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r51",
+      "row_index": 51,
+      "product_name": {
+        "raw": "Quista kidz (Chocolate)",
+        "normalized": "Quista kidz (Chocolate)",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200 g",
+        "normalized": "200 g",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7004026",
+          "normalized": 7004026.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "12",
+          "normalized": 12.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "18",
+          "normalized": 18.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r52",
+      "row_index": 52,
+      "product_name": {
+        "raw": "Quista kidz (Vanilla)",
+        "normalized": "Quista kidz (Vanilla)",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200 g",
+        "normalized": "200 g",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7004025",
+          "normalized": 7004025.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r53",
+      "row_index": 53,
+      "product_name": {
+        "raw": "Reosto tablets",
+        "normalized": "Reosto tablets",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "30s",
+        "normalized": "30s",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7000338",
+          "normalized": 7000338.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "7",
+          "normalized": 7.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r54",
+      "row_index": 54,
+      "product_name": {
+        "raw": "Septilin syrup",
+        "normalized": "Septilin syrup",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200 ml",
+        "normalized": "200 ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7000358",
+          "normalized": 7000358.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "6",
+          "normalized": 6.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "20",
+          "normalized": 20.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r55",
+      "row_index": 55,
+      "product_name": {
+        "raw": "Septilin tablets",
+        "normalized": "Septilin tablets",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60s",
+        "normalized": "60s",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7000363",
+          "normalized": 7000363.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "2",
+          "normalized": 2.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "12",
+          "normalized": 12.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r56",
+      "row_index": 56,
+      "product_name": {
+        "raw": "Septilin gummies",
+        "normalized": "Septilin gummies",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "30s",
+        "normalized": "30s",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7005601",
+          "normalized": 7005601.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r57",
+      "row_index": 57,
+      "product_name": {
+        "raw": "Serpina tablets",
+        "normalized": "Serpina tablets",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "100s",
+        "normalized": "100s",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7000365",
+          "normalized": 7000365.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r58",
+      "row_index": 58,
+      "product_name": {
+        "raw": "Shatavari tablets",
+        "normalized": "Shatavari tablets",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60s",
+        "normalized": "60s",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7002264",
+          "normalized": 7002264.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r59",
+      "row_index": 59,
+      "product_name": {
+        "raw": "Shuddha-Guggulu tablets",
+        "normalized": "Shuddha-Guggulu tablets",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60s",
+        "normalized": "60s",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7002265",
+          "normalized": 7002265.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r60",
+      "row_index": 60,
+      "product_name": {
+        "raw": "Speman tablets",
+        "normalized": "Speman tablets",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60s",
+        "normalized": "60s",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7000379",
+          "normalized": 7000379.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "46",
+          "normalized": 46.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "49",
+          "normalized": 49.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r61",
+      "row_index": 61,
+      "product_name": {
+        "raw": "Styplon tablets",
+        "normalized": "Styplon tablets",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "30s",
+        "normalized": "30s",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7000380",
+          "normalized": 7000380.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "51",
+          "normalized": 51.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "49",
+          "normalized": 49.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r62",
+      "row_index": 62,
+      "product_name": {
+        "raw": "V-Gel",
+        "normalized": "V-Gel",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "30 g",
+        "normalized": "30 g",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7000404",
+          "normalized": 7000404.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "5",
+          "normalized": 5.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "30",
+          "normalized": 30.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r63",
+      "row_index": 63,
+      "product_name": {
+        "raw": "Galactosure granules (Elaichi)",
+        "normalized": "Galactosure granules (Elaichi)",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200 g",
+        "normalized": "200 g",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "SAP Code",
+          "semantic": "unknown",
+          "raw": "7006190",
+          "normalized": 7006190.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Qty.",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rs.",
+          "semantic": "unknown",
+          "raw": "7",
+          "normalized": 7.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "P.",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    }
+  ],
+  "headers": [],
+  "notes": [
+    "AI_PROPOSED from the original image only. Not verified. Named quantities are set only when a printed header was copied. Blank cells were not stored as zero."
+  ],
+  "failure": null,
+  "vision_model": "gemini-2.5-flash",
+  "vision_input": "original",
+  "ocr_used_as_label": false
+}

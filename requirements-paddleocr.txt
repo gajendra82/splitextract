@@ -1,0 +1,16 @@
+# Isolated classic PaddleOCR (PP-OCR) for the API interpreter.
+# Do not install these pins into .venv: paddleocr 2.7 pulls protobuf 3.20
+# and opencv 4.6, and its imgaug release imports np.sctypes.
+#
+#   python -m venv .venvs/paddleocr
+#   .venvs/paddleocr/Scripts/python.exe -m pip install -r requirements-paddleocr.txt
+#
+# Local det/rec/cls models already live in .paddleocr/whl.
+
+paddlepaddle==2.6.2
+paddleocr==2.7.3
+setuptools
+numpy==1.26.4
+scipy==1.13.1
+opencv-python==4.6.0.66
+opencv-contrib-python==4.6.0.66

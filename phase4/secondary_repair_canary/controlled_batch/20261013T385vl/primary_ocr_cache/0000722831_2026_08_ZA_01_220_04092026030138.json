@@ -1,0 +1,8 @@
+{
+  "document_id": "0000722831_2026_08_ZA_01_220_04092026030138.jpg",
+  "sha256": "8aeeb236b5e76336925301a8701a8cac26991ea39ab8a28535f5fab3c89a029f",
+  "engine": "paddleocr-vl-1.6",
+  "text": "VADA\nCustomer*\n0- SVMED SOLUTIONS PVT LTD (7228...)\nDownload CB\nChoose file No file chosen\n<table><tr><td>Mat Name</td><td>MRP</td><td>Secondary Rate</td><td>OB (Qty)</td><td>Primary (Qty)</td><td>CB (Qty)</td><td>Secondary Qty total</td></tr><tr><td>CYSTONE SYRUP 200ml</td><td>271</td><td>183.04</td><td>0</td><td>24.00</td><td>0</td><td>24</td></tr><tr><td>LIV.52 DS TABS (FC) 60 s (AQ)</td><td>281</td><td>189.8</td><td>101</td><td>0.00</td><td>71</td><td>101</td></tr><tr><td>ARJUNA TABLETS 60 S INDIA</td><td>325</td><td>220.63</td><td>0</td><td>0.00</td><td>0</td><td>0</td></tr><tr><td>BONNISAN DROPS 30ml</td><td>98</td><td>66.19</td><td>0</td><td>-5.00</td><td>0</td><td>0</td></tr><tr><td>BONNISAN LIQUID 100ML (HINDI TEXT) INDIA</td><td>65</td><td>43.9</td><td>0</td><td>0.00</td><td>0</td><td>0</td></tr><tr><td>BONNISAN LIQUID 100ML (ORIYA TEXT) INDIA</td><td>70</td><td>42.66</td><td>0</td><td>0.00</td><td>0</td><td>0</td></tr><tr><td>BONNISAN LIQUID 100ML (TAMIL TEXT) INDIA</td><td>65</td><td>43.9</td><td>0</td><td>0.00</td><td>0</td><td>0</td></tr><tr><td>BONNISAN LIQUID 100ml INDIA</td><td>89</td><td>60.1</td><td>0</td><td>-4.00</td><td>0</td><td>0</td></tr><tr><td>BONNISAN LIQUID 120ml</td><td>37</td><td>25</td><td>0</td><td>0.00</td><td>0</td><td>0</td></tr><tr><td>BONNISAN LIQUID 200ml</td><td>150</td><td>101.31</td><td>0</td><td>0.00</td><td>0</td><td>0</td></tr></table>",
+  "text_len": 1402,
+  "status": "success"
+}

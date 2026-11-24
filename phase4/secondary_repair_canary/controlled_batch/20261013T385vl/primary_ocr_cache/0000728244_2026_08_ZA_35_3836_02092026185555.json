@@ -1,0 +1,8 @@
+{
+  "document_id": "0000728244_2026_08_ZA_35_3836_02092026185555.jpg",
+  "sha256": "d496f04da19f5798131ade4b24a059da7b419d9dd6787f4bfc65768651be6bc9",
+  "engine": "paddleocr-vl-1.6",
+  "text": "<table><tr><td>SEPTILIN SYRUP</td><td>200 ML</td><td>87</td><td>-</td><td>10</td><td>77</td></tr><tr><td>SEPTILIN TABS.</td><td>60&#x27;S</td><td>139</td><td>-</td><td>65</td><td>74</td></tr><tr><td>SERPINA TABS.</td><td>100&#x27;S</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>TOTAL</td><td></td><td>409802</td><td>294795</td><td>336346</td><td>369973</td></tr><tr><td>KUNNAON MEDICOSE</td><td></td><td></td><td></td><td></td><td>Continued.2</td></tr><tr><td>HIMALAYA ZENDRA ZA STOCK &amp; SALES ANALYSIS</td><td>T (HIMALAYA ZENDRA ZA</td><td>TA</td><td>T)</td><td></td><td>Page No..2</td></tr><tr><td>ITEM DESCRIPTION</td><td></td><td>OPENING</td><td>RECEIPT</td><td>ISSUE</td><td>CLOSING</td></tr><tr><td>SHATAVARI TAB</td><td>60&#x27;S</td><td>22</td><td>-</td><td>5</td><td>17</td></tr><tr><td>*SHUDDHA GUGGULU TAB</td><td>60&#x27;S</td><td>-</td><td>-</td><td>-</td><td>-</td></tr><tr><td>SPEMAN TABS.</td><td>60&#x27;S</td><td>14</td><td>50</td><td>24</td><td>40</td></tr><tr><td>STYPLON TABS.</td><td>30&#x27;S</td><td>24</td><td>-</td><td>5</td><td>19</td></tr><tr><td>V-GEL 30 GM</td><td>30 GM</td><td>6</td><td>-</td><td>-</td><td>6</td></tr><tr><td>TOTAL</td><td></td><td>419508</td><td>303172</td><td>342108</td><td>382304</td></tr></table>",
+  "text_len": 1264,
+  "status": "success"
+}

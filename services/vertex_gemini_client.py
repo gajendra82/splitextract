@@ -323,9 +323,14 @@ def sdk_response_to_rest_dict(response) -> Dict[str, Any]:
     usage_metadata: Dict[str, Any] = {}
     usage = getattr(response, "usage_metadata", None)
     if usage is not None:
+        out_tokens = (
+            getattr(usage, "candidates_token_count", None)
+            if getattr(usage, "candidates_token_count", None) is not None
+            else getattr(usage, "response_token_count", 0)
+        )
         usage_metadata = {
             "promptTokenCount": int(getattr(usage, "prompt_token_count", 0) or 0),
-            "candidatesTokenCount": int(getattr(usage, "response_token_count", 0) or 0),
+            "candidatesTokenCount": int(out_tokens or 0),
         }
 
     return {

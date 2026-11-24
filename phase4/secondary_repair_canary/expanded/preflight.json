@@ -1,0 +1,7 @@
+{
+  "unset_enabled": false,
+  "false_enabled": false,
+  "noop_when_off": true,
+  "baseline_report_exists": true,
+  "pass": true
+}

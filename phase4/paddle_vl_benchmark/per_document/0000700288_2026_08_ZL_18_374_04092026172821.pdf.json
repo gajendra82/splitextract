@@ -1,0 +1,74 @@
+{
+  "document_id": "0000700288_2026_08_ZL_18_374_04092026172821.pdf",
+  "relative_path": "0000700288_2026_08_ZL_18_374_04092026172821.pdf",
+  "source_path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700288_2026_08_ZL_18_374_04092026172821.pdf",
+  "file_type": "pdf",
+  "pdf_kind": "digital",
+  "manifest_ocr_required": false,
+  "engine": "paddleocr-vl-1.6",
+  "model": "PaddleOCR-VL-1.6",
+  "model_version": "v1.6",
+  "started_at": "2026-10-08T12:02:10.977022+00:00",
+  "pages": [
+    {
+      "page": 1,
+      "status": "skipped_native_text",
+      "paddle_vl_status": "skipped_native_text",
+      "native_text": true,
+      "ocr_required": false,
+      "engine": "paddleocr-vl-1.6",
+      "latency_ms": 11.87460000005558,
+      "embedded_text_chars": 1568,
+      "reason": "native_text",
+      "page_count": 4
+    },
+    {
+      "page": 2,
+      "status": "skipped_native_text",
+      "paddle_vl_status": "skipped_native_text",
+      "native_text": true,
+      "ocr_required": false,
+      "engine": "paddleocr-vl-1.6",
+      "latency_ms": 9.64920000001257,
+      "embedded_text_chars": 1534,
+      "reason": "native_text",
+      "page_count": 4
+    },
+    {
+      "page": 3,
+      "status": "skipped_native_text",
+      "paddle_vl_status": "skipped_native_text",
+      "native_text": true,
+      "ocr_required": false,
+      "engine": "paddleocr-vl-1.6",
+      "latency_ms": 12.482900000122754,
+      "embedded_text_chars": 1505,
+      "reason": "native_text",
+      "page_count": 4
+    },
+    {
+      "page": 4,
+      "status": "skipped_native_text",
+      "paddle_vl_status": "skipped_native_text",
+      "native_text": true,
+      "ocr_required": false,
+      "engine": "paddleocr-vl-1.6",
+      "latency_ms": 10.21349999996346,
+      "embedded_text_chars": 297,
+      "reason": "native_text",
+      "page_count": 4
+    }
+  ],
+  "status": "success",
+  "errors": [],
+  "latency_ms": 59.386800000083895,
+  "finished_at": "2026-10-08T12:02:11.036409+00:00",
+  "resources": {
+    "cpu_percent": 14.8,
+    "ram_used_gb": 11.95,
+    "ram_total_gb": 15.31,
+    "gpu": "NVIDIA GeForce RTX 3050 6GB Laptop GPU",
+    "vram_used_gb": 7.095,
+    "vram_total_gb": 6.0
+  }
+}

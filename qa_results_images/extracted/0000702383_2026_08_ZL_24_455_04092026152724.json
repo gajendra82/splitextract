@@ -1,0 +1,457 @@
+{
+  "source_file": "0000702383_2026_08_ZL_24_455_04092026152724.jpg",
+  "source_format": "jpg",
+  "stockist_name": null,
+  "stockist_address": null,
+  "company_name": null,
+  "period_from": null,
+  "period_to": null,
+  "report_title": null,
+  "line_items": [
+    {
+      "product_code": "2",
+      "product_name": "AACTARIL SOAP 75G INDIA",
+      "packing": null,
+      "opening_qty": 115.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 2.0,
+      "closing_value": 155.36,
+      "extra": {
+        "expected_total": 115.0,
+        "expected_closing": 115.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": "3",
+      "product_name": "ABANA TABS 60 s",
+      "packing": null,
+      "opening_qty": 220.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 2.0,
+      "closing_value": 297.2,
+      "extra": {
+        "expected_total": 220.0,
+        "expected_closing": 220.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": "4",
+      "product_name": "BLEMINOR ANTIBLEMISH CREAM 30ml",
+      "packing": null,
+      "opening_qty": 257.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 5.0,
+      "closing_value": 867.9,
+      "extra": {
+        "expected_total": 257.0,
+        "expected_closing": 257.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": "5",
+      "product_name": "CLARINA ANTI ACNE CREAM 30g",
+      "packing": null,
+      "opening_qty": 192.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 3.0,
+      "closing_value": 389.04,
+      "extra": {
+        "expected_total": 192.0,
+        "expected_closing": 192.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": "6",
+      "product_name": "CLARINA ANTIACNE FACE WASH GEL 60ml",
+      "packing": null,
+      "opening_qty": 180.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 5.0,
+      "closing_value": 540.95,
+      "extra": {
+        "expected_total": 180.0,
+        "expected_closing": 180.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": "7",
+      "product_name": "CONFIDO TABS (FC) 60 s (AQ)",
+      "packing": null,
+      "opening_qty": 255.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 63.0,
+      "closing_value": 10850.49,
+      "extra": {
+        "expected_total": 255.0,
+        "expected_closing": 255.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": "8",
+      "product_name": "HADJOD TABLETS 60 S INDIA",
+      "packing": null,
+      "opening_qty": 325.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 8.0,
+      "closing_value": 1765.04,
+      "extra": {
+        "expected_total": 325.0,
+        "expected_closing": 325.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": "9",
+      "product_name": "HAIR ZONE SOLUTION 60ml",
+      "packing": null,
+      "opening_qty": 440.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 440.0,
+        "expected_closing": 440.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": "10",
+      "product_name": "HERBOLAX CAPSULES 10 s",
+      "packing": null,
+      "opening_qty": 84.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 103.0,
+      "closing_value": 5844.22,
+      "extra": {
+        "expected_total": 84.0,
+        "expected_closing": 84.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": "11",
+      "product_name": "HERBOLAX TABS (SC) 100 s",
+      "packing": null,
+      "opening_qty": 220.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 21.0,
+      "closing_value": 3120.6,
+      "extra": {
+        "expected_total": 220.0,
+        "expected_closing": 220.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": "12",
+      "product_name": "HIMCOLIN GEL 30g",
+      "packing": null,
+      "opening_qty": 304.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 5.0,
+      "closing_value": 1026.65,
+      "extra": {
+        "expected_total": 304.0,
+        "expected_closing": 304.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": "13",
+      "product_name": "LIV. 52 HB CAPSULES 3x10 s",
+      "packing": null,
+      "opening_qty": 225.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 19.0,
+      "closing_value": 2887.24,
+      "extra": {
+        "expected_total": 225.0,
+        "expected_closing": 225.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": "14",
+      "product_name": "LIV.52 SYRUP 100ml",
+      "packing": null,
+      "opening_qty": 140.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 95.0,
+      "closing_value": 8982.25,
+      "extra": {
+        "expected_total": 140.0,
+        "expected_closing": 140.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": "15",
+      "product_name": "LIV.52 SYRUP 200ml",
+      "packing": null,
+      "opening_qty": 234.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 525.0,
+      "sales_value": 0.0,
+      "closing_qty": 370.0,
+      "closing_value": 58478.5,
+      "extra": {
+        "expected_total": 234.0,
+        "expected_closing": -291.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": "16",
+      "product_name": "LIV.52 TABS (FC) 100 S",
+      "packing": null,
+      "opening_qty": 220.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 106.0,
+      "closing_value": 15751.6,
+      "extra": {
+        "expected_total": 220.0,
+        "expected_closing": 220.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": "17",
+      "product_name": "OPHTHACARE EYE DROPS 10ml",
+      "packing": null,
+      "opening_qty": 103.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 2.0,
+      "closing_value": 139.14,
+      "extra": {
+        "expected_total": 103.0,
+        "expected_closing": 103.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": "18",
+      "product_name": "OXITARD CAPSULE 3X10 s",
+      "packing": null,
+      "opening_qty": 126.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 22.0,
+      "closing_value": 1872.2,
+      "extra": {
+        "expected_total": 126.0,
+        "expected_closing": 126.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": "19",
+      "product_name": "PILEX FORTE OINTMENT 30G IND",
+      "packing": null,
+      "opening_qty": 160.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 31.0,
+      "closing_value": 3349.86,
+      "extra": {
+        "expected_total": 160.0,
+        "expected_closing": 160.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": "20",
+      "product_name": "PILEX FORTE TABLETS 2X30 S (INDIA)",
+      "packing": null,
+      "opening_qty": 165.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 165.0,
+        "expected_closing": 165.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": "21",
+      "product_name": "PILEX TABS (FC) 60 s (AQ)",
+      "packing": null,
+      "opening_qty": 245.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 204.0,
+      "closing_value": 33755.88,
+      "extra": {
+        "expected_total": 245.0,
+        "expected_closing": 245.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": "22",
+      "product_name": "PURIM TABS (FC) 60 s",
+      "packing": null,
+      "opening_qty": 178.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 178.0,
+        "expected_closing": 178.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": "23",
+      "product_name": "SHALLAKI TABLETS 60 S INDIA",
+      "packing": null,
+      "opening_qty": 300.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 60.0,
+      "sales_value": 0.0,
+      "closing_qty": 30.0,
+      "closing_value": 6109.8,
+      "extra": {
+        "expected_total": 300.0,
+        "expected_closing": 240.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": "24",
+      "product_name": "TENTEX FORTE TABS 10 s",
+      "packing": null,
+      "opening_qty": 140.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 51.0,
+      "closing_value": 4822.05,
+      "extra": {
+        "expected_total": 140.0,
+        "expected_closing": 140.0,
+        "stock_identity_ok": false
+      }
+    }
+  ],
+  "totals": {
+    "sales_value": null,
+    "closing_value": null,
+    "extra": {
+      "extraction_method": "gemini_extraction_fallback",
+      "line_sales_value_sum": 0.0,
+      "line_closing_value_sum": 161005.97,
+      "sales_qty": 585.0,
+      "closing_qty": 1147.0,
+      "stock_identity_kind": "opening_receipts_sales_closing",
+      "stock_identity_formula": "closing=opening+receipts-sales",
+      "stock_identity_fail_count": 23,
+      "stock_validation": {
+        "opening_plus_purchase": 4828.0,
+        "expected_total": 4828.0,
+        "calculated_closing": 4243.0,
+        "extracted_closing": 1147.0,
+        "is_valid": false
+      },
+      "extraction_quality": {
+        "quality": "poor",
+        "score": 75,
+        "reasons": [
+          "stock_identity_failure"
+        ],
+        "threshold": 75.0
+      },
+      "gemini_fallback": "validation_failed",
+      "early_vision_reason": "missing_stock_headers,low_ocr_quality_score"
+    }
+  }
+}

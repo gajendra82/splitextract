@@ -1,0 +1,409 @@
+{
+  "filename": "0000732705_2026_08_ZA_24_270_04092026051409.TXT",
+  "bytes": 2281,
+  "elapsed_s": 0.0112,
+  "method": null,
+  "stockist_name": "KRISHNA MEDICOS 03/09/2026,16:15",
+  "company_name": "HIMALAYA ZANDRA >>> CO.GST:09ACLPJ6378D1ZA",
+  "period_from": "2026-08-01",
+  "period_to": "2026-08-31",
+  "row_count": 20,
+  "line_items": [
+    {
+      "product_name": "BLEMINOR CREAM 51",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 8.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 8.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": true,
+        "expected_closing": 8.0
+      }
+    },
+    {
+      "product_name": "BONNISAN DROPS",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 118.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 80.0,
+      "closing_qty": 38.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": true,
+        "expected_closing": 38.0
+      }
+    },
+    {
+      "product_name": "BONNISAN LIQUID",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 54.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 54.0,
+      "closing_qty": 0.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": true,
+        "expected_closing": 0.0
+      }
+    },
+    {
+      "product_name": "BRESOL SYRUP",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 66.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 11.0,
+      "closing_qty": 55.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": true,
+        "expected_closing": 55.0
+      }
+    },
+    {
+      "product_name": "CYSTONE FORTE TAB 38",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 40.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 40.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": true,
+        "expected_closing": 40.0
+      }
+    },
+    {
+      "product_name": "CYSTONE SYRUP",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 48.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 38.0,
+      "closing_qty": 10.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": true,
+        "expected_closing": 10.0
+      }
+    },
+    {
+      "product_name": "CYSTONE TAB",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 5.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 5.0,
+      "closing_qty": 0.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": true,
+        "expected_closing": 0.0
+      }
+    },
+    {
+      "product_name": "EVECARE SYRUP",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 28.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 27.0,
+      "closing_qty": 2.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": 1.0
+      }
+    },
+    {
+      "product_name": "GALACTOSURE GRANULES 153",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 12.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 12.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": true,
+        "expected_closing": 12.0
+      }
+    },
+    {
+      "product_name": "HIORA K T/P 50 GM",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 30.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 11.0,
+      "closing_qty": 19.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": true,
+        "expected_closing": 19.0
+      }
+    },
+    {
+      "product_name": "LIV 52 DROPS 100 ML",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 52.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 1.0,
+      "closing_qty": 51.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": true,
+        "expected_closing": 51.0
+      }
+    },
+    {
+      "product_name": "LIV 52 DROPS 60 ML",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 17.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 17.0,
+      "closing_qty": 0.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": true,
+        "expected_closing": 0.0
+      }
+    },
+    {
+      "product_name": "LIV 52 DS SYP 100 ML",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 67.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 18.0,
+      "closing_qty": 51.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": 49.0
+      }
+    },
+    {
+      "product_name": "LIV 52 DS SYP 200 ML",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 312.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 83.0,
+      "closing_qty": 229.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": true,
+        "expected_closing": 229.0
+      }
+    },
+    {
+      "product_name": "LUKOL SYP",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 11.0,
+      "receipts_qty": 28.0,
+      "sales_qty": 9.0,
+      "closing_qty": 30.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": true,
+        "expected_closing": 30.0
+      }
+    },
+    {
+      "product_name": "LUKOL TAB",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 54.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 7.0,
+      "closing_qty": 44.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": 47.0
+      }
+    },
+    {
+      "product_name": "MENTAT SYP",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 3.0,
+      "receipts_qty": 28.0,
+      "sales_qty": 13.0,
+      "closing_qty": 18.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": true,
+        "expected_closing": 18.0
+      }
+    },
+    {
+      "product_name": "SEPTILIN SYP",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 49.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 3.0,
+      "closing_qty": 46.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": true,
+        "expected_closing": 46.0
+      }
+    },
+    {
+      "product_name": "SEPTILIN TAB",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 81.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 6.0,
+      "closing_qty": 75.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": true,
+        "expected_closing": 75.0
+      }
+    },
+    {
+      "product_name": "SPEMAN TABLETS",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 20.0,
+      "receipts_qty": 50.0,
+      "sales_qty": 7.0,
+      "closing_qty": 63.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": true,
+        "expected_closing": 63.0
+      }
+    }
+  ],
+  "totals": {
+    "opening_qty": null,
+    "receipts_qty": null,
+    "sales_qty": null,
+    "closing_qty": null,
+    "opening_value": null,
+    "receipts_value": null,
+    "sales_value": null,
+    "closing_value": 142700.0
+  },
+  "validation_status": "unresolved",
+  "validation_accepted": false,
+  "source_agreement": true,
+  "source_evidence": true,
+  "business_status": "inconsistent",
+  "failure_reasons": [
+    "stock_identity_failure"
+  ],
+  "decision_status": "UNRESOLVED",
+  "verified": false,
+  "decision_reason": "stock_identity_failure",
+  "phase2": {
+    "status": null,
+    "attempts": null,
+    "failure": null
+  },
+  "grounding": {
+    "status": "insufficient_source_evidence",
+    "reader": ".txt",
+    "compared_rows": 0,
+    "discrepancy_count": 0,
+    "blank_read_as_zero": 0,
+    "explicit_zero": null,
+    "unreadable": null,
+    "missing_rows": null,
+    "duplicate_rows": null,
+    "low_name_match": null,
+    "blocks_verification": false,
+    "ocr_invoked": false,
+    "discrepancies": [],
+    "sheets": [],
+    "pages": [],
+    "truncated": false,
+    "evidence": {
+      "sufficient": false,
+      "reason": "no_source_table",
+      "blocks_verification": false,
+      "coordinates_available": false,
+      "text_retained": "cells",
+      "script": "unspecified",
+      "language": "unspecified"
+    }
+  },
+  "ocr_calls": [],
+  "gemini_calls": [],
+  "error": null
+}

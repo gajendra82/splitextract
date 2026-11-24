@@ -1,0 +1,428 @@
+{
+  "document_id": "0000701275_2026_08_ZL_03_360_02092026152716.jpg",
+  "role": "ordinary",
+  "source_path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000701275_2026_08_ZL_03_360_02092026152716.jpg",
+  "off": {
+    "correct_count": 24,
+    "field_count": 24,
+    "silent_wrong_count": 0,
+    "missing_count": 0,
+    "secondary_ocr_ms": 5.3,
+    "pipeline_helper_ms": 5.7,
+    "text_sha": "34b827056bd400d2",
+    "repair_report": {
+      "document_id": "0000701275_2026_08_ZL_03_360_02092026152716.jpg",
+      "repairs": [],
+      "unresolved": [
+        {
+          "reason": "secondary_repair_disabled"
+        }
+      ]
+    }
+  },
+  "on": {
+    "correct_count": 24,
+    "field_count": 24,
+    "silent_wrong_count": 0,
+    "missing_count": 0,
+    "secondary_ocr_ms": 1788.3,
+    "pipeline_helper_ms": 1830.4,
+    "text_sha": "34b827056bd400d2",
+    "repair_report": {
+      "document_id": "0000701275_2026_08_ZL_03_360_02092026152716.jpg",
+      "repairs": [],
+      "unresolved": []
+    },
+    "pipeline_text_matches": true
+  },
+  "deltas": [],
+  "repair_types_on": [],
+  "matches_off": [
+    {
+      "field_id": "vendor",
+      "expected_raw": "TIRTHAMOYEE DRUGS",
+      "predicted_raw": "TIRTHAMOYEE DRUGS",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_open",
+      "expected_raw": "OPENING",
+      "predicted_raw": "OPENING",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_issue",
+      "expected_raw": "ISSUE",
+      "predicted_raw": "ISSUE",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_close",
+      "expected_raw": "CLOSING",
+      "predicted_raw": "CLOSING",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "aact_op",
+      "expected_raw": "72",
+      "predicted_raw": "72",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "aact_cl",
+      "expected_raw": "72",
+      "predicted_raw": "72",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "aact_exp",
+      "expected_raw": "12/27",
+      "predicted_raw": "12/27",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "abana_op",
+      "expected_raw": "100",
+      "predicted_raw": "100",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "abana_iss",
+      "expected_raw": "3",
+      "predicted_raw": "3",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "abana_cl",
+      "expected_raw": "97",
+      "predicted_raw": "97",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "diab_op",
+      "expected_raw": "89",
+      "predicted_raw": "89",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "diab_cl",
+      "expected_raw": "89",
+      "predicted_raw": "89",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "him_op",
+      "expected_raw": "36",
+      "predicted_raw": "36",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "him_rec",
+      "expected_raw": "50",
+      "predicted_raw": "50",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "him_iss",
+      "expected_raw": "5",
+      "predicted_raw": "5",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "him_cl",
+      "expected_raw": "81",
+      "predicted_raw": "81",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv100_op",
+      "expected_raw": "57",
+      "predicted_raw": "57",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv100_rec",
+      "expected_raw": "1400",
+      "predicted_raw": "1400",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv100_iss",
+      "expected_raw": "140",
+      "predicted_raw": "140",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv100_cl",
+      "expected_raw": "1317",
+      "predicted_raw": "1317",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tot_open",
+      "expected_raw": "503184",
+      "predicted_raw": "503184",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tot_rec",
+      "expected_raw": "277797",
+      "predicted_raw": "277797",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tot_iss",
+      "expected_raw": "110666",
+      "predicted_raw": "110666",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tot_cl",
+      "expected_raw": "670315",
+      "predicted_raw": "670315",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    }
+  ],
+  "matches_on": [
+    {
+      "field_id": "vendor",
+      "expected_raw": "TIRTHAMOYEE DRUGS",
+      "predicted_raw": "TIRTHAMOYEE DRUGS",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_open",
+      "expected_raw": "OPENING",
+      "predicted_raw": "OPENING",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_issue",
+      "expected_raw": "ISSUE",
+      "predicted_raw": "ISSUE",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_close",
+      "expected_raw": "CLOSING",
+      "predicted_raw": "CLOSING",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "aact_op",
+      "expected_raw": "72",
+      "predicted_raw": "72",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "aact_cl",
+      "expected_raw": "72",
+      "predicted_raw": "72",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "aact_exp",
+      "expected_raw": "12/27",
+      "predicted_raw": "12/27",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "abana_op",
+      "expected_raw": "100",
+      "predicted_raw": "100",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "abana_iss",
+      "expected_raw": "3",
+      "predicted_raw": "3",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "abana_cl",
+      "expected_raw": "97",
+      "predicted_raw": "97",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "diab_op",
+      "expected_raw": "89",
+      "predicted_raw": "89",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "diab_cl",
+      "expected_raw": "89",
+      "predicted_raw": "89",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "him_op",
+      "expected_raw": "36",
+      "predicted_raw": "36",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "him_rec",
+      "expected_raw": "50",
+      "predicted_raw": "50",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "him_iss",
+      "expected_raw": "5",
+      "predicted_raw": "5",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "him_cl",
+      "expected_raw": "81",
+      "predicted_raw": "81",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv100_op",
+      "expected_raw": "57",
+      "predicted_raw": "57",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv100_rec",
+      "expected_raw": "1400",
+      "predicted_raw": "1400",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv100_iss",
+      "expected_raw": "140",
+      "predicted_raw": "140",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv100_cl",
+      "expected_raw": "1317",
+      "predicted_raw": "1317",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tot_open",
+      "expected_raw": "503184",
+      "predicted_raw": "503184",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tot_rec",
+      "expected_raw": "277797",
+      "predicted_raw": "277797",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tot_iss",
+      "expected_raw": "110666",
+      "predicted_raw": "110666",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tot_cl",
+      "expected_raw": "670315",
+      "predicted_raw": "670315",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    }
+  ]
+}

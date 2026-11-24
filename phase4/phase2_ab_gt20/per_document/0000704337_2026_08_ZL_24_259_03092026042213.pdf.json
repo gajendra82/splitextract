@@ -1,0 +1,1421 @@
+{
+  "document_id": "0000704337_2026_08_ZL_24_259_03092026042213.pdf",
+  "source_path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000704337_2026_08_ZL_24_259_03092026042213.pdf",
+  "verified_fields": 12,
+  "off": {
+    "error": null,
+    "telemetry": {
+      "gemini_calls": 1,
+      "prompt_tokens": 167,
+      "output_tokens": 88,
+      "latency_ms": 1118,
+      "estimated_cost_usd": 5.2e-05,
+      "pricing_note": "estimate using flash-lite ballpark $0.1/1M in + $0.4/1M out",
+      "calls": [
+        {
+          "model": "gemini-2.5-flash-lite",
+          "timeout": 30,
+          "latency_ms": 1118,
+          "prompt_tokens": 167,
+          "output_tokens": 88,
+          "error": null,
+          "response_mime_type": "application/json",
+          "schema_title": null,
+          "part_kinds": [
+            "text"
+          ]
+        }
+      ],
+      "wall_latency_ms": 1148,
+      "phase2_enabled": false,
+      "ocr_mode": "stored_vl_ocr",
+      "phase2_status": null,
+      "phase2_attempts": null,
+      "phase2_failure_type": null,
+      "extraction_method": "di_ocr_html_override"
+    },
+    "score": {
+      "metrics": {
+        "verified_fields": 12,
+        "correct_fields": 2,
+        "field_accuracy": 0.16666666666666666,
+        "numeric_accuracy": 0.0,
+        "quantity_accuracy": 0.0,
+        "price_accuracy": null,
+        "date_accuracy": null,
+        "batch_accuracy": null,
+        "header_accuracy": 1.0,
+        "table_column_accuracy": 0.0,
+        "text_accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 0.16666666666666666,
+        "f1": 0.2857142857142857,
+        "silent_wrong_rate": 0.0,
+        "silent_wrong_count": 0,
+        "silent_wrong_denominator_verified_fields": 12,
+        "accepted_field_silent_wrong_rate": 0.0,
+        "accepted_field_silent_wrong_count": 0,
+        "accepted_field_denominator": 2,
+        "explicit_unresolved_rate": 0.0,
+        "missing_value_rate": 0.0,
+        "critical_error_rate": 0.8333333333333334,
+        "by_type_prf": {
+          "numeric": {
+            "precision": null,
+            "recall": 0.0,
+            "f1": null,
+            "n": 10
+          },
+          "text": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 2
+          },
+          "table": {
+            "precision": null,
+            "recall": 0.0,
+            "f1": null,
+            "n": 10
+          }
+        },
+        "error_type_counts": {
+          "MISSING_PRODUCT": 10
+        }
+      },
+      "document_status": "PARTIALLY_CORRECT",
+      "quantity_accuracy": 0.0,
+      "product_identity": {
+        "gt_products": 10,
+        "found_products": 0,
+        "recall": 0.0
+      },
+      "missing_values": 10,
+      "verified_fields": 12,
+      "correct_fields": 2
+    },
+    "matches": [
+      {
+        "field_id": "h_order",
+        "field_type": "header",
+        "printed_header": "ORDER FORM",
+        "product_key": null,
+        "expected_raw": "ORDER FORM",
+        "expected_normalized": null,
+        "predicted_raw": "ORDER FORM",
+        "match_mode": "ocr_header_presence",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": false,
+        "priority": "high"
+      },
+      {
+        "field_id": "h_qty",
+        "field_type": "header",
+        "printed_header": "Qty.",
+        "product_key": null,
+        "expected_raw": "Qty.",
+        "expected_normalized": null,
+        "predicted_raw": "Qty.",
+        "match_mode": "ocr_header_presence",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": false,
+        "priority": "high"
+      },
+      {
+        "field_id": "aact_qty",
+        "field_type": "quantity",
+        "printed_header": "Qty.",
+        "product_key": "Aactaril Soap",
+        "expected_raw": "80",
+        "expected_normalized": 80.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "clar_qty",
+        "field_type": "quantity",
+        "printed_header": "Qty.",
+        "product_key": "Clarina Anti-acne Cream",
+        "expected_raw": "1",
+        "expected_normalized": 1.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "conf_qty",
+        "field_type": "quantity",
+        "printed_header": "Qty.",
+        "product_key": "Confido Tablets",
+        "expected_raw": "2",
+        "expected_normalized": 2.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "diab_qty",
+        "field_type": "quantity",
+        "printed_header": "Qty.",
+        "product_key": "Diabecon DS Tablets",
+        "expected_raw": "10",
+        "expected_normalized": 10.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "liv_syp_qty",
+        "field_type": "quantity",
+        "printed_header": "Qty.",
+        "product_key": "Liv.52 Syrup",
+        "expected_raw": "80",
+        "expected_normalized": 80.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "liv_tab_qty",
+        "field_type": "quantity",
+        "printed_header": "Qty.",
+        "product_key": "Liv.52 Tablets",
+        "expected_raw": "20",
+        "expected_normalized": 20.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "oph_qty",
+        "field_type": "quantity",
+        "printed_header": "Qty.",
+        "product_key": "Ophthacare Eye Drops",
+        "expected_raw": "5",
+        "expected_normalized": 5.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "oxi_qty",
+        "field_type": "quantity",
+        "printed_header": "Qty.",
+        "product_key": "Oxitard Capsules",
+        "expected_raw": "120",
+        "expected_normalized": 120.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "pilex_oint_qty",
+        "field_type": "quantity",
+        "printed_header": "Qty.",
+        "product_key": "Pilex forte Ointment",
+        "expected_raw": "10",
+        "expected_normalized": 10.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "pilex_tab_qty",
+        "field_type": "quantity",
+        "printed_header": "Qty.",
+        "product_key": "Pilex Tablets",
+        "expected_raw": "10",
+        "expected_normalized": 10.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      }
+    ],
+    "stock_equation": {
+      "accepted": false,
+      "fail_count": 0,
+      "is_valid": false,
+      "healthy_rows": 0,
+      "failing_rows": 0,
+      "reasons": [
+        "empty_line_items",
+        "low_ocr_quality_score"
+      ]
+    },
+    "result": {
+      "stockist_name": null,
+      "company_name": null,
+      "line_item_count": 0,
+      "line_items": [],
+      "extraction_method": "di_ocr_html_override",
+      "di_ocr_override": true,
+      "phase1_validation": {
+        "accepted": false,
+        "status": "unresolved",
+        "reasons": [
+          "empty_line_items",
+          "low_ocr_quality_score"
+        ],
+        "checks": {
+          "schema": true,
+          "quality": false,
+          "stock_identity": true,
+          "rows": false,
+          "duplicates": true,
+          "cell_validation": true,
+          "column_mapping": true,
+          "ocr_verified": true
+        },
+        "quality_score": 0,
+        "parser": "di_ocr_html_override",
+        "failure_type": "EMPTY_OUTPUT",
+        "business_validation": {
+          "status": "unknown",
+          "reason": "identity_profile_unknown"
+        },
+        "source_agreement": null,
+        "source_evidence": true,
+        "cell_validation": {
+          "issues": [],
+          "column_report": {
+            "assignments": [],
+            "unresolved_headers": [],
+            "ambiguous_fields": [],
+            "issues": [
+              "unknown_layout_no_mapping"
+            ],
+            "layout_id": "unknown",
+            "mapping_confidence": 0.0,
+            "has_column_confusion": false
+          },
+          "accepted_critical_fields": 0,
+          "unresolved_critical_fields": 0,
+          "has_blocking_issues": false
+        }
+      },
+      "phase2": null
+    }
+  },
+  "on": {
+    "error": null,
+    "telemetry": {
+      "gemini_calls": 2,
+      "prompt_tokens": 4409,
+      "output_tokens": 8665,
+      "latency_ms": 20553,
+      "estimated_cost_usd": 0.003907,
+      "pricing_note": "estimate using flash-lite ballpark $0.1/1M in + $0.4/1M out",
+      "calls": [
+        {
+          "model": "gemini-2.5-flash-lite",
+          "timeout": 60,
+          "latency_ms": 15762,
+          "prompt_tokens": 2435,
+          "output_tokens": 7500,
+          "error": null,
+          "response_mime_type": "application/json",
+          "schema_title": "SalesExtractionOutput",
+          "part_kinds": [
+            "text",
+            "text"
+          ]
+        },
+        {
+          "model": "gemini-2.5-flash-lite",
+          "timeout": 60,
+          "latency_ms": 4791,
+          "prompt_tokens": 1974,
+          "output_tokens": 1165,
+          "error": null,
+          "response_mime_type": null,
+          "schema_title": null,
+          "part_kinds": [
+            "text",
+            "inline_data"
+          ]
+        }
+      ],
+      "wall_latency_ms": 321512,
+      "phase2_enabled": true,
+      "ocr_mode": "stored_vl_ocr",
+      "phase2_status": "recovered",
+      "phase2_attempts": 1,
+      "phase2_failure_type": "EMPTY_OUTPUT",
+      "extraction_method": "di_ocr_html_override"
+    },
+    "score": {
+      "metrics": {
+        "verified_fields": 12,
+        "correct_fields": 2,
+        "field_accuracy": 0.16666666666666666,
+        "numeric_accuracy": 0.0,
+        "quantity_accuracy": 0.0,
+        "price_accuracy": null,
+        "date_accuracy": null,
+        "batch_accuracy": null,
+        "header_accuracy": 1.0,
+        "table_column_accuracy": 0.0,
+        "text_accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 0.16666666666666666,
+        "f1": 0.2857142857142857,
+        "silent_wrong_rate": 0.0,
+        "silent_wrong_count": 0,
+        "silent_wrong_denominator_verified_fields": 12,
+        "accepted_field_silent_wrong_rate": 0.0,
+        "accepted_field_silent_wrong_count": 0,
+        "accepted_field_denominator": 2,
+        "explicit_unresolved_rate": 0.0,
+        "missing_value_rate": 0.0,
+        "critical_error_rate": 0.8333333333333334,
+        "by_type_prf": {
+          "numeric": {
+            "precision": null,
+            "recall": 0.0,
+            "f1": null,
+            "n": 10
+          },
+          "text": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "n": 2
+          },
+          "table": {
+            "precision": null,
+            "recall": 0.0,
+            "f1": null,
+            "n": 10
+          }
+        },
+        "error_type_counts": {
+          "UNMAPPED_HEADER": 8,
+          "MISSING_PRODUCT": 2
+        }
+      },
+      "document_status": "PARTIALLY_CORRECT",
+      "quantity_accuracy": 0.0,
+      "product_identity": {
+        "gt_products": 10,
+        "found_products": 8,
+        "recall": 0.8
+      },
+      "missing_values": 10,
+      "verified_fields": 12,
+      "correct_fields": 2
+    },
+    "matches": [
+      {
+        "field_id": "h_order",
+        "field_type": "header",
+        "printed_header": "ORDER FORM",
+        "product_key": null,
+        "expected_raw": "ORDER FORM",
+        "expected_normalized": null,
+        "predicted_raw": "ORDER FORM",
+        "match_mode": "ocr_header_presence",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": false,
+        "priority": "high"
+      },
+      {
+        "field_id": "h_qty",
+        "field_type": "header",
+        "printed_header": "Qty.",
+        "product_key": null,
+        "expected_raw": "Qty.",
+        "expected_normalized": null,
+        "predicted_raw": "Qty.",
+        "match_mode": "ocr_header_presence",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": false,
+        "priority": "high"
+      },
+      {
+        "field_id": "aact_qty",
+        "field_type": "quantity",
+        "printed_header": "Qty.",
+        "product_key": "Aactaril Soap",
+        "expected_raw": "80",
+        "expected_normalized": 80.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "UNMAPPED_HEADER",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "clar_qty",
+        "field_type": "quantity",
+        "printed_header": "Qty.",
+        "product_key": "Clarina Anti-acne Cream",
+        "expected_raw": "1",
+        "expected_normalized": 1.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "UNMAPPED_HEADER",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "conf_qty",
+        "field_type": "quantity",
+        "printed_header": "Qty.",
+        "product_key": "Confido Tablets",
+        "expected_raw": "2",
+        "expected_normalized": 2.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "UNMAPPED_HEADER",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "diab_qty",
+        "field_type": "quantity",
+        "printed_header": "Qty.",
+        "product_key": "Diabecon DS Tablets",
+        "expected_raw": "10",
+        "expected_normalized": 10.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "UNMAPPED_HEADER",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "liv_syp_qty",
+        "field_type": "quantity",
+        "printed_header": "Qty.",
+        "product_key": "Liv.52 Syrup",
+        "expected_raw": "80",
+        "expected_normalized": 80.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "UNMAPPED_HEADER",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "liv_tab_qty",
+        "field_type": "quantity",
+        "printed_header": "Qty.",
+        "product_key": "Liv.52 Tablets",
+        "expected_raw": "20",
+        "expected_normalized": 20.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "UNMAPPED_HEADER",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "oph_qty",
+        "field_type": "quantity",
+        "printed_header": "Qty.",
+        "product_key": "Ophthacare Eye Drops",
+        "expected_raw": "5",
+        "expected_normalized": 5.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "oxi_qty",
+        "field_type": "quantity",
+        "printed_header": "Qty.",
+        "product_key": "Oxitard Capsules",
+        "expected_raw": "120",
+        "expected_normalized": 120.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "UNMAPPED_HEADER",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "pilex_oint_qty",
+        "field_type": "quantity",
+        "printed_header": "Qty.",
+        "product_key": "Pilex forte Ointment",
+        "expected_raw": "10",
+        "expected_normalized": 10.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "UNMAPPED_HEADER",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "pilex_tab_qty",
+        "field_type": "quantity",
+        "printed_header": "Qty.",
+        "product_key": "Pilex Tablets",
+        "expected_raw": "10",
+        "expected_normalized": 10.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      }
+    ],
+    "stock_equation": {
+      "accepted": true,
+      "fail_count": 0,
+      "is_valid": false,
+      "healthy_rows": 0,
+      "failing_rows": 0,
+      "reasons": []
+    },
+    "result": {
+      "stockist_name": null,
+      "company_name": null,
+      "line_item_count": 55,
+      "line_items": [
+        {
+          "product_name": "Aactaril Soap",
+          "opening_qty": null,
+          "receipts_qty": null,
+          "sales_qty": null,
+          "closing_qty": null,
+          "stock_out_qty": null,
+          "stock_identity_ok": null,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "Pitex Tablets",
+          "opening_qty": null,
+          "receipts_qty": null,
+          "sales_qty": null,
+          "closing_qty": null,
+          "stock_out_qty": null,
+          "stock_identity_ok": null,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "PureHands Advanced (Blue)",
+          "opening_qty": null,
+          "receipts_qty": null,
+          "sales_qty": null,
+          "closing_qty": null,
+          "stock_out_qty": null,
+          "stock_identity_ok": null,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "Purim Tablets",
+          "opening_qty": null,
+          "receipts_qty": null,
+          "sales_qty": null,
+          "closing_qty": null,
+          "stock_out_qty": null,
+          "stock_identity_ok": null,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "Quista active (Chocolate)",
+          "opening_qty": null,
+          "receipts_qty": null,
+          "sales_qty": null,
+          "closing_qty": null,
+          "stock_out_qty": null,
+          "stock_identity_ok": null,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "Quista active (Milk Masala)",
+          "opening_qty": null,
+          "receipts_qty": null,
+          "sales_qty": null,
+          "closing_qty": null,
+          "stock_out_qty": null,
+          "stock_identity_ok": null,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "Quista DN (Milk Masala)",
+          "opening_qty": null,
+          "receipts_qty": null,
+          "sales_qty": null,
+          "closing_qty": null,
+          "stock_out_qty": null,
+          "stock_identity_ok": null,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "Quista DN (Vanilla)",
+          "opening_qty": null,
+          "receipts_qty": null,
+          "sales_qty": null,
+          "closing_qty": null,
+          "stock_out_qty": null,
+          "stock_identity_ok": null,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "Quista DN (Milk Masala)",
+          "opening_qty": null,
+          "receipts_qty": null,
+          "sales_qty": null,
+          "closing_qty": null,
+          "stock_out_qty": null,
+          "stock_identity_ok": null,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "Quista DN (Vanilla)",
+          "opening_qty": null,
+          "receipts_qty": null,
+          "sales_qty": null,
+          "closing_qty": null,
+          "stock_out_qty": null,
+          "stock_identity_ok": null,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "Renalka Syrup",
+          "opening_qty": null,
+          "receipts_qty": null,
+          "sales_qty": null,
+          "closing_qty": null,
+          "stock_out_qty": null,
+          "stock_identity_ok": null,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "Renalka Syrup",
+          "opening_qty": null,
+          "receipts_qty": null,
+          "sales_qty": null,
+          "closing_qty": null,
+          "stock_out_qty": null,
+          "stock_identity_ok": null,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "Shallaki Tablets",
+          "opening_qty": null,
+          "receipts_qty": null,
+          "sales_qty": null,
+          "closing_qty": null,
+          "stock_out_qty": null,
+          "stock_identity_ok": null,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "Shigru Tablets",
+          "opening_qty": null,
+          "receipts_qty": null,
+          "sales_qty": null,
+          "closing_qty": null,
+          "stock_out_qty": null,
+          "stock_identity_ok": null,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "Tagara Tablets",
+          "opening_qty": null,
+          "receipts_qty": null,
+          "sales_qty": null,
+          "closing_qty": null,
+          "stock_out_qty": null,
+          "stock_identity_ok": null,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "Talckt Syrup",
+          "opening_qty": null,
+          "receipts_qty": null,
+          "sales_qty": null,
+          "closing_qty": null,
+          "stock_out_qty": null,
+          "stock_identity_ok": null,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "Talckt Tablets",
+          "opening_qty": null,
+          "receipts_qty": null,
+          "sales_qty": null,
+          "closing_qty": null,
+          "stock_out_qty": null,
+          "stock_identity_ok": null,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "Tentex forte Tablets",
+          "opening_qty": null,
+          "receipts_qty": null,
+          "sales_qty": null,
+          "closing_qty": null,
+          "stock_out_qty": null,
+          "stock_identity_ok": null,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "Trikatu Syrup",
+          "opening_qty": null,
+          "receipts_qty": null,
+          "sales_qty": null,
+          "closing_qty": null,
+          "stock_out_qty": null,
+          "stock_identity_ok": null,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "Trikatu Tablets",
+          "opening_qty": null,
+          "receipts_qty": null,
+          "sales_qty": null,
+          "closing_qty": null,
+          "stock_out_qty": null,
+          "stock_identity_ok": null,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "Triphala Tablets",
+          "opening_qty": null,
+          "receipts_qty": null,
+          "sales_qty": null,
+          "closing_qty": null,
+          "stock_out_qty": null,
+          "stock_identity_ok": null,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "Vasaka Syrup",
+          "opening_qty": null,
+          "receipts_qty": null,
+          "sales_qty": null,
+          "closing_qty": null,
+          "stock_out_qty": null,
+          "stock_identity_ok": null,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "Vasaka Tablets",
+          "opening_qty": null,
+          "receipts_qty": null,
+          "sales_qty": null,
+          "closing_qty": null,
+          "stock_out_qty": null,
+          "stock_identity_ok": null,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "Vrikshamba Tablets",
+          "opening_qty": null,
+          "receipts_qty": null,
+          "sales_qty": null,
+          "closing_qty": null,
+          "stock_out_qty": null,
+          "stock_identity_ok": null,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "Yashhumadhu Tablets",
+          "opening_qty": null,
+          "receipts_qty": null,
+          "sales_qty": null,
+          "closing_qty": null,
+          "stock_out_qty": null,
+          "stock_identity_ok": null,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "Abana Tablets",
+          "opening_qty": null,
+          "receipts_qty": null,
+          "sales_qty": null,
+          "closing_qty": null,
+          "stock_out_qty": null,
+          "stock_identity_ok": null,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "Althea Lotion",
+          "opening_qty": null,
+          "receipts_qty": null,
+          "sales_qty": null,
+          "closing_qty": null,
+          "stock_out_qty": null,
+          "stock_identity_ok": null,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "Amalaki Tablets",
+          "opening_qty": null,
+          "receipts_qty": null,
+          "sales_qty": null,
+          "closing_qty": null,
+          "stock_out_qty": null,
+          "stock_identity_ok": null,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "Bael Tablets",
+          "opening_qty": null,
+          "receipts_qty": null,
+          "sales_qty": null,
+          "closing_qty": null,
+          "stock_out_qty": null,
+          "stock_identity_ok": null,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "Bleiminor Anti-blemish Cream",
+          "opening_qty": null,
+          "receipts_qty": null,
+          "sales_qty": null,
+          "closing_qty": 10.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": null,
+          "field_sources": {
+            "closing_qty": "gemini_phase2"
+          },
+          "recovery_original": null
+        },
+        {
+          "product_name": "Clarina Anti-acne Cream",
+          "opening_qty": null,
+          "receipts_qty": null,
+          "sales_qty": null,
+          "closing_qty": 1.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": null,
+          "field_sources": {
+            "closing_qty": "gemini_phase2"
+          },
+          "recovery_original": null
+        },
+        {
+          "product_name": "Clarina Anti-acne Face Wash Gel",
+          "opening_qty": null,
+          "receipts_qty": null,
+          "sales_qty": null,
+          "closing_qty": null,
+          "stock_out_qty": null,
+          "stock_identity_ok": null,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "Confido Tablets",
+          "opening_qty": null,
+          "receipts_qty": null,
+          "sales_qty": null,
+          "closing_qty": 2.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": null,
+          "field_sources": {
+            "closing_qty": "gemini_phase2"
+          },
+          "recovery_original": null
+        },
+        {
+          "product_name": "Diabecon DS Tablets",
+          "opening_qty": null,
+          "receipts_qty": null,
+          "sales_qty": null,
+          "closing_qty": 10.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": null,
+          "field_sources": {
+            "closing_qty": "gemini_phase2"
+          },
+          "recovery_original": null
+        },
+        {
+          "product_name": "Diabecon Tablets",
+          "opening_qty": null,
+          "receipts_qty": null,
+          "sales_qty": null,
+          "closing_qty": null,
+          "stock_out_qty": null,
+          "stock_identity_ok": null,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "Diarex Syrup",
+          "opening_qty": null,
+          "receipts_qty": null,
+          "sales_qty": null,
+          "closing_qty": 80.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": null,
+          "field_sources": {
+            "closing_qty": "gemini_phase2"
+          },
+          "recovery_original": null
+        },
+        {
+          "product_name": "Diarex Tablets",
+          "opening_qty": null,
+          "receipts_qty": null,
+          "sales_qty": null,
+          "closing_qty": null,
+          "stock_out_qty": null,
+          "stock_identity_ok": null,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "Hadjod Tablets",
+          "opening_qty": null,
+          "receipts_qty": null,
+          "sales_qty": null,
+          "closing_qty": 20.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": null,
+          "field_sources": {
+            "closing_qty": "gemini_phase2"
+          },
+          "recovery_original": null
+        },
+        {
+          "product_name": "Hairzone Solution",
+          "opening_qty": null,
+          "receipts_qty": null,
+          "sales_qty": null,
+          "closing_qty": null,
+          "stock_out_qty": null,
+          "stock_identity_ok": null,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "Herbolax Capsules",
+          "opening_qty": null,
+          "receipts_qty": null,
+          "sales_qty": null,
+          "closing_qty": null,
+          "stock_out_qty": null,
+          "stock_identity_ok": null,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "Herbolax Tablets",
+          "opening_qty": null,
+          "receipts_qty": null,
+          "sales_qty": null,
+          "closing_qty": 10.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": null,
+          "field_sources": {
+            "closing_qty": "gemini_phase2"
+          },
+          "recovery_original": null
+        },
+        {
+          "product_name": "Himcolin Gel",
+          "opening_qty": null,
+          "receipts_qty": null,
+          "sales_qty": null,
+          "closing_qty": 1.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": null,
+          "field_sources": {
+            "closing_qty": "gemini_phase2"
+          },
+          "recovery_original": null
+        },
+        {
+          "product_name": "Kapikachhu Tablets",
+          "opening_qty": null,
+          "receipts_qty": null,
+          "sales_qty": null,
+          "closing_qty": null,
+          "stock_out_qty": null,
+          "stock_identity_ok": null,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "Liv.52 HB Capsules",
+          "opening_qty": null,
+          "receipts_qty": null,
+          "sales_qty": null,
+          "closing_qty": null,
+          "stock_out_qty": null,
+          "stock_identity_ok": null,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "Liv.52 Syrup",
+          "opening_qty": null,
+          "receipts_qty": null,
+          "sales_qty": null,
+          "closing_qty": 80.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": null,
+          "field_sources": {
+            "closing_qty": "gemini_phase2"
+          },
+          "recovery_original": null
+        },
+        {
+          "product_name": "Liv.52 Syrup",
+          "opening_qty": null,
+          "receipts_qty": null,
+          "sales_qty": null,
+          "closing_qty": null,
+          "stock_out_qty": null,
+          "stock_identity_ok": null,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "Liv.52 Tablets",
+          "opening_qty": null,
+          "receipts_qty": null,
+          "sales_qty": null,
+          "closing_qty": 20.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": null,
+          "field_sources": {
+            "closing_qty": "gemini_phase2"
+          },
+          "recovery_original": null
+        },
+        {
+          "product_name": "Liv.52 Sugar Free Syrup",
+          "opening_qty": null,
+          "receipts_qty": null,
+          "sales_qty": null,
+          "closing_qty": 10.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": null,
+          "field_sources": {
+            "closing_qty": "gemini_phase2"
+          },
+          "recovery_original": null
+        },
+        {
+          "product_name": "Liv.52 Sugar Free Syrup",
+          "opening_qty": null,
+          "receipts_qty": null,
+          "sales_qty": null,
+          "closing_qty": 2.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": null,
+          "field_sources": {
+            "closing_qty": "gemini_phase2"
+          },
+          "recovery_original": null
+        },
+        {
+          "product_name": "Manjishsta Tablets",
+          "opening_qty": null,
+          "receipts_qty": null,
+          "sales_qty": null,
+          "closing_qty": null,
+          "stock_out_qty": null,
+          "stock_identity_ok": null,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "Ophthalcare Eye Drops",
+          "opening_qty": null,
+          "receipts_qty": null,
+          "sales_qty": null,
+          "closing_qty": 5.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": null,
+          "field_sources": {
+            "closing_qty": "gemini_phase2"
+          },
+          "recovery_original": null
+        },
+        {
+          "product_name": "Oro-T Oral Rinse",
+          "opening_qty": null,
+          "receipts_qty": null,
+          "sales_qty": null,
+          "closing_qty": null,
+          "stock_out_qty": null,
+          "stock_identity_ok": null,
+          "field_sources": null,
+          "recovery_original": null
+        },
+        {
+          "product_name": "Oxitard Capsules",
+          "opening_qty": null,
+          "receipts_qty": null,
+          "sales_qty": null,
+          "closing_qty": 120.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": null,
+          "field_sources": {
+            "closing_qty": "gemini_phase2"
+          },
+          "recovery_original": null
+        },
+        {
+          "product_name": "Pilex forte Ointment",
+          "opening_qty": null,
+          "receipts_qty": null,
+          "sales_qty": null,
+          "closing_qty": 10.0,
+          "stock_out_qty": null,
+          "stock_identity_ok": null,
+          "field_sources": {
+            "closing_qty": "gemini_phase2"
+          },
+          "recovery_original": null
+        },
+        {
+          "product_name": "Pilex forte Tablets",
+          "opening_qty": null,
+          "receipts_qty": null,
+          "sales_qty": null,
+          "closing_qty": null,
+          "stock_out_qty": null,
+          "stock_identity_ok": null,
+          "field_sources": null,
+          "recovery_original": null
+        }
+      ],
+      "extraction_method": "di_ocr_html_override",
+      "di_ocr_override": true,
+      "phase1_validation": {
+        "accepted": true,
+        "status": "unresolved",
+        "reasons": [],
+        "checks": {
+          "schema": true,
+          "quality": true,
+          "stock_identity": true,
+          "rows": true,
+          "duplicates": true,
+          "cell_validation": true,
+          "column_mapping": true,
+          "ocr_verified": true
+        },
+        "quality_score": 100,
+        "parser": "di_ocr_html_override",
+        "failure_type": null,
+        "business_validation": {
+          "status": "unknown",
+          "reason": "identity_profile_unknown"
+        },
+        "source_agreement": null,
+        "source_evidence": true,
+        "cell_validation": {
+          "issues": [],
+          "column_report": {
+            "assignments": [],
+            "unresolved_headers": [],
+            "ambiguous_fields": [],
+            "issues": [
+              "unknown_layout_no_mapping"
+            ],
+            "layout_id": "unknown",
+            "mapping_confidence": 0.0,
+            "has_column_confusion": false
+          },
+          "accepted_critical_fields": 15,
+          "unresolved_critical_fields": 205,
+          "has_blocking_issues": false
+        }
+      },
+      "phase2": {
+        "status": "recovered",
+        "failure_type": "EMPTY_OUTPUT",
+        "strategy": "structured_reread",
+        "attempts": 1,
+        "applied": true,
+        "accepted": true,
+        "recovery_log": [
+          {
+            "attempt": 1,
+            "accepted": true,
+            "parsed": true,
+            "returned": [
+              "Aactaril Soap opening=None receipts=None sales=None stock_out=None closing=None",
+              "Pitex Tablets opening=None receipts=None sales=None stock_out=None closing=None",
+              "PureHands Advanced (Blue) opening=None receipts=None sales=None stock_out=None closing=None",
+              "Purim Tablets opening=None receipts=None sales=None stock_out=None closing=None",
+              "Quista active (Chocolate) opening=None receipts=None sales=None stock_out=None closing=None",
+              "Quista active (Milk Masala) opening=None receipts=None sales=None stock_out=None closing=None",
+              "Quista DN (Milk Masala) opening=None receipts=None sales=None stock_out=None closing=None",
+              "Quista DN (Vanilla) opening=None receipts=None sales=None stock_out=None closing=None",
+              "Quista DN (Milk Masala) opening=None receipts=None sales=None stock_out=None closing=None",
+              "Quista DN (Vanilla) opening=None receipts=None sales=None stock_out=None closing=None",
+              "Renalka Syrup opening=None receipts=None sales=None stock_out=None closing=None",
+              "Renalka Syrup opening=None receipts=None sales=None stock_out=None closing=None",
+              "Shallaki Tablets opening=None receipts=None sales=None stock_out=None closing=None",
+              "Shigru Tablets opening=None receipts=None sales=None stock_out=None closing=None",
+              "Tagara Tablets opening=None receipts=None sales=None stock_out=None closing=None",
+              "Talckt Syrup opening=None receipts=None sales=None stock_out=None closing=None",
+              "Talckt Tablets opening=None receipts=None sales=None stock_out=None closing=None",
+              "Tentex forte Tablets opening=None receipts=None sales=None stock_out=None closing=None",
+              "Trikatu Syrup opening=None receipts=None sales=None stock_out=None closing=None",
+              "Trikatu Tablets opening=None receipts=None sales=None stock_out=None closing=None",
+              "Triphala Tablets opening=None receipts=None sales=None stock_out=None closing=None",
+              "Vasaka Syrup opening=None receipts=None sales=None stock_out=None closing=None",
+              "Vasaka Tablets opening=None receipts=None sales=None stock_out=None closing=None",
+              "Vrikshamba Tablets opening=None receipts=None sales=None stock_out=None closing=None",
+              "Yashhumadhu Tablets opening=None receipts=None sales=None stock_out=None closing=None",
+              "Abana Tablets opening=None receipts=None sales=None stock_out=None closing=None",
+              "Althea Lotion opening=None receipts=None sales=None stock_out=None closing=None",
+              "Amalaki Tablets opening=None receipts=None sales=None stock_out=None closing=None",
+              "Bael Tablets opening=None receipts=None sales=None stock_out=None closing=None",
+              "Bleiminor Anti-blemish Cream opening=None receipts=None sales=None stock_out=None closing=10.0",
+              "Clarina Anti-acne Cream opening=None receipts=None sales=None stock_out=None closing=1.0",
+              "Clarina Anti-acne Face Wash Gel opening=None receipts=None sales=None stock_out=None closing=None",
+              "Confido Tablets opening=None receipts=None sales=None stock_out=None closing=2.0",
+              "Diabecon DS Tablets opening=None receipts=None sales=None stock_out=None closing=10.0",
+              "Diabecon Tablets opening=None receipts=None sales=None stock_out=None closing=None",
+              "Diarex Syrup opening=None receipts=None sales=None stock_out=None closing=80.0",
+              "Diarex Tablets opening=None receipts=None sales=None stock_out=None closing=None",
+              "Hadjod Tablets opening=None receipts=None sales=None stock_out=None closing=20.0",
+              "Hairzone Solution opening=None receipts=None sales=None stock_out=None closing=None",
+              "Herbolax Capsules opening=None receipts=None sales=None stock_out=None closing=None",
+              "Herbolax Tablets opening=None receipts=None sales=None stock_out=None closing=10.0",
+              "Himcolin Gel opening=None receipts=None sales=None stock_out=None closing=1.0",
+              "Kapikachhu Tablets opening=None receipts=None sales=None stock_out=None closing=None",
+              "Liv.52 HB Capsules opening=None receipts=None sales=None stock_out=None closing=None",
+              "Liv.52 Syrup opening=None receipts=None sales=None stock_out=None closing=80.0",
+              "Liv.52 Syrup opening=None receipts=None sales=None stock_out=None closing=None",
+              "Liv.52 Tablets opening=None receipts=None sales=None stock_out=None closing=20.0",
+              "Liv.52 Sugar Free Syrup opening=None receipts=None sales=None stock_out=None closing=10.0",
+              "Liv.52 Sugar Free Syrup opening=None receipts=None sales=None stock_out=None closing=2.0",
+              "Manjishsta Tablets opening=None receipts=None sales=None stock_out=None closing=None",
+              "Ophthalcare Eye Drops opening=None receipts=None sales=None stock_out=None closing=5.0",
+              "Oro-T Oral Rinse opening=None receipts=None sales=None stock_out=None closing=None",
+              "Oxitard Capsules opening=None receipts=None sales=None stock_out=None closing=120.0",
+              "Pilex forte Ointment opening=None receipts=None sales=None stock_out=None closing=10.0",
+              "Pilex forte Tablets opening=None receipts=None sales=None stock_out=None closing=None"
+            ]
+          }
+        ],
+        "original_values": [],
+        "manual_review": null
+      }
+    }
+  },
+  "comparison": {
+    "field_accuracy_off": 0.16666666666666666,
+    "field_accuracy_on": 0.16666666666666666,
+    "field_accuracy_delta": 0.0,
+    "quantity_accuracy_off": 0.0,
+    "quantity_accuracy_on": 0.0,
+    "quantity_accuracy_delta": 0.0,
+    "product_identity_recall_off": 0.0,
+    "product_identity_recall_on": 0.8,
+    "missing_values_off": 10,
+    "missing_values_on": 10,
+    "missing_values_delta": 0
+  },
+  "healthy_row_check": {
+    "healthy_rows_checked": 0,
+    "healthy_rows_changed": 0,
+    "unchanged": true,
+    "changes": []
+  }
+}

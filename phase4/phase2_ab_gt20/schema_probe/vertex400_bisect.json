@@ -1,0 +1,206 @@
+{
+  "probes": [
+    {
+      "label": "raw_pydantic",
+      "model": "gemini-2.5-flash-lite",
+      "endpoint_host": "aiplatform.googleapis.com",
+      "responseMimeType": "application/json",
+      "schema_title": "SalesExtractionOutput",
+      "schema_bytes": 29937,
+      "schema_has_$defs": true,
+      "schema_has_default": true,
+      "schema_anyOf_count": 144,
+      "parts": [
+        {
+          "kind": "text",
+          "chars": 147
+        }
+      ],
+      "credentials_redacted": true,
+      "sdk_response_mime_type": "application/json",
+      "sdk_has_response_json_schema": true,
+      "sdk_has_response_schema": false,
+      "client_ok": true,
+      "ok": false,
+      "http_status": 400,
+      "status": "INVALID_ARGUMENT",
+      "message": "Request contains an invalid argument.",
+      "error_type": "ClientError",
+      "error_details": {
+        "error": {
+          "code": 400,
+          "message": "Request contains an invalid argument.",
+          "status": "INVALID_ARGUMENT"
+        }
+      },
+      "error_repr": "ClientError(\"400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Request contains an invalid argument.', 'status': 'INVALID_ARGUMENT'}}\")",
+      "traceback": "\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\.venv\\Lib\\site-packages\\tenacity\\__init__.py\", line 470, in __call__\n    do = self.iter(retry_state=retry_state)\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\.venv\\Lib\\site-packages\\tenacity\\__init__.py\", line 371, in iter\n    result = action(retry_state)\n             ^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\.venv\\Lib\\site-packages\\tenacity\\__init__.py\", line 413, in exc_check\n    raise retry_exc.reraise()\n          ^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\.venv\\Lib\\site-packages\\tenacity\\__init__.py\", line 184, in reraise\n    raise self.last_attempt.result()\n          ^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Python312\\Lib\\concurrent\\futures\\_base.py\", line 449, in result\n    return self.__get_result()\n           ^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Python312\\Lib\\concurrent\\futures\\_base.py\", line 401, in __get_result\n    raise self._exception\n  File \"C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\.venv\\Lib\\site-packages\\tenacity\\__init__.py\", line 473, in __call__\n    result = fn(*args, **kwargs)\n             ^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\.venv\\Lib\\site-packages\\google\\genai\\_api_client.py\", line 1511, in _request_once\n    errors.APIError.raise_for_response(response)\n  File \"C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\.venv\\Lib\\site-packages\\google\\genai\\errors.py\", line 173, in raise_for_response\n    cls.raise_error(response.status_code, response_json, response)\n  File \"C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\.venv\\Lib\\site-packages\\google\\genai\\errors.py\", line 202, in raise_error\n    raise ClientError(status_code, response_json, response)\ngoogle.genai.errors.ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Request contains an invalid argument.', 'status': 'INVALID_ARGUMENT'}}\n"
+    },
+    {
+      "label": "strip_defaults",
+      "model": "gemini-2.5-flash-lite",
+      "endpoint_host": "aiplatform.googleapis.com",
+      "responseMimeType": "application/json",
+      "schema_title": "SalesExtractionOutput",
+      "schema_bytes": 29648,
+      "schema_has_$defs": true,
+      "schema_has_default": false,
+      "schema_anyOf_count": 144,
+      "parts": [
+        {
+          "kind": "text",
+          "chars": 147
+        }
+      ],
+      "credentials_redacted": true,
+      "sdk_response_mime_type": "application/json",
+      "sdk_has_response_json_schema": true,
+      "sdk_has_response_schema": false,
+      "client_ok": true,
+      "ok": false,
+      "http_status": 400,
+      "status": "INVALID_ARGUMENT",
+      "message": "Request contains an invalid argument.",
+      "error_type": "ClientError",
+      "error_details": {
+        "error": {
+          "code": 400,
+          "message": "Request contains an invalid argument.",
+          "status": "INVALID_ARGUMENT"
+        }
+      },
+      "error_repr": "ClientError(\"400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Request contains an invalid argument.', 'status': 'INVALID_ARGUMENT'}}\")",
+      "traceback": "\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\.venv\\Lib\\site-packages\\tenacity\\__init__.py\", line 470, in __call__\n    do = self.iter(retry_state=retry_state)\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\.venv\\Lib\\site-packages\\tenacity\\__init__.py\", line 371, in iter\n    result = action(retry_state)\n             ^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\.venv\\Lib\\site-packages\\tenacity\\__init__.py\", line 413, in exc_check\n    raise retry_exc.reraise()\n          ^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\.venv\\Lib\\site-packages\\tenacity\\__init__.py\", line 184, in reraise\n    raise self.last_attempt.result()\n          ^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Python312\\Lib\\concurrent\\futures\\_base.py\", line 449, in result\n    return self.__get_result()\n           ^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Python312\\Lib\\concurrent\\futures\\_base.py\", line 401, in __get_result\n    raise self._exception\n  File \"C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\.venv\\Lib\\site-packages\\tenacity\\__init__.py\", line 473, in __call__\n    result = fn(*args, **kwargs)\n             ^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\.venv\\Lib\\site-packages\\google\\genai\\_api_client.py\", line 1511, in _request_once\n    errors.APIError.raise_for_response(response)\n  File \"C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\.venv\\Lib\\site-packages\\google\\genai\\errors.py\", line 173, in raise_for_response\n    cls.raise_error(response.status_code, response_json, response)\n  File \"C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\.venv\\Lib\\site-packages\\google\\genai\\errors.py\", line 202, in raise_error\n    raise ClientError(status_code, response_json, response)\ngoogle.genai.errors.ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Request contains an invalid argument.', 'status': 'INVALID_ARGUMENT'}}\n"
+    },
+    {
+      "label": "strip_defaults+additional_true",
+      "model": "gemini-2.5-flash-lite",
+      "endpoint_host": "aiplatform.googleapis.com",
+      "responseMimeType": "application/json",
+      "schema_title": "SalesExtractionOutput",
+      "schema_bytes": 2468,
+      "schema_has_$defs": true,
+      "schema_has_default": false,
+      "schema_anyOf_count": 18,
+      "parts": [
+        {
+          "kind": "text",
+          "chars": 147
+        }
+      ],
+      "credentials_redacted": true,
+      "sdk_response_mime_type": "application/json",
+      "sdk_has_response_json_schema": true,
+      "sdk_has_response_schema": false,
+      "client_ok": true,
+      "ok": true,
+      "http_status": 200,
+      "response_text_preview": "",
+      "usage": {}
+    },
+    {
+      "label": "strip_defaults+leaf_types",
+      "model": "gemini-2.5-flash-lite",
+      "endpoint_host": "aiplatform.googleapis.com",
+      "responseMimeType": "application/json",
+      "schema_title": "SalesExtractionOutput",
+      "schema_bytes": 2558,
+      "schema_has_$defs": true,
+      "schema_has_default": false,
+      "schema_anyOf_count": 18,
+      "parts": [
+        {
+          "kind": "text",
+          "chars": 147
+        }
+      ],
+      "credentials_redacted": true,
+      "sdk_response_mime_type": "application/json",
+      "sdk_has_response_json_schema": true,
+      "sdk_has_response_schema": false,
+      "client_ok": true,
+      "ok": true,
+      "http_status": 200,
+      "response_text_preview": "",
+      "usage": {}
+    },
+    {
+      "label": "strip_defaults+shallow_anyof",
+      "model": "gemini-2.5-flash-lite",
+      "endpoint_host": "aiplatform.googleapis.com",
+      "responseMimeType": "application/json",
+      "schema_title": "SalesExtractionOutput",
+      "schema_bytes": 2718,
+      "schema_has_$defs": true,
+      "schema_has_default": false,
+      "schema_anyOf_count": 20,
+      "parts": [
+        {
+          "kind": "text",
+          "chars": 147
+        }
+      ],
+      "credentials_redacted": true,
+      "sdk_response_mime_type": "application/json",
+      "sdk_has_response_json_schema": true,
+      "sdk_has_response_schema": false,
+      "client_ok": true,
+      "ok": true,
+      "http_status": 200,
+      "response_text_preview": "",
+      "usage": {}
+    },
+    {
+      "label": "inline_refs+strip+additional_true",
+      "model": "gemini-2.5-flash-lite",
+      "endpoint_host": "aiplatform.googleapis.com",
+      "responseMimeType": "application/json",
+      "schema_title": "SalesExtractionOutput",
+      "schema_bytes": 2289,
+      "schema_has_$defs": false,
+      "schema_has_default": false,
+      "schema_anyOf_count": 18,
+      "parts": [
+        {
+          "kind": "text",
+          "chars": 147
+        }
+      ],
+      "credentials_redacted": true,
+      "sdk_response_mime_type": "application/json",
+      "sdk_has_response_json_schema": true,
+      "sdk_has_response_schema": false,
+      "client_ok": true,
+      "ok": true,
+      "http_status": 200,
+      "response_text_preview": "",
+      "usage": {}
+    },
+    {
+      "label": "hand_minimal",
+      "model": "gemini-2.5-flash-lite",
+      "endpoint_host": "aiplatform.googleapis.com",
+      "responseMimeType": "application/json",
+      "schema_title": "SalesExtractionOutput",
+      "schema_bytes": 1366,
+      "schema_has_$defs": false,
+      "schema_has_default": false,
+      "schema_anyOf_count": 0,
+      "parts": [
+        {
+          "kind": "text",
+          "chars": 147
+        }
+      ],
+      "credentials_redacted": true,
+      "sdk_response_mime_type": "application/json",
+      "sdk_has_response_json_schema": true,
+      "sdk_has_response_schema": false,
+      "client_ok": true,
+      "ok": true,
+      "http_status": 200,
+      "response_text_preview": "",
+      "usage": {}
+    }
+  ]
+}

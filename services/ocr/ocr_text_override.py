@@ -9,15 +9,22 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from contextvars import ContextVar, Token
-from typing import Iterator, Optional
+from typing import Any, Dict, Iterator, Optional
 
 _OCR_TEXT_OVERRIDE: ContextVar[Optional[str]] = ContextVar(
     "splitextract_ocr_text_override", default=None
+)
+_OCR_RECOVERY_STATE: ContextVar[Optional[Dict[str, Any]]] = ContextVar(
+    "splitextract_ocr_recovery_state", default=None
 )
 
 
 def get_ocr_text_override() -> Optional[str]:
     return _OCR_TEXT_OVERRIDE.get()
+
+
+def get_ocr_recovery_state() -> Optional[Dict[str, Any]]:
+    return _OCR_RECOVERY_STATE.get()
 
 
 @contextmanager
@@ -28,3 +35,13 @@ def ocr_text_override(text: Optional[str]) -> Iterator[None]:
         yield
     finally:
         _OCR_TEXT_OVERRIDE.reset(token)
+
+
+@contextmanager
+def ocr_recovery_state(state: Optional[Dict[str, Any]]) -> Iterator[None]:
+    """Publish DI OCR recovery outcome (accepted engine / failure) to extractors."""
+    token: Token = _OCR_RECOVERY_STATE.set(state)
+    try:
+        yield
+    finally:
+        _OCR_RECOVERY_STATE.reset(token)

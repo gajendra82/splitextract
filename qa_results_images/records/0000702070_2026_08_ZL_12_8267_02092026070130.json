@@ -1,0 +1,504 @@
+{
+  "file": "0000702070_2026_08_ZL_12_8267_02092026070130.jpg",
+  "path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000702070_2026_08_ZL_12_8267_02092026070130.jpg",
+  "format": "Stock Statement",
+  "api_method": "pharma_hub_jun_jul_photo",
+  "status": "FAIL",
+  "expected_rows": 35,
+  "extracted_rows": 34,
+  "matched_rows": 25,
+  "missing_rows": [
+    {
+      "product": "GM",
+      "opening_qty": 39,
+      "receipts_qty": 72,
+      "sales_qty": 36,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "IML Listho",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "XEAM=",
+      "opening_qty": null,
+      "receipts_qty": 50,
+      "sales_qty": 5,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "10 GALCTOSURE",
+      "opening_qty": null,
+      "receipts_qty": 9,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "13 HIMCOLIN GEL",
+      "opening_qty": 1,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "15 LIV-52 100ML SYP 100M 1@ LIV-52 200 SUGAR FREE",
+      "opening_qty": 20,
+      "receipts_qty": null,
+      "sales_qty": 11,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "28 RENALKA",
+      "opening_qty": 36,
+      "receipts_qty": 56,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "29 TALEKT SYRUP",
+      "opening_qty": 6,
+      "receipts_qty": 0,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "im Rs. iOTAL",
+      "opening_qty": 172174,
+      "receipts_qty": 97664,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "Vai Sie Value Diiiiae: Tg",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 692,
+      "closing_qty": null,
+      "kind": "missing_product"
+    }
+  ],
+  "extra_rows": [
+    {
+      "product": "AACTARIL SOAP 75 GM 75 GM",
+      "opening_qty": 39,
+      "sales_qty": 36,
+      "closing_qty": 75,
+      "kind": "extra_product"
+    },
+    {
+      "product": "ALTHEA LOTION 100ML 1*10",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "BLEMINOR A/B CREAM 30 ML 30ML",
+      "opening_qty": 11,
+      "sales_qty": 5,
+      "closing_qty": 56,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HIMCOLIN GEL 30 GM 30GM",
+      "opening_qty": 1,
+      "sales_qty": 0,
+      "closing_qty": 1,
+      "kind": "extra_product"
+    },
+    {
+      "product": "LIV-52 100ML SYP 100ML",
+      "opening_qty": 172,
+      "sales_qty": 65,
+      "closing_qty": 177,
+      "kind": "extra_product"
+    },
+    {
+      "product": "LIV-52 200 SUGAR FREE 200ML",
+      "opening_qty": 20,
+      "sales_qty": 11,
+      "closing_qty": 9,
+      "kind": "extra_product"
+    },
+    {
+      "product": "RENALKA 100ML 100ML",
+      "opening_qty": 36,
+      "sales_qty": 22,
+      "closing_qty": 70,
+      "kind": "extra_product"
+    },
+    {
+      "product": "TALEKT SYRUP 120 ML 120 ML",
+      "opening_qty": 6,
+      "sales_qty": 5,
+      "closing_qty": 1,
+      "kind": "extra_product"
+    },
+    {
+      "product": "VASAKA SYRUP 200ML 200 ML",
+      "opening_qty": 18,
+      "sales_qty": 0,
+      "closing_qty": 18,
+      "kind": "extra_product"
+    }
+  ],
+  "duplicates": [],
+  "mismatches": [
+    {
+      "product": "7 DIABECON DS TAB 1*60 1°60",
+      "field": "sales_qty",
+      "expected": 122,
+      "actual": 13,
+      "kind": "wrong_sales_qty"
+    },
+    {
+      "product": "JDIAREX SYRUP 100 ML 1*100",
+      "field": "opening_qty",
+      "expected": 5,
+      "actual": 57,
+      "kind": "wrong_opening_qty"
+    },
+    {
+      "product": "25 rows",
+      "field": "sales_value",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 25,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    },
+    {
+      "product": "25 rows",
+      "field": "closing_value",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 25,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    },
+    {
+      "product": "25 rows",
+      "field": "closing_qty",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 25,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    }
+  ],
+  "ocr_review": [
+    {
+      "product": "ANTI ACNE FACE WASH 60",
+      "api_product": "CLARINA ANTI ACNE FACE WASH 60",
+      "similarity": 0.846,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "27 QUISTA DN 200 GM VANILLA pow 4",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 3,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "17 LIV-52 200ML SYP 200ML.",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 149,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "30 TENTEX FORTE “TAB 1*19",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 3,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "11 HADJOD TAB 60/S 60/SG",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "LARINA CREAM 306M",
+      "api_product": "CLARINA CREAM 30GM 30 GM",
+      "similarity": 0.78,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "19 LIV.52 HB CAPSULFS 1*10 1*10",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "18 LIV-52 TAB 1008 1*100",
+      "api_product": "LIV-52 TAB 1005 1*100",
+      "similarity": 0.889,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "18 LIV-52 TAB 1008 1*100",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 13,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "20 OPHTHACARE EYE 1OML DROP 1OML",
+      "api_product": "OPHTHACARE EYE 10ML DROP 10ML",
+      "similarity": 0.885,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "20 OPHTHACARE EYE 1OML DROP 1OML",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 24,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "22 PELEX 1*60 TAB 1°60",
+      "api_product": "PILEX 1*60 TAB 1*60",
+      "similarity": 0.878,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "22 PELEX 1*60 TAB 1°60",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 27,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "23 PILEX FORTE OINTMENT 30 GM 30",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "23 PILEX FORTE OINTMENT 30 GM 30",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 22,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "24 PILEX FORTE TABLET 2*30 2*30",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 56,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "24 PILEX FORTE TABLET 2*30 2*30",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 10,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "TRIKATU SYRUP 200 ML",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "TRIKATU SYRUP 200 ML",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 6,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "25 PURIM TAB’ 60 1*60 No.",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "25 PURIM TAB’ 60 1*60 No.",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "21 ORO-T ORAL RINSE",
+      "api_product": "ORO-T ORAL RINSE 100ML 100 ML",
+      "similarity": 0.75,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "21 ORO-T ORAL RINSE",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 5,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "26 QUISTA ACTIVE 200 GM",
+      "api_product": "QUISTA ACTIVE 200 GM 200GM",
+      "similarity": 0.898,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "26 QUISTA ACTIVE 200 GM",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "26 QUISTA ACTIVE 200 GM",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 5,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "34 VRIKSHAMLA *TAB 60S 60",
+      "api_product": "VRIKSHAMLA *TAB 60S 60 S",
+      "similarity": 0.894,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "34 VRIKSHAMLA *TAB 60S 60",
+      "field": "opening_qty",
+      "expected": null,
+      "actual": 1,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "34 VRIKSHAMLA *TAB 60S 60",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": ": 14 LIV-52 100 ML SUGAR FREI 100",
+      "api_product": "LIV-52 100 ML SUGAR FREE 1*100",
+      "similarity": 0.885,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": ": 14 LIV-52 100 ML SUGAR FREI 100",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": ": 14 LIV-52 100 ML SUGAR FREI 100",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "33 VEGECORT CREAM",
+      "api_product": "VEGECORT CREAM 30 GM 30GM",
+      "similarity": 0.81,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "33 VEGECORT CREAM",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "33 VEGECORT CREAM",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "; 12 HAIR ZONE SOLUTION",
+      "api_product": "HAIR ZONE SOLUTION 60 ML 60ML",
+      "similarity": 0.76,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "; 12 HAIR ZONE SOLUTION",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "; 12 HAIR ZONE SOLUTION",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "GRANULES 200GM 120",
+      "api_product": "GALCTOSURE GRANULES 200GM 1*20",
+      "similarity": 0.75,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "GRANULES 200GM 120",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "GRANULES 200GM 120",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "JDIAREX SYRUP 100 ML 1*100",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 56,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "JDIAREX SYRUP 100 ML 1*100",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 61,
+      "note": "Ground truth did not read this cell confidently."
+    }
+  ],
+  "accounting": [],
+  "confidence": "medium",
+  "notes": [
+    "OCR used tesseract psm 6."
+  ],
+  "result_key": "0000702070_2026_08_ZL_12_8267_02092026070130",
+  "unavailable_fields": {
+    "sales_value": 25,
+    "closing_value": 25,
+    "closing_qty": 25
+  },
+  "formula_checked": "none"
+}

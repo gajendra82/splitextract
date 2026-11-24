@@ -1,0 +1,442 @@
+{
+  "metrics": {
+    "total_documents": 100,
+    "baseline": {
+      "PASS": 52,
+      "FAIL": 44,
+      "ERROR": 4,
+      "provider_error": 0,
+      "ocr_required": 52
+    },
+    "phase2": {
+      "recovery_attempted": 43,
+      "recovery_accepted": 0,
+      "recovery_rejected": 39,
+      "recovery_unresolved": 1,
+      "recovery_not_attempted": 56,
+      "provider_error": 4,
+      "verified_correct": 0,
+      "verified_wrong": 0,
+      "unverified": 44,
+      "unverified_accepted": 0
+    },
+    "transitions": {
+      "PASS \u2192 PASS": 52,
+      "PASS \u2192 RECOVERED": 0,
+      "PASS \u2192 CHANGED": 0,
+      "PASS \u2192 WRONG": 0,
+      "FAIL \u2192 RECOVERED": 0,
+      "FAIL \u2192 UNRESOLVED": 40,
+      "FAIL \u2192 PROVIDER_ERROR": 4,
+      "FAIL \u2192 WRONG": 0
+    },
+    "safety": {
+      "pass_to_wrong": 0,
+      "fail_to_wrong": 0,
+      "null_became_zero": 0,
+      "unknown_layout_accepted": 0,
+      "dynamic_field_changed": 0,
+      "canonical_values_changed": 0
+    },
+    "quality": {
+      "verified_recovery_precision": null,
+      "recovery_acceptance_rate": 0.0,
+      "recovery_verification_rate": null
+    },
+    "breakdown": {
+      "file_type": {
+        ".pdf": {
+          "PASS \u2192 PASS": 15,
+          "PASS \u2192 RECOVERED": 0,
+          "PASS \u2192 CHANGED": 0,
+          "PASS \u2192 WRONG": 0,
+          "FAIL \u2192 RECOVERED": 0,
+          "FAIL \u2192 UNRESOLVED": 17,
+          "FAIL \u2192 PROVIDER_ERROR": 2,
+          "FAIL \u2192 WRONG": 0,
+          "documents": 36
+        },
+        "(none)": {
+          "PASS \u2192 PASS": 0,
+          "PASS \u2192 RECOVERED": 0,
+          "PASS \u2192 CHANGED": 0,
+          "PASS \u2192 WRONG": 0,
+          "FAIL \u2192 RECOVERED": 0,
+          "FAIL \u2192 UNRESOLVED": 1,
+          "FAIL \u2192 PROVIDER_ERROR": 0,
+          "FAIL \u2192 WRONG": 0,
+          "documents": 1
+        },
+        ".jpg": {
+          "PASS \u2192 PASS": 7,
+          "PASS \u2192 RECOVERED": 0,
+          "PASS \u2192 CHANGED": 0,
+          "PASS \u2192 WRONG": 0,
+          "FAIL \u2192 RECOVERED": 0,
+          "FAIL \u2192 UNRESOLVED": 13,
+          "FAIL \u2192 PROVIDER_ERROR": 1,
+          "FAIL \u2192 WRONG": 0,
+          "documents": 21
+        },
+        ".jpeg": {
+          "PASS \u2192 PASS": 3,
+          "PASS \u2192 RECOVERED": 0,
+          "PASS \u2192 CHANGED": 0,
+          "PASS \u2192 WRONG": 0,
+          "FAIL \u2192 RECOVERED": 0,
+          "FAIL \u2192 UNRESOLVED": 4,
+          "FAIL \u2192 PROVIDER_ERROR": 0,
+          "FAIL \u2192 WRONG": 0,
+          "documents": 7
+        },
+        ".png": {
+          "PASS \u2192 PASS": 9,
+          "PASS \u2192 RECOVERED": 0,
+          "PASS \u2192 CHANGED": 0,
+          "PASS \u2192 WRONG": 0,
+          "FAIL \u2192 RECOVERED": 0,
+          "FAIL \u2192 UNRESOLVED": 0,
+          "FAIL \u2192 PROVIDER_ERROR": 0,
+          "FAIL \u2192 WRONG": 0,
+          "documents": 9
+        },
+        ".xlsx": {
+          "PASS \u2192 PASS": 9,
+          "PASS \u2192 RECOVERED": 0,
+          "PASS \u2192 CHANGED": 0,
+          "PASS \u2192 WRONG": 0,
+          "FAIL \u2192 RECOVERED": 0,
+          "FAIL \u2192 UNRESOLVED": 1,
+          "FAIL \u2192 PROVIDER_ERROR": 0,
+          "FAIL \u2192 WRONG": 0,
+          "documents": 10
+        },
+        ".xls": {
+          "PASS \u2192 PASS": 6,
+          "PASS \u2192 RECOVERED": 0,
+          "PASS \u2192 CHANGED": 0,
+          "PASS \u2192 WRONG": 0,
+          "FAIL \u2192 RECOVERED": 0,
+          "FAIL \u2192 UNRESOLVED": 1,
+          "FAIL \u2192 PROVIDER_ERROR": 1,
+          "FAIL \u2192 WRONG": 0,
+          "documents": 8
+        },
+        ".docx": {
+          "PASS \u2192 PASS": 2,
+          "PASS \u2192 RECOVERED": 0,
+          "PASS \u2192 CHANGED": 0,
+          "PASS \u2192 WRONG": 0,
+          "FAIL \u2192 RECOVERED": 0,
+          "FAIL \u2192 UNRESOLVED": 1,
+          "FAIL \u2192 PROVIDER_ERROR": 0,
+          "FAIL \u2192 WRONG": 0,
+          "documents": 3
+        },
+        ".doc": {
+          "PASS \u2192 PASS": 0,
+          "PASS \u2192 RECOVERED": 0,
+          "PASS \u2192 CHANGED": 0,
+          "PASS \u2192 WRONG": 0,
+          "FAIL \u2192 RECOVERED": 0,
+          "FAIL \u2192 UNRESOLVED": 1,
+          "FAIL \u2192 PROVIDER_ERROR": 0,
+          "FAIL \u2192 WRONG": 0,
+          "documents": 1
+        },
+        ".txt": {
+          "PASS \u2192 PASS": 1,
+          "PASS \u2192 RECOVERED": 0,
+          "PASS \u2192 CHANGED": 0,
+          "PASS \u2192 WRONG": 0,
+          "FAIL \u2192 RECOVERED": 0,
+          "FAIL \u2192 UNRESOLVED": 0,
+          "FAIL \u2192 PROVIDER_ERROR": 0,
+          "FAIL \u2192 WRONG": 0,
+          "documents": 1
+        },
+        ".rtf": {
+          "PASS \u2192 PASS": 0,
+          "PASS \u2192 RECOVERED": 0,
+          "PASS \u2192 CHANGED": 0,
+          "PASS \u2192 WRONG": 0,
+          "FAIL \u2192 RECOVERED": 0,
+          "FAIL \u2192 UNRESOLVED": 0,
+          "FAIL \u2192 PROVIDER_ERROR": 0,
+          "FAIL \u2192 WRONG": 0,
+          "documents": 1
+        },
+        ".csv": {
+          "PASS \u2192 PASS": 0,
+          "PASS \u2192 RECOVERED": 0,
+          "PASS \u2192 CHANGED": 0,
+          "PASS \u2192 WRONG": 0,
+          "FAIL \u2192 RECOVERED": 0,
+          "FAIL \u2192 UNRESOLVED": 1,
+          "FAIL \u2192 PROVIDER_ERROR": 0,
+          "FAIL \u2192 WRONG": 0,
+          "documents": 1
+        },
+        ".mht": {
+          "PASS \u2192 PASS": 0,
+          "PASS \u2192 RECOVERED": 0,
+          "PASS \u2192 CHANGED": 0,
+          "PASS \u2192 WRONG": 0,
+          "FAIL \u2192 RECOVERED": 0,
+          "FAIL \u2192 UNRESOLVED": 0,
+          "FAIL \u2192 PROVIDER_ERROR": 0,
+          "FAIL \u2192 WRONG": 0,
+          "documents": 1
+        }
+      },
+      "layout": {
+        "generic": {
+          "PASS \u2192 PASS": 30,
+          "PASS \u2192 RECOVERED": 0,
+          "PASS \u2192 CHANGED": 0,
+          "PASS \u2192 WRONG": 0,
+          "FAIL \u2192 RECOVERED": 0,
+          "FAIL \u2192 UNRESOLVED": 34,
+          "FAIL \u2192 PROVIDER_ERROR": 4,
+          "FAIL \u2192 WRONG": 0,
+          "documents": 72
+        },
+        "product_wise": {
+          "PASS \u2192 PASS": 2,
+          "PASS \u2192 RECOVERED": 0,
+          "PASS \u2192 CHANGED": 0,
+          "PASS \u2192 WRONG": 0,
+          "FAIL \u2192 RECOVERED": 0,
+          "FAIL \u2192 UNRESOLVED": 2,
+          "FAIL \u2192 PROVIDER_ERROR": 0,
+          "FAIL \u2192 WRONG": 0,
+          "documents": 4
+        },
+        "opbal": {
+          "PASS \u2192 PASS": 3,
+          "PASS \u2192 RECOVERED": 0,
+          "PASS \u2192 CHANGED": 0,
+          "PASS \u2192 WRONG": 0,
+          "FAIL \u2192 RECOVERED": 0,
+          "FAIL \u2192 UNRESOLVED": 0,
+          "FAIL \u2192 PROVIDER_ERROR": 0,
+          "FAIL \u2192 WRONG": 0,
+          "documents": 3
+        },
+        "saleret": {
+          "PASS \u2192 PASS": 0,
+          "PASS \u2192 RECOVERED": 0,
+          "PASS \u2192 CHANGED": 0,
+          "PASS \u2192 WRONG": 0,
+          "FAIL \u2192 RECOVERED": 0,
+          "FAIL \u2192 UNRESOLVED": 1,
+          "FAIL \u2192 PROVIDER_ERROR": 0,
+          "FAIL \u2192 WRONG": 0,
+          "documents": 1
+        },
+        "product_wise_image": {
+          "PASS \u2192 PASS": 9,
+          "PASS \u2192 RECOVERED": 0,
+          "PASS \u2192 CHANGED": 0,
+          "PASS \u2192 WRONG": 0,
+          "FAIL \u2192 RECOVERED": 0,
+          "FAIL \u2192 UNRESOLVED": 2,
+          "FAIL \u2192 PROVIDER_ERROR": 0,
+          "FAIL \u2192 WRONG": 0,
+          "documents": 11
+        },
+        "unknown": {
+          "PASS \u2192 PASS": 0,
+          "PASS \u2192 RECOVERED": 0,
+          "PASS \u2192 CHANGED": 0,
+          "PASS \u2192 WRONG": 0,
+          "FAIL \u2192 RECOVERED": 0,
+          "FAIL \u2192 UNRESOLVED": 1,
+          "FAIL \u2192 PROVIDER_ERROR": 0,
+          "FAIL \u2192 WRONG": 0,
+          "documents": 1
+        },
+        "not_scored": {
+          "PASS \u2192 PASS": 8,
+          "PASS \u2192 RECOVERED": 0,
+          "PASS \u2192 CHANGED": 0,
+          "PASS \u2192 WRONG": 0,
+          "FAIL \u2192 RECOVERED": 0,
+          "FAIL \u2192 UNRESOLVED": 0,
+          "FAIL \u2192 PROVIDER_ERROR": 0,
+          "FAIL \u2192 WRONG": 0,
+          "documents": 8
+        }
+      },
+      "recovery_strategy": {
+        "none": {
+          "PASS \u2192 PASS": 52,
+          "PASS \u2192 RECOVERED": 0,
+          "PASS \u2192 CHANGED": 0,
+          "PASS \u2192 WRONG": 0,
+          "FAIL \u2192 RECOVERED": 0,
+          "FAIL \u2192 UNRESOLVED": 0,
+          "FAIL \u2192 PROVIDER_ERROR": 0,
+          "FAIL \u2192 WRONG": 0,
+          "documents": 56
+        },
+        "targeted_stock_extraction": {
+          "PASS \u2192 PASS": 0,
+          "PASS \u2192 RECOVERED": 0,
+          "PASS \u2192 CHANGED": 0,
+          "PASS \u2192 WRONG": 0,
+          "FAIL \u2192 RECOVERED": 0,
+          "FAIL \u2192 UNRESOLVED": 37,
+          "FAIL \u2192 PROVIDER_ERROR": 0,
+          "FAIL \u2192 WRONG": 0,
+          "documents": 37
+        },
+        "provider_retry": {
+          "PASS \u2192 PASS": 0,
+          "PASS \u2192 RECOVERED": 0,
+          "PASS \u2192 CHANGED": 0,
+          "PASS \u2192 WRONG": 0,
+          "FAIL \u2192 RECOVERED": 0,
+          "FAIL \u2192 UNRESOLVED": 0,
+          "FAIL \u2192 PROVIDER_ERROR": 4,
+          "FAIL \u2192 WRONG": 0,
+          "documents": 4
+        },
+        "structured_reread": {
+          "PASS \u2192 PASS": 0,
+          "PASS \u2192 RECOVERED": 0,
+          "PASS \u2192 CHANGED": 0,
+          "PASS \u2192 WRONG": 0,
+          "FAIL \u2192 RECOVERED": 0,
+          "FAIL \u2192 UNRESOLVED": 3,
+          "FAIL \u2192 PROVIDER_ERROR": 0,
+          "FAIL \u2192 WRONG": 0,
+          "documents": 3
+        }
+      },
+      "failure_type": {
+        "none": {
+          "PASS \u2192 PASS": 52,
+          "PASS \u2192 RECOVERED": 0,
+          "PASS \u2192 CHANGED": 0,
+          "PASS \u2192 WRONG": 0,
+          "FAIL \u2192 RECOVERED": 0,
+          "FAIL \u2192 UNRESOLVED": 0,
+          "FAIL \u2192 PROVIDER_ERROR": 0,
+          "FAIL \u2192 WRONG": 0,
+          "documents": 56
+        },
+        "STOCK_IDENTITY_FAILURE": {
+          "PASS \u2192 PASS": 0,
+          "PASS \u2192 RECOVERED": 0,
+          "PASS \u2192 CHANGED": 0,
+          "PASS \u2192 WRONG": 0,
+          "FAIL \u2192 RECOVERED": 0,
+          "FAIL \u2192 UNRESOLVED": 37,
+          "FAIL \u2192 PROVIDER_ERROR": 0,
+          "FAIL \u2192 WRONG": 0,
+          "documents": 37
+        },
+        "PROVIDER_ERROR": {
+          "PASS \u2192 PASS": 0,
+          "PASS \u2192 RECOVERED": 0,
+          "PASS \u2192 CHANGED": 0,
+          "PASS \u2192 WRONG": 0,
+          "FAIL \u2192 RECOVERED": 0,
+          "FAIL \u2192 UNRESOLVED": 0,
+          "FAIL \u2192 PROVIDER_ERROR": 4,
+          "FAIL \u2192 WRONG": 0,
+          "documents": 4
+        },
+        "EMPTY_OUTPUT": {
+          "PASS \u2192 PASS": 0,
+          "PASS \u2192 RECOVERED": 0,
+          "PASS \u2192 CHANGED": 0,
+          "PASS \u2192 WRONG": 0,
+          "FAIL \u2192 RECOVERED": 0,
+          "FAIL \u2192 UNRESOLVED": 3,
+          "FAIL \u2192 PROVIDER_ERROR": 0,
+          "FAIL \u2192 WRONG": 0,
+          "documents": 3
+        }
+      },
+      "ocr": {
+        "digital_text": {
+          "PASS \u2192 PASS": 14,
+          "PASS \u2192 RECOVERED": 0,
+          "PASS \u2192 CHANGED": 0,
+          "PASS \u2192 WRONG": 0,
+          "FAIL \u2192 RECOVERED": 0,
+          "FAIL \u2192 UNRESOLVED": 5,
+          "FAIL \u2192 PROVIDER_ERROR": 0,
+          "FAIL \u2192 WRONG": 0,
+          "documents": 21
+        },
+        "pymupdf_fallback": {
+          "PASS \u2192 PASS": 0,
+          "PASS \u2192 RECOVERED": 0,
+          "PASS \u2192 CHANGED": 0,
+          "PASS \u2192 WRONG": 0,
+          "FAIL \u2192 RECOVERED": 0,
+          "FAIL \u2192 UNRESOLVED": 1,
+          "FAIL \u2192 PROVIDER_ERROR": 0,
+          "FAIL \u2192 WRONG": 0,
+          "documents": 1
+        },
+        "ocr_required": {
+          "PASS \u2192 PASS": 20,
+          "PASS \u2192 RECOVERED": 0,
+          "PASS \u2192 CHANGED": 0,
+          "PASS \u2192 WRONG": 0,
+          "FAIL \u2192 RECOVERED": 0,
+          "FAIL \u2192 UNRESOLVED": 29,
+          "FAIL \u2192 PROVIDER_ERROR": 3,
+          "FAIL \u2192 WRONG": 0,
+          "documents": 52
+        },
+        "spreadsheet": {
+          "PASS \u2192 PASS": 15,
+          "PASS \u2192 RECOVERED": 0,
+          "PASS \u2192 CHANGED": 0,
+          "PASS \u2192 WRONG": 0,
+          "FAIL \u2192 RECOVERED": 0,
+          "FAIL \u2192 UNRESOLVED": 2,
+          "FAIL \u2192 PROVIDER_ERROR": 1,
+          "FAIL \u2192 WRONG": 0,
+          "documents": 18
+        },
+        "native_text": {
+          "PASS \u2192 PASS": 3,
+          "PASS \u2192 RECOVERED": 0,
+          "PASS \u2192 CHANGED": 0,
+          "PASS \u2192 WRONG": 0,
+          "FAIL \u2192 RECOVERED": 0,
+          "FAIL \u2192 UNRESOLVED": 2,
+          "FAIL \u2192 PROVIDER_ERROR": 0,
+          "FAIL \u2192 WRONG": 0,
+          "documents": 5
+        },
+        "other": {
+          "PASS \u2192 PASS": 0,
+          "PASS \u2192 RECOVERED": 0,
+          "PASS \u2192 CHANGED": 0,
+          "PASS \u2192 WRONG": 0,
+          "FAIL \u2192 RECOVERED": 0,
+          "FAIL \u2192 UNRESOLVED": 1,
+          "FAIL \u2192 PROVIDER_ERROR": 0,
+          "FAIL \u2192 WRONG": 0,
+          "documents": 3
+        }
+      }
+    },
+    "averages": {
+      "recovery_attempts": 0.81,
+      "provider_calls": 0.81,
+      "processing_time_ms": 156124.54
+    }
+  },
+  "recommendation": {
+    "recommendation": "INVESTIGATE",
+    "reason": "Phase 2 attempted recovery on failed documents, but it accepted none. No PASS to WRONG or verified FAIL to WRONG case was observed. This batch does not show an accuracy gain."
+  }
+}

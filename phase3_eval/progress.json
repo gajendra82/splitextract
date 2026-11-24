@@ -1,0 +1,502 @@
+{
+  "0000700218_2026_08_ZL_18_8178_02092026173735.PDF": {
+    "state": "complete",
+    "transition": "PASS \u2192 PASS",
+    "baseline_outcome": "PASS"
+  },
+  "0000700029_2026_08_ZL_06_476_02092026113447.pdf": {
+    "state": "complete",
+    "transition": "PASS \u2192 PASS",
+    "baseline_outcome": "PASS"
+  },
+  "0000700283_2026_08_ZL_18_377_01092026063405.pdf": {
+    "state": "complete",
+    "transition": "FAIL \u2192 UNRESOLVED",
+    "baseline_outcome": "FAIL"
+  },
+  "0000700224_2026_08_ZL_18_373_03092026133548.pdf": {
+    "state": "complete",
+    "transition": "PASS \u2192 PASS",
+    "baseline_outcome": "PASS"
+  },
+  "0000700284_2026_08_ZL_18_245_05092026055948.pdf": {
+    "state": "complete",
+    "transition": "PASS \u2192 PASS",
+    "baseline_outcome": "PASS"
+  },
+  "0000700026_2026_08_ZL_06_313_03092026130418.pdf": {
+    "state": "complete",
+    "transition": "FAIL \u2192 UNRESOLVED",
+    "baseline_outcome": "FAIL"
+  },
+  "0000700112_2026_08_ZL_06_305_02092026004955.pdf": {
+    "state": "complete",
+    "transition": "PASS \u2192 PASS",
+    "baseline_outcome": "PASS"
+  },
+  "0000700262_2026_08_ZL_18_376_04092026170456.PDF": {
+    "state": "complete",
+    "transition": "PASS \u2192 PASS",
+    "baseline_outcome": "PASS"
+  },
+  "0000700080_2026_08_ZL_06_305_02092026004326.pdf": {
+    "state": "complete",
+    "transition": "PASS \u2192 PASS",
+    "baseline_outcome": "PASS"
+  },
+  "0000700398_2026_08_ZL_18_377_01092026063708.pdf": {
+    "state": "complete",
+    "transition": "FAIL \u2192 UNRESOLVED",
+    "baseline_outcome": "FAIL"
+  },
+  "0000700060_2026_08_ZL_06_748_04092026113445.pdf": {
+    "state": "complete",
+    "transition": "PASS \u2192 PASS",
+    "baseline_outcome": "PASS"
+  },
+  "0000700376_2026_08_ZL_18_376_04092026170135.PDF": {
+    "state": "complete",
+    "transition": "PASS \u2192 PASS",
+    "baseline_outcome": "PASS"
+  },
+  "0000700096_2026_08_ZL_06_8236_03092026155517.pdf": {
+    "state": "complete",
+    "transition": "PASS \u2192 PASS",
+    "baseline_outcome": "PASS"
+  },
+  "0000700088_2026_08_ZL_06_304_06092026142123.pdf": {
+    "state": "complete",
+    "transition": "PASS \u2192 PASS",
+    "baseline_outcome": "PASS"
+  },
+  "0000700046_2026_08_ZL_06_521_02092026053734.pdf": {
+    "state": "complete",
+    "transition": "PASS \u2192 PASS",
+    "baseline_outcome": "PASS"
+  },
+  "0000700079_2026_08_ZL_06_476_01092026063244.PDF": {
+    "state": "complete",
+    "transition": "PASS \u2192 PASS",
+    "baseline_outcome": "PASS"
+  },
+  "0000700379_2026_08_ZL_18_375_05092026174136.PDF": {
+    "state": "complete",
+    "transition": "FAIL \u2192 UNRESOLVED",
+    "baseline_outcome": "FAIL"
+  },
+  "0000700017_2026_08_ZL_06_476_02092026121836.pdf": {
+    "state": "complete",
+    "transition": "FAIL \u2192 UNRESOLVED",
+    "baseline_outcome": "FAIL"
+  },
+  "0000700288_2026_08_ZL_18_374_04092026172821.pdf": {
+    "state": "complete",
+    "transition": "PASS \u2192 PASS",
+    "baseline_outcome": "PASS"
+  },
+  "0000700238_2026_08_ZL_18_377_03092026154026.pdf": {
+    "state": "complete",
+    "transition": "FAIL \u2192 UNRESOLVED",
+    "baseline_outcome": "FAIL"
+  },
+  "0000700358_2026_08_ZL_18_8173_05092026185826.pdf": {
+    "state": "complete",
+    "transition": "FAIL \u2192 UNRESOLVED",
+    "baseline_outcome": "FAIL"
+  },
+  "0000700364_2026_08_ZL_18_8173_05092026190156.pdf": {
+    "state": "complete",
+    "transition": "PASS \u2192 PASS",
+    "baseline_outcome": "PASS"
+  },
+  "0000700124_2026_08_ZL_06_521_02092026204703.pdf": {
+    "state": "complete",
+    "transition": "FAIL \u2192 UNRESOLVED",
+    "baseline_outcome": "FAIL"
+  },
+  "0000700209_2026_08_ZL_18_374_04092026060313.pdf": {
+    "state": "complete",
+    "transition": "FAIL \u2192 PROVIDER_ERROR",
+    "baseline_outcome": "FAIL"
+  },
+  "0000700084_2026_08_ZL_06_8236_03092026155136.pdf": {
+    "state": "complete",
+    "transition": "FAIL \u2192 UNRESOLVED",
+    "baseline_outcome": "FAIL"
+  },
+  "0000700346_2026_08_ZL_18_8189_05092026025159.pdf": {
+    "state": "complete",
+    "transition": "FAIL \u2192 PROVIDER_ERROR",
+    "baseline_outcome": "FAIL"
+  },
+  "0000700317_2026_08_ZL_18_374_02092026171443.pdf": {
+    "state": "complete",
+    "transition": "FAIL \u2192 UNRESOLVED",
+    "baseline_outcome": "FAIL"
+  },
+  "0000700275_2026_08_ZL_18_374_04092026171615.pdf": {
+    "state": "complete",
+    "transition": "FAIL \u2192 UNRESOLVED",
+    "baseline_outcome": "FAIL"
+  },
+  "0000704337_2026_08_ZL_24_259_03092026042213.pdf": {
+    "state": "complete",
+    "transition": "FAIL \u2192 UNRESOLVED",
+    "baseline_outcome": "FAIL"
+  },
+  "0000729951_2026_08_ZL_20_471_04092026104138.pdf": {
+    "state": "complete",
+    "transition": "FAIL \u2192 UNRESOLVED",
+    "baseline_outcome": "FAIL"
+  },
+  "0000730089_2026_08_ZL_24_244_05092026160041.pdf": {
+    "state": "complete",
+    "transition": "FAIL \u2192 UNRESOLVED",
+    "baseline_outcome": "FAIL"
+  },
+  "0000702913_2026_08_ZL_22_413A_04092026075910": {
+    "state": "complete",
+    "transition": "FAIL \u2192 UNRESOLVED",
+    "baseline_outcome": "FAIL"
+  },
+  "0000729971_2026_08_ZL_18_374_04092026174632.pdf": {
+    "state": "complete",
+    "transition": "FAIL \u2192 UNRESOLVED",
+    "baseline_outcome": "FAIL"
+  },
+  "0000723881_2026_08_ZL_06_550_04092026145241.pdf": {
+    "state": "complete",
+    "transition": "FAIL \u2192 UNRESOLVED",
+    "baseline_outcome": "FAIL"
+  },
+  "0000722000_2026_08_ZL_04_742_03092026185220.pdf": {
+    "state": "complete",
+    "transition": "FAIL \u2192 UNRESOLVED",
+    "baseline_outcome": "FAIL"
+  },
+  "0000731783_2026_08_ZL_13_270_07092026032432.pdf": {
+    "state": "complete",
+    "transition": "BASELINE_ERROR",
+    "baseline_outcome": "ERROR"
+  },
+  "0000719013_2026_08_ZL_20_300_03092026101215.pdf": {
+    "state": "complete",
+    "transition": "BASELINE_ERROR",
+    "baseline_outcome": "ERROR"
+  },
+  "0000700406_2026_08_ZL_10_384_05092026140711.jpg": {
+    "state": "complete",
+    "transition": "PASS \u2192 PASS",
+    "baseline_outcome": "PASS"
+  },
+  "0000701904_2026_08_ZL_20_8227_05092026154848.jpg": {
+    "state": "complete",
+    "transition": "FAIL \u2192 UNRESOLVED",
+    "baseline_outcome": "FAIL"
+  },
+  "0000700835_2026_08_ZL_25_447_03092026105819.jpeg": {
+    "state": "complete",
+    "transition": "PASS \u2192 PASS",
+    "baseline_outcome": "PASS"
+  },
+  "0000700434_2026_08_ZL_10_386_05092026034503.jpg": {
+    "state": "complete",
+    "transition": "FAIL \u2192 UNRESOLVED",
+    "baseline_outcome": "FAIL"
+  },
+  "0000701078_2026_08_ZL_03_362_05092026080346.jpeg": {
+    "state": "complete",
+    "transition": "FAIL \u2192 UNRESOLVED",
+    "baseline_outcome": "FAIL"
+  },
+  "0000701851_2026_08_ZL_20_302_03092026134940.jpg": {
+    "state": "complete",
+    "transition": "PASS \u2192 PASS",
+    "baseline_outcome": "PASS"
+  },
+  "0000701275_2026_08_ZL_03_360_02092026152716.jpg": {
+    "state": "complete",
+    "transition": "FAIL \u2192 UNRESOLVED",
+    "baseline_outcome": "FAIL"
+  },
+  "0000701864_2026_08_ZL_20_5015_03092026091037.jpg": {
+    "state": "complete",
+    "transition": "PASS \u2192 PASS",
+    "baseline_outcome": "PASS"
+  },
+  "0000700308_2026_08_ZL_18_8175_03092026072320.jpg": {
+    "state": "complete",
+    "transition": "PASS \u2192 PASS",
+    "baseline_outcome": "PASS"
+  },
+  "0000701151_2026_08_ZL_14_361_03092026025650.jpg": {
+    "state": "complete",
+    "transition": "PASS \u2192 PASS",
+    "baseline_outcome": "PASS"
+  },
+  "0000700206_2026_08_ZL_18_377_04092026042611.png": {
+    "state": "complete",
+    "transition": "PASS \u2192 PASS",
+    "baseline_outcome": "PASS"
+  },
+  "0000700221_2026_08_ZL_18_377_04092026042846.png": {
+    "state": "complete",
+    "transition": "PASS \u2192 PASS",
+    "baseline_outcome": "PASS"
+  },
+  "0000701012_2026_08_ZL_11_423_03092026183736.jpg": {
+    "state": "complete",
+    "transition": "FAIL \u2192 UNRESOLVED",
+    "baseline_outcome": "FAIL"
+  },
+  "0000700345_2026_08_ZL_18_377_04092026043609.png": {
+    "state": "complete",
+    "transition": "PASS \u2192 PASS",
+    "baseline_outcome": "PASS"
+  },
+  "0000700253_2026_08_ZL_18_377_04092026043422.png": {
+    "state": "complete",
+    "transition": "PASS \u2192 PASS",
+    "baseline_outcome": "PASS"
+  },
+  "0000701273_2026_08_ZL_03_368_06092026130923.jpeg": {
+    "state": "complete",
+    "transition": "FAIL \u2192 UNRESOLVED",
+    "baseline_outcome": "FAIL"
+  },
+  "0000700325_2026_08_ZL_18_379_03092026175634.jpg": {
+    "state": "complete",
+    "transition": "FAIL \u2192 UNRESOLVED",
+    "baseline_outcome": "FAIL"
+  },
+  "0000701116_2026_08_ZL_03_362_05092026080412.jpeg": {
+    "state": "complete",
+    "transition": "FAIL \u2192 UNRESOLVED",
+    "baseline_outcome": "FAIL"
+  },
+  "0000700481_2026_08_ZL_10_389_04092026110107.jpeg": {
+    "state": "complete",
+    "transition": "FAIL \u2192 UNRESOLVED",
+    "baseline_outcome": "FAIL"
+  },
+  "0000700374_2026_08_ZL_18_377_04092026044112.png": {
+    "state": "complete",
+    "transition": "PASS \u2192 PASS",
+    "baseline_outcome": "PASS"
+  },
+  "0000700400_2026_08_ZL_18_377_04092026044551.png": {
+    "state": "complete",
+    "transition": "PASS \u2192 PASS",
+    "baseline_outcome": "PASS"
+  },
+  "0000701406_2026_08_ZL_37_391_04092026155529.jpg": {
+    "state": "complete",
+    "transition": "FAIL \u2192 PROVIDER_ERROR",
+    "baseline_outcome": "FAIL"
+  },
+  "0000700223_2026_08_ZL_18_377_04092026043208.png": {
+    "state": "complete",
+    "transition": "PASS \u2192 PASS",
+    "baseline_outcome": "PASS"
+  },
+  "0000700365_2026_08_ZL_18_377_04092026043750.png": {
+    "state": "complete",
+    "transition": "PASS \u2192 PASS",
+    "baseline_outcome": "PASS"
+  },
+  "0000701789_2026_08_ZL_20_557_05092026163636.jpg": {
+    "state": "complete",
+    "transition": "FAIL \u2192 UNRESOLVED",
+    "baseline_outcome": "FAIL"
+  },
+  "0000701468_2026_08_ZL_37_8181_04092026181217.jpg": {
+    "state": "complete",
+    "transition": "FAIL \u2192 UNRESOLVED",
+    "baseline_outcome": "FAIL"
+  },
+  "0000701862_2026_08_ZL_20_302_03092026134909.jpg": {
+    "state": "complete",
+    "transition": "PASS \u2192 PASS",
+    "baseline_outcome": "PASS"
+  },
+  "0000700259_2026_08_ZL_18_379_03092026174312.jpg": {
+    "state": "complete",
+    "transition": "FAIL \u2192 UNRESOLVED",
+    "baseline_outcome": "FAIL"
+  },
+  "0000700381_2026_08_ZL_18_377_04092026045438.png": {
+    "state": "complete",
+    "transition": "PASS \u2192 PASS",
+    "baseline_outcome": "PASS"
+  },
+  "0000701051_2026_08_ZL_11_423_03092026184131.jpg": {
+    "state": "complete",
+    "transition": "FAIL \u2192 UNRESOLVED",
+    "baseline_outcome": "FAIL"
+  },
+  "0000700220_2026_08_ZL_18_8189_05092026022949.jpeg": {
+    "state": "complete",
+    "transition": "PASS \u2192 PASS",
+    "baseline_outcome": "PASS"
+  },
+  "0000701209_2026_08_ZL_14_361_03092026025829.jpg": {
+    "state": "complete",
+    "transition": "FAIL \u2192 UNRESOLVED",
+    "baseline_outcome": "FAIL"
+  },
+  "0000701202_2026_08_ZL_03_9203_07092026044839.jpeg": {
+    "state": "complete",
+    "transition": "PASS \u2192 PASS",
+    "baseline_outcome": "PASS"
+  },
+  "0000700625_2026_08_ZL_10_383_05092026054825.jpg": {
+    "state": "complete",
+    "transition": "FAIL \u2192 UNRESOLVED",
+    "baseline_outcome": "FAIL"
+  },
+  "0000700648_2026_08_ZL_10_388_03092026150719.jpg": {
+    "state": "complete",
+    "transition": "PASS \u2192 PASS",
+    "baseline_outcome": "PASS"
+  },
+  "0000700624_2026_08_ZL_10_383_05092026055419.jpg": {
+    "state": "complete",
+    "transition": "FAIL \u2192 UNRESOLVED",
+    "baseline_outcome": "FAIL"
+  },
+  "0000700536_2026_08_ZL_10_383_04092026205548.jpg": {
+    "state": "complete",
+    "transition": "FAIL \u2192 UNRESOLVED",
+    "baseline_outcome": "FAIL"
+  },
+  "0000735303_2026_08_ZL_25_451_03092026180858.xlsx": {
+    "state": "complete",
+    "transition": "PASS \u2192 PASS",
+    "baseline_outcome": "PASS"
+  },
+  "0000728682_2026_08_ZL _10_380_04092026092536.xlsx": {
+    "state": "complete",
+    "transition": "FAIL \u2192 UNRESOLVED",
+    "baseline_outcome": "FAIL"
+  },
+  "0000719211_2026_08_ZL_24_258_04092026115151.xlsx": {
+    "state": "complete",
+    "transition": "PASS \u2192 PASS",
+    "baseline_outcome": "PASS"
+  },
+  "0000702233_2026_08_ZL_24_631_05092026142054.xlsx": {
+    "state": "complete",
+    "transition": "PASS \u2192 PASS",
+    "baseline_outcome": "PASS"
+  },
+  "0000715858_2026_08_ZL_33_330_05092026103518.xlsx": {
+    "state": "complete",
+    "transition": "PASS \u2192 PASS",
+    "baseline_outcome": "PASS"
+  },
+  "0000734357_2026_08_ZL_35_522_04092026144023.xlsx": {
+    "state": "complete",
+    "transition": "PASS \u2192 PASS",
+    "baseline_outcome": "PASS"
+  },
+  "0000704386_2026_08_ZL_24_416_01092026035415.xlsx": {
+    "state": "complete",
+    "transition": "PASS \u2192 PASS",
+    "baseline_outcome": "PASS"
+  },
+  "0000732488_2026_08_ZL_04_346_01092026154042.xlsx": {
+    "state": "complete",
+    "transition": "PASS \u2192 PASS",
+    "baseline_outcome": "PASS"
+  },
+  "0000703919_2026_08_ZL_04_346_03092026132909.xlsx": {
+    "state": "complete",
+    "transition": "PASS \u2192 PASS",
+    "baseline_outcome": "PASS"
+  },
+  "0000730907_2026_08_ZL_24_416_03092026111433.xlsx": {
+    "state": "complete",
+    "transition": "PASS \u2192 PASS",
+    "baseline_outcome": "PASS"
+  },
+  "0000732713_2026_08_ZL_25_447_04092026063536.docx": {
+    "state": "complete",
+    "transition": "PASS \u2192 PASS",
+    "baseline_outcome": "PASS"
+  },
+  "0000702848_2026_08_ZL_22_419_02092026074109.doc": {
+    "state": "complete",
+    "transition": "FAIL \u2192 UNRESOLVED",
+    "baseline_outcome": "FAIL"
+  },
+  "0000701555_2026_08_ZL_37_390_06092026182510.docx": {
+    "state": "complete",
+    "transition": "FAIL \u2192 UNRESOLVED",
+    "baseline_outcome": "FAIL"
+  },
+  "0000701432_2026_08_ZL_37_390_05092026065901.docx": {
+    "state": "complete",
+    "transition": "PASS \u2192 PASS",
+    "baseline_outcome": "PASS"
+  },
+  "0000721182_2026_08_ZL_37_725_04092026163430.TXT": {
+    "state": "complete",
+    "transition": "PASS \u2192 PASS",
+    "baseline_outcome": "PASS"
+  },
+  "0000704723_2026_08_ZL_08_215_01092026060426.rtf": {
+    "state": "complete",
+    "transition": "BASELINE_ERROR",
+    "baseline_outcome": "ERROR"
+  },
+  "0000722964_2026_08_ZL_20_303_05092026043110.csv": {
+    "state": "complete",
+    "transition": "FAIL \u2192 UNRESOLVED",
+    "baseline_outcome": "FAIL"
+  },
+  "0000703861_2026_08_ZL_04_339_05092026163757.mht": {
+    "state": "complete",
+    "transition": "BASELINE_ERROR",
+    "baseline_outcome": "ERROR"
+  },
+  "0000729823_2026_08_ZL_33_740_06092026135713.XLS": {
+    "state": "complete",
+    "transition": "PASS \u2192 PASS",
+    "baseline_outcome": "PASS"
+  },
+  "0000734248_2026_08_ZL_12_554_07092026051856.XLS": {
+    "state": "complete",
+    "transition": "FAIL \u2192 UNRESOLVED",
+    "baseline_outcome": "FAIL"
+  },
+  "0000709799_2026_08_ZL_24_455_04092026153752.XLS": {
+    "state": "complete",
+    "transition": "PASS \u2192 PASS",
+    "baseline_outcome": "PASS"
+  },
+  "0000701808_2026_08_ZL_20_8233_03092026155729.XLS": {
+    "state": "complete",
+    "transition": "PASS \u2192 PASS",
+    "baseline_outcome": "PASS"
+  },
+  "0000701845_2026_08_ZL_20_8233_06092026153908.XLS": {
+    "state": "complete",
+    "transition": "PASS \u2192 PASS",
+    "baseline_outcome": "PASS"
+  },
+  "0000728510_2026_08_ZL_10_387_04092026172005.xls": {
+    "state": "complete",
+    "transition": "PASS \u2192 PASS",
+    "baseline_outcome": "PASS"
+  },
+  "0000703749_2026_08_ZL_04_337_05092026184136.xls": {
+    "state": "complete",
+    "transition": "FAIL \u2192 PROVIDER_ERROR",
+    "baseline_outcome": "FAIL"
+  },
+  "0000723050_2026_08_ZL_24_8271_06092026032321.XLS": {
+    "state": "complete",
+    "transition": "PASS \u2192 PASS",
+    "baseline_outcome": "PASS"
+  }
+}

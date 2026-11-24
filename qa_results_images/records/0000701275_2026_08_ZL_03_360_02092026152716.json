@@ -1,0 +1,368 @@
+{
+  "file": "0000701275_2026_08_ZL_03_360_02092026152716.jpg",
+  "path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000701275_2026_08_ZL_03_360_02092026152716.jpg",
+  "format": "STOCK & SALES ANALYSIS",
+  "api_method": "gemini_extraction_fallback",
+  "status": "FAIL",
+  "expected_rows": 43,
+  "extracted_rows": 0,
+  "matched_rows": 0,
+  "missing_rows": [
+    {
+      "product": "AACTARIL SOAP 75GM PKT",
+      "opening_qty": 72,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "ABANA TABLET 60 NOS Bot",
+      "opening_qty": 100,
+      "receipts_qty": 0,
+      "sales_qty": 3,
+      "closing_qty": 97,
+      "kind": "missing_product"
+    },
+    {
+      "product": "CLARINA CREAM 30 GM Tub",
+      "opening_qty": 79,
+      "receipts_qty": 0,
+      "sales_qty": 2,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "CLARINA FACE WASH 60ML GEL",
+      "opening_qty": 48,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 48,
+      "kind": "missing_product"
+    },
+    {
+      "product": "CONFIDO TAB 60 NOS Pot",
+      "opening_qty": 272,
+      "receipts_qty": 0,
+      "sales_qty": 10,
+      "closing_qty": 262,
+      "kind": "missing_product"
+    },
+    {
+      "product": "DIABECON DS TAB 60NOS POT",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "DIABECON TAB 60 NOS Bot",
+      "opening_qty": 89,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 89,
+      "kind": "missing_product"
+    },
+    {
+      "product": "DIAREX SYP 100 BOL",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "HAIR ZONE SOLUTION 60 ML Bot",
+      "opening_qty": 84,
+      "receipts_qty": 0,
+      "sales_qty": 4,
+      "closing_qty": 80,
+      "kind": "missing_product"
+    },
+    {
+      "product": "HEAL LIP 10 GM TUB",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "HERBOLAK CAP 10 Nos str",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "HIMCOLIN OINTMENT 30 GM Tub",
+      "opening_qty": 36,
+      "receipts_qty": 50,
+      "sales_qty": 5,
+      "closing_qty": 81,
+      "kind": "missing_product"
+    },
+    {
+      "product": "HIOWNA (CHOCOLATE) 200 GM Bot",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "LIV 52 100 ML SUGA 100 ML Pcs",
+      "opening_qty": 267,
+      "receipts_qty": 0,
+      "sales_qty": 139,
+      "closing_qty": 128,
+      "kind": "missing_product"
+    },
+    {
+      "product": "LIV 52 H B CAP 10 Nos str",
+      "opening_qty": 84,
+      "receipts_qty": 84,
+      "sales_qty": 6,
+      "closing_qty": 162,
+      "kind": "missing_product"
+    },
+    {
+      "product": "LIV 52 SUGAR FREE 200 ML PCS",
+      "opening_qty": 577,
+      "receipts_qty": 0,
+      "sales_qty": 315,
+      "closing_qty": 262,
+      "kind": "missing_product"
+    },
+    {
+      "product": "LIV 52 SYP 100 ML Bot",
+      "opening_qty": 57,
+      "receipts_qty": 1400,
+      "sales_qty": 140,
+      "closing_qty": 1317,
+      "kind": "missing_product"
+    },
+    {
+      "product": "LIV 52 SYP 200 ML Bot",
+      "opening_qty": 113,
+      "receipts_qty": 350,
+      "sales_qty": null,
+      "closing_qty": 463,
+      "kind": "missing_product"
+    },
+    {
+      "product": "LIV 52 TAB 100 NO Bot",
+      "opening_qty": 278,
+      "receipts_qty": 200,
+      "sales_qty": 46,
+      "closing_qty": 432,
+      "kind": "missing_product"
+    },
+    {
+      "product": "OPHTHACARE EYE DRO 10 ML Bot",
+      "opening_qty": 41,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 41,
+      "kind": "missing_product"
+    },
+    {
+      "product": "ORO-T ORAL RINSE 100ML BOL",
+      "opening_qty": 39,
+      "receipts_qty": 0,
+      "sales_qty": 5,
+      "closing_qty": 34,
+      "kind": "missing_product"
+    },
+    {
+      "product": "ORO-T ORAL RINSE L 200ML BOL",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "OXITRAD CAP 10 NOS STR",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "PILEX FORTE OINT 30 GM TUB",
+      "opening_qty": 269,
+      "receipts_qty": 0,
+      "sales_qty": 22,
+      "closing_qty": 247,
+      "kind": "missing_product"
+    },
+    {
+      "product": "PILEX FORTE TAB 30 NOS STR",
+      "opening_qty": 86,
+      "receipts_qty": 56,
+      "sales_qty": 5,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "PILEX OINTMENT 30 GM Tub",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "PILEX TAB 60 NOS Bot",
+      "opening_qty": 145,
+      "receipts_qty": 0,
+      "sales_qty": 13,
+      "closing_qty": 132,
+      "kind": "missing_product"
+    },
+    {
+      "product": "PURE HANDS 500 ML BOL",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "PURE HANDS 50ML LI 50 ML Bot",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "PURIM 60 NOS Bot",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "Q-DEE TABS 20 NOS STR",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "QUISTA ACTIVE 200 GM JAR",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "QUISTA DN VANILA F 400 GM TIN",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "QUISTA KIDZ CHOCLA 200 GM POT",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "SHALLAKI TAB 60NOS POT",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "SHIGRU TAB 60NOS POT",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "TALEKT 120 ML Bot",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "TENTEX FORTE TAB 10 NOS Str",
+      "opening_qty": 352,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 352,
+      "kind": "missing_product"
+    },
+    {
+      "product": "TRIKATU SYP 200 ML BOT",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "TRIPHALA TAB 60NS | STR",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "VEGECORT CREAM 30 GM TUB",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "YASHTIMADHU TAB 60NS | STR",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "ZZ2ZZZ 3238",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    }
+  ],
+  "extra_rows": [],
+  "duplicates": [],
+  "mismatches": [],
+  "ocr_review": [],
+  "accounting": [],
+  "confidence": "medium",
+  "notes": [
+    "OCR used tesseract psm 6."
+  ],
+  "result_key": "0000701275_2026_08_ZL_03_360_02092026152716",
+  "unavailable_fields": {},
+  "formula_checked": "simple"
+}

@@ -1,0 +1,86 @@
+{
+  "source_file": "0000701727_2026_08_ZL_37_391_04092026155901.jpg",
+  "source_format": "jpg",
+  "stockist_name": "SHUBHODAYA ENTERPRISES",
+  "stockist_address": null,
+  "company_name": "ZEAL PHARMA",
+  "period_from": "2026-08-01",
+  "period_to": "2026-08-31",
+  "report_title": "Stock & Sales Statement",
+  "line_items": [
+    {
+      "product_code": null,
+      "product_name": "LIV-52 SYP",
+      "packing": "200ML",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 35.0,
+      "receipts_value": null,
+      "sales_qty": 3.0,
+      "sales_value": 0.0,
+      "closing_qty": 32.0,
+      "closing_value": 5151.16,
+      "extra": {
+        "tot": 0.0,
+        "free": 0.0,
+        "sret": 0.0,
+        "age": 23.0,
+        "expected_total": 35.0,
+        "expected_closing": 32.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV-52 SYP",
+      "packing": "100ML",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 70.0,
+      "receipts_value": null,
+      "sales_qty": 9.0,
+      "sales_value": 0.0,
+      "closing_qty": 61.0,
+      "closing_value": 6055.93,
+      "extra": {
+        "tot": 0.0,
+        "free": 0.0,
+        "sret": 0.0,
+        "age": 23.0,
+        "expected_total": 70.0,
+        "expected_closing": 61.0,
+        "stock_identity_ok": true
+      }
+    }
+  ],
+  "totals": {
+    "sales_value": null,
+    "closing_value": 11207.09,
+    "extra": {
+      "extraction_method": "gemini_extraction_fallback",
+      "line_sales_value_sum": 0.0,
+      "line_closing_value_sum": 11207.09,
+      "sales_qty": 12.0,
+      "closing_qty": 93.0,
+      "rejected_sales_value": 1376.42,
+      "stock_identity_kind": "opening_receipts_sales_closing",
+      "stock_identity_formula": "closing=opening+receipts-sales",
+      "stock_identity_fail_count": 0,
+      "stock_validation": {
+        "opening_plus_purchase": 105.0,
+        "expected_total": 105.0,
+        "calculated_closing": 93.0,
+        "extracted_closing": 93.0,
+        "is_valid": true
+      },
+      "extraction_quality": {
+        "quality": "good",
+        "score": 100,
+        "reasons": [],
+        "threshold": 75.0
+      },
+      "gemini_fallback": "not_called",
+      "early_vision_reason": "empty_ocr_text,too_few_product_rows"
+    }
+  }
+}

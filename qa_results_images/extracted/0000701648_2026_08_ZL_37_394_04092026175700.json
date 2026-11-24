@@ -1,0 +1,293 @@
+{
+  "source_file": "0000701648_2026_08_ZL_37_394_04092026175700.jpg",
+  "source_format": "jpg",
+  "stockist_name": "SRI KATAKAM AGENCIES",
+  "stockist_address": null,
+  "company_name": "HIMALAYA ZEAL",
+  "period_from": "2026-07-01",
+  "period_to": "2026-07-04",
+  "report_title": "Stock & Sales Statement F",
+  "line_items": [
+    {
+      "product_code": "261",
+      "product_name": "ABANA",
+      "packing": "60TAB",
+      "opening_qty": 29.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 29.0,
+      "closing_value": 5104.0,
+      "extra": {
+        "expected_total": 29.0,
+        "expected_closing": 29.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "461",
+      "product_name": "CONFIDO",
+      "packing": "60TAB",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "1086",
+      "product_name": "DIABECON",
+      "packing": "60TAB",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "155",
+      "product_name": "DIABECON DS TABS",
+      "packing": "60'S",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "155",
+      "product_name": "HIMCOLIN GEL",
+      "packing": "30 GM",
+      "opening_qty": 48.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 48.0,
+      "closing_value": 11673.6,
+      "extra": {
+        "expected_total": 48.0,
+        "expected_closing": 48.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "5",
+      "product_name": "LIV 52 TAB (FC)",
+      "packing": "100`S",
+      "opening_qty": 305.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 305.0,
+      "closing_value": 53680.0,
+      "extra": {
+        "expected_total": 305.0,
+        "expected_closing": 305.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "582",
+      "product_name": "LIV-52 SYP 100ML (SUGA",
+      "packing": "100ml",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "111",
+      "product_name": "LIV-52 SYP.",
+      "packing": "200ML",
+      "opening_qty": 1.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 1.0,
+      "closing_value": 187.19,
+      "extra": {
+        "expected_total": 1.0,
+        "expected_closing": 1.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "5",
+      "product_name": "LIV-52 SYP.",
+      "packing": "100ML",
+      "opening_qty": 70.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 70.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 70.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "796",
+      "product_name": "OPTHACARE",
+      "packing": "10ML",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "5",
+      "product_name": "PILEX",
+      "packing": "60TAB",
+      "opening_qty": 300.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 103.0,
+      "sales_value": 0.0,
+      "closing_qty": 197.0,
+      "closing_value": 36876.43,
+      "extra": {
+        "expected_total": 300.0,
+        "expected_closing": 197.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "5",
+      "product_name": "PILEX FORTE OINT",
+      "packing": "30GM",
+      "opening_qty": 146.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 63.0,
+      "sales_value": 0.0,
+      "closing_qty": 83.0,
+      "closing_value": 9959.17,
+      "extra": {
+        "expected_total": 146.0,
+        "expected_closing": 83.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "1287",
+      "product_name": "PILEX FORTE TAB",
+      "packing": "2X30`S",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "96",
+      "product_name": "TENTEX FORTE",
+      "packing": "10TAB",
+      "opening_qty": 237.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 20.0,
+      "sales_value": 0.0,
+      "closing_qty": 217.0,
+      "closing_value": 24277.96,
+      "extra": {
+        "expected_total": 237.0,
+        "expected_closing": 217.0,
+        "stock_identity_ok": true
+      }
+    }
+  ],
+  "totals": {
+    "sales_value": null,
+    "closing_value": 141758.35,
+    "extra": {
+      "extraction_method": "gemini_extraction_fallback",
+      "line_sales_value_sum": 0.0,
+      "line_closing_value_sum": 141758.35,
+      "sales_qty": 256.0,
+      "closing_qty": 880.0,
+      "rejected_sales_value": 33605.46,
+      "stock_identity_kind": "opening_receipts_sales_closing",
+      "stock_identity_formula": "closing=opening+receipts-sales",
+      "stock_identity_fail_count": 0,
+      "stock_validation": {
+        "opening_plus_purchase": 1136.0,
+        "expected_total": 1136.0,
+        "calculated_closing": 880.0,
+        "extracted_closing": 880.0,
+        "is_valid": true
+      },
+      "extraction_quality": {
+        "quality": "good",
+        "score": 100,
+        "reasons": [],
+        "threshold": 75.0
+      },
+      "gemini_fallback": "not_called"
+    }
+  }
+}

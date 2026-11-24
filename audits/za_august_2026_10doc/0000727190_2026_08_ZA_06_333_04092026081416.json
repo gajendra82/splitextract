@@ -1,0 +1,1530 @@
+{
+  "filename": "0000727190_2026_08_ZA_06_333_04092026081416.png",
+  "bytes": 187332,
+  "elapsed_s": 21.3902,
+  "method": null,
+  "stockist_name": null,
+  "company_name": null,
+  "period_from": null,
+  "period_to": null,
+  "row_count": 23,
+  "line_items": [
+    {
+      "product_name": "HIORA SG GEL",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 5.0,
+      "receipts_qty": 50.0,
+      "sales_qty": 0.0,
+      "closing_qty": 55.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": true,
+        "expected_closing": 55.0
+      }
+    },
+    {
+      "product_name": "LASUNA TAB 60'S",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 13.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 13.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": true,
+        "expected_closing": 13.0
+      }
+    },
+    {
+      "product_name": "LIV 52 DROPS [100ML]",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 54.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 54.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": true,
+        "expected_closing": 54.0
+      }
+    },
+    {
+      "product_name": "LIV 52 DROPS [60 ML]",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 64.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 64.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": true,
+        "expected_closing": 64.0
+      }
+    },
+    {
+      "product_name": "LIV 52 DS SYRUP [100 ML]",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 40.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 40.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": true,
+        "expected_closing": 40.0
+      }
+    },
+    {
+      "product_name": "LIV 52 DS SYRUP [200 ML]",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 70.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 70.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": true,
+        "expected_closing": 70.0
+      }
+    },
+    {
+      "product_name": "LIV 52 DS TABS",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 81.0,
+      "receipts_qty": 100.0,
+      "sales_qty": 0.0,
+      "closing_qty": 181.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": true,
+        "expected_closing": 181.0
+      }
+    },
+    {
+      "product_name": "LUKOL SYRUP",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 21.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 21.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": true,
+        "expected_closing": 21.0
+      }
+    },
+    {
+      "product_name": "LUKOL TABS",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 13.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 13.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": true,
+        "expected_closing": 13.0
+      }
+    },
+    {
+      "product_name": "MENOSAN TABS",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 20.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 20.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": true,
+        "expected_closing": 20.0
+      }
+    },
+    {
+      "product_name": "MENTAT DS SYRUP [SUGARFREE]",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 54.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 54.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": true,
+        "expected_closing": 54.0
+      }
+    },
+    {
+      "product_name": "MENTAT SYRUP",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 26.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 26.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": true,
+        "expected_closing": 26.0
+      }
+    },
+    {
+      "product_name": "MENTAT TABS",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 43.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 43.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": true,
+        "expected_closing": 43.0
+      }
+    },
+    {
+      "product_name": "PLATENZA SYRUP [100 ML]",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 114.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 114.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": true,
+        "expected_closing": 114.0
+      }
+    },
+    {
+      "product_name": "PLATENZA TABS",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 81.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 81.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": true,
+        "expected_closing": 81.0
+      }
+    },
+    {
+      "product_name": "REOSTO TABS",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 37.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 37.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": true,
+        "expected_closing": 37.0
+      }
+    },
+    {
+      "product_name": "SEPTILIN SYRUP",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 17.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 17.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": true,
+        "expected_closing": 17.0
+      }
+    },
+    {
+      "product_name": "SEPTILIN TABS",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 34.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 34.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": true,
+        "expected_closing": 34.0
+      }
+    },
+    {
+      "product_name": "SHATAVARI TAB 60'S",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 18.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 18.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": true,
+        "expected_closing": 18.0
+      }
+    },
+    {
+      "product_name": "SHUDDHA GUGGULU TAB 60'S",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 53.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 53.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": true,
+        "expected_closing": 53.0
+      }
+    },
+    {
+      "product_name": "SPEMAN TABS",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 0.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": true,
+        "expected_closing": 0.0
+      }
+    },
+    {
+      "product_name": "STYPLON TABS",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 40.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 40.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": true,
+        "expected_closing": 40.0
+      }
+    },
+    {
+      "product_name": "V GEL",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 28.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 28.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": true,
+        "expected_closing": 28.0
+      }
+    }
+  ],
+  "totals": {
+    "opening_qty": null,
+    "receipts_qty": null,
+    "sales_qty": null,
+    "closing_qty": null,
+    "opening_value": null,
+    "receipts_value": null,
+    "sales_value": null,
+    "closing_value": 192238.0
+  },
+  "validation_status": "unresolved",
+  "validation_accepted": false,
+  "source_agreement": true,
+  "source_evidence": false,
+  "business_status": "consistent",
+  "failure_reasons": [
+    "unverified_ocr_fallback",
+    "cell_validation_failure"
+  ],
+  "decision_status": "UNRESOLVED",
+  "verified": false,
+  "decision_reason": "insufficient_source_evidence",
+  "phase2": {
+    "status": null,
+    "attempts": null,
+    "failure": null
+  },
+  "grounding": {
+    "status": "insufficient_source_evidence",
+    "reader": "ocr_text",
+    "compared_rows": 0,
+    "discrepancy_count": 0,
+    "blank_read_as_zero": 0,
+    "explicit_zero": null,
+    "unreadable": null,
+    "missing_rows": null,
+    "duplicate_rows": null,
+    "low_name_match": null,
+    "blocks_verification": true,
+    "ocr_invoked": false,
+    "discrepancies": [],
+    "sheets": [],
+    "pages": [],
+    "truncated": false,
+    "evidence": {
+      "sufficient": false,
+      "reason": "no_source_table",
+      "blocks_verification": true,
+      "coordinates_available": false,
+      "text_retained": "cells",
+      "script": "unspecified",
+      "language": "unspecified"
+    }
+  },
+  "ocr_calls": [
+    {
+      "ok": true,
+      "elapsed_s": 3.8655,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6",
+        "gemini"
+      ],
+      "primary_engine": "gemini",
+      "primary_status": "success",
+      "primary_chars": 1558,
+      "secondary_engine": "paddleocr-vl-1.6",
+      "fallback": true,
+      "unverified_fallback": true,
+      "kind": "ocr",
+      "t": 1136845.9454898
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0628,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136846.0577443
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0693,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136846.4998132
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0723,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136846.6136195
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0638,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136846.7153796
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0661,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136846.8169709
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0901,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136846.9665362
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0883,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136847.1104794
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.076,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136847.2288898
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0755,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136847.3436112
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0756,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136847.4703465
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0757,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136847.5968175
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0655,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136847.7050286
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0669,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136847.8135373
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0979,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136847.9832869
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0966,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136848.1501328
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0832,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136848.2812918
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.1052,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136848.4477208
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0982,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136848.928866
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.1698,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136849.1540824
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0891,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136849.2973999
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0822,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136849.4214366
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.1181,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136849.6153969
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.122,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136849.809574
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.1281,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136850.0195805
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.1172,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136850.2100209
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0994,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136850.3683559
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0962,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136850.5229848
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0816,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136850.6506437
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0821,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136850.7777823
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.1149,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136850.9851003
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.1163,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136851.1763803
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.1159,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136851.3731155
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.1202,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136851.5675505
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.1031,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136852.0784911
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.1025,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136852.2371442
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0813,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136852.3658101
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0853,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136852.4970195
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.133,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136852.7055215
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.1341,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136852.9246393
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.1149,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136853.1190807
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.124,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136853.3135883
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.1059,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136853.4917329
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.1002,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136853.6571567
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0839,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136853.7903401
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0838,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136853.9228468
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.1202,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136854.1199437
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.1302,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136854.3277774
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.1151,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136854.5265953
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.1152,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136854.7196172
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0543,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136855.1141594
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0545,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136855.2025211
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0476,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136855.2794811
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0471,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136855.3561747
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0674,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136855.4730074
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0713,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136855.5915379
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0703,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136855.7126117
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0714,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136855.832608
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0548,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136855.9245669
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0608,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136856.0233903
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0456,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136856.0992797
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0516,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136856.1826963
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0764,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136856.3212891
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0734,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136856.4508209
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0759,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136856.5834751
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0764,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136856.7118762
+    }
+  ],
+  "gemini_calls": [
+    {
+      "ok": true,
+      "elapsed_s": 6.3098,
+      "model": "gemini-2.5-flash-lite",
+      "request_type": "vision",
+      "prompt_tokens": null,
+      "output_tokens": null,
+      "kind": "gemini",
+      "t": 1136863.4615406
+    }
+  ],
+  "error": null
+}

@@ -1,0 +1,888 @@
+{
+  "document_id": "0000701864_2026_08_ZL_20_5015_03092026091037.jpg",
+  "relative_path": "0000701864_2026_08_ZL_20_5015_03092026091037.jpg",
+  "source_path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000701864_2026_08_ZL_20_5015_03092026091037.jpg",
+  "file_type": "image",
+  "pdf_kind": null,
+  "manifest_ocr_required": true,
+  "engine": "paddleocr-vl-1.6",
+  "model": "PaddleOCR-VL-1.6",
+  "model_version": "v1.6",
+  "started_at": "2026-10-08T13:12:22.640548+00:00",
+  "pages": [
+    {
+      "engine": "paddleocr-vl-1.6",
+      "status": "success",
+      "model": "PaddleOCR-VL-1.6",
+      "model_version": "v1.6",
+      "text": "\ud83c\udfe0\ud83d\udce7 Q \u2702\ufe0f :\nJAJRA DRUG AGENCY 26-27\nD-64, SADUL COLONY\nPage No.1\nSales & Stock Statement(From 01/08/2026 Upto 31/08/2026)\nHIMALYA DRUG COMPANY\n<table><tr><td>PRODUCT NAME</td><td>PACKING</td><td>Op.Bal. Qty.</td><td>Receipt Qty.</td><td>Total Qty.</td><td>Issue Qty.</td><td>Closing Balance</td><td>Near Expiry</td><td>MSR Price</td></tr><tr><td>ABANA</td><td>1*60TAB</td><td>49</td><td>0</td><td>49</td><td>11</td><td>38</td><td>2</td><td>0.00</td></tr><tr><td>CLARINA-CREAM</td><td>1*30GM</td><td>15</td><td>0</td><td>15</td><td>4</td><td>11</td><td>1</td><td>0.00</td></tr><tr><td>CONFIDO TAB</td><td>1*60TAB</td><td>3</td><td>100</td><td>103</td><td>13</td><td>90</td><td>0</td><td>0.00</td></tr><tr><td>HIMCOLIN GEL</td><td>1*30GM</td><td>2</td><td>50</td><td>52</td><td>7</td><td>45</td><td>0</td><td>0.00</td></tr><tr><td>LIV-52 SYP.</td><td>1*200ML</td><td>25</td><td>140</td><td>165</td><td>128</td><td>37</td><td>1</td><td>0.00</td></tr><tr><td>LIV-52 SYRUP</td><td>1*100ML</td><td>69</td><td>70</td><td>139</td><td>54</td><td>85</td><td>0</td><td>0.00</td></tr><tr><td>LIV-52 TAB</td><td>1*100TAB</td><td>104</td><td>100</td><td>204</td><td>104</td><td>100</td><td>2</td><td>0.00</td></tr><tr><td>PILEX TAB</td><td>1*60TAB</td><td>43</td><td>0</td><td>43</td><td>38</td><td>5</td><td>0</td><td>0.00</td></tr><tr><td>TENTEX FORTE</td><td>1*10TAB</td><td>247</td><td>0</td><td>247</td><td>76</td><td>171</td><td>0</td><td>0.00</td></tr><tr><td>DIABECON-DS TAB</td><td>1*60TAB</td><td>44</td><td>0</td><td>44</td><td>12</td><td>32</td><td>0</td><td>0.00</td></tr><tr><td>OXITARD CAP.</td><td>1 10caps</td><td>1</td><td>0</td><td>1</td><td>0</td><td>1</td><td>1</td><td>0.00</td></tr><tr><td>CLARINA ANTI ACN</td><td>1*60ML</td><td>3</td><td>0</td><td>3</td><td>2</td><td>1</td><td>0</td><td>0.00</td></tr><tr><td>HAIR ZONE SOL.</td><td>1*60ML</td><td>17</td><td>0</td><td>17</td><td>8</td><td>9</td><td>0</td><td>0.00</td></tr><tr><td>LIV-52 HB CAP</td><td>1*10CAP</td><td>21</td><td>0</td><td>21</td><td>0</td><td>21</td><td>0</td><td>0.00</td></tr><tr><td>ORO-T 100ML</td><td>1*100ML</td><td>30</td><td>51</td><td>81</td><td>31</td><td>50</td><td>0</td><td>0.00</td></tr><tr><td>QUISTA -DN 400GM</td><td>1*400GM</td><td>0</td><td>12</td><td>12</td><td>12</td><td>0</td><td>0</td><td>0.00</td></tr><tr><td>PILEX FORTE OINT.</td><td>1*30GM</td><td>79</td><td>0</td><td>79</td><td>28</td><td>51</td><td>0</td><td>0.00</td></tr><tr><td>QUISTA ACTIVE</td><td>1*200GM</td><td>0</td><td>12</td><td>12</td><td>12</td><td>0</td><td>0</td><td>0.00</td></tr><tr><td>TOTAL</td><td></td><td>95222</td><td>83451</td><td>178674</td><td>89597</td><td>101577</td><td>777</td><td></td></tr></table>\nGRAND TOTAL | 95222 | 83451 | 178674 | 89597 | 101577 |\nPowered By SwilERP for Retail, Distribution & Chain Stores\n7771\nAI Assistant\nHighlight\nText\n\u2160\u2160",
+      "normalized_text": "\ud83c\udfe0\ud83d\udce7 Q \u2702\ufe0f : JAJRA DRUG AGENCY 26-27 D-64, SADUL COLONY Page No.1 Sales & Stock Statement(From 01/08/2026 Upto 31/08/2026) HIMALYA DRUG COMPANY <table><tr><td>PRODUCT NAME</td><td>PACKING</td><td>Op.Bal. Qty.</td><td>Receipt Qty.</td><td>Total Qty.</td><td>Issue Qty.</td><td>Closing Balance</td><td>Near Expiry</td><td>MSR Price</td></tr><tr><td>ABANA</td><td>1*60TAB</td><td>49</td><td>0</td><td>49</td><td>11</td><td>38</td><td>2</td><td>0.00</td></tr><tr><td>CLARINA-CREAM</td><td>1*30GM</td><td>15</td><td>0</td><td>15</td><td>4</td><td>11</td><td>1</td><td>0.00</td></tr><tr><td>CONFIDO TAB</td><td>1*60TAB</td><td>3</td><td>100</td><td>103</td><td>13</td><td>90</td><td>0</td><td>0.00</td></tr><tr><td>HIMCOLIN GEL</td><td>1*30GM</td><td>2</td><td>50</td><td>52</td><td>7</td><td>45</td><td>0</td><td>0.00</td></tr><tr><td>LIV-52 SYP.</td><td>1*200ML</td><td>25</td><td>140</td><td>165</td><td>128</td><td>37</td><td>1</td><td>0.00</td></tr><tr><td>LIV-52 SYRUP</td><td>1*100ML</td><td>69</td><td>70</td><td>139</td><td>54</td><td>85</td><td>0</td><td>0.00</td></tr><tr><td>LIV-52 TAB</td><td>1*100TAB</td><td>104</td><td>100</td><td>204</td><td>104</td><td>100</td><td>2</td><td>0.00</td></tr><tr><td>PILEX TAB</td><td>1*60TAB</td><td>43</td><td>0</td><td>43</td><td>38</td><td>5</td><td>0</td><td>0.00</td></tr><tr><td>TENTEX FORTE</td><td>1*10TAB</td><td>247</td><td>0</td><td>247</td><td>76</td><td>171</td><td>0</td><td>0.00</td></tr><tr><td>DIABECON-DS TAB</td><td>1*60TAB</td><td>44</td><td>0</td><td>44</td><td>12</td><td>32</td><td>0</td><td>0.00</td></tr><tr><td>OXITARD CAP.</td><td>1 10caps</td><td>1</td><td>0</td><td>1</td><td>0</td><td>1</td><td>1</td><td>0.00</td></tr><tr><td>CLARINA ANTI ACN</td><td>1*60ML</td><td>3</td><td>0</td><td>3</td><td>2</td><td>1</td><td>0</td><td>0.00</td></tr><tr><td>HAIR ZONE SOL.</td><td>1*60ML</td><td>17</td><td>0</td><td>17</td><td>8</td><td>9</td><td>0</td><td>0.00</td></tr><tr><td>LIV-52 HB CAP</td><td>1*10CAP</td><td>21</td><td>0</td><td>21</td><td>0</td><td>21</td><td>0</td><td>0.00</td></tr><tr><td>ORO-T 100ML</td><td>1*100ML</td><td>30</td><td>51</td><td>81</td><td>31</td><td>50</td><td>0</td><td>0.00</td></tr><tr><td>QUISTA -DN 400GM</td><td>1*400GM</td><td>0</td><td>12</td><td>12</td><td>12</td><td>0</td><td>0</td><td>0.00</td></tr><tr><td>PILEX FORTE OINT.</td><td>1*30GM</td><td>79</td><td>0</td><td>79</td><td>28</td><td>51</td><td>0</td><td>0.00</td></tr><tr><td>QUISTA ACTIVE</td><td>1*200GM</td><td>0</td><td>12</td><td>12</td><td>12</td><td>0</td><td>0</td><td>0.00</td></tr><tr><td>TOTAL</td><td></td><td>95222</td><td>83451</td><td>178674</td><td>89597</td><td>101577</td><td>777</td><td></td></tr></table> GRAND TOTAL | 95222 | 83451 | 178674 | 89597 | 101577 | Powered By SwilERP for Retail, Distribution & Chain Stores 7771 AI Assistant Highlight Text \u2160\u2160",
+      "word_count": 82,
+      "line_count": 11,
+      "numeric_tokens": [
+        "1",
+        "49",
+        "0",
+        "49",
+        "11",
+        "38",
+        "2",
+        "0.00",
+        "1",
+        "15",
+        "0",
+        "15",
+        "4",
+        "11",
+        "1",
+        "0.00",
+        "1",
+        "3",
+        "100",
+        "103",
+        "13",
+        "90",
+        "0",
+        "0.00",
+        "1",
+        "2",
+        "50",
+        "52",
+        "7",
+        "45",
+        "0",
+        "0.00",
+        "1",
+        "25",
+        "140",
+        "165",
+        "128",
+        "37",
+        "1",
+        "0.00",
+        "1",
+        "69",
+        "70",
+        "139",
+        "54",
+        "85",
+        "0",
+        "0.00",
+        "1",
+        "104",
+        "100",
+        "204",
+        "104",
+        "100",
+        "2",
+        "0.00",
+        "1",
+        "43",
+        "0",
+        "43",
+        "38",
+        "5",
+        "0",
+        "0.00",
+        "1",
+        "247",
+        "0",
+        "247",
+        "76",
+        "171",
+        "0",
+        "0.00",
+        "1",
+        "44",
+        "0",
+        "44",
+        "12",
+        "32",
+        "0",
+        "0.00",
+        "1",
+        "1",
+        "0",
+        "1",
+        "0",
+        "1",
+        "1",
+        "0.00",
+        "1",
+        "3",
+        "0",
+        "3",
+        "2",
+        "1",
+        "0",
+        "0.00",
+        "1",
+        "17",
+        "0",
+        "17",
+        "8",
+        "9",
+        "0",
+        "0.00",
+        "1",
+        "21",
+        "0",
+        "21",
+        "0",
+        "21",
+        "0",
+        "0.00",
+        "1",
+        "30",
+        "51",
+        "81",
+        "31",
+        "50",
+        "0",
+        "0.00",
+        "1",
+        "0",
+        "12",
+        "12",
+        "12",
+        "0",
+        "0",
+        "0.00",
+        "1",
+        "79",
+        "0",
+        "79",
+        "28",
+        "51",
+        "0",
+        "0.00",
+        "1",
+        "0",
+        "12",
+        "12",
+        "12",
+        "0",
+        "0",
+        "0.00",
+        "95222",
+        "83451",
+        "178674",
+        "89597",
+        "101577",
+        "777",
+        "95222",
+        "83451",
+        "178674",
+        "89597",
+        "101577",
+        "7771"
+      ],
+      "words": [
+        {
+          "text": "\ud83c\udfe0\ud83d\udce7 Q \u2702\ufe0f :",
+          "bbox": [
+            436.0,
+            113.0,
+            997.0,
+            184.0
+          ],
+          "confidence": null,
+          "page": 1
+        },
+        {
+          "text": "JAJRA DRUG AGENCY 26-27\nD-64, SADUL COLONY",
+          "bbox": [
+            351.0,
+            408.0,
+            742.0,
+            465.0
+          ],
+          "confidence": null,
+          "page": 1
+        },
+        {
+          "text": "Page No.1\nSales & Stock Statement(From 01/08/2026 Upto 31/08/2026)",
+          "bbox": [
+            35.0,
+            485.0,
+            128.0,
+            512.0
+          ],
+          "confidence": null,
+          "page": 1
+        },
+        {
+          "text": "HIMALYA DRUG COMPANY",
+          "bbox": [
+            35.0,
+            535.0,
+            425.0,
+            566.0
+          ],
+          "confidence": null,
+          "page": 1
+        },
+        {
+          "text": "<table><tr><td>PRODUCT NAME</td><td>PACKING</td><td>Op.Bal. Qty.</td><td>Receipt Qty.</td><td>Total Qty.</td><td>Issue Qty.</td><td>Closing Balance</td><td>Near Expiry</td><td>MSR Price</td></tr><tr><td>ABANA</td><td>1*60TAB</td><td>49</td><td>0</td><td>49</td><td>11</td><td>38</td><td>2</td><td>0.00</td></tr><tr><td>CLARINA-CREAM</td><td>1*30GM</td><td>15</td><td>0</td><td>15</td><td>4</td><td>11</td><td>1</td><td>0.00</td></tr><tr><td>CONFIDO TAB</td><td>1*60TAB</td><td>3</td><td>100</td><td>103</td><td>13</td><td>90</td><td>0</td><td>0.00</td></tr><tr><td>HIMCOLIN GEL</td><td>1*30GM</td><td>2</td><td>50</td><td>52</td><td>7</td><td>45</td><td>0</td><td>0.00</td></tr><tr><td>LIV-52 SYP.</td><td>1*200ML</td><td>25</td><td>140</td><td>165</td><td>128</td><td>37</td><td>1</td><td>0.00</td></tr><tr><td>LIV-52 SYRUP</td><td>1*100ML</td><td>69</td><td>70</td><td>139</td><td>54</td><td>85</td><td>0</td><td>0.00</td></tr><tr><td>LIV-52 TAB</td><td>1*100TAB</td><td>104</td><td>100</td><td>204</td><td>104</td><td>100</td><td>2</td><td>0.00</td></tr><tr><td>PILEX TAB</td><td>1*60TAB</td><td>43</td><td>0</td><td>43</td><td>38</td><td>5</td><td>0</td><td>0.00</td></tr><tr><td>TENTEX FORTE</td><td>1*10TAB</td><td>247</td><td>0</td><td>247</td><td>76</td><td>171</td><td>0</td><td>0.00</td></tr><tr><td>DIABECON-DS TAB</td><td>1*60TAB</td><td>44</td><td>0</td><td>44</td><td>12</td><td>32</td><td>0</td><td>0.00</td></tr><tr><td>OXITARD CAP.</td><td>1 10caps</td><td>1</td><td>0</td><td>1</td><td>0</td><td>1</td><td>1</td><td>0.00</td></tr><tr><td>CLARINA ANTI ACN</td><td>1*60ML</td><td>3</td><td>0</td><td>3</td><td>2</td><td>1</td><td>0</td><td>0.00</td></tr><tr><td>HAIR ZONE SOL.</td><td>1*60ML</td><td>17</td><td>0</td><td>17</td><td>8</td><td>9</td><td>0</td><td>0.00</td></tr><tr><td>LIV-52 HB CAP</td><td>1*10CAP</td><td>21</td><td>0</td><td>21</td><td>0</td><td>21</td><td>0</td><td>0.00</td></tr><tr><td>ORO-T 100ML</td><td>1*100ML</td><td>30</td><td>51</td><td>81</td><td>31</td><td>50</td><td>0</td><td>0.00</td></tr><tr><td>QUISTA -DN 400GM</td><td>1*400GM</td><td>0</td><td>12</td><td>12</td><td>12</td><td>0</td><td>0</td><td>0.00</td></tr><tr><td>PILEX FORTE OINT.</td><td>1*30GM</td><td>79</td><td>0</td><td>79</td><td>28</td><td>51</td><td>0</td><td>0.00</td></tr><tr><td>QUISTA ACTIVE</td><td>1*200GM</td><td>0</td><td>12</td><td>12</td><td>12</td><td>0</td><td>0</td><td>0.00</td></tr><tr><td>TOTAL</td><td></td><td>95222</td><td>83451</td><td>178674</td><td>89597</td><td>101577</td><td>777</td><td></td></tr></table>",
+          "bbox": [
+            34.0,
+            566.0,
+            1048.0,
+            1066.0
+          ],
+          "confidence": null,
+          "page": 1
+        },
+        {
+          "text": "GRAND TOTAL | 95222 | 83451 | 178674 | 89597 | 101577 |\nPowered By SwilERP for Retail, Distribution & Chain Stores",
+          "bbox": [
+            33.0,
+            1778.0,
+            624.0,
+            1832.0
+          ],
+          "confidence": null,
+          "page": 1
+        },
+        {
+          "text": "7771",
+          "bbox": [
+            661.0,
+            1780.0,
+            697.0,
+            1808.0
+          ],
+          "confidence": null,
+          "page": 1
+        },
+        {
+          "text": "AI Assistant",
+          "bbox": [
+            776.0,
+            1926.0,
+            989.0,
+            1972.0
+          ],
+          "confidence": null,
+          "page": 1
+        },
+        {
+          "text": "Highlight",
+          "bbox": [
+            268.0,
+            2213.0,
+            388.0,
+            2252.0
+          ],
+          "confidence": null,
+          "page": 1
+        },
+        {
+          "text": "Text",
+          "bbox": [
+            579.0,
+            2214.0,
+            637.0,
+            2248.0
+          ],
+          "confidence": null,
+          "page": 1
+        },
+        {
+          "text": "\u2160\u2160",
+          "bbox": [
+            206.0,
+            2311.0,
+            259.0,
+            2366.0
+          ],
+          "confidence": null,
+          "page": 1
+        }
+      ],
+      "boxes": [
+        [
+          436.0,
+          113.0,
+          997.0,
+          184.0
+        ],
+        [
+          351.0,
+          408.0,
+          742.0,
+          465.0
+        ],
+        [
+          35.0,
+          485.0,
+          128.0,
+          512.0
+        ],
+        [
+          35.0,
+          535.0,
+          425.0,
+          566.0
+        ],
+        [
+          34.0,
+          566.0,
+          1048.0,
+          1066.0
+        ],
+        [
+          33.0,
+          1778.0,
+          624.0,
+          1832.0
+        ],
+        [
+          661.0,
+          1780.0,
+          697.0,
+          1808.0
+        ],
+        [
+          776.0,
+          1926.0,
+          989.0,
+          1972.0
+        ],
+        [
+          268.0,
+          2213.0,
+          388.0,
+          2252.0
+        ],
+        [
+          579.0,
+          2214.0,
+          637.0,
+          2248.0
+        ],
+        [
+          206.0,
+          2311.0,
+          259.0,
+          2366.0
+        ]
+      ],
+      "confidence": {
+        "mean": null,
+        "count": 0,
+        "available": false
+      },
+      "layout": {
+        "regions": [
+          {
+            "index": 0,
+            "label": "header_image",
+            "text": "",
+            "bbox": [
+              50.0,
+              123.0,
+              107.0,
+              174.0
+            ],
+            "order": 0
+          },
+          {
+            "index": 1,
+            "label": "header",
+            "text": "\ud83c\udfe0\ud83d\udce7 Q \u2702\ufe0f :",
+            "bbox": [
+              436.0,
+              113.0,
+              997.0,
+              184.0
+            ],
+            "order": 1
+          },
+          {
+            "index": 2,
+            "label": "paragraph_title",
+            "text": "JAJRA DRUG AGENCY 26-27\nD-64, SADUL COLONY",
+            "bbox": [
+              351.0,
+              408.0,
+              742.0,
+              465.0
+            ],
+            "order": 2
+          },
+          {
+            "index": 3,
+            "label": "text",
+            "text": "Page No.1\nSales & Stock Statement(From 01/08/2026 Upto 31/08/2026)",
+            "bbox": [
+              35.0,
+              485.0,
+              128.0,
+              512.0
+            ],
+            "order": 3
+          },
+          {
+            "index": 4,
+            "label": "text",
+            "text": "",
+            "bbox": [
+              285.0,
+              484.0,
+              813.0,
+              513.0
+            ],
+            "order": 4
+          },
+          {
+            "index": 5,
+            "label": "figure_title",
+            "text": "HIMALYA DRUG COMPANY",
+            "bbox": [
+              35.0,
+              535.0,
+              425.0,
+              566.0
+            ],
+            "order": 5
+          },
+          {
+            "index": 6,
+            "label": "table",
+            "text": "<table><tr><td>PRODUCT NAME</td><td>PACKING</td><td>Op.Bal. Qty.</td><td>Receipt Qty.</td><td>Total Qty.</td><td>Issue Qty.</td><td>Closing Balance</td><td>Near Expiry</td><td>MSR Price</td></tr><tr><td>ABANA</td><td>1*60TAB</td><td>49</td><td>0</td><td>49</td><td>11</td><td>38</td><td>2</td><td>0.00</td></tr><tr><td>CLARINA-CREAM</td><td>1*30GM</td><td>15</td><td>0</td><td>15</td><td>4</td><td>11</td><td>1</td><td>0.00</td></tr><tr><td>CONFIDO TAB</td><td>1*60TAB</td><td>3</td><td>100</td><td>103</td><td>13</td><td>90</td><td>0</td><td>0.00</td></tr><tr><td>HIMCOLIN GEL</td><td>1*30GM</td><td>2</td><td>50</td><td>52</td><td>7</td><td>45</td><td>0</td><td>0.00</td></tr><tr><td>LIV-52 SYP.</td><td>1*200ML</td><td>25</td><td>140</td><td>165</td><td>128</td><td>37</td><td>1</td><td>0.00</td></tr><tr><td>LIV-52 SYRUP</td><td>1*100ML</td><td>69</td><td>70</td><td>139</td><td>54</td><td>85</td><td>0</td><td>0.00</td></tr><tr><td>LIV-52 TAB</td><td>1*100TAB</td><td>104</td><td>100</td><td>204</td><td>104</td><td>100</td><td>2</td><td>0.00</td></tr><tr><td>PILEX TAB</td><td>1*60TAB</td><td>43</td><td>0</td><td>43</td><td>38</td><td>5</td><td>0</td><td>0.00</td></tr><tr><td>TENTEX FORTE</td><td>1*10TAB</td><td>247</td><td>0</td><td>247</td><td>76</td><td>171</td><td>0</td><td>0.00</td></tr><tr><td>DIABECON-DS TAB</td><td>1*60TAB</td><td>44</td><td>0</td><td>44</td><td>12</td><td>32</td><td>0</td><td>0.00</td></tr><tr><td>OXITARD CAP.</td><td>1 10caps</td><td>1</td><td>0</td><td>1</td><td>0</td><td>1</td><td>1</td><td>0.00</td></tr><tr><td>CLARINA ANTI ACN</td><td>1*60ML</td><td>3</td><td>0</td><td>3</td><td>2</td><td>1</td><td>0</td><td>0.00</td></tr><tr><td>HAIR ZONE SOL.</td><td>1*60ML</td><td>17</td><td>0</td><td>17</td><td>8</td><td>9</td><td>0</td><td>0.00</td></tr><tr><td>LIV-52 HB CAP</td><td>1*10CAP</td><td>21</td><td>0</td><td>21</td><td>0</td><td>21</td><td>0</td><td>0.00</td></tr><tr><td>ORO-T 100ML</td><td>1*100ML</td><td>30</td><td>51</td><td>81</td><td>31</td><td>50</td><td>0</td><td>0.00</td></tr><tr><td>QUISTA -DN 400GM</td><td>1*400GM</td><td>0</td><td>12</td><td>12</td><td>12</td><td>0</td><td>0</td><td>0.00</td></tr><tr><td>PILEX FORTE OINT.</td><td>1*30GM</td><td>79</td><td>0</td><td>79</td><td>28</td><td>51</td><td>0</td><td>0.00</td></tr><tr><td>QUISTA ACTIVE</td><td>1*200GM</td><td>0</td><td>12</td><td>12</td><td>12</td><td>0</td><td>0</td><td>0.00</td></tr><tr><td>TOTAL</td><td></td><td>95222</td><td>83451</td><td>178674</td><td>89597</td><td>101577</td><td>777</td><td></td></tr></table>",
+            "bbox": [
+              34.0,
+              566.0,
+              1048.0,
+              1066.0
+            ],
+            "order": 6
+          },
+          {
+            "index": 7,
+            "label": "text",
+            "text": "GRAND TOTAL | 95222 | 83451 | 178674 | 89597 | 101577 |\nPowered By SwilERP for Retail, Distribution & Chain Stores",
+            "bbox": [
+              33.0,
+              1778.0,
+              624.0,
+              1832.0
+            ],
+            "order": 7
+          },
+          {
+            "index": 8,
+            "label": "number",
+            "text": "7771",
+            "bbox": [
+              661.0,
+              1780.0,
+              697.0,
+              1808.0
+            ],
+            "order": 8
+          },
+          {
+            "index": 9,
+            "label": "image",
+            "text": "",
+            "bbox": [
+              692.0,
+              1913.0,
+              760.0,
+              1982.0
+            ],
+            "order": 9
+          },
+          {
+            "index": 10,
+            "label": "text",
+            "text": "AI Assistant",
+            "bbox": [
+              776.0,
+              1926.0,
+              989.0,
+              1972.0
+            ],
+            "order": 10
+          },
+          {
+            "index": 11,
+            "label": "image",
+            "text": "",
+            "bbox": [
+              145.0,
+              2124.0,
+              208.0,
+              2190.0
+            ],
+            "order": 11
+          },
+          {
+            "index": 12,
+            "label": "image",
+            "text": "",
+            "bbox": [
+              297.0,
+              2120.0,
+              382.0,
+              2195.0
+            ],
+            "order": 12
+          },
+          {
+            "index": 13,
+            "label": "image",
+            "text": "",
+            "bbox": [
+              439.0,
+              2129.0,
+              506.0,
+              2180.0
+            ],
+            "order": 13
+          },
+          {
+            "index": 14,
+            "label": "image",
+            "text": "",
+            "bbox": [
+              583.0,
+              2123.0,
+              631.0,
+              2181.0
+            ],
+            "order": 14
+          },
+          {
+            "index": 15,
+            "label": "text",
+            "text": "Highlight",
+            "bbox": [
+              268.0,
+              2213.0,
+              388.0,
+              2252.0
+            ],
+            "order": 15
+          },
+          {
+            "index": 16,
+            "label": "image",
+            "text": "",
+            "bbox": [
+              716.0,
+              2122.0,
+              803.0,
+              2194.0
+            ],
+            "order": 16
+          },
+          {
+            "index": 17,
+            "label": "image",
+            "text": "",
+            "bbox": [
+              873.0,
+              2122.0,
+              934.0,
+              2185.0
+            ],
+            "order": 17
+          },
+          {
+            "index": 18,
+            "label": "text",
+            "text": "Text",
+            "bbox": [
+              579.0,
+              2214.0,
+              637.0,
+              2248.0
+            ],
+            "order": 18
+          },
+          {
+            "index": 19,
+            "label": "number",
+            "text": "\u2160\u2160",
+            "bbox": [
+              206.0,
+              2311.0,
+              259.0,
+              2366.0
+            ],
+            "order": 19
+          },
+          {
+            "index": 20,
+            "label": "footer_image",
+            "text": "",
+            "bbox": [
+              509.0,
+              2313.0,
+              561.0,
+              2362.0
+            ],
+            "order": 20
+          },
+          {
+            "index": 21,
+            "label": "footer_image",
+            "text": "",
+            "bbox": [
+              821.0,
+              2310.0,
+              855.0,
+              2366.0
+            ],
+            "order": 21
+          }
+        ],
+        "available": true
+      },
+      "tables": {
+        "items": [
+          {
+            "index": 6,
+            "label": "table",
+            "text": "<table><tr><td>PRODUCT NAME</td><td>PACKING</td><td>Op.Bal. Qty.</td><td>Receipt Qty.</td><td>Total Qty.</td><td>Issue Qty.</td><td>Closing Balance</td><td>Near Expiry</td><td>MSR Price</td></tr><tr><td>ABANA</td><td>1*60TAB</td><td>49</td><td>0</td><td>49</td><td>11</td><td>38</td><td>2</td><td>0.00</td></tr><tr><td>CLARINA-CREAM</td><td>1*30GM</td><td>15</td><td>0</td><td>15</td><td>4</td><td>11</td><td>1</td><td>0.00</td></tr><tr><td>CONFIDO TAB</td><td>1*60TAB</td><td>3</td><td>100</td><td>103</td><td>13</td><td>90</td><td>0</td><td>0.00</td></tr><tr><td>HIMCOLIN GEL</td><td>1*30GM</td><td>2</td><td>50</td><td>52</td><td>7</td><td>45</td><td>0</td><td>0.00</td></tr><tr><td>LIV-52 SYP.</td><td>1*200ML</td><td>25</td><td>140</td><td>165</td><td>128</td><td>37</td><td>1</td><td>0.00</td></tr><tr><td>LIV-52 SYRUP</td><td>1*100ML</td><td>69</td><td>70</td><td>139</td><td>54</td><td>85</td><td>0</td><td>0.00</td></tr><tr><td>LIV-52 TAB</td><td>1*100TAB</td><td>104</td><td>100</td><td>204</td><td>104</td><td>100</td><td>2</td><td>0.00</td></tr><tr><td>PILEX TAB</td><td>1*60TAB</td><td>43</td><td>0</td><td>43</td><td>38</td><td>5</td><td>0</td><td>0.00</td></tr><tr><td>TENTEX FORTE</td><td>1*10TAB</td><td>247</td><td>0</td><td>247</td><td>76</td><td>171</td><td>0</td><td>0.00</td></tr><tr><td>DIABECON-DS TAB</td><td>1*60TAB</td><td>44</td><td>0</td><td>44</td><td>12</td><td>32</td><td>0</td><td>0.00</td></tr><tr><td>OXITARD CAP.</td><td>1 10caps</td><td>1</td><td>0</td><td>1</td><td>0</td><td>1</td><td>1</td><td>0.00</td></tr><tr><td>CLARINA ANTI ACN</td><td>1*60ML</td><td>3</td><td>0</td><td>3</td><td>2</td><td>1</td><td>0</td><td>0.00</td></tr><tr><td>HAIR ZONE SOL.</td><td>1*60ML</td><td>17</td><td>0</td><td>17</td><td>8</td><td>9</td><td>0</td><td>0.00</td></tr><tr><td>LIV-52 HB CAP</td><td>1*10CAP</td><td>21</td><td>0</td><td>21</td><td>0</td><td>21</td><td>0</td><td>0.00</td></tr><tr><td>ORO-T 100ML</td><td>1*100ML</td><td>30</td><td>51</td><td>81</td><td>31</td><td>50</td><td>0</td><td>0.00</td></tr><tr><td>QUISTA -DN 400GM</td><td>1*400GM</td><td>0</td><td>12</td><td>12</td><td>12</td><td>0</td><td>0</td><td>0.00</td></tr><tr><td>PILEX FORTE OINT.</td><td>1*30GM</td><td>79</td><td>0</td><td>79</td><td>28</td><td>51</td><td>0</td><td>0.00</td></tr><tr><td>QUISTA ACTIVE</td><td>1*200GM</td><td>0</td><td>12</td><td>12</td><td>12</td><td>0</td><td>0</td><td>0.00</td></tr><tr><td>TOTAL</td><td></td><td>95222</td><td>83451</td><td>178674</td><td>89597</td><td>101577</td><td>777</td><td></td></tr></table>",
+            "bbox": [
+              34.0,
+              566.0,
+              1048.0,
+              1066.0
+            ],
+            "html": null,
+            "cells": null
+          }
+        ],
+        "available": true,
+        "count": 1
+      },
+      "latency_ms": 64190.527400000065,
+      "image_width": 1080,
+      "image_height": 2408,
+      "device": "gpu:0",
+      "metadata": {
+        "document_id": "0000701864_2026_08_ZL_20_5015_03092026091037.jpg",
+        "source_path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000701864_2026_08_ZL_20_5015_03092026091037.jpg",
+        "original_width": 1080,
+        "original_height": 2408,
+        "processed_width": 1080,
+        "processed_height": 2408,
+        "orientation": 0,
+        "preprocessing": [
+          "exif_transpose",
+          "rgb"
+        ],
+        "engine": "paddleocr-vl-1.6",
+        "model": "PaddleOCR-VL-1.6",
+        "model_version": "v1.6",
+        "pipeline_version": "v1.6",
+        "device": "gpu:0",
+        "init_latency_ms": 12079.41050000045,
+        "model_loaded": true,
+        "init_error": null,
+        "available": true,
+        "status": "success",
+        "latency_ms": 64190.527400000065,
+        "image_width": 1080,
+        "image_height": 2408,
+        "word_count": 82,
+        "block_count": 11,
+        "line_count": 11,
+        "lines": [
+          {
+            "text": "\ud83c\udfe0\ud83d\udce7 Q \u2702\ufe0f :",
+            "bbox": [
+              436.0,
+              113.0,
+              997.0,
+              184.0
+            ],
+            "label": "header",
+            "order": 1
+          },
+          {
+            "text": "JAJRA DRUG AGENCY 26-27\nD-64, SADUL COLONY",
+            "bbox": [
+              351.0,
+              408.0,
+              742.0,
+              465.0
+            ],
+            "label": "paragraph_title",
+            "order": 2
+          },
+          {
+            "text": "Page No.1\nSales & Stock Statement(From 01/08/2026 Upto 31/08/2026)",
+            "bbox": [
+              35.0,
+              485.0,
+              128.0,
+              512.0
+            ],
+            "label": "text",
+            "order": 3
+          },
+          {
+            "text": "HIMALYA DRUG COMPANY",
+            "bbox": [
+              35.0,
+              535.0,
+              425.0,
+              566.0
+            ],
+            "label": "figure_title",
+            "order": 5
+          },
+          {
+            "text": "<table><tr><td>PRODUCT NAME</td><td>PACKING</td><td>Op.Bal. Qty.</td><td>Receipt Qty.</td><td>Total Qty.</td><td>Issue Qty.</td><td>Closing Balance</td><td>Near Expiry</td><td>MSR Price</td></tr><tr><td>ABANA</td><td>1*60TAB</td><td>49</td><td>0</td><td>49</td><td>11</td><td>38</td><td>2</td><td>0.00</td></tr><tr><td>CLARINA-CREAM</td><td>1*30GM</td><td>15</td><td>0</td><td>15</td><td>4</td><td>11</td><td>1</td><td>0.00</td></tr><tr><td>CONFIDO TAB</td><td>1*60TAB</td><td>3</td><td>100</td><td>103</td><td>13</td><td>90</td><td>0</td><td>0.00</td></tr><tr><td>HIMCOLIN GEL</td><td>1*30GM</td><td>2</td><td>50</td><td>52</td><td>7</td><td>45</td><td>0</td><td>0.00</td></tr><tr><td>LIV-52 SYP.</td><td>1*200ML</td><td>25</td><td>140</td><td>165</td><td>128</td><td>37</td><td>1</td><td>0.00</td></tr><tr><td>LIV-52 SYRUP</td><td>1*100ML</td><td>69</td><td>70</td><td>139</td><td>54</td><td>85</td><td>0</td><td>0.00</td></tr><tr><td>LIV-52 TAB</td><td>1*100TAB</td><td>104</td><td>100</td><td>204</td><td>104</td><td>100</td><td>2</td><td>0.00</td></tr><tr><td>PILEX TAB</td><td>1*60TAB</td><td>43</td><td>0</td><td>43</td><td>38</td><td>5</td><td>0</td><td>0.00</td></tr><tr><td>TENTEX FORTE</td><td>1*10TAB</td><td>247</td><td>0</td><td>247</td><td>76</td><td>171</td><td>0</td><td>0.00</td></tr><tr><td>DIABECON-DS TAB</td><td>1*60TAB</td><td>44</td><td>0</td><td>44</td><td>12</td><td>32</td><td>0</td><td>0.00</td></tr><tr><td>OXITARD CAP.</td><td>1 10caps</td><td>1</td><td>0</td><td>1</td><td>0</td><td>1</td><td>1</td><td>0.00</td></tr><tr><td>CLARINA ANTI ACN</td><td>1*60ML</td><td>3</td><td>0</td><td>3</td><td>2</td><td>1</td><td>0</td><td>0.00</td></tr><tr><td>HAIR ZONE SOL.</td><td>1*60ML</td><td>17</td><td>0</td><td>17</td><td>8</td><td>9</td><td>0</td><td>0.00</td></tr><tr><td>LIV-52 HB CAP</td><td>1*10CAP</td><td>21</td><td>0</td><td>21</td><td>0</td><td>21</td><td>0</td><td>0.00</td></tr><tr><td>ORO-T 100ML</td><td>1*100ML</td><td>30</td><td>51</td><td>81</td><td>31</td><td>50</td><td>0</td><td>0.00</td></tr><tr><td>QUISTA -DN 400GM</td><td>1*400GM</td><td>0</td><td>12</td><td>12</td><td>12</td><td>0</td><td>0</td><td>0.00</td></tr><tr><td>PILEX FORTE OINT.</td><td>1*30GM</td><td>79</td><td>0</td><td>79</td><td>28</td><td>51</td><td>0</td><td>0.00</td></tr><tr><td>QUISTA ACTIVE</td><td>1*200GM</td><td>0</td><td>12</td><td>12</td><td>12</td><td>0</td><td>0</td><td>0.00</td></tr><tr><td>TOTAL</td><td></td><td>95222</td><td>83451</td><td>178674</td><td>89597</td><td>101577</td><td>777</td><td></td></tr></table>",
+            "bbox": [
+              34.0,
+              566.0,
+              1048.0,
+              1066.0
+            ],
+            "label": "table",
+            "order": 6
+          },
+          {
+            "text": "GRAND TOTAL | 95222 | 83451 | 178674 | 89597 | 101577 |\nPowered By SwilERP for Retail, Distribution & Chain Stores",
+            "bbox": [
+              33.0,
+              1778.0,
+              624.0,
+              1832.0
+            ],
+            "label": "text",
+            "order": 7
+          },
+          {
+            "text": "7771",
+            "bbox": [
+              661.0,
+              1780.0,
+              697.0,
+              1808.0
+            ],
+            "label": "number",
+            "order": 8
+          },
+          {
+            "text": "AI Assistant",
+            "bbox": [
+              776.0,
+              1926.0,
+              989.0,
+              1972.0
+            ],
+            "label": "text",
+            "order": 10
+          },
+          {
+            "text": "Highlight",
+            "bbox": [
+              268.0,
+              2213.0,
+              388.0,
+              2252.0
+            ],
+            "label": "text",
+            "order": 15
+          },
+          {
+            "text": "Text",
+            "bbox": [
+              579.0,
+              2214.0,
+              637.0,
+              2248.0
+            ],
+            "label": "text",
+            "order": 18
+          },
+          {
+            "text": "\u2160\u2160",
+            "bbox": [
+              206.0,
+              2311.0,
+              259.0,
+              2366.0
+            ],
+            "label": "number",
+            "order": 19
+          }
+        ],
+        "reading_order": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21
+        ],
+        "bbox_stats": {
+          "valid": 11,
+          "invalid": 0,
+          "total": 11
+        }
+      },
+      "error": null,
+      "error_type": null,
+      "page": 1,
+      "native_text": false,
+      "ocr_required": true,
+      "paddle_vl_status": "success",
+      "image_meta": {
+        "original_width": 1080,
+        "original_height": 2408,
+        "processed_width": 1080,
+        "processed_height": 2408,
+        "orientation": 0,
+        "preprocessing": [
+          "exif_transpose",
+          "rgb"
+        ]
+      },
+      "resources": {
+        "cpu_percent": 0.0,
+        "ram_used_gb": 14.23,
+        "ram_total_gb": 15.31,
+        "gpu": "NVIDIA GeForce RTX 3050 6GB Laptop GPU",
+        "vram_used_gb": 10.626,
+        "vram_total_gb": 6.0
+      }
+    }
+  ],
+  "status": "success",
+  "errors": [],
+  "latency_ms": 64424.8706999997,
+  "finished_at": "2026-10-08T13:13:27.064918+00:00",
+  "resources": {
+    "cpu_percent": 0.0,
+    "ram_used_gb": 14.23,
+    "ram_total_gb": 15.31,
+    "gpu": "NVIDIA GeForce RTX 3050 6GB Laptop GPU",
+    "vram_used_gb": 10.626,
+    "vram_total_gb": 6.0
+  }
+}

@@ -1,0 +1,211 @@
+{
+  "source_file": "0000700479_2026_08_ZL_10_383_04092026195730.jpg",
+  "source_format": "jpg",
+  "stockist_name": null,
+  "stockist_address": null,
+  "company_name": "HIMALAYA ZEAL DIVIS",
+  "period_from": "2026-08-01",
+  "period_to": "2026-08-31",
+  "report_title": "STOCK & SALES STATEMENT",
+  "line_items": [
+    {
+      "product_code": null,
+      "product_name": "AACTARIL SOAP 75GM",
+      "packing": null,
+      "opening_qty": 54.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 4.0,
+      "sales_value": 313.2,
+      "closing_qty": 50.0,
+      "closing_value": 3470.5,
+      "extra": {
+        "expiry_stock": "01-Nov-27",
+        "expected_total": 54.0,
+        "expected_closing": 50.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ABANA TABLET 60S",
+      "packing": null,
+      "opening_qty": 36.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 7.0,
+      "sales_value": 1175.02,
+      "closing_qty": 29.0,
+      "closing_value": 4315.49,
+      "extra": {
+        "expiry_stock": "01-Apr-27",
+        "expected_total": 36.0,
+        "expected_closing": 29.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "DIABECON DS TAB 60 S",
+      "packing": null,
+      "opening_qty": 46.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 10.0,
+      "sales_value": 2171.4,
+      "closing_qty": 36.0,
+      "closing_value": 6929.64,
+      "extra": {
+        "expiry_stock": "01-Nov-26",
+        "expected_total": 46.0,
+        "expected_closing": 36.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "DIABECON TAB 60S",
+      "packing": null,
+      "opening_qty": 82.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 82.0,
+      "closing_value": 9866.24,
+      "extra": {
+        "expiry_stock": "01-Mar-28",
+        "expected_total": 82.0,
+        "expected_closing": 82.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV 52 HB CAP 10S",
+      "packing": null,
+      "opening_qty": 30.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 3.0,
+      "sales_value": 471.42,
+      "closing_qty": 27.0,
+      "closing_value": 3761.1,
+      "extra": {
+        "expiry_stock": "01-Feb-27",
+        "expected_total": 30.0,
+        "expected_closing": 27.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV 52 SYP 100ML",
+      "packing": null,
+      "opening_qty": 53.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 19.0,
+      "sales_value": 2026.54,
+      "closing_qty": 34.0,
+      "closing_value": 3214.7,
+      "extra": {
+        "expiry_stock": "01-Dec-28",
+        "expected_total": 53.0,
+        "expected_closing": 34.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "52 SYP 200ML",
+      "packing": null,
+      "opening_qty": 46.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 18.0,
+      "sales_value": 3209.04,
+      "closing_qty": 28.0,
+      "closing_value": 4425.4,
+      "extra": {
+        "expiry_stock": "01-Nov-28",
+        "expected_total": 46.0,
+        "expected_closing": 28.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "52 TAB 100S",
+      "packing": null,
+      "opening_qty": 31.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 26.0,
+      "sales_value": 4358.12,
+      "closing_qty": 5.0,
+      "closing_value": 743.0,
+      "extra": {
+        "expiry_stock": "01-Mar-27",
+        "expected_total": 31.0,
+        "expected_closing": 5.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "NALKA SYR 100ML",
+      "packing": null,
+      "opening_qty": 17.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 11.0,
+      "sales_value": 864.38,
+      "closing_qty": 6.0,
+      "closing_value": 417.96,
+      "extra": {
+        "expiry_stock": "01-Mar-28",
+        "expected_total": 17.0,
+        "expected_closing": 6.0,
+        "stock_identity_ok": true
+      }
+    }
+  ],
+  "totals": {
+    "sales_value": 14589.12,
+    "closing_value": 37144.03,
+    "extra": {
+      "extraction_method": "gemini_extraction_fallback",
+      "line_sales_value_sum": 14589.119999999999,
+      "line_closing_value_sum": 37144.03,
+      "sales_qty": 98.0,
+      "closing_qty": 297.0,
+      "stock_identity_kind": "opening_receipts_sales_closing",
+      "stock_identity_formula": "closing=opening+receipts-sales",
+      "stock_identity_fail_count": 0,
+      "stock_validation": {
+        "opening_plus_purchase": 395.0,
+        "expected_total": 395.0,
+        "calculated_closing": 297.0,
+        "extracted_closing": 297.0,
+        "is_valid": true
+      },
+      "extraction_quality": {
+        "quality": "good",
+        "score": 100,
+        "reasons": [],
+        "threshold": 75.0
+      },
+      "gemini_fallback": "not_called"
+    }
+  }
+}

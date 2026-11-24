@@ -1,0 +1,192 @@
+{
+  "document_id": "0000700308_2026_08_ZL_18_8175_03092026072320.jpg",
+  "role": "compatible_ssa_like",
+  "source_path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700308_2026_08_ZL_18_8175_03092026072320.jpg",
+  "off": {
+    "correct_count": 9,
+    "field_count": 9,
+    "silent_wrong_count": 0,
+    "missing_count": 0,
+    "secondary_ocr_ms": 2.3,
+    "pipeline_helper_ms": 2.1,
+    "text_sha": "fde0767866b6d98a",
+    "repair_report": {
+      "document_id": "0000700308_2026_08_ZL_18_8175_03092026072320.jpg",
+      "repairs": [],
+      "unresolved": [
+        {
+          "reason": "secondary_repair_disabled"
+        }
+      ]
+    }
+  },
+  "on": {
+    "correct_count": 9,
+    "field_count": 9,
+    "silent_wrong_count": 0,
+    "missing_count": 0,
+    "secondary_ocr_ms": 6656.3,
+    "pipeline_helper_ms": 6580.3,
+    "text_sha": "fde0767866b6d98a",
+    "repair_report": {
+      "document_id": "0000700308_2026_08_ZL_18_8175_03092026072320.jpg",
+      "repairs": [],
+      "unresolved": [
+        {
+          "reason": "total_footer_layout_not_himalaya_qty"
+        }
+      ]
+    },
+    "pipeline_text_matches": true
+  },
+  "deltas": [],
+  "repair_types_on": [],
+  "matches_off": [
+    {
+      "field_id": "vendor",
+      "expected_raw": "MOHAN PHARMACEUTICALS",
+      "predicted_raw": "MOHAN PHARMACEUTICALS",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_open",
+      "expected_raw": "Opening",
+      "predicted_raw": "Opening",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_issues",
+      "expected_raw": "Issues",
+      "predicted_raw": "Issues",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_close",
+      "expected_raw": "Closing",
+      "predicted_raw": "Closing",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv_rec",
+      "expected_raw": "70",
+      "predicted_raw": "70",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv_iss",
+      "expected_raw": "6",
+      "predicted_raw": "6",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv_cl",
+      "expected_raw": "64",
+      "predicted_raw": "64",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tot_sales",
+      "expected_raw": "554.00",
+      "predicted_raw": "554.00",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tot_close",
+      "expected_raw": "5933.00",
+      "predicted_raw": "5,933.00",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    }
+  ],
+  "matches_on": [
+    {
+      "field_id": "vendor",
+      "expected_raw": "MOHAN PHARMACEUTICALS",
+      "predicted_raw": "MOHAN PHARMACEUTICALS",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_open",
+      "expected_raw": "Opening",
+      "predicted_raw": "Opening",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_issues",
+      "expected_raw": "Issues",
+      "predicted_raw": "Issues",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_close",
+      "expected_raw": "Closing",
+      "predicted_raw": "Closing",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv_rec",
+      "expected_raw": "70",
+      "predicted_raw": "70",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv_iss",
+      "expected_raw": "6",
+      "predicted_raw": "6",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv_cl",
+      "expected_raw": "64",
+      "predicted_raw": "64",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tot_sales",
+      "expected_raw": "554.00",
+      "predicted_raw": "554.00",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tot_close",
+      "expected_raw": "5933.00",
+      "predicted_raw": "5,933.00",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    }
+  ]
+}

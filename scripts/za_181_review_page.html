@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ZA 181 review</title>
+<style>
+body { margin: 0; font-family: sans-serif; color: #1a1a1a; }
+header { padding: 0.75rem 1rem; background: #102030; color: white; }
+header p { margin: 0.3rem 0 0; font-size: 0.9rem; }
+#app { display: grid; grid-template-columns: 280px 1fr; min-height: calc(100vh - 84px); }
+aside { border-right: 1px solid #ccc; overflow: auto; max-height: calc(100vh - 84px); }
+aside button, select { margin: 0.4rem; }
+#list { list-style: none; padding: 0; margin: 0; }
+#list li { padding: 0.4rem 0.6rem; cursor: pointer; border-bottom: 1px solid #eee; font-size: 0.78rem; }
+#list li.active { background: #e7f1ff; }
+main { padding: 0.8rem 1rem 2rem; overflow: auto; max-height: calc(100vh - 84px); }
+img { max-width: 100%; max-height: 70vh; object-fit: contain; background: #f4f4f4; border: 1px solid #ccc; }
+.ocr { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; }
+pre { white-space: pre-wrap; max-height: 240px; overflow: auto; background: #f7f7f7; border: 1px solid #ddd; padding: 0.5rem; }
+.row { border: 1px solid #ddd; margin: 0.6rem 0; padding: 0.6rem; }
+label { display: block; margin: 0.25rem 0; }
+input[type="text"], textarea, select { width: 100%; box-sizing: border-box; }
+.locked { background: #f3f3f3; }
+.error { color: #a12626; }
+</style>
+</head>
+<body>
+<header>
+  <strong>ZA image review</strong>
+  <p id="banner"></p>
+</header>
+<div id="app">
+  <aside>
+    <select id="filter">
+      <option value="all">All images</option>
+      <option value="pending">Pending proposals</option>
+      <option value="verified">Verified rows</option>
+      <option value="corrected">Corrected rows</option>
+      <option value="uncertain">Uncertain rows</option>
+      <option value="locked">Source-verified</option>
+      <option value="empty">No proposal rows</option>
+    </select>
+    <ol id="list"></ol>
+  </aside>
+  <main>
+    <div id="meta"></div>
+    <p><a id="full" href="#" target="_blank">Open the original image</a></p>
+    <img id="page" alt="original stock statement">
+    <div class="ocr">
+      <section><h2>Tesseract</h2><div id="tess-products"></div><pre id="tess"></pre></section>
+      <section><h2>PaddleOCR-VL</h2><div id="paddle-products"></div><pre id="paddle"></pre></section>
+    </div>
+    <h2>Proposed rows</h2>
+    <p>Proposed values stay fixed. Check a named quantity only when you want that number scored. Unknown, amount, and price columns are not stock quantities.</p>
+    <div id="rows"></div>
+    <button id="add" type="button">Add a row read from the image</button>
+    <button id="save" type="button">Save review</button>
+    <p id="status"></p>
+  </main>
+</div>
+<script>
+let index = null;
+let current = null;
+const list = document.getElementById("list");
+const filter = document.getElementById("filter");
+
+function matches(image) {
+  const mode = filter.value;
+  if (mode === "all") return true;
+  if (mode === "locked") return image.locked_source_verified;
+  if (mode === "empty") return image.row_count === 0;
+  if (mode === "pending") return image.pending > 0;
+  if (mode === "verified") return image.verified > 0;
+  if (mode === "corrected") return image.corrected > 0;
+  if (mode === "uncertain") return image.uncertain > 0;
+  return true;
+}
+
+function renderList() {
+  list.innerHTML = "";
+  index.images.filter(matches).forEach(image => {
+    const item = document.createElement("li");
+    const mark = image.locked_source_verified ? "SOURCE VERIFIED" : image.label_origin;
+    item.textContent = mark + " · " + image.row_count + " rows · " + image.document_id;
+    if (current && current.document_id === image.document_id) item.className = "active";
+    item.onclick = () => select(image.document_id);
+    list.appendChild(item);
+  });
+}
+
+async function loadIndex() {
+  index = await (await fetch("/api/index")).json();
+  const counts = index.counts;
+  document.getElementById("banner").textContent =
+    index.limitation + " Source-verified images: " + counts.source_verified_images +
+    ". AI proposal images: " + counts.ai_proposed_images +
+    ". Pending rows: " + counts.pending_rows +
+    ". Verified rows: " + counts.verified_rows +
+    ". Corrected rows: " + counts.corrected_rows +
+    ". Uncertain rows: " + counts.uncertain_rows +
+    ". Failed images: " + counts.proposal_failed_images +
+    ". Not started: " + counts.not_started_images + ".";
+  renderList();
+}
+
+function field(label, node) {
+  const wrap = document.createElement("label");
+  wrap.textContent = label;
+  wrap.appendChild(node);
+  return wrap;
+}
+
+function renderRows() {
+  const root = document.getElementById("rows");
+  root.innerHTML = "";
+  const locked = current.locked_source_verified;
+  current.rows.forEach(row => {
+    const box = document.createElement("div");
+    box.className = "row" + (locked ? " locked" : "");
+    const title = document.createElement("strong");
+    title.textContent = (row.row_id || "") + "  " + (row.proposed_product_name || "(no proposed name)");
+    box.appendChild(title);
+    const status = document.createElement("select");
+    ["PENDING", "VERIFIED", "CORRECTED", "UNCERTAIN"].forEach(value => {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = value;
+      status.appendChild(option);
+    });
+    status.value = ["PENDING", "VERIFIED", "CORRECTED", "UNCERTAIN"].includes(row.review_status) ? row.review_status : "PENDING";
+    status.disabled = locked;
+    status.onchange = () => { row.review_status = status.value; };
+    box.appendChild(field("Review status", status));
+    const notes = document.createElement("textarea");
+    notes.value = row.reviewer_notes || "";
+    notes.disabled = locked;
+    notes.oninput = () => { row.reviewer_notes = notes.value; };
+    box.appendChild(field("Reviewer notes", notes));
+    const corrected = document.createElement("input");
+    corrected.type = "text";
+    corrected.value = row.corrected_product_name || "";
+    corrected.disabled = locked;
+    corrected.oninput = () => { row.corrected_product_name = corrected.value; };
+    box.appendChild(field("Corrected product name", corrected));
+    (row.columns || []).forEach(column => {
+      const line = document.createElement("div");
+      const header = column.printed_header || column.semantic || "column";
+      const proposed = column.proposed_raw == null ? "" : column.proposed_raw;
+      const text = document.createElement("div");
+      text.textContent = header + " = " + proposed + " [" + (column.proposed_status || "") + "] semantic " + (column.semantic || "");
+      line.appendChild(text);
+      const edit = document.createElement("input");
+      edit.type = "text";
+      edit.value = column.corrected_raw || "";
+      edit.disabled = locked;
+      edit.oninput = () => { column.corrected_raw = edit.value; };
+      line.appendChild(field("Corrected quantity", edit));
+      const score = document.createElement("input");
+      score.type = "checkbox";
+      score.checked = !!column.score_column;
+      score.disabled = locked;
+      score.onchange = () => { column.score_column = score.checked; };
+      const scoreLabel = document.createElement("label");
+      scoreLabel.appendChild(score);
+      scoreLabel.appendChild(document.createTextNode(" Include this named quantity in the verified score"));
+      line.appendChild(scoreLabel);
+      box.appendChild(line);
+    });
+    root.appendChild(box);
+  });
+  document.getElementById("add").disabled = locked;
+  document.getElementById("save").disabled = locked;
+}
+
+async function select(documentId) {
+  current = await (await fetch("/api/review/" + encodeURIComponent(documentId))).json();
+  document.getElementById("meta").textContent = current.label_origin + " · " + current.document_id;
+  document.getElementById("page").src = "/image/" + encodeURIComponent(documentId);
+  document.getElementById("full").href = "/image/" + encodeURIComponent(documentId);
+  renderRows();
+  renderList();
+  const ocr = await (await fetch("/api/ocr/" + encodeURIComponent(documentId))).json();
+  showOcr("tess", "tess-products", ocr.tesseract);
+  showOcr("paddle", "paddle-products", ocr["paddleocr-vl"]);
+}
+
+function showOcr(textId, listId, payload) {
+  const products = document.getElementById(listId);
+  products.innerHTML = "";
+  if (!payload || payload.error) {
+    document.getElementById(textId).textContent = payload && payload.error ? payload.error : "No OCR cache.";
+    return;
+  }
+  (payload.products || []).forEach(name => {
+    const item = document.createElement("div");
+    item.textContent = name;
+    products.appendChild(item);
+  });
+  document.getElementById(textId).textContent = payload.text || "";
+}
+
+document.getElementById("add").onclick = () => {
+  if (!current || current.locked_source_verified) return;
+  current.rows.push({
+    row_id: "",
+    proposed_product_name: "",
+    corrected_product_name: "",
+    review_status: "PENDING",
+    reviewer_notes: "",
+    origin: "human_added",
+    columns: [{
+      position: 1,
+      printed_header: "closing",
+      semantic: "closing_qty",
+      proposed_raw: null,
+      proposed_status: "absent",
+      corrected_raw: "",
+      score_column: false,
+      origin: "human_added"
+    }]
+  });
+  renderRows();
+};
+
+document.getElementById("save").onclick = async () => {
+  const status = document.getElementById("status");
+  if (!current || current.locked_source_verified) return;
+  const response = await fetch("/api/save", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({document_id: current.document_id, rows: current.rows})
+  });
+  const body = await response.json();
+  if (!response.ok) {
+    status.className = "error";
+    status.textContent = body.error || "Save failed";
+    return;
+  }
+  status.className = "";
+  status.textContent = "Saved to the human review folder. Ground truth was not changed.";
+  await loadIndex();
+  await select(current.document_id);
+};
+
+filter.onchange = renderList;
+loadIndex();
+</script>
+</body>
+</html>

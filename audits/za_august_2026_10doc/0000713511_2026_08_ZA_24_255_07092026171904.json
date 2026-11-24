@@ -1,0 +1,1004 @@
+{
+  "filename": "0000713511_2026_08_ZA_24_255_07092026171904.docx",
+  "bytes": 13119,
+  "elapsed_s": 0.2324,
+  "method": null,
+  "stockist_name": "LACHMI DRUG AGENCIES",
+  "company_name": "HIMALAYA (ZANDRA)",
+  "period_from": "2026-08-01",
+  "period_to": "2026-08-31",
+  "row_count": 55,
+  "line_items": [
+    {
+      "product_name": "ARJUNA TAB",
+      "product_code": null,
+      "packing": "1*60TAB",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 15.0,
+      "closing_qty": 1.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 3496.0,
+      "closing_value": 208.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": -15.0
+      }
+    },
+    {
+      "product_name": "BONNISAN 200ML",
+      "product_code": null,
+      "packing": "200ML",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 17.0,
+      "closing_qty": 11.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 1774.0,
+      "closing_value": 1112.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": -17.0
+      }
+    },
+    {
+      "product_name": "BONNISAN DROP",
+      "product_code": null,
+      "packing": "30ML",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 9.0,
+      "closing_qty": 87.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 627.0,
+      "closing_value": 5744.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": -9.0
+      }
+    },
+    {
+      "product_name": "BONNISAN SYP",
+      "product_code": null,
+      "packing": "120ML",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 1.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 60.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": 0.0
+      }
+    },
+    {
+      "product_name": "BONNISPAZ DROP",
+      "product_code": null,
+      "packing": "15ML",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 62.0,
+      "closing_qty": 84.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 3588.0,
+      "closing_value": 4754.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": -62.0
+      }
+    },
+    {
+      "product_name": "BRESOL NASAL DROP",
+      "product_code": null,
+      "packing": "10ML",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 8.0,
+      "closing_qty": 15.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 413.0,
+      "closing_value": 798.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": -8.0
+      }
+    },
+    {
+      "product_name": "BRESOL SYP",
+      "product_code": null,
+      "packing": "200ML",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 8.0,
+      "closing_qty": 11.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 1230.0,
+      "closing_value": 1677.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": -8.0
+      }
+    },
+    {
+      "product_name": "BRESOL TAB",
+      "product_code": null,
+      "packing": "60TAB",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 5.0,
+      "closing_qty": 46.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 860.0,
+      "closing_value": 8091.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": -5.0
+      }
+    },
+    {
+      "product_name": "CLARINA FACE WASH",
+      "product_code": null,
+      "packing": "60ML",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 8.0,
+      "closing_qty": 30.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 890.0,
+      "closing_value": 3447.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": -8.0
+      }
+    },
+    {
+      "product_name": "CYSTONE SYRUP",
+      "product_code": null,
+      "packing": "200ML",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 17.0,
+      "closing_qty": 1.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 3194.0,
+      "closing_value": 179.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": -17.0
+      }
+    },
+    {
+      "product_name": "CYSTONE TAB",
+      "product_code": null,
+      "packing": "1*60TAB",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 15.0,
+      "closing_qty": 61.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 2572.0,
+      "closing_value": 10197.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": -15.0
+      }
+    },
+    {
+      "product_name": "EVECARE CAP",
+      "product_code": null,
+      "packing": "1*30CAPS",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 8.0,
+      "closing_qty": 8.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 1400.0,
+      "closing_value": 1282.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": -8.0
+      }
+    },
+    {
+      "product_name": "EVECARE FORTE SYP",
+      "product_code": null,
+      "packing": "200ML",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 18.0,
+      "closing_qty": 24.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 3211.0,
+      "closing_value": 4156.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": -18.0
+      }
+    },
+    {
+      "product_name": "EVECARE FORTE TAB",
+      "product_code": null,
+      "packing": "1*10TAB",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 6.0,
+      "closing_qty": 70.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 399.0,
+      "closing_value": 4432.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": -6.0
+      }
+    },
+    {
+      "product_name": "EVECARE SYP",
+      "product_code": null,
+      "packing": "200ML",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 17.0,
+      "closing_qty": 31.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 2591.0,
+      "closing_value": 4396.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": -17.0
+      }
+    },
+    {
+      "product_name": "EVECARE SYP",
+      "product_code": null,
+      "packing": "400ML",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 4.0,
+      "closing_qty": 11.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 932.0,
+      "closing_value": 2431.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": -4.0
+      }
+    },
+    {
+      "product_name": "GALACTOSURE POWDER",
+      "product_code": null,
+      "packing": "200GM",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 3.0,
+      "closing_qty": 2.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 854.0,
+      "closing_value": 559.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": -3.0
+      }
+    },
+    {
+      "product_name": "GERIFORT SYP",
+      "product_code": null,
+      "packing": "200ML",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 4.0,
+      "closing_qty": 26.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 596.0,
+      "closing_value": 3687.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": -4.0
+      }
+    },
+    {
+      "product_name": "GERIFORT TAB",
+      "product_code": null,
+      "packing": "1*100TAB",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 9.0,
+      "closing_qty": 41.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 1023.0,
+      "closing_value": 4769.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": -9.0
+      }
+    },
+    {
+      "product_name": "HARIDRA CAPS",
+      "product_code": null,
+      "packing": "60CAPS",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 4.0,
+      "closing_qty": 55.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 841.0,
+      "closing_value": 11761.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": -4.0
+      }
+    },
+    {
+      "product_name": "HIMPLASIA TAB",
+      "product_code": null,
+      "packing": "1*30TAB",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 15.0,
+      "closing_qty": 72.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 2565.0,
+      "closing_value": 11885.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": -15.0
+      }
+    },
+    {
+      "product_name": "HIORA K MOUTH WASH",
+      "product_code": null,
+      "packing": "1*150ML",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 3.0,
+      "closing_qty": 22.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 264.0,
+      "closing_value": 2075.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": -3.0
+      }
+    },
+    {
+      "product_name": "HIORA-GA",
+      "product_code": null,
+      "packing": "15ML",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 9.0,
+      "closing_qty": 40.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 665.0,
+      "closing_value": 2776.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": -9.0
+      }
+    },
+    {
+      "product_name": "HIORA-K PASTE",
+      "product_code": null,
+      "packing": "100GM",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 24.0,
+      "closing_qty": 44.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 2727.0,
+      "closing_value": 4743.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": -24.0
+      }
+    },
+    {
+      "product_name": "HIORA-K PASTE",
+      "product_code": null,
+      "packing": "50GM",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 7.0,
+      "closing_qty": 43.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 517.0,
+      "closing_value": 3071.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": -7.0
+      }
+    },
+    {
+      "product_name": "HIORA-SG",
+      "product_code": null,
+      "packing": "10GM",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 10.0,
+      "closing_qty": 47.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 734.0,
+      "closing_value": 3547.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": -10.0
+      }
+    },
+    {
+      "product_name": "KARELA TAB",
+      "product_code": null,
+      "packing": "1*60TAB",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 2.0,
+      "closing_qty": 53.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 416.0,
+      "closing_value": 10540.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": -2.0
+      }
+    },
+    {
+      "product_name": "LASUNA TAB",
+      "product_code": null,
+      "packing": "1*60TAB",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 5.0,
+      "closing_qty": 38.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 1149.0,
+      "closing_value": 8803.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": -5.0
+      }
+    },
+    {
+      "product_name": "LIV 52 DROP",
+      "product_code": null,
+      "packing": "100ML",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 5.0,
+      "closing_qty": 31.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 590.0,
+      "closing_value": 3571.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": -5.0
+      }
+    },
+    {
+      "product_name": "LIV 52 DROP",
+      "product_code": null,
+      "packing": "60ML",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 2.0,
+      "closing_qty": 1.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 165.0,
+      "closing_value": 80.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": -2.0
+      }
+    },
+    {
+      "product_name": "LIV 52 DS TAB",
+      "product_code": null,
+      "packing": "1*60TAB",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 74.0,
+      "closing_qty": 126.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 14602.0,
+      "closing_value": 24357.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": -74.0
+      }
+    },
+    {
+      "product_name": "LIV DS 200ML",
+      "product_code": null,
+      "packing": "200ML",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 30.0,
+      "closing_qty": 22.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 7333.0,
+      "closing_value": 5312.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": -30.0
+      }
+    },
+    {
+      "product_name": "LIV-52 DS SYP",
+      "product_code": null,
+      "packing": "100ML",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 6.0,
+      "closing_qty": 0.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 941.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": -6.0
+      }
+    },
+    {
+      "product_name": "LUKOL SYP",
+      "product_code": null,
+      "packing": "200ML",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 13.0,
+      "closing_qty": 12.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 2111.0,
+      "closing_value": 1852.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": -13.0
+      }
+    },
+    {
+      "product_name": "LUKOL TAB",
+      "product_code": null,
+      "packing": "1*60TAB",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 9.0,
+      "closing_qty": 45.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 1581.0,
+      "closing_value": 8074.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": -9.0
+      }
+    },
+    {
+      "product_name": "MENOSAN",
+      "product_code": null,
+      "packing": "1*30TAB",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 56.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 9168.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": 0.0
+      }
+    },
+    {
+      "product_name": "MENTAT SYP",
+      "product_code": null,
+      "packing": "200ML",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 23.0,
+      "closing_qty": 11.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 4118.0,
+      "closing_value": 1905.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": -23.0
+      }
+    },
+    {
+      "product_name": "MENTAT TAB",
+      "product_code": null,
+      "packing": "1*50TAB",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 2.0,
+      "closing_qty": 89.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 286.0,
+      "closing_value": 13003.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": -2.0
+      }
+    },
+    {
+      "product_name": "MESHASHRINGI TAB",
+      "product_code": null,
+      "packing": "1*60TAB",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 5.0,
+      "closing_qty": 43.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 1070.0,
+      "closing_value": 8552.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": -5.0
+      }
+    },
+    {
+      "product_name": "ORGANIC ASHWAGANDHA",
+      "product_code": null,
+      "packing": "1*30TAB",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 1.0,
+      "closing_qty": 32.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 351.0,
+      "closing_value": 11494.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": -1.0
+      }
+    },
+    {
+      "product_name": "PLATENZA",
+      "product_code": null,
+      "packing": "1*20TAB",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 31.0,
+      "closing_qty": 105.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 4328.0,
+      "closing_value": 14219.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": -31.0
+      }
+    },
+    {
+      "product_name": "PLATENZA SYP",
+      "product_code": null,
+      "packing": "100ML",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 7.0,
+      "closing_qty": 52.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 1272.0,
+      "closing_value": 9179.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": -7.0
+      }
+    },
+    {
+      "product_name": "PUNARNAVA TAB",
+      "product_code": null,
+      "packing": "1*60TAB",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 5.0,
+      "closing_qty": 26.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 1179.0,
+      "closing_value": 5602.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": -5.0
+      }
+    },
+    {
+      "product_name": "QUISTA KIDZ CHOCO",
+      "product_code": null,
+      "packing": "200GM",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 12.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 3559.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": 0.0
+      }
+    },
+    {
+      "product_name": "QUISTA KIDZ VANILA",
+      "product_code": null,
+      "packing": "200GM",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 12.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 3559.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": 0.0
+      }
+    },
+    {
+      "product_name": "RENALKA SYP",
+      "product_code": null,
+      "packing": "100ML",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 4.0,
+      "closing_qty": 47.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 313.0,
+      "closing_value": 3547.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": -4.0
+      }
+    },
+    {
+      "product_name": "RENALKA SYP",
+      "product_code": null,
+      "packing": "200ML",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 5.0,
+      "closing_qty": 27.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 728.0,
+      "closing_value": 3820.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": -5.0
+      }
+    },
+    {
+      "product_name": "RENOSANTE CAP",
+      "product_code": null,
+      "packing": "1*60CAP",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 25.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 8511.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": 0.0
+      }
+    },
+    {
+      "product_name": "REOSTO",
+      "product_code": null,
+      "packing": "1*30TAB",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 6.0,
+      "closing_qty": 50.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 1032.0,
+      "closing_value": 8794.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": -6.0
+      }
+    },
+    {
+      "product_name": "RUMALAYA ROLLON",
+      "product_code": null,
+      "packing": "60ML",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 23.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 3017.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": 0.0
+      }
+    },
+    {
+      "product_name": "SEPTILIN SYP",
+      "product_code": null,
+      "packing": "200ML",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 14.0,
+      "closing_qty": 7.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 2199.0,
+      "closing_value": 1039.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": -14.0
+      }
+    },
+    {
+      "product_name": "SHATAVARI TAB",
+      "product_code": null,
+      "packing": "1*60TAB",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 6.0,
+      "closing_qty": 39.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 1298.0,
+      "closing_value": 7756.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": -6.0
+      }
+    },
+    {
+      "product_name": "SHUDDHA-GUGGULU TAB",
+      "product_code": null,
+      "packing": "1*60TAB",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 20.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 4362.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": 0.0
+      }
+    },
+    {
+      "product_name": "SPEMAN TAB",
+      "product_code": null,
+      "packing": "1*60TAB",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 8.0,
+      "closing_qty": 41.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 1378.0,
+      "closing_value": 7211.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": -8.0
+      }
+    },
+    {
+      "product_name": "V-GEL CREAM",
+      "product_code": null,
+      "packing": "30GM",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 2.0,
+      "closing_qty": 23.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 201.0,
+      "closing_value": 2365.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": -2.0
+      }
+    }
+  ],
+  "totals": {
+    "opening_qty": null,
+    "receipts_qty": null,
+    "sales_qty": null,
+    "closing_qty": null,
+    "opening_value": null,
+    "receipts_value": null,
+    "sales_value": 86604.0,
+    "closing_value": 295088.0
+  },
+  "validation_status": "unresolved",
+  "validation_accepted": false,
+  "source_agreement": true,
+  "source_evidence": true,
+  "business_status": "inconsistent",
+  "failure_reasons": [
+    "stock_identity_failure"
+  ],
+  "decision_status": "UNRESOLVED",
+  "verified": false,
+  "decision_reason": "stock_identity_failure",
+  "phase2": {
+    "status": null,
+    "attempts": null,
+    "failure": null
+  },
+  "grounding": {
+    "status": "insufficient_source_evidence",
+    "reader": ".docx",
+    "compared_rows": 0,
+    "discrepancy_count": 0,
+    "blank_read_as_zero": 0,
+    "explicit_zero": null,
+    "unreadable": null,
+    "missing_rows": null,
+    "duplicate_rows": null,
+    "low_name_match": null,
+    "blocks_verification": false,
+    "ocr_invoked": false,
+    "discrepancies": [],
+    "sheets": [],
+    "pages": [],
+    "truncated": false,
+    "evidence": {
+      "sufficient": false,
+      "reason": "no_source_table",
+      "blocks_verification": false,
+      "coordinates_available": false,
+      "text_retained": "cells",
+      "script": "unspecified",
+      "language": "unspecified"
+    }
+  },
+  "ocr_calls": [],
+  "gemini_calls": [],
+  "error": null
+}

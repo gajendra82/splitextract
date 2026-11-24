@@ -1,0 +1,151 @@
+{
+  "source_file": "0000702062_2026_08_ZL_12_322_05092026122122.jpg",
+  "source_format": "jpg",
+  "stockist_name": "JAYANTI MARKET LAXMI TALKIES TIKAMGARH (M.P)",
+  "stockist_address": "TIKAMGARH (M.P.)",
+  "company_name": "RACHANA CHEMIST",
+  "period_from": "2026-08-01",
+  "period_to": "2026-08-25",
+  "report_title": "STOCK & SALES ANALYSIS",
+  "line_items": [
+    {
+      "product_code": null,
+      "product_name": "CLARINA CREAM",
+      "packing": "60ml",
+      "opening_qty": 47.0,
+      "opening_value": null,
+      "receipts_qty": 36.0,
+      "receipts_value": null,
+      "sales_qty": 36.0,
+      "sales_value": 0.0,
+      "closing_qty": 43.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 83.0,
+        "expected_closing": 47.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "CLARINA FACEWASH",
+      "packing": "100ML",
+      "opening_qty": 36.0,
+      "opening_value": null,
+      "receipts_qty": 21.0,
+      "receipts_value": null,
+      "sales_qty": 15.0,
+      "sales_value": 0.0,
+      "closing_qty": 6.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 57.0,
+        "expected_closing": 42.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV 52 SYP",
+      "packing": "200ML",
+      "opening_qty": 21.0,
+      "opening_value": null,
+      "receipts_qty": 8.0,
+      "receipts_value": null,
+      "sales_qty": 9.0,
+      "sales_value": 0.0,
+      "closing_qty": 9.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 29.0,
+        "expected_closing": 20.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV 52 SYP",
+      "packing": "1X100TAB",
+      "opening_qty": 8.0,
+      "opening_value": null,
+      "receipts_qty": 1.0,
+      "receipts_value": null,
+      "sales_qty": 1.0,
+      "sales_value": 0.0,
+      "closing_qty": 1.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 9.0,
+        "expected_closing": 8.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV 52 TAB",
+      "packing": "10ML",
+      "opening_qty": 1.0,
+      "opening_value": null,
+      "receipts_qty": 1.0,
+      "receipts_value": null,
+      "sales_qty": 1.0,
+      "sales_value": 0.0,
+      "closing_qty": 1.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 2.0,
+        "expected_closing": 1.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "OPHTHACARE DROP",
+      "packing": "30GM",
+      "opening_qty": 73.0,
+      "opening_value": null,
+      "receipts_qty": 11.0,
+      "receipts_value": null,
+      "sales_qty": 62.0,
+      "sales_value": 0.0,
+      "closing_qty": 62.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 84.0,
+        "expected_closing": 22.0,
+        "stock_identity_ok": false
+      }
+    }
+  ],
+  "totals": {
+    "sales_value": null,
+    "closing_value": null,
+    "extra": {
+      "extraction_method": "gemini_extraction_fallback",
+      "line_sales_value_sum": 0.0,
+      "line_closing_value_sum": 0.0,
+      "sales_qty": 124.0,
+      "closing_qty": 122.0,
+      "stock_identity_kind": "opening_receipts_sales_closing",
+      "stock_identity_formula": "closing=opening+receipts-sales",
+      "stock_identity_fail_count": 5,
+      "stock_validation": {
+        "opening_plus_purchase": 264.0,
+        "expected_total": 264.0,
+        "calculated_closing": 140.0,
+        "extracted_closing": 122.0,
+        "is_valid": false
+      },
+      "extraction_quality": {
+        "quality": "poor",
+        "score": 75,
+        "reasons": [
+          "stock_identity_failure"
+        ],
+        "threshold": 75.0
+      },
+      "gemini_fallback": "validation_failed",
+      "early_vision_reason": "missing_stock_headers,low_ocr_quality_score"
+    }
+  }
+}

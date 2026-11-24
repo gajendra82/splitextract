@@ -1,0 +1,303 @@
+{
+  "decision": "CANARY PASS \u2014 READY FOR EXPANDED CONTROLLED ROLLOUT",
+  "preflight": {
+    "unset_enabled": false,
+    "unset_noop": true,
+    "false_enabled": false,
+    "value_'0'": true,
+    "value_'no'": true,
+    "value_'TRUE'": true,
+    "value_'on'": true,
+    "pipeline_off_unchanged": true,
+    "pipeline_off_meta_disabled": true,
+    "pass": true
+  },
+  "stop_reasons": [],
+  "document_ids": [
+    "0000701078_2026_08_ZL_03_362_05092026080346.jpeg",
+    "0000701151_2026_08_ZL_14_361_03092026025650.jpg",
+    "0000700275_2026_08_ZL_18_374_04092026171615.pdf",
+    "0000700084_2026_08_ZL_06_8236_03092026155136.pdf",
+    "0000700209_2026_08_ZL_18_374_04092026060313.pdf"
+  ],
+  "documents": [
+    {
+      "document_id": "0000701078_2026_08_ZL_03_362_05092026080346.jpeg",
+      "role": "himalaya_expiry_breakage",
+      "off_correct": "16/18",
+      "on_correct": "18/18",
+      "deltas": [
+        {
+          "field_id": "aact_close",
+          "expected": "69",
+          "off_pred": "89",
+          "on_pred": "69",
+          "off_correct": false,
+          "on_correct": true,
+          "off_error": "WRONG_VALUE",
+          "on_error": null
+        },
+        {
+          "field_id": "talekt_exp",
+          "expected": "12",
+          "off_pred": "0",
+          "on_pred": "12",
+          "off_correct": false,
+          "on_correct": true,
+          "off_error": "WRONG_VALUE",
+          "on_error": null
+        }
+      ],
+      "repair_types_on": [
+        "himalaya_row_anchor_ocr"
+      ],
+      "watch_field_detail": {
+        "aact_close": {
+          "off": {
+            "field_id": "aact_close",
+            "expected_raw": "69",
+            "predicted_raw": "89",
+            "correct": false,
+            "error_type": "WRONG_VALUE",
+            "silent_wrong": true,
+            "match_mode": "column_aware_table"
+          },
+          "on": {
+            "field_id": "aact_close",
+            "expected_raw": "69",
+            "predicted_raw": "69",
+            "correct": true,
+            "error_type": null,
+            "silent_wrong": false,
+            "match_mode": "column_aware_table"
+          }
+        },
+        "talekt_exp": {
+          "off": {
+            "field_id": "talekt_exp",
+            "expected_raw": "12",
+            "predicted_raw": "0",
+            "correct": false,
+            "error_type": "WRONG_VALUE",
+            "silent_wrong": true,
+            "match_mode": "column_aware_table"
+          },
+          "on": {
+            "field_id": "talekt_exp",
+            "expected_raw": "12",
+            "predicted_raw": "12",
+            "correct": true,
+            "error_type": null,
+            "silent_wrong": false,
+            "match_mode": "column_aware_table"
+          }
+        }
+      },
+      "elapsed_ms_off": 31.3,
+      "elapsed_ms_on": 21051.1
+    },
+    {
+      "document_id": "0000701151_2026_08_ZL_14_361_03092026025650.jpg",
+      "role": "total_footer",
+      "off_correct": "17/19",
+      "on_correct": "19/19",
+      "deltas": [
+        {
+          "field_id": "tot_cl",
+          "expected": "775274",
+          "off_pred": null,
+          "on_pred": "775274",
+          "off_correct": false,
+          "on_correct": true,
+          "off_error": "MISSING",
+          "on_error": null
+        },
+        {
+          "field_id": "tot_op",
+          "expected": "834578",
+          "off_pred": null,
+          "on_pred": "834578",
+          "off_correct": false,
+          "on_correct": true,
+          "off_error": "MISSING",
+          "on_error": null
+        }
+      ],
+      "repair_types_on": [
+        "total_footer_ocr"
+      ],
+      "watch_field_detail": {
+        "tot_op": {
+          "off": {
+            "field_id": "tot_op",
+            "expected_raw": "834578",
+            "predicted_raw": null,
+            "correct": false,
+            "error_type": "MISSING",
+            "silent_wrong": false,
+            "match_mode": null
+          },
+          "on": {
+            "field_id": "tot_op",
+            "expected_raw": "834578",
+            "predicted_raw": "834578",
+            "correct": true,
+            "error_type": null,
+            "silent_wrong": false,
+            "match_mode": "column_aware_table"
+          }
+        },
+        "tot_cl": {
+          "off": {
+            "field_id": "tot_cl",
+            "expected_raw": "775274",
+            "predicted_raw": null,
+            "correct": false,
+            "error_type": "MISSING",
+            "silent_wrong": false,
+            "match_mode": null
+          },
+          "on": {
+            "field_id": "tot_cl",
+            "expected_raw": "775274",
+            "predicted_raw": "775274",
+            "correct": true,
+            "error_type": null,
+            "silent_wrong": false,
+            "match_mode": "column_aware_table"
+          }
+        },
+        "aact_cl": {
+          "off": {
+            "field_id": "aact_cl",
+            "expected_raw": "54",
+            "predicted_raw": "54",
+            "correct": true,
+            "error_type": null,
+            "silent_wrong": false,
+            "match_mode": "column_aware_table"
+          },
+          "on": {
+            "field_id": "aact_cl",
+            "expected_raw": "54",
+            "predicted_raw": "54",
+            "correct": true,
+            "error_type": null,
+            "silent_wrong": false,
+            "match_mode": "column_aware_table"
+          }
+        }
+      },
+      "elapsed_ms_off": 13.0,
+      "elapsed_ms_on": 4375.6
+    },
+    {
+      "document_id": "0000700275_2026_08_ZL_18_374_04092026171615.pdf",
+      "role": "liv52_closing",
+      "off_correct": "20/21",
+      "on_correct": "21/21",
+      "deltas": [
+        {
+          "field_id": "liv100_cl",
+          "expected": "37",
+          "off_pred": "162",
+          "on_pred": "37",
+          "off_correct": false,
+          "on_correct": true,
+          "off_error": "WRONG_VALUE",
+          "on_error": null
+        }
+      ],
+      "repair_types_on": [
+        "liv_printed_closing_ocr"
+      ],
+      "watch_field_detail": {
+        "liv100_cl": {
+          "off": {
+            "field_id": "liv100_cl",
+            "expected_raw": "37",
+            "predicted_raw": "162",
+            "correct": false,
+            "error_type": "WRONG_VALUE",
+            "silent_wrong": true,
+            "match_mode": "column_aware_table"
+          },
+          "on": {
+            "field_id": "liv100_cl",
+            "expected_raw": "37",
+            "predicted_raw": "37",
+            "correct": true,
+            "error_type": null,
+            "silent_wrong": false,
+            "match_mode": "column_aware_table"
+          }
+        }
+      },
+      "elapsed_ms_off": 19.3,
+      "elapsed_ms_on": 7498.2
+    },
+    {
+      "document_id": "0000700084_2026_08_ZL_06_8236_03092026155136.pdf",
+      "role": "ordinary_compatible",
+      "off_correct": "15/15",
+      "on_correct": "15/15",
+      "deltas": [],
+      "repair_types_on": [],
+      "watch_field_detail": {},
+      "elapsed_ms_off": 22.9,
+      "elapsed_ms_on": 7889.3
+    },
+    {
+      "document_id": "0000700209_2026_08_ZL_18_374_04092026060313.pdf",
+      "role": "negative_blank_unresolved",
+      "off_correct": "14/16",
+      "on_correct": "14/16",
+      "deltas": [],
+      "repair_types_on": [],
+      "watch_field_detail": {
+        "aact_op": {
+          "off": {
+            "field_id": "aact_op",
+            "expected_raw": "69",
+            "predicted_raw": null,
+            "correct": false,
+            "error_type": "MISSING",
+            "silent_wrong": false,
+            "match_mode": null
+          },
+          "on": {
+            "field_id": "aact_op",
+            "expected_raw": "69",
+            "predicted_raw": null,
+            "correct": false,
+            "error_type": "MISSING",
+            "silent_wrong": false,
+            "match_mode": null
+          }
+        },
+        "aact_cl": {
+          "off": {
+            "field_id": "aact_cl",
+            "expected_raw": "69",
+            "predicted_raw": null,
+            "correct": false,
+            "error_type": "MISSING",
+            "silent_wrong": false,
+            "match_mode": null
+          },
+          "on": {
+            "field_id": "aact_cl",
+            "expected_raw": "69",
+            "predicted_raw": null,
+            "correct": false,
+            "error_type": "MISSING",
+            "silent_wrong": false,
+            "match_mode": null
+          }
+        }
+      },
+      "elapsed_ms_off": 18.5,
+      "elapsed_ms_on": 6571.8
+    }
+  ]
+}

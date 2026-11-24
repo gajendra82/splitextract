@@ -17,4 +17,4 @@ Environment: **`/var/www/html/.env`** (shared)
 
 See [docs/SYSTEMD_SETUP.md](../docs/SYSTEMD_SETUP.md) for full details.
 
-tmux (`start-tmux.sh`) remains supported for legacy split-extract deployments — do not run both on the same port.
+tmux (`deploy/start-tmux.sh`) remains supported for legacy split-extract deployments — do not run both on the same port.

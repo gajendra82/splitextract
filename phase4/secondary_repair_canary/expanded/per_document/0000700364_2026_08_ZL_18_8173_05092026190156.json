@@ -1,0 +1,364 @@
+{
+  "document_id": "0000700364_2026_08_ZL_18_8173_05092026190156.pdf",
+  "role": "compatible_himalaya_qty",
+  "source_path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700364_2026_08_ZL_18_8173_05092026190156.pdf",
+  "off": {
+    "correct_count": 20,
+    "field_count": 20,
+    "silent_wrong_count": 0,
+    "missing_count": 0,
+    "secondary_ocr_ms": 4.7,
+    "pipeline_helper_ms": 4.9,
+    "text_sha": "b158dd08307ed0e0",
+    "repair_report": {
+      "document_id": "0000700364_2026_08_ZL_18_8173_05092026190156.pdf",
+      "repairs": [],
+      "unresolved": [
+        {
+          "reason": "secondary_repair_disabled"
+        }
+      ]
+    }
+  },
+  "on": {
+    "correct_count": 20,
+    "field_count": 20,
+    "silent_wrong_count": 0,
+    "missing_count": 0,
+    "secondary_ocr_ms": 1521.8,
+    "pipeline_helper_ms": 1454.2,
+    "text_sha": "b158dd08307ed0e0",
+    "repair_report": {
+      "document_id": "0000700364_2026_08_ZL_18_8173_05092026190156.pdf",
+      "repairs": [],
+      "unresolved": []
+    },
+    "pipeline_text_matches": true
+  },
+  "deltas": [],
+  "repair_types_on": [],
+  "matches_off": [
+    {
+      "field_id": "vendor",
+      "expected_raw": "SANTOSH MEDICAL AGENCY",
+      "predicted_raw": "SANTOSH MEDICAL AGENCY",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_op",
+      "expected_raw": "Op.Bal. Qty.",
+      "predicted_raw": "Op.Bal. Qty.",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_iss",
+      "expected_raw": "Issue Qty.",
+      "predicted_raw": "Issue Qty.",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_cl",
+      "expected_raw": "Closing Balance",
+      "predicted_raw": "Closing Balance",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "aact_op",
+      "expected_raw": "22",
+      "predicted_raw": "22",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "aact_iss",
+      "expected_raw": "8",
+      "predicted_raw": "8",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "aact_cl",
+      "expected_raw": "14",
+      "predicted_raw": "14",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "conf_op",
+      "expected_raw": "21",
+      "predicted_raw": "21",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "conf_rec",
+      "expected_raw": "100",
+      "predicted_raw": "100",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "conf_iss",
+      "expected_raw": "32",
+      "predicted_raw": "32",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "conf_cl",
+      "expected_raw": "89",
+      "predicted_raw": "89",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv100_op",
+      "expected_raw": "76",
+      "predicted_raw": "76",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv100_rec",
+      "expected_raw": "70",
+      "predicted_raw": "70",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv100_iss",
+      "expected_raw": "92",
+      "predicted_raw": "92",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv100_cl",
+      "expected_raw": "54",
+      "predicted_raw": "54",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tent_op",
+      "expected_raw": "185",
+      "predicted_raw": "185",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tent_iss",
+      "expected_raw": "48",
+      "predicted_raw": "48",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tent_cl",
+      "expected_raw": "137",
+      "predicted_raw": "137",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tot_op",
+      "expected_raw": "157673",
+      "predicted_raw": "157673",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tot_cl",
+      "expected_raw": "97537",
+      "predicted_raw": "97537",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    }
+  ],
+  "matches_on": [
+    {
+      "field_id": "vendor",
+      "expected_raw": "SANTOSH MEDICAL AGENCY",
+      "predicted_raw": "SANTOSH MEDICAL AGENCY",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_op",
+      "expected_raw": "Op.Bal. Qty.",
+      "predicted_raw": "Op.Bal. Qty.",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_iss",
+      "expected_raw": "Issue Qty.",
+      "predicted_raw": "Issue Qty.",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_cl",
+      "expected_raw": "Closing Balance",
+      "predicted_raw": "Closing Balance",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "aact_op",
+      "expected_raw": "22",
+      "predicted_raw": "22",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "aact_iss",
+      "expected_raw": "8",
+      "predicted_raw": "8",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "aact_cl",
+      "expected_raw": "14",
+      "predicted_raw": "14",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "conf_op",
+      "expected_raw": "21",
+      "predicted_raw": "21",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "conf_rec",
+      "expected_raw": "100",
+      "predicted_raw": "100",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "conf_iss",
+      "expected_raw": "32",
+      "predicted_raw": "32",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "conf_cl",
+      "expected_raw": "89",
+      "predicted_raw": "89",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv100_op",
+      "expected_raw": "76",
+      "predicted_raw": "76",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv100_rec",
+      "expected_raw": "70",
+      "predicted_raw": "70",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv100_iss",
+      "expected_raw": "92",
+      "predicted_raw": "92",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv100_cl",
+      "expected_raw": "54",
+      "predicted_raw": "54",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tent_op",
+      "expected_raw": "185",
+      "predicted_raw": "185",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tent_iss",
+      "expected_raw": "48",
+      "predicted_raw": "48",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tent_cl",
+      "expected_raw": "137",
+      "predicted_raw": "137",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tot_op",
+      "expected_raw": "157673",
+      "predicted_raw": "157673",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tot_cl",
+      "expected_raw": "97537",
+      "predicted_raw": "97537",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    }
+  ]
+}

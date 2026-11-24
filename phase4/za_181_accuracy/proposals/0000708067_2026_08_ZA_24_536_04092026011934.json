@@ -1,0 +1,1779 @@
+{
+  "document_id": "0000708067_2026_08_ZA_24_536_04092026011934.png",
+  "source_file": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000708067_2026_08_ZA_24_536_04092026011934.png",
+  "source_file_exists": true,
+  "verification_status": "unverified",
+  "annotation_origin": "AI_PROPOSED",
+  "ai_generated": true,
+  "human_verified": false,
+  "rows": [
+    {
+      "row_id": "r01",
+      "row_index": 1,
+      "product_name": {
+        "raw": "BONNISAN DROPS",
+        "normalized": "BONNISAN DROPS",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "30ml",
+        "normalized": "30ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opn\n(Q+F)",
+          "semantic": "opening_qty",
+          "raw": "18.00",
+          "normalized": 18.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Opn\nAmt(Q+F)",
+          "semantic": "not_quantity",
+          "raw": "1208.00",
+          "normalized": 1208.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rec\n(Q+F)",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 4,
+          "printed_header": "Rec\nAmt",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 5,
+          "printed_header": "Issue\n(Q+F)",
+          "semantic": "sales_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 6,
+          "printed_header": "Issue\nAmt",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 7,
+          "printed_header": "Bal\n(Q+F)",
+          "semantic": "closing_qty",
+          "raw": "18.00",
+          "normalized": 18.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "Bal\nAmt(Q+F)",
+          "semantic": "not_quantity",
+          "raw": "1208.00",
+          "normalized": 1208.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r02",
+      "row_index": 2,
+      "product_name": {
+        "raw": "BONNISAN LIQUID",
+        "normalized": "BONNISAN LIQUID",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "100ml",
+        "normalized": "100ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opn\n(Q+F)",
+          "semantic": "opening_qty",
+          "raw": "2.00",
+          "normalized": 2.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Opn\nAmt(Q+F)",
+          "semantic": "not_quantity",
+          "raw": "91.44",
+          "normalized": 91.44,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rec\n(Q+F)",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 4,
+          "printed_header": "Rec\nAmt",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 5,
+          "printed_header": "Issue\n(Q+F)",
+          "semantic": "sales_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 6,
+          "printed_header": "Issue\nAmt",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 7,
+          "printed_header": "Bal\n(Q+F)",
+          "semantic": "closing_qty",
+          "raw": "2.00",
+          "normalized": 2.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "Bal\nAmt(Q+F)",
+          "semantic": "not_quantity",
+          "raw": "91.44",
+          "normalized": 91.44,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r03",
+      "row_index": 3,
+      "product_name": {
+        "raw": "CYSTONE TAB",
+        "normalized": "CYSTONE TAB",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60T",
+        "normalized": "60T",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opn\n(Q+F)",
+          "semantic": "opening_qty",
+          "raw": "87.00",
+          "normalized": 87.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Opn\nAmt(Q+F)",
+          "semantic": "not_quantity",
+          "raw": "14279.31",
+          "normalized": 14279.31,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rec\n(Q+F)",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 4,
+          "printed_header": "Rec\nAmt",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 5,
+          "printed_header": "Issue\n(Q+F)",
+          "semantic": "sales_qty",
+          "raw": "7.00",
+          "normalized": 7.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Issue\nAmt",
+          "semantic": "not_quantity",
+          "raw": "1114.47",
+          "normalized": 1114.47,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Bal\n(Q+F)",
+          "semantic": "closing_qty",
+          "raw": "80.00",
+          "normalized": 80.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "Bal\nAmt(Q+F)",
+          "semantic": "not_quantity",
+          "raw": "13130.40",
+          "normalized": 13130.4,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r04",
+      "row_index": 4,
+      "product_name": {
+        "raw": "CYSTONE SYRUP 200ml",
+        "normalized": "CYSTONE SYRUP 200ml",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "1S",
+        "normalized": "1S",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opn\n(Q+F)",
+          "semantic": "opening_qty",
+          "raw": "4.00",
+          "normalized": 4.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Opn\nAmt(Q+F)",
+          "semantic": "not_quantity",
+          "raw": "671.20",
+          "normalized": 671.2,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rec\n(Q+F)",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 4,
+          "printed_header": "Rec\nAmt",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 5,
+          "printed_header": "Issue\n(Q+F)",
+          "semantic": "sales_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 6,
+          "printed_header": "Issue\nAmt",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 7,
+          "printed_header": "Bal\n(Q+F)",
+          "semantic": "closing_qty",
+          "raw": "4.00",
+          "normalized": 4.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "Bal\nAmt(Q+F)",
+          "semantic": "not_quantity",
+          "raw": "671.20",
+          "normalized": 671.2,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r05",
+      "row_index": 5,
+      "product_name": {
+        "raw": "EVECARE SYRUP 200ml",
+        "normalized": "EVECARE SYRUP 200ml",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "1S",
+        "normalized": "1S",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opn\n(Q+F)",
+          "semantic": "opening_qty",
+          "raw": "28.00",
+          "normalized": 28.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Opn\nAmt(Q+F)",
+          "semantic": "not_quantity",
+          "raw": "4065.88",
+          "normalized": 4065.88,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rec\n(Q+F)",
+          "semantic": "receipt_qty",
+          "raw": "28.00",
+          "normalized": 28.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Rec\nAmt",
+          "semantic": "not_quantity",
+          "raw": "3862.60",
+          "normalized": 3862.6,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Issue\n(Q+F)",
+          "semantic": "sales_qty",
+          "raw": "3.00",
+          "normalized": 3.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Issue\nAmt",
+          "semantic": "not_quantity",
+          "raw": "413.85",
+          "normalized": 413.85,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Bal\n(Q+F)",
+          "semantic": "closing_qty",
+          "raw": "53.00",
+          "normalized": 53.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "Bal\nAmt(Q+F)",
+          "semantic": "not_quantity",
+          "raw": "7696.13",
+          "normalized": 7696.13,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r06",
+      "row_index": 6,
+      "product_name": {
+        "raw": "HIORA GA GEL 15ml",
+        "normalized": "HIORA GA GEL 15ml",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "15ML",
+        "normalized": "15ML",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opn\n(Q+F)",
+          "semantic": "opening_qty",
+          "raw": "50.00",
+          "normalized": 50.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Opn\nAmt(Q+F)",
+          "semantic": "not_quantity",
+          "raw": "3478.50",
+          "normalized": 3478.5,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rec\n(Q+F)",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 4,
+          "printed_header": "Rec\nAmt",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 5,
+          "printed_header": "Issue\n(Q+F)",
+          "semantic": "sales_qty",
+          "raw": "20.00",
+          "normalized": 20.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Issue\nAmt",
+          "semantic": "not_quantity",
+          "raw": "1321.80",
+          "normalized": 1321.8,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Bal\n(Q+F)",
+          "semantic": "closing_qty",
+          "raw": "30.00",
+          "normalized": 30.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "Bal\nAmt(Q+F)",
+          "semantic": "not_quantity",
+          "raw": "2087.10",
+          "normalized": 2087.1,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r07",
+      "row_index": 7,
+      "product_name": {
+        "raw": "HIORA K ToothPaste 50g",
+        "normalized": "HIORA K ToothPaste 50g",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "1S",
+        "normalized": "1S",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opn\n(Q+F)",
+          "semantic": "opening_qty",
+          "raw": "20.00",
+          "normalized": 20.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Opn\nAmt(Q+F)",
+          "semantic": "not_quantity",
+          "raw": "1431.80",
+          "normalized": 1431.8,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rec\n(Q+F)",
+          "semantic": "receipt_qty",
+          "raw": "50.00",
+          "normalized": 50.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Rec\nAmt",
+          "semantic": "not_quantity",
+          "raw": "3400.50",
+          "normalized": 3400.5,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Issue\n(Q+F)",
+          "semantic": "sales_qty",
+          "raw": "20.00",
+          "normalized": 20.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Issue\nAmt",
+          "semantic": "not_quantity",
+          "raw": "1331.60",
+          "normalized": 1331.6,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Bal\n(Q+F)",
+          "semantic": "closing_qty",
+          "raw": "50.00",
+          "normalized": 50.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "Bal\nAmt(Q+F)",
+          "semantic": "not_quantity",
+          "raw": "3579.50",
+          "normalized": 3579.5,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r08",
+      "row_index": 8,
+      "product_name": {
+        "raw": "LIV. 52 DROPS",
+        "normalized": "LIV. 52 DROPS",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60ml",
+        "normalized": "60ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opn\n(Q+F)",
+          "semantic": "opening_qty",
+          "raw": "53.00",
+          "normalized": 53.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Opn\nAmt(Q+F)",
+          "semantic": "not_quantity",
+          "raw": "5190.82",
+          "normalized": 5190.82,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rec\n(Q+F)",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 4,
+          "printed_header": "Rec\nAmt",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 5,
+          "printed_header": "Issue\n(Q+F)",
+          "semantic": "sales_qty",
+          "raw": "10.00",
+          "normalized": 10.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Issue\nAmt",
+          "semantic": "not_quantity",
+          "raw": "930.40",
+          "normalized": 930.4,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Bal\n(Q+F)",
+          "semantic": "closing_qty",
+          "raw": "43.00",
+          "normalized": 43.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "Bal\nAmt(Q+F)",
+          "semantic": "not_quantity",
+          "raw": "4211.42",
+          "normalized": 4211.42,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r09",
+      "row_index": 9,
+      "product_name": {
+        "raw": "LIV.52 DS",
+        "normalized": "LIV.52 DS",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60T",
+        "normalized": "60T",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opn\n(Q+F)",
+          "semantic": "opening_qty",
+          "raw": "2.00",
+          "normalized": 2.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Opn\nAmt(Q+F)",
+          "semantic": "not_quantity",
+          "raw": "379.60",
+          "normalized": 379.6,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rec\n(Q+F)",
+          "semantic": "receipt_qty",
+          "raw": "100.00",
+          "normalized": 100.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Rec\nAmt",
+          "semantic": "not_quantity",
+          "raw": "18411.00",
+          "normalized": 18411.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Issue\n(Q+F)",
+          "semantic": "sales_qty",
+          "raw": "5.00",
+          "normalized": 5.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Issue\nAmt",
+          "semantic": "not_quantity",
+          "raw": "920.55",
+          "normalized": 920.55,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Bal\n(Q+F)",
+          "semantic": "closing_qty",
+          "raw": "97.00",
+          "normalized": 97.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "Bal\nAmt(Q+F)",
+          "semantic": "not_quantity",
+          "raw": "18410.60",
+          "normalized": 18410.6,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r10",
+      "row_index": 10,
+      "product_name": {
+        "raw": "LIV.52 DS SYRUP 100ml",
+        "normalized": "LIV.52 DS SYRUP 100ml",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "1X1",
+        "normalized": "1X1",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opn\n(Q+F)",
+          "semantic": "opening_qty",
+          "raw": "10.00",
+          "normalized": 10.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Opn\nAmt(Q+F)",
+          "semantic": "not_quantity",
+          "raw": "1393.00",
+          "normalized": 1393.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rec\n(Q+F)",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 4,
+          "printed_header": "Rec\nAmt",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 5,
+          "printed_header": "Issue\n(Q+F)",
+          "semantic": "sales_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 6,
+          "printed_header": "Issue\nAmt",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 7,
+          "printed_header": "Bal\n(Q+F)",
+          "semantic": "closing_qty",
+          "raw": "10.00",
+          "normalized": 10.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "Bal\nAmt(Q+F)",
+          "semantic": "not_quantity",
+          "raw": "1393.00",
+          "normalized": 1393.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r11",
+      "row_index": 11,
+      "product_name": {
+        "raw": "LIV.52 DS SYRUP 200ML",
+        "normalized": "LIV.52 DS SYRUP 200ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "1S",
+        "normalized": "1S",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opn\n(Q+F)",
+          "semantic": "opening_qty",
+          "raw": "90.00",
+          "normalized": 90.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Opn\nAmt(Q+F)",
+          "semantic": "not_quantity",
+          "raw": "21336.30",
+          "normalized": 21336.3,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rec\n(Q+F)",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 4,
+          "printed_header": "Rec\nAmt",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 5,
+          "printed_header": "Issue\n(Q+F)",
+          "semantic": "sales_qty",
+          "raw": "27.00",
+          "normalized": 27.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Issue\nAmt",
+          "semantic": "not_quantity",
+          "raw": "6208.92",
+          "normalized": 6208.92,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Bal\n(Q+F)",
+          "semantic": "closing_qty",
+          "raw": "63.00",
+          "normalized": 63.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "Bal\nAmt(Q+F)",
+          "semantic": "not_quantity",
+          "raw": "14935.41",
+          "normalized": 14935.41,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r12",
+      "row_index": 12,
+      "product_name": {
+        "raw": "LUKOL SYRUP",
+        "normalized": "LUKOL SYRUP",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200ml",
+        "normalized": "200ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opn\n(Q+F)",
+          "semantic": "opening_qty",
+          "raw": "8.00",
+          "normalized": 8.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Opn\nAmt(Q+F)",
+          "semantic": "not_quantity",
+          "raw": "1134.48",
+          "normalized": 1134.48,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rec\n(Q+F)",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 4,
+          "printed_header": "Rec\nAmt",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 5,
+          "printed_header": "Issue\n(Q+F)",
+          "semantic": "sales_qty",
+          "raw": "2.00",
+          "normalized": 2.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Issue\nAmt",
+          "semantic": "not_quantity",
+          "raw": "255.26",
+          "normalized": 255.26,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Bal\n(Q+F)",
+          "semantic": "closing_qty",
+          "raw": "6.00",
+          "normalized": 6.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "Bal\nAmt(Q+F)",
+          "semantic": "not_quantity",
+          "raw": "850.86",
+          "normalized": 850.86,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r13",
+      "row_index": 13,
+      "product_name": {
+        "raw": "LUKOL TABS",
+        "normalized": "LUKOL TABS",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "60T",
+        "normalized": "60T",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opn\n(Q+F)",
+          "semantic": "opening_qty",
+          "raw": "43.00",
+          "normalized": 43.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Opn\nAmt(Q+F)",
+          "semantic": "not_quantity",
+          "raw": "7347.84",
+          "normalized": 7347.84,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rec\n(Q+F)",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 4,
+          "printed_header": "Rec\nAmt",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 5,
+          "printed_header": "Issue\n(Q+F)",
+          "semantic": "sales_qty",
+          "raw": "8.00",
+          "normalized": 8.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Issue\nAmt",
+          "semantic": "not_quantity",
+          "raw": "1271.36",
+          "normalized": 1271.36,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Bal\n(Q+F)",
+          "semantic": "closing_qty",
+          "raw": "35.00",
+          "normalized": 35.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "Bal\nAmt(Q+F)",
+          "semantic": "not_quantity",
+          "raw": "5980.80",
+          "normalized": 5980.8,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r14",
+      "row_index": 14,
+      "product_name": {
+        "raw": "MENTAT SYRUP",
+        "normalized": "MENTAT SYRUP",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200ml",
+        "normalized": "200ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opn\n(Q+F)",
+          "semantic": "opening_qty",
+          "raw": "18.00",
+          "normalized": 18.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Opn\nAmt(Q+F)",
+          "semantic": "not_quantity",
+          "raw": "3124.44",
+          "normalized": 3124.44,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rec\n(Q+F)",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 4,
+          "printed_header": "Rec\nAmt",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 5,
+          "printed_header": "Issue\n(Q+F)",
+          "semantic": "sales_qty",
+          "raw": "3.00",
+          "normalized": 3.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Issue\nAmt",
+          "semantic": "not_quantity",
+          "raw": "520.74",
+          "normalized": 520.74,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Bal\n(Q+F)",
+          "semantic": "closing_qty",
+          "raw": "15.00",
+          "normalized": 15.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "Bal\nAmt(Q+F)",
+          "semantic": "not_quantity",
+          "raw": "2603.70",
+          "normalized": 2603.7,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r15",
+      "row_index": 15,
+      "product_name": {
+        "raw": "RENALKA SYRUP 200ml",
+        "normalized": "RENALKA SYRUP 200ml",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": "200ml",
+        "normalized": "200ml",
+        "status": "ai_proposed"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opn\n(Q+F)",
+          "semantic": "opening_qty",
+          "raw": "25.00",
+          "normalized": 25.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Opn\nAmt(Q+F)",
+          "semantic": "not_quantity",
+          "raw": "3546.00",
+          "normalized": 3546.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rec\n(Q+F)",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 4,
+          "printed_header": "Rec\nAmt",
+          "semantic": "not_quantity",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 5,
+          "printed_header": "Issue\n(Q+F)",
+          "semantic": "sales_qty",
+          "raw": "9.00",
+          "normalized": 9.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Issue\nAmt",
+          "semantic": "not_quantity",
+          "raw": "1276.56",
+          "normalized": 1276.56,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Bal\n(Q+F)",
+          "semantic": "closing_qty",
+          "raw": "16.00",
+          "normalized": 16.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "Bal\nAmt(Q+F)",
+          "semantic": "not_quantity",
+          "raw": "2269.44",
+          "normalized": 2269.44,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r16",
+      "row_index": 16,
+      "product_name": {
+        "raw": "Firm Total",
+        "normalized": "Firm Total",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opn\n(Q+F)",
+          "semantic": "opening_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 2,
+          "printed_header": "Opn\nAmt(Q+F)",
+          "semantic": "not_quantity",
+          "raw": "68678.61",
+          "normalized": 68678.61,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Rec\n(Q+F)",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 4,
+          "printed_header": "Rec\nAmt",
+          "semantic": "not_quantity",
+          "raw": "25674.10",
+          "normalized": 25674.1,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Issue\n(Q+F)",
+          "semantic": "sales_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 6,
+          "printed_header": "Issue\nAmt",
+          "semantic": "not_quantity",
+          "raw": "15565.51",
+          "normalized": 15565.51,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "Bal\n(Q+F)",
+          "semantic": "closing_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 8,
+          "printed_header": "Bal\nAmt(Q+F)",
+          "semantic": "not_quantity",
+          "raw": "79119.00",
+          "normalized": 79119.0,
+          "status": "uncertain"
+        }
+      ]
+    }
+  ],
+  "headers": [],
+  "notes": [
+    "AI_PROPOSED from the original image only. Not verified. Named quantities are set only when a printed header was copied. Blank cells were not stored as zero."
+  ],
+  "failure": null,
+  "vision_model": "gemini-2.5-flash",
+  "vision_input": "original",
+  "ocr_used_as_label": false
+}

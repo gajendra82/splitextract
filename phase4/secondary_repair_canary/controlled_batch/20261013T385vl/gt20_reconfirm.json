@@ -1,0 +1,222 @@
+{
+  "decision": "PASS",
+  "totals": {
+    "fields": 331,
+    "off_correct": 142,
+    "on_correct": 147,
+    "verified_corrections": 5,
+    "regressions": 0,
+    "incorrect_on": 0,
+    "unresolved_missing_on": 0
+  },
+  "stop_reasons": [],
+  "documents": [
+    {
+      "document_id": "0000700084_2026_08_ZL_06_8236_03092026155136.pdf",
+      "deltas": [],
+      "elapsed_ms": 7488.364399992861,
+      "overlay_on": null
+    },
+    {
+      "document_id": "0000700124_2026_08_ZL_06_521_02092026204703.pdf",
+      "deltas": [],
+      "elapsed_ms": 4509.087600003113,
+      "overlay_on": null
+    },
+    {
+      "document_id": "0000700209_2026_08_ZL_18_374_04092026060313.pdf",
+      "deltas": [],
+      "elapsed_ms": 4257.266700005857,
+      "overlay_on": null
+    },
+    {
+      "document_id": "0000700275_2026_08_ZL_18_374_04092026171615.pdf",
+      "deltas": [
+        {
+          "field_id": "liv100_cl",
+          "off": "162",
+          "on": "37",
+          "expected": "37"
+        }
+      ],
+      "elapsed_ms": 4692.606899989187,
+      "overlay_on": {
+        "applied_count": 1,
+        "fields": [
+          {
+            "product_key": "LIV-52 SYRUP",
+            "field": "closing_qty",
+            "to": 37.0,
+            "repair": "liv_printed_closing_ocr"
+          }
+        ]
+      }
+    },
+    {
+      "document_id": "0000700308_2026_08_ZL_18_8175_03092026072320.jpg",
+      "deltas": [],
+      "elapsed_ms": 6939.570300004561,
+      "overlay_on": null
+    },
+    {
+      "document_id": "0000700317_2026_08_ZL_18_374_02092026171443.pdf",
+      "deltas": [],
+      "elapsed_ms": 1640.4230000043754,
+      "overlay_on": null
+    },
+    {
+      "document_id": "0000700346_2026_08_ZL_18_8189_05092026025159.pdf",
+      "deltas": [],
+      "elapsed_ms": 6748.333600000478,
+      "overlay_on": null
+    },
+    {
+      "document_id": "0000700358_2026_08_ZL_18_8173_05092026185826.pdf",
+      "deltas": [],
+      "elapsed_ms": 1634.4969000056153,
+      "overlay_on": null
+    },
+    {
+      "document_id": "0000700364_2026_08_ZL_18_8173_05092026190156.pdf",
+      "deltas": [],
+      "elapsed_ms": 2652.300399990054,
+      "overlay_on": null
+    },
+    {
+      "document_id": "0000700406_2026_08_ZL_10_384_05092026140711.jpg",
+      "deltas": [],
+      "elapsed_ms": 1373.8233000040054,
+      "overlay_on": null
+    },
+    {
+      "document_id": "0000700434_2026_08_ZL_10_386_05092026034503.jpg",
+      "deltas": [],
+      "elapsed_ms": 2602.742399991257,
+      "overlay_on": null
+    },
+    {
+      "document_id": "0000700835_2026_08_ZL_25_447_03092026105819.jpeg",
+      "deltas": [],
+      "elapsed_ms": 997.2215000016149,
+      "overlay_on": null
+    },
+    {
+      "document_id": "0000701012_2026_08_ZL_11_423_03092026183736.jpg",
+      "deltas": [],
+      "elapsed_ms": 2370.336899999529,
+      "overlay_on": null
+    },
+    {
+      "document_id": "0000701078_2026_08_ZL_03_362_05092026080346.jpeg",
+      "deltas": [
+        {
+          "field_id": "aact_close",
+          "off": "89",
+          "on": "69",
+          "expected": "69"
+        },
+        {
+          "field_id": "talekt_exp",
+          "off": "0",
+          "on": "12",
+          "expected": "12"
+        }
+      ],
+      "elapsed_ms": 10776.686900004279,
+      "overlay_on": {
+        "applied_count": 2,
+        "fields": [
+          {
+            "product_key": "AACTARIL SOAP",
+            "field": "closing_qty",
+            "to": 69.0,
+            "repair": "himalaya_row_anchor_ocr"
+          },
+          {
+            "product_key": "TALEKT CAPS.",
+            "field": "expiry_breakage_qty",
+            "to": 12.0,
+            "repair": "himalaya_row_anchor_ocr"
+          }
+        ]
+      }
+    },
+    {
+      "document_id": "0000701151_2026_08_ZL_14_361_03092026025650.jpg",
+      "deltas": [
+        {
+          "field_id": "tot_op",
+          "off": null,
+          "on": "834578",
+          "expected": "834578"
+        },
+        {
+          "field_id": "tot_cl",
+          "off": null,
+          "on": "775274",
+          "expected": "775274"
+        }
+      ],
+      "elapsed_ms": 2307.8564000024926,
+      "overlay_on": {
+        "applied_count": 4,
+        "fields": [
+          {
+            "product_key": "TOTAL",
+            "field": "opening_qty",
+            "to": 834578.0,
+            "repair": "total_footer_ocr"
+          },
+          {
+            "product_key": "TOTAL",
+            "field": "receipts_qty",
+            "to": 410457.0,
+            "repair": "total_footer_ocr"
+          },
+          {
+            "product_key": "TOTAL",
+            "field": "sales_qty",
+            "to": 468994.0,
+            "repair": "total_footer_ocr"
+          },
+          {
+            "product_key": "TOTAL",
+            "field": "closing_qty",
+            "to": 775274.0,
+            "repair": "total_footer_ocr"
+          }
+        ]
+      }
+    },
+    {
+      "document_id": "0000701275_2026_08_ZL_03_360_02092026152716.jpg",
+      "deltas": [],
+      "elapsed_ms": 1983.3892000024207,
+      "overlay_on": null
+    },
+    {
+      "document_id": "0000701851_2026_08_ZL_20_302_03092026134940.jpg",
+      "deltas": [],
+      "elapsed_ms": 1658.4596000029705,
+      "overlay_on": null
+    },
+    {
+      "document_id": "0000701864_2026_08_ZL_20_5015_03092026091037.jpg",
+      "deltas": [],
+      "elapsed_ms": 1640.6996000005165,
+      "overlay_on": null
+    },
+    {
+      "document_id": "0000701904_2026_08_ZL_20_8227_05092026154848.jpg",
+      "deltas": [],
+      "elapsed_ms": 3697.4043999944115,
+      "overlay_on": null
+    },
+    {
+      "document_id": "0000704337_2026_08_ZL_24_259_03092026042213.pdf",
+      "deltas": [],
+      "elapsed_ms": 2617.6548000075854,
+      "overlay_on": null
+    }
+  ]
+}

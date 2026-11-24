@@ -1,0 +1,756 @@
+{
+  "count": 31,
+  "by_root_cause": {
+    "COLUMN_DROPPED": 3,
+    "UNKNOWN": 26,
+    "PARSER_EXTRACTION_ERROR": 2
+  },
+  "by_method": {
+    "pdf_text_gemini": 1,
+    "zandra_stock_sale_vision": 4,
+    "swil_receipt_pur_value_vision": 3,
+    "product_wise_stock_statement_pdf": 1,
+    "pdf_split_page_images": 3,
+    "swilerp_retrn_sales_stock": 1,
+    "pack_op_pur_bal_stock_sale_vision": 3,
+    "pharma_hub_jun_jul_photo": 2,
+    "gemini_vision": 3,
+    "gemini_extraction_fallback": 4,
+    "marg_closing_mexp_photo": 1,
+    "pack_opening_receipt_issue_mexp": 1,
+    "generic": 2,
+    "main_stock_sales_statement": 1,
+    "marg_erp_xls_receive_issue_value": 1
+  },
+  "documents": [
+    {
+      "document": "0000700017_2026_08_ZL_06_476_02092026121836.pdf",
+      "file_type": ".pdf",
+      "extraction_method": "pdf_text_gemini",
+      "selected_profile": "generic",
+      "selected_layout": null,
+      "ocr_used": false,
+      "ocr_quality": 75,
+      "parser": "pdf_text_gemini",
+      "validation_result": "FAIL",
+      "identity_failures": [
+        {
+          "product": "AACTARIL SOAP",
+          "source": {
+            "opening": 40,
+            "pur_qty": 0,
+            "orec_qty": 2,
+            "sale_qty": 11,
+            "oiss_qty": 0,
+            "closing": 31
+          },
+          "parser": {
+            "opening_qty": 40,
+            "receipts_qty": 0,
+            "sales_qty": 11,
+            "closing_qty": 31
+          },
+          "expected_if_orec_ignored": 29,
+          "source_closing_check": "40+0+2-11-0=31"
+        }
+      ],
+      "root_cause": "COLUMN_DROPPED",
+      "confidence": "high",
+      "evidence": [
+        "Embedded PDF text header is Op.Qty, Op.Val, Pur.Qty, Pur.Val, ORec.Qty, ORec.Val, Sale.Qty, Sale.Val, OIss.Qty, OIss.Val, Cl.Qty, Cl.Val.",
+        "All 49 reconstructed source rows satisfy opening + purchase + ORec - sale - OIss = closing.",
+        "21 of 49 rows differ from opening + purchase - sale by exactly ORec - OIss.",
+        "Named text parsers before Gemini do not claim this header.",
+        "_SALES_STATEMENT_TEXT_PROMPT maps Pur.Qnt/Purchase/Receipt to receipts_qty and does not name ORec.Qty or OIss.Qty.",
+        "_apply_parsed_sales_json copies receipts_qty and does not add an other-receipt field.",
+        "column_mapping.py has no ORec entry. Recovery mappings cannot invent it."
+      ]
+    },
+    {
+      "document": "0000700084_2026_08_ZL_06_8236_03092026155136.pdf",
+      "file_type": ".pdf",
+      "extraction_method": "zandra_stock_sale_vision",
+      "selected_profile": "generic",
+      "selected_layout": null,
+      "ocr_used": true,
+      "ocr_quality": 75,
+      "parser": "zandra_stock_sale_vision",
+      "validation_result": "FAIL",
+      "identity_failures": [],
+      "root_cause": "UNKNOWN",
+      "confidence": "low",
+      "evidence": [
+        "Phase 3 profile is generic and baseline validation is FAIL.",
+        "The canonical quantities were not compared to the printed row in this audit.",
+        "This document does not share the Op/Pur/ORec/OIss header, the Sale_Ret_Qty sheet, or the Marg purchase-detail trailer."
+      ]
+    },
+    {
+      "document": "0000700124_2026_08_ZL_06_521_02092026204703.pdf",
+      "file_type": ".pdf",
+      "extraction_method": "swil_receipt_pur_value_vision",
+      "selected_profile": "generic",
+      "selected_layout": "swil_receipt_pur_value",
+      "ocr_used": true,
+      "ocr_quality": 75,
+      "parser": "swil_receipt_pur_value_vision",
+      "validation_result": "FAIL",
+      "identity_failures": [],
+      "root_cause": "UNKNOWN",
+      "confidence": "low",
+      "evidence": [
+        "Phase 3 profile is generic and baseline validation is FAIL.",
+        "The canonical quantities were not compared to the printed row in this audit.",
+        "This document does not share the Op/Pur/ORec/OIss header, the Sale_Ret_Qty sheet, or the Marg purchase-detail trailer."
+      ]
+    },
+    {
+      "document": "0000700238_2026_08_ZL_18_377_03092026154026.pdf",
+      "file_type": ".pdf",
+      "extraction_method": "product_wise_stock_statement_pdf",
+      "selected_profile": "generic",
+      "selected_layout": null,
+      "ocr_used": false,
+      "ocr_quality": 100,
+      "parser": "product_wise_stock_statement_pdf",
+      "validation_result": "FAIL",
+      "identity_failures": [
+        {
+          "product": "row with receipts_free",
+          "parser": {
+            "opening_qty": 0,
+            "receipts_qty": 48,
+            "sales_qty": 50,
+            "closing_qty": 0,
+            "receipts_free": 2
+          },
+          "generic_expected": -2,
+          "delta": 2
+        },
+        {
+          "product": "row with issues_free_repl",
+          "parser": {
+            "opening_qty": 0,
+            "receipts_qty": 200,
+            "sales_qty": 172,
+            "closing_qty": 26,
+            "issues_free_repl": 2
+          },
+          "generic_expected": 28,
+          "delta": -2
+        }
+      ],
+      "root_cause": "COLUMN_DROPPED",
+      "confidence": "high",
+      "evidence": [
+        "Printed header includes Opening, Receipt, Free, Issues, Free, Goods, Closing, Sh.Exp.",
+        "Method product_wise_stock_statement_pdf is in _KNOWN_GENERIC_METHODS, so select_profile returns generic.",
+        "_parse_product_wise_stock_statement_pdf stores receipts_free and issues_free_repl on extra and does not add them to receipts_qty or sales_qty. Comment says free is not a period movement.",
+        "On the two failing rows the closing gap equals that free quantity. The product_wise equation opening+receipts-sales has the same gap, so changing only the profile id does not make these rows pass.",
+        "generic_expected_closing does not read receipts_free or issues_free_repl."
+      ]
+    },
+    {
+      "document": "0000700275_2026_08_ZL_18_374_04092026171615.pdf",
+      "file_type": ".pdf",
+      "extraction_method": "pdf_split_page_images",
+      "selected_profile": "generic",
+      "selected_layout": null,
+      "ocr_used": true,
+      "ocr_quality": 100,
+      "parser": "pdf_split_page_images",
+      "validation_result": "FAIL",
+      "identity_failures": [],
+      "root_cause": "UNKNOWN",
+      "confidence": "low",
+      "evidence": [
+        "Phase 3 profile is generic and baseline validation is FAIL.",
+        "The canonical quantities were not compared to the printed row in this audit.",
+        "This document does not share the Op/Pur/ORec/OIss header, the Sale_Ret_Qty sheet, or the Marg purchase-detail trailer."
+      ]
+    },
+    {
+      "document": "0000700317_2026_08_ZL_18_374_02092026171443.pdf",
+      "file_type": ".pdf",
+      "extraction_method": "swil_receipt_pur_value_vision",
+      "selected_profile": "generic",
+      "selected_layout": "swil_receipt_pur_value",
+      "ocr_used": true,
+      "ocr_quality": 75,
+      "parser": "swil_receipt_pur_value_vision",
+      "validation_result": "FAIL",
+      "identity_failures": [],
+      "root_cause": "UNKNOWN",
+      "confidence": "low",
+      "evidence": [
+        "Phase 3 profile is generic and baseline validation is FAIL.",
+        "The canonical quantities were not compared to the printed row in this audit.",
+        "This document does not share the Op/Pur/ORec/OIss header, the Sale_Ret_Qty sheet, or the Marg purchase-detail trailer."
+      ]
+    },
+    {
+      "document": "0000700358_2026_08_ZL_18_8173_05092026185826.pdf",
+      "file_type": ".pdf",
+      "extraction_method": "pdf_split_page_images",
+      "selected_profile": "generic",
+      "selected_layout": null,
+      "ocr_used": true,
+      "ocr_quality": 100,
+      "parser": "pdf_split_page_images",
+      "validation_result": "FAIL",
+      "identity_failures": [],
+      "root_cause": "UNKNOWN",
+      "confidence": "low",
+      "evidence": [
+        "Phase 3 profile is generic and baseline validation is FAIL.",
+        "The canonical quantities were not compared to the printed row in this audit.",
+        "This document does not share the Op/Pur/ORec/OIss header, the Sale_Ret_Qty sheet, or the Marg purchase-detail trailer."
+      ]
+    },
+    {
+      "document": "0000700379_2026_08_ZL_18_375_05092026174136.PDF",
+      "file_type": ".pdf",
+      "extraction_method": "swilerp_retrn_sales_stock",
+      "selected_profile": "generic",
+      "selected_layout": null,
+      "ocr_used": false,
+      "ocr_quality": 100,
+      "parser": "swilerp_retrn_sales_stock",
+      "validation_result": "FAIL",
+      "identity_failures": [],
+      "root_cause": "UNKNOWN",
+      "confidence": "low",
+      "evidence": [
+        "Phase 3 profile is generic and baseline validation is FAIL.",
+        "The canonical quantities were not compared to the printed row in this audit.",
+        "This document does not share the Op/Pur/ORec/OIss header, the Sale_Ret_Qty sheet, or the Marg purchase-detail trailer."
+      ]
+    },
+    {
+      "document": "0000700434_2026_08_ZL_10_386_05092026034503.jpg",
+      "file_type": ".jpg",
+      "extraction_method": "pack_op_pur_bal_stock_sale_vision",
+      "selected_profile": "generic",
+      "selected_layout": "pack_op_pur_bal_stock_sale",
+      "ocr_used": true,
+      "ocr_quality": 75,
+      "parser": "pack_op_pur_bal_stock_sale_vision",
+      "validation_result": "FAIL",
+      "identity_failures": [],
+      "root_cause": "UNKNOWN",
+      "confidence": "low",
+      "evidence": [
+        "Phase 3 profile is generic and baseline validation is FAIL.",
+        "The canonical quantities were not compared to the printed row in this audit.",
+        "This document does not share the Op/Pur/ORec/OIss header, the Sale_Ret_Qty sheet, or the Marg purchase-detail trailer."
+      ]
+    },
+    {
+      "document": "0000700481_2026_08_ZL_10_389_04092026110107.jpeg",
+      "file_type": ".jpeg",
+      "extraction_method": "pack_op_pur_bal_stock_sale_vision",
+      "selected_profile": "generic",
+      "selected_layout": "pack_op_pur_bal_stock_sale",
+      "ocr_used": true,
+      "ocr_quality": 75,
+      "parser": "pack_op_pur_bal_stock_sale_vision",
+      "validation_result": "FAIL",
+      "identity_failures": [],
+      "root_cause": "UNKNOWN",
+      "confidence": "low",
+      "evidence": [
+        "Phase 3 profile is generic and baseline validation is FAIL.",
+        "The canonical quantities were not compared to the printed row in this audit.",
+        "This document does not share the Op/Pur/ORec/OIss header, the Sale_Ret_Qty sheet, or the Marg purchase-detail trailer."
+      ]
+    },
+    {
+      "document": "0000700536_2026_08_ZL_10_383_04092026205548.jpg",
+      "file_type": ".jpg",
+      "extraction_method": "pharma_hub_jun_jul_photo",
+      "selected_profile": "generic",
+      "selected_layout": "pharma_hub_jun_jul",
+      "ocr_used": true,
+      "ocr_quality": 100,
+      "parser": "pharma_hub_jun_jul_photo",
+      "validation_result": "FAIL",
+      "identity_failures": [],
+      "root_cause": "UNKNOWN",
+      "confidence": "low",
+      "evidence": [
+        "Phase 3 profile is generic and baseline validation is FAIL.",
+        "The canonical quantities were not compared to the printed row in this audit.",
+        "This document does not share the Op/Pur/ORec/OIss header, the Sale_Ret_Qty sheet, or the Marg purchase-detail trailer."
+      ]
+    },
+    {
+      "document": "0000700624_2026_08_ZL_10_383_05092026055419.jpg",
+      "file_type": ".jpg",
+      "extraction_method": "pharma_hub_jun_jul_photo",
+      "selected_profile": "generic",
+      "selected_layout": "pharma_hub_jun_jul",
+      "ocr_used": true,
+      "ocr_quality": 100,
+      "parser": "pharma_hub_jun_jul_photo",
+      "validation_result": "FAIL",
+      "identity_failures": [],
+      "root_cause": "UNKNOWN",
+      "confidence": "low",
+      "evidence": [
+        "Phase 3 profile is generic and baseline validation is FAIL.",
+        "The canonical quantities were not compared to the printed row in this audit.",
+        "This document does not share the Op/Pur/ORec/OIss header, the Sale_Ret_Qty sheet, or the Marg purchase-detail trailer."
+      ]
+    },
+    {
+      "document": "0000701012_2026_08_ZL_11_423_03092026183736.jpg",
+      "file_type": ".jpg",
+      "extraction_method": "gemini_vision",
+      "selected_profile": "generic",
+      "selected_layout": null,
+      "ocr_used": true,
+      "ocr_quality": 75,
+      "parser": "gemini_vision",
+      "validation_result": "FAIL",
+      "identity_failures": [],
+      "root_cause": "UNKNOWN",
+      "confidence": "low",
+      "evidence": [
+        "Phase 3 profile is generic and baseline validation is FAIL.",
+        "The canonical quantities were not compared to the printed row in this audit.",
+        "This document does not share the Op/Pur/ORec/OIss header, the Sale_Ret_Qty sheet, or the Marg purchase-detail trailer."
+      ]
+    },
+    {
+      "document": "0000701051_2026_08_ZL_11_423_03092026184131.jpg",
+      "file_type": ".jpg",
+      "extraction_method": "gemini_extraction_fallback",
+      "selected_profile": "generic",
+      "selected_layout": null,
+      "ocr_used": true,
+      "ocr_quality": 75,
+      "parser": "gemini_extraction_fallback",
+      "validation_result": "FAIL",
+      "identity_failures": [],
+      "root_cause": "UNKNOWN",
+      "confidence": "low",
+      "evidence": [
+        "Phase 3 profile is generic and baseline validation is FAIL.",
+        "The canonical quantities were not compared to the printed row in this audit.",
+        "This document does not share the Op/Pur/ORec/OIss header, the Sale_Ret_Qty sheet, or the Marg purchase-detail trailer."
+      ]
+    },
+    {
+      "document": "0000701078_2026_08_ZL_03_362_05092026080346.jpeg",
+      "file_type": ".jpeg",
+      "extraction_method": "gemini_vision",
+      "selected_profile": "generic",
+      "selected_layout": null,
+      "ocr_used": true,
+      "ocr_quality": 100,
+      "parser": "gemini_vision",
+      "validation_result": "FAIL",
+      "identity_failures": [],
+      "root_cause": "UNKNOWN",
+      "confidence": "low",
+      "evidence": [
+        "Phase 3 profile is generic and baseline validation is FAIL.",
+        "The canonical quantities were not compared to the printed row in this audit.",
+        "This document does not share the Op/Pur/ORec/OIss header, the Sale_Ret_Qty sheet, or the Marg purchase-detail trailer."
+      ]
+    },
+    {
+      "document": "0000701116_2026_08_ZL_03_362_05092026080412.jpeg",
+      "file_type": ".jpeg",
+      "extraction_method": "marg_closing_mexp_photo",
+      "selected_profile": "generic",
+      "selected_layout": "marg_closing_mexp",
+      "ocr_used": true,
+      "ocr_quality": 75,
+      "parser": "marg_closing_mexp_photo",
+      "validation_result": "FAIL",
+      "identity_failures": [],
+      "root_cause": "UNKNOWN",
+      "confidence": "low",
+      "evidence": [
+        "Phase 3 profile is generic and baseline validation is FAIL.",
+        "The canonical quantities were not compared to the printed row in this audit.",
+        "This document does not share the Op/Pur/ORec/OIss header, the Sale_Ret_Qty sheet, or the Marg purchase-detail trailer."
+      ]
+    },
+    {
+      "document": "0000701209_2026_08_ZL_14_361_03092026025829.jpg",
+      "file_type": ".jpg",
+      "extraction_method": "gemini_vision",
+      "selected_profile": "generic",
+      "selected_layout": null,
+      "ocr_used": true,
+      "ocr_quality": 100,
+      "parser": "gemini_vision",
+      "validation_result": "FAIL",
+      "identity_failures": [],
+      "root_cause": "UNKNOWN",
+      "confidence": "low",
+      "evidence": [
+        "Phase 3 profile is generic and baseline validation is FAIL.",
+        "The canonical quantities were not compared to the printed row in this audit.",
+        "This document does not share the Op/Pur/ORec/OIss header, the Sale_Ret_Qty sheet, or the Marg purchase-detail trailer."
+      ]
+    },
+    {
+      "document": "0000701273_2026_08_ZL_03_368_06092026130923.jpeg",
+      "file_type": ".jpeg",
+      "extraction_method": "gemini_extraction_fallback",
+      "selected_profile": "generic",
+      "selected_layout": null,
+      "ocr_used": true,
+      "ocr_quality": 75,
+      "parser": "gemini_extraction_fallback",
+      "validation_result": "FAIL",
+      "identity_failures": [],
+      "root_cause": "UNKNOWN",
+      "confidence": "low",
+      "evidence": [
+        "Phase 3 profile is generic and baseline validation is FAIL.",
+        "The canonical quantities were not compared to the printed row in this audit.",
+        "This document does not share the Op/Pur/ORec/OIss header, the Sale_Ret_Qty sheet, or the Marg purchase-detail trailer."
+      ]
+    },
+    {
+      "document": "0000701275_2026_08_ZL_03_360_02092026152716.jpg",
+      "file_type": ".jpg",
+      "extraction_method": "pack_opening_receipt_issue_mexp",
+      "selected_profile": "generic",
+      "selected_layout": "pack_opening_receipt_issue_mexp",
+      "ocr_used": true,
+      "ocr_quality": 100,
+      "parser": "pack_opening_receipt_issue_mexp",
+      "validation_result": "FAIL",
+      "identity_failures": [],
+      "root_cause": "UNKNOWN",
+      "confidence": "low",
+      "evidence": [
+        "Phase 3 profile is generic and baseline validation is FAIL.",
+        "The canonical quantities were not compared to the printed row in this audit.",
+        "This document does not share the Op/Pur/ORec/OIss header, the Sale_Ret_Qty sheet, or the Marg purchase-detail trailer."
+      ]
+    },
+    {
+      "document": "0000701468_2026_08_ZL_37_8181_04092026181217.jpg",
+      "file_type": ".jpg",
+      "extraction_method": "pack_op_pur_bal_stock_sale_vision",
+      "selected_profile": "generic",
+      "selected_layout": "pack_op_pur_bal_stock_sale",
+      "ocr_used": true,
+      "ocr_quality": 100,
+      "parser": "pack_op_pur_bal_stock_sale_vision",
+      "validation_result": "FAIL",
+      "identity_failures": [],
+      "root_cause": "UNKNOWN",
+      "confidence": "low",
+      "evidence": [
+        "Phase 3 profile is generic and baseline validation is FAIL.",
+        "The canonical quantities were not compared to the printed row in this audit.",
+        "This document does not share the Op/Pur/ORec/OIss header, the Sale_Ret_Qty sheet, or the Marg purchase-detail trailer."
+      ]
+    },
+    {
+      "document": "0000701555_2026_08_ZL_37_390_06092026182510.docx",
+      "file_type": ".docx",
+      "extraction_method": "generic",
+      "selected_profile": "generic",
+      "selected_layout": null,
+      "ocr_used": false,
+      "ocr_quality": 75,
+      "parser": "generic",
+      "validation_result": "FAIL",
+      "identity_failures": [
+        {
+          "product": "ABANA TABLETS",
+          "source_cells": [
+            "ABANA TABLETS",
+            "60 TAB",
+            "7",
+            "0",
+            "7",
+            "2",
+            "5",
+            "756.80",
+            "148"
+          ],
+          "source_identity": "O.Stk 7 + Purc 0 - Sale 2 = Qoh 5",
+          "parser": {
+            "opening_qty": 60,
+            "receipts_qty": 0,
+            "sales_qty": 5,
+            "closing_qty": 0,
+            "sales_scheme": 756.8
+          }
+        }
+      ],
+      "root_cause": "PARSER_EXTRACTION_ERROR",
+      "confidence": "high",
+      "evidence": [
+        "Paragraph above the table is the glued header Product Name, Packing, O.Stk, Purc, Tot, Sale, Qoh, Value, Age.",
+        "The table's first row is a product, not that header.",
+        "_parse_profitmaker_ostk_docx only maps headers on table row 0, so this file misses the existing layout reader.",
+        "Fallback output puts the pack size 60 into opening_qty, Qoh-like 5 into sales_qty, and the rupee value 756.80 into sales_scheme. Closing stays 0.",
+        "The printed identity O.Stk + Purc - Sale = Qoh holds. The generic equation is then applied to the shifted fields."
+      ]
+    },
+    {
+      "document": "0000701904_2026_08_ZL_20_8227_05092026154848.jpg",
+      "file_type": ".jpg",
+      "extraction_method": "main_stock_sales_statement",
+      "selected_profile": "generic",
+      "selected_layout": "opening_receive_issue_closing",
+      "ocr_used": true,
+      "ocr_quality": 75,
+      "parser": "main_stock_sales_statement",
+      "validation_result": "FAIL",
+      "identity_failures": [],
+      "root_cause": "UNKNOWN",
+      "confidence": "low",
+      "evidence": [
+        "Phase 3 profile is generic and baseline validation is FAIL.",
+        "The canonical quantities were not compared to the printed row in this audit.",
+        "This document does not share the Op/Pur/ORec/OIss header, the Sale_Ret_Qty sheet, or the Marg purchase-detail trailer."
+      ]
+    },
+    {
+      "document": "0000702913_2026_08_ZL_22_413A_04092026075910",
+      "file_type": "(none)",
+      "extraction_method": "zandra_stock_sale_vision",
+      "selected_profile": "generic",
+      "selected_layout": null,
+      "ocr_used": true,
+      "ocr_quality": 75,
+      "parser": "zandra_stock_sale_vision",
+      "validation_result": "FAIL",
+      "identity_failures": [],
+      "root_cause": "UNKNOWN",
+      "confidence": "low",
+      "evidence": [
+        "Phase 3 profile is generic and baseline validation is FAIL.",
+        "The canonical quantities were not compared to the printed row in this audit.",
+        "This document does not share the Op/Pur/ORec/OIss header, the Sale_Ret_Qty sheet, or the Marg purchase-detail trailer."
+      ]
+    },
+    {
+      "document": "0000704337_2026_08_ZL_24_259_03092026042213.pdf",
+      "file_type": ".pdf",
+      "extraction_method": "gemini_extraction_fallback",
+      "selected_profile": "generic",
+      "selected_layout": null,
+      "ocr_used": true,
+      "ocr_quality": 75,
+      "parser": "gemini_extraction_fallback",
+      "validation_result": "FAIL",
+      "identity_failures": [],
+      "root_cause": "UNKNOWN",
+      "confidence": "low",
+      "evidence": [
+        "Phase 3 profile is generic and baseline validation is FAIL.",
+        "The canonical quantities were not compared to the printed row in this audit.",
+        "This document does not share the Op/Pur/ORec/OIss header, the Sale_Ret_Qty sheet, or the Marg purchase-detail trailer."
+      ]
+    },
+    {
+      "document": "0000722000_2026_08_ZL_04_742_03092026185220.pdf",
+      "file_type": ".pdf",
+      "extraction_method": "zandra_stock_sale_vision",
+      "selected_profile": "generic",
+      "selected_layout": null,
+      "ocr_used": true,
+      "ocr_quality": 75,
+      "parser": "zandra_stock_sale_vision",
+      "validation_result": "FAIL",
+      "identity_failures": [],
+      "root_cause": "UNKNOWN",
+      "confidence": "low",
+      "evidence": [
+        "Phase 3 profile is generic and baseline validation is FAIL.",
+        "The canonical quantities were not compared to the printed row in this audit.",
+        "This document does not share the Op/Pur/ORec/OIss header, the Sale_Ret_Qty sheet, or the Marg purchase-detail trailer."
+      ]
+    },
+    {
+      "document": "0000723881_2026_08_ZL_06_550_04092026145241.pdf",
+      "file_type": ".pdf",
+      "extraction_method": "zandra_stock_sale_vision",
+      "selected_profile": "generic",
+      "selected_layout": null,
+      "ocr_used": true,
+      "ocr_quality": 75,
+      "parser": "zandra_stock_sale_vision",
+      "validation_result": "FAIL",
+      "identity_failures": [],
+      "root_cause": "UNKNOWN",
+      "confidence": "low",
+      "evidence": [
+        "Phase 3 profile is generic and baseline validation is FAIL.",
+        "The canonical quantities were not compared to the printed row in this audit.",
+        "This document does not share the Op/Pur/ORec/OIss header, the Sale_Ret_Qty sheet, or the Marg purchase-detail trailer."
+      ]
+    },
+    {
+      "document": "0000728682_2026_08_ZL _10_380_04092026092536.xlsx",
+      "file_type": ".xlsx",
+      "extraction_method": "generic",
+      "selected_profile": "generic",
+      "selected_layout": null,
+      "ocr_used": false,
+      "ocr_quality": 100,
+      "parser": "generic",
+      "validation_result": "FAIL",
+      "identity_failures": [
+        {
+          "product": "HERBOLAX TABS",
+          "opening": 47,
+          "purchase": 0,
+          "sale": 4,
+          "sale_ret_qty": 1,
+          "other_qty": 0,
+          "closing": 44,
+          "check": "47-4+1=44"
+        },
+        {
+          "product": "LIV-52 SYRUP",
+          "opening": 82,
+          "purchase": 105,
+          "sale": 77,
+          "sale_ret_qty": 2,
+          "other_qty": 0,
+          "closing": 112,
+          "check": "82+105-77+2=112"
+        },
+        {
+          "product": "PILEX FORTE TAB",
+          "opening": 99,
+          "purchase": 0,
+          "sale": 1,
+          "sale_ret_qty": 1,
+          "other_qty": 0,
+          "closing": 99,
+          "check": "99-1+1=99"
+        },
+        {
+          "product": "VASAKA SYRUP",
+          "opening": 55,
+          "purchase": 0,
+          "sale": 0,
+          "sale_ret_qty": 0,
+          "other_qty": -27,
+          "closing": 28,
+          "check": "55-27=28"
+        }
+      ],
+      "root_cause": "COLUMN_DROPPED",
+      "confidence": "high",
+      "evidence": [
+        "Sheet headers include Opening_Qty, Purchase_Qty, Sale_Qty, Sale_Ret_Qty, Other_Qty, Closing_Qty.",
+        "_XLS_HEADER_ALIASES maps openingqty, purchaseqty, saleqty, and closingqty. It has no saleretqty and no otherqty.",
+        "_xls_fill_from_rows therefore never stores Sale_Ret_Qty or Other_Qty.",
+        "saleret_expected_closing already adds sale_return when that extra field exists. It is not selected here because the field was never stored.",
+        "Other_Qty is a signed adjustment. The saleret equation does not contain it. AACTARIL SOAP 122-3=119 holds because both extra columns are 0."
+      ]
+    },
+    {
+      "document": "0000729951_2026_08_ZL_20_471_04092026104138.pdf",
+      "file_type": ".pdf",
+      "extraction_method": "swil_receipt_pur_value_vision",
+      "selected_profile": "generic",
+      "selected_layout": "swil_receipt_pur_value",
+      "ocr_used": true,
+      "ocr_quality": 100,
+      "parser": "swil_receipt_pur_value_vision",
+      "validation_result": "FAIL",
+      "identity_failures": [],
+      "root_cause": "UNKNOWN",
+      "confidence": "low",
+      "evidence": [
+        "Phase 3 profile is generic and baseline validation is FAIL.",
+        "The canonical quantities were not compared to the printed row in this audit.",
+        "This document does not share the Op/Pur/ORec/OIss header, the Sale_Ret_Qty sheet, or the Marg purchase-detail trailer."
+      ]
+    },
+    {
+      "document": "0000729971_2026_08_ZL_18_374_04092026174632.pdf",
+      "file_type": ".pdf",
+      "extraction_method": "pdf_split_page_images",
+      "selected_profile": "generic",
+      "selected_layout": null,
+      "ocr_used": true,
+      "ocr_quality": 100,
+      "parser": "pdf_split_page_images",
+      "validation_result": "FAIL",
+      "identity_failures": [],
+      "root_cause": "UNKNOWN",
+      "confidence": "low",
+      "evidence": [
+        "Phase 3 profile is generic and baseline validation is FAIL.",
+        "The canonical quantities were not compared to the printed row in this audit.",
+        "This document does not share the Op/Pur/ORec/OIss header, the Sale_Ret_Qty sheet, or the Marg purchase-detail trailer."
+      ]
+    },
+    {
+      "document": "0000730089_2026_08_ZL_24_244_05092026160041.pdf",
+      "file_type": ".pdf",
+      "extraction_method": "gemini_extraction_fallback",
+      "selected_profile": "generic",
+      "selected_layout": null,
+      "ocr_used": true,
+      "ocr_quality": 75,
+      "parser": "gemini_extraction_fallback",
+      "validation_result": "FAIL",
+      "identity_failures": [],
+      "root_cause": "UNKNOWN",
+      "confidence": "low",
+      "evidence": [
+        "Phase 3 profile is generic and baseline validation is FAIL.",
+        "The canonical quantities were not compared to the printed row in this audit.",
+        "This document does not share the Op/Pur/ORec/OIss header, the Sale_Ret_Qty sheet, or the Marg purchase-detail trailer."
+      ]
+    },
+    {
+      "document": "0000734248_2026_08_ZL_12_554_07092026051856.XLS",
+      "file_type": ".xls",
+      "extraction_method": "marg_erp_xls_receive_issue_value",
+      "selected_profile": "generic",
+      "selected_layout": null,
+      "ocr_used": false,
+      "ocr_quality": 100,
+      "parser": "marg_erp_xls_receive_issue_value",
+      "validation_result": "FAIL",
+      "identity_failures": [
+        {
+          "product": "HIMALAYA WELLNESS COM INDORE",
+          "source_row": 45,
+          "source_section": "PURCHASE DETAIL",
+          "source_cells": [
+            "HIMALAYA WELLNESS COM INDORE",
+            "5126107167",
+            "21-08-2026",
+            "21-08-2026",
+            93636
+          ],
+          "parser": {
+            "opening_qty": 5126107167,
+            "receipts_qty": 21,
+            "sales_qty": 0,
+            "closing_qty": 0
+          }
+        }
+      ],
+      "root_cause": "PARSER_EXTRACTION_ERROR",
+      "confidence": "high",
+      "evidence": [
+        "Stock header is PRODUCT DESCRIPTION, OPENING STOCK, OPENING VALUE, RECEIVE QUANTITY, RECEIVE VALUE, ISSUE QUANTITY, ISSUE VALUE, CLOSING STOCK, CLOSING VALUE.",
+        "AACTARIL SOAP source is 40, 0, 0, 40. 34 of 35 parser rows satisfy opening + receive - issue = closing.",
+        "Row 39 is the stock TOTAL. Row 43 starts a second table headed PURCHASE DETAIL with SUPPLIER NAME, INVOICE NO., DATE, RECEIVE DATE, AMOUNT.",
+        "_parse_marg_erp_xls keeps the stock column indexes and reads row 45 as a product. Invoice 5126107167 becomes opening_qty. Date 21-08-2026 becomes receipts_qty 21.",
+        "The stock grid itself is mapped correctly. The first wrong step is not stopping at the purchase-detail section."
+      ]
+    }
+  ]
+}

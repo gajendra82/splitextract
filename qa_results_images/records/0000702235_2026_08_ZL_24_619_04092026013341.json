@@ -1,0 +1,24 @@
+{
+  "file": "0000702235_2026_08_ZL_24_619_04092026013341.jpg",
+  "path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000702235_2026_08_ZL_24_619_04092026013341.jpg",
+  "format": "gemini_extraction_fallback",
+  "api_method": "gemini_extraction_fallback",
+  "status": "REVIEW",
+  "expected_rows": 0,
+  "extracted_rows": 0,
+  "matched_rows": 0,
+  "missing_rows": [],
+  "extra_rows": [],
+  "duplicates": [],
+  "mismatches": [],
+  "ocr_review": [],
+  "accounting": [],
+  "confidence": "low",
+  "notes": [
+    "OCR used tesseract psm 6.",
+    "No stock-grid header with product rows was found in this PDF."
+  ],
+  "result_key": "0000702235_2026_08_ZL_24_619_04092026013341",
+  "unavailable_fields": {},
+  "formula_checked": "none"
+}

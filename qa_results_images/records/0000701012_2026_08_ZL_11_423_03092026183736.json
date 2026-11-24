@@ -1,0 +1,576 @@
+{
+  "file": "0000701012_2026_08_ZL_11_423_03092026183736.jpg",
+  "path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000701012_2026_08_ZL_11_423_03092026183736.jpg",
+  "format": "STOCK STATUS REPORT",
+  "api_method": "gemini_extraction_fallback",
+  "status": "FAIL",
+  "expected_rows": 37,
+  "extracted_rows": 37,
+  "matched_rows": 3,
+  "missing_rows": [
+    {
+      "product": "0090466 AACTARIL SOAP",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 8,
+      "closing_qty": 88,
+      "kind": "missing_product"
+    },
+    {
+      "product": "0090005 ABANA TABLETS",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 3,
+      "closing_qty": 79,
+      "kind": "missing_product"
+    },
+    {
+      "product": "0090225 BLEMINOR CREAM",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 12,
+      "closing_qty": 33,
+      "kind": "missing_product"
+    },
+    {
+      "product": "0090022 CLARINA CREAM",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 6,
+      "closing_qty": 51,
+      "kind": "missing_product"
+    },
+    {
+      "product": "0090217 CLARINA FACE WASH GEL#",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 8,
+      "closing_qty": 41,
+      "kind": "missing_product"
+    },
+    {
+      "product": "0090150 CONFIDO",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 15,
+      "closing_qty": 6,
+      "kind": "missing_product"
+    },
+    {
+      "product": "0090191 DIABECON DS TAB",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 32,
+      "closing_qty": 30,
+      "kind": "missing_product"
+    },
+    {
+      "product": "0090170 DIABECON TAB",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 5,
+      "closing_qty": 108,
+      "kind": "missing_product"
+    },
+    {
+      "product": "0090264 HADJOD CAP",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 6,
+      "closing_qty": 36,
+      "kind": "missing_product"
+    },
+    {
+      "product": "0090215 HAIR ZONE SOLUTION",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 13,
+      "closing_qty": 15,
+      "kind": "missing_product"
+    },
+    {
+      "product": "0090050 HERBOLAX CAP",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 46,
+      "closing_qty": 106,
+      "kind": "missing_product"
+    },
+    {
+      "product": "0090055 HIMCOLIN GEL",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 6,
+      "closing_qty": 64,
+      "kind": "missing_product"
+    },
+    {
+      "product": "0090063 KAPIKACHHU CAP",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 6,
+      "closing_qty": 19,
+      "kind": "missing_product"
+    },
+    {
+      "product": "0090234 LIV 52 HB CAPS",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 2,
+      "closing_qty": 65,
+      "kind": "missing_product"
+    },
+    {
+      "product": "0090080 LIV 52 SYRUP",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 34,
+      "closing_qty": 54,
+      "kind": "missing_product"
+    },
+    {
+      "product": "0090474 LIV 52 SYRUP 100ML SUG",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 0,
+      "closing_qty": 70,
+      "kind": "missing_product"
+    },
+    {
+      "product": "0090085 LIV 52 SYRUP",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 54,
+      "closing_qty": 20,
+      "kind": "missing_product"
+    },
+    {
+      "product": "0090087 LIV 52 TAB",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 179,
+      "closing_qty": 848,
+      "kind": "missing_product"
+    },
+    {
+      "product": "0090108 MANJISHTHA TAB",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 2,
+      "closing_qty": 14,
+      "kind": "missing_product"
+    },
+    {
+      "product": "0090180 OPHTHACARE EYE DROP",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 118,
+      "closing_qty": 309,
+      "kind": "missing_product"
+    },
+    {
+      "product": "0090198 OXITARD CAP 10 S",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 5,
+      "closing_qty": 41,
+      "kind": "missing_product"
+    },
+    {
+      "product": "0090115 PILEX FORTE OINTMENT",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 187,
+      "closing_qty": 37,
+      "kind": "missing_product"
+    },
+    {
+      "product": "0090436 PILEX FORTE TAB 60 S",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 4,
+      "closing_qty": 38,
+      "kind": "missing_product"
+    },
+    {
+      "product": "0090110 PILEX TAB",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 451,
+      "closing_qty": 832,
+      "kind": "missing_product"
+    },
+    {
+      "product": "0090116 PURIM TAB",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "0090126 RENALKA SYRUP",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 4,
+      "closing_qty": 40,
+      "kind": "missing_product"
+    },
+    {
+      "product": "0090197 RENALKA SYRUP",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 12,
+      "closing_qty": 22,
+      "kind": "missing_product"
+    },
+    {
+      "product": "0090142 SHALLAKI TAB",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 0,
+      "closing_qty": 49,
+      "kind": "missing_product"
+    },
+    {
+      "product": "0090169 TAGARA CAP",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 0,
+      "closing_qty": 15,
+      "kind": "missing_product"
+    },
+    {
+      "product": "0090165 TENTEX FORTE",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 100,
+      "closing_qty": 189,
+      "kind": "missing_product"
+    },
+    {
+      "product": "0090167 TRIPHALA TAB",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 34,
+      "closing_qty": 47,
+      "kind": "missing_product"
+    },
+    {
+      "product": "0090488 VASAKA TAB",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 0,
+      "closing_qty": 37,
+      "kind": "missing_product"
+    },
+    {
+      "product": "0090156 VRIKSHAMLA TAB",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 3,
+      "closing_qty": 36,
+      "kind": "missing_product"
+    },
+    {
+      "product": "0090181 YASHTI-MADHU CAP",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 3,
+      "closing_qty": 33,
+      "kind": "missing_product"
+    }
+  ],
+  "extra_rows": [
+    {
+      "product": "AACTARIL SOAP 75G",
+      "opening_qty": 88,
+      "sales_qty": 8,
+      "closing_qty": 31,
+      "kind": "extra_product"
+    },
+    {
+      "product": "ABANA TABLETS",
+      "opening_qty": 79,
+      "sales_qty": 3,
+      "closing_qty": 42,
+      "kind": "extra_product"
+    },
+    {
+      "product": "BLEMINOR CREAM",
+      "opening_qty": 33,
+      "sales_qty": 12,
+      "closing_qty": 5,
+      "kind": "extra_product"
+    },
+    {
+      "product": "CLARINA CREAM",
+      "opening_qty": 51,
+      "sales_qty": 6,
+      "closing_qty": 14,
+      "kind": "extra_product"
+    },
+    {
+      "product": "CLARINA FACE WASH GEL#",
+      "opening_qty": 41,
+      "sales_qty": 8,
+      "closing_qty": 6,
+      "kind": "extra_product"
+    },
+    {
+      "product": "CONFIDO",
+      "opening_qty": 6,
+      "sales_qty": 15,
+      "closing_qty": 26,
+      "kind": "extra_product"
+    },
+    {
+      "product": "DIABECON DS TAB",
+      "opening_qty": 30,
+      "sales_qty": 32,
+      "closing_qty": 35,
+      "kind": "extra_product"
+    },
+    {
+      "product": "DIABECON TAB",
+      "opening_qty": 108,
+      "sales_qty": 5,
+      "closing_qty": 7,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HADJOD CAP",
+      "opening_qty": 36,
+      "sales_qty": 6,
+      "closing_qty": 6,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HAIR ZONE SOLUTION 60ML",
+      "opening_qty": 15,
+      "sales_qty": 13,
+      "closing_qty": 6,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HERBOLAX CAP",
+      "opening_qty": 106,
+      "sales_qty": 46,
+      "closing_qty": 68,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HIMCOLIN GEL",
+      "opening_qty": 64,
+      "sales_qty": 6,
+      "closing_qty": 8,
+      "kind": "extra_product"
+    },
+    {
+      "product": "KAPIKACHHU CAP",
+      "opening_qty": 19,
+      "sales_qty": 6,
+      "closing_qty": 10,
+      "kind": "extra_product"
+    },
+    {
+      "product": "LIV 52 HB CAPS",
+      "opening_qty": 65,
+      "sales_qty": 2,
+      "closing_qty": 13,
+      "kind": "extra_product"
+    },
+    {
+      "product": "LIV 52 SYRUP 100ML",
+      "opening_qty": 54,
+      "sales_qty": 34,
+      "closing_qty": 31,
+      "kind": "extra_product"
+    },
+    {
+      "product": "LIV 52 SYRUP 100ML SUG FR",
+      "opening_qty": 70,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "LIV 52 SYRUP 200ML",
+      "opening_qty": 20,
+      "sales_qty": 54,
+      "closing_qty": 115,
+      "kind": "extra_product"
+    },
+    {
+      "product": "LIV 52 TAB",
+      "opening_qty": 848,
+      "sales_qty": 179,
+      "closing_qty": 366,
+      "kind": "extra_product"
+    },
+    {
+      "product": "MANJISHTHA TAB",
+      "opening_qty": 14,
+      "sales_qty": 2,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "OPHTHACARE EYE DROP",
+      "opening_qty": 309,
+      "sales_qty": 118,
+      "closing_qty": 191,
+      "kind": "extra_product"
+    },
+    {
+      "product": "OXITARD CAP 10 S",
+      "opening_qty": 41,
+      "sales_qty": 5,
+      "closing_qty": 17,
+      "kind": "extra_product"
+    },
+    {
+      "product": "PILEX FORTE OINTMENT",
+      "opening_qty": 37,
+      "sales_qty": 187,
+      "closing_qty": 370,
+      "kind": "extra_product"
+    },
+    {
+      "product": "PILEX FORTE TAB 60 S",
+      "opening_qty": 38,
+      "sales_qty": 4,
+      "closing_qty": 13,
+      "kind": "extra_product"
+    },
+    {
+      "product": "PILEX TAB",
+      "opening_qty": 832,
+      "sales_qty": 451,
+      "closing_qty": 511,
+      "kind": "extra_product"
+    },
+    {
+      "product": "PURIM TAB",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "RENALKA SYRUP 100ML",
+      "opening_qty": 40,
+      "sales_qty": 4,
+      "closing_qty": 11,
+      "kind": "extra_product"
+    },
+    {
+      "product": "RENALKA SYRUP 200ML",
+      "opening_qty": 22,
+      "sales_qty": 12,
+      "closing_qty": 23,
+      "kind": "extra_product"
+    },
+    {
+      "product": "SHALLAKI TAB",
+      "opening_qty": 49,
+      "sales_qty": 0,
+      "closing_qty": 13,
+      "kind": "extra_product"
+    },
+    {
+      "product": "TAGARA CAP",
+      "opening_qty": 15,
+      "sales_qty": 0,
+      "closing_qty": 7,
+      "kind": "extra_product"
+    },
+    {
+      "product": "TENTEX FORTE",
+      "opening_qty": 189,
+      "sales_qty": 100,
+      "closing_qty": 36,
+      "kind": "extra_product"
+    },
+    {
+      "product": "TRIPHALA TAB",
+      "opening_qty": 47,
+      "sales_qty": 34,
+      "closing_qty": 34,
+      "kind": "extra_product"
+    },
+    {
+      "product": "VASAKA TAB",
+      "opening_qty": 37,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "VRIKSHAMLA TAB",
+      "opening_qty": 36,
+      "sales_qty": 3,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "YASHTI-MADHU CAP",
+      "opening_qty": 33,
+      "sales_qty": 3,
+      "closing_qty": 4,
+      "kind": "extra_product"
+    }
+  ],
+  "duplicates": [],
+  "mismatches": [
+    {
+      "product": "3 rows",
+      "field": "opening_qty",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 3,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    },
+    {
+      "product": "3 rows",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 3,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    }
+  ],
+  "ocr_review": [
+    {
+      "product": "0090422 QUISTA DN 400G VANILA",
+      "api_product": "QUISTA DN 400G VANILA",
+      "similarity": 0.84,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "0090482 QUISTA DN 200G VANILA",
+      "api_product": "QUISTA DN 200G VANILA",
+      "similarity": 0.84,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "0090470 SHIGRU TAB 60 S",
+      "api_product": "SHIGRU TAB 60 S",
+      "similarity": 0.789,
+      "note": "Product names differ but the row quantities correspond."
+    }
+  ],
+  "accounting": [],
+  "confidence": "medium",
+  "notes": [
+    "OCR used tesseract psm 6."
+  ],
+  "result_key": "0000701012_2026_08_ZL_11_423_03092026183736",
+  "unavailable_fields": {
+    "opening_qty": 3,
+    "receipts_qty": 3
+  },
+  "formula_checked": "none"
+}

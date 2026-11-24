@@ -1,0 +1,686 @@
+{
+  "document_id": "0000701012_2026_08_ZL_11_423_03092026183736.jpg",
+  "relative_path": "0000701012_2026_08_ZL_11_423_03092026183736.jpg",
+  "source_path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000701012_2026_08_ZL_11_423_03092026183736.jpg",
+  "file_type": "image",
+  "pdf_kind": null,
+  "manifest_ocr_required": true,
+  "engine": "paddleocr-vl-1.6",
+  "model": "PaddleOCR-VL-1.6",
+  "model_version": "v1.6",
+  "started_at": "2026-10-08T13:19:34.817103+00:00",
+  "pages": [
+    {
+      "engine": "paddleocr-vl-1.6",
+      "status": "success",
+      "model": "PaddleOCR-VL-1.6",
+      "model_version": "v1.6",
+      "text": "12:07 Fri, 4 Sept\n88%\n\u2190 ZEAL.TXT\nPRESAGE PHARMA\nSTOCK STATUS REPORT AS ON 31-08-2026\nHIMALAYA WELLNESS 701012(DIVISION - ZEAL)\nPAGE NO : 1\n<table><tr><td>ITEMCODE</td><td>ITEMNAME</td><td>CLSTOCK</td><td>CLVALUE</td><td>SALES</td><td>SALESVALUE</td><td>LM</td><td>SALE</td><td>%</td></tr><tr><td>-</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>0090466</td><td>AACTARIL SOAP 75G</td><td>88</td><td>7710.56</td><td>8</td><td></td><td>688.44</td><td>31</td><td>15.77</td></tr><tr><td>0090005</td><td>ABANA TABLETS</td><td>79</td><td>13241.98</td><td>3</td><td></td><td>502.86</td><td>42</td><td>11.35</td></tr><tr><td>0090225</td><td>BLEMINOR CREAM</td><td>33</td><td>6461.40</td><td>12</td><td></td><td>2349.60</td><td>5</td><td>11.35</td></tr><tr><td>0090022</td><td>CLARINA CREAM</td><td>51</td><td>7460.28</td><td>6</td><td></td><td>877.68</td><td>14</td><td>11.35</td></tr><tr><td>0090217</td><td>CLARINA FACE WASH GEL#</td><td>41</td><td>5003.64</td><td>8</td><td></td><td>976.32</td><td>6</td><td>11.35</td></tr><tr><td>0090150</td><td>CONFIDO</td><td>6</td><td>1110.84</td><td>15</td><td></td><td>2777.10</td><td>26</td><td>20.21</td></tr><tr><td>0090191</td><td>DIABECON DS TAB</td><td>30</td><td>6514.20</td><td>32</td><td></td><td>6951.36</td><td>35</td><td>11.35</td></tr><tr><td>0090170</td><td>DIABECON TAB</td><td>108</td><td>16128.72</td><td>5</td><td></td><td>746.70</td><td>7</td><td>17.56</td></tr><tr><td>0090264</td><td>HADJOD CAP</td><td>36</td><td>8914.32</td><td>6</td><td></td><td>1485.72</td><td>6</td><td>17.14</td></tr><tr><td>0090215</td><td>HAIR ZONE SOLUTION 60ML</td><td>15</td><td>4474.50</td><td>13</td><td></td><td>3877.90</td><td>6</td><td>11.35</td></tr><tr><td>0090050</td><td>HERBOLAX CAP</td><td>106</td><td>6784.00</td><td>46</td><td></td><td>2944.84</td><td>68</td><td>15.78</td></tr><tr><td>0090055</td><td>HIMCOLIN GEL</td><td>64</td><td>14823.68</td><td>6</td><td></td><td>1290.86</td><td>8</td><td>11.35</td></tr><tr><td>0090063</td><td>KAPIKACHHU CAP</td><td>19</td><td>4343.02</td><td>6</td><td></td><td>1371.48</td><td>10</td><td>10.90</td></tr><tr><td>0090234</td><td>LIV 52 HB CAPS</td><td>65</td><td>11142.30</td><td>2</td><td></td><td>342.84</td><td>13</td><td>14.01</td></tr><tr><td>0090080</td><td>LIV 52 SYRUP 100ML</td><td>54</td><td>5759.64</td><td>34</td><td></td><td>3626.44</td><td>31</td><td>11.35</td></tr><tr><td>0090474</td><td>LIV 52 SYRUP 100ML SUG FR</td><td>70</td><td>8960.00</td><td>0</td><td></td><td>0.00</td><td>0</td><td>17.55</td></tr><tr><td>0090085</td><td>LIV 52 SYRUP 200ML</td><td>20</td><td>3565.60</td><td>54</td><td></td><td>9627.12</td><td>115</td><td>14.01</td></tr><tr><td>0090087</td><td>LIV 52 TAB</td><td>848</td><td>142141.76</td><td>179</td><td></td><td>30003.98</td><td>366</td><td>14.01</td></tr><tr><td>0090108</td><td>MANJISHTHA TAB</td><td>14</td><td>2823.38</td><td>2</td><td></td><td>419.04</td><td>0</td><td>10.90</td></tr><tr><td>0090180</td><td>OPHTHACARE EYE DROP</td><td>309</td><td>24250.32</td><td>118</td><td></td><td>9254.18</td><td>191</td><td>18.74</td></tr><tr><td>0090198</td><td>OXITARD CAP 10 S</td><td>41</td><td>3936.00</td><td>5</td><td></td><td>480.00</td><td>17</td><td>11.35</td></tr><tr><td>0090115</td><td>PILEX FORTE OINTMENT</td><td>37</td><td>4228.36</td><td>187</td><td></td><td>21370.36</td><td>370</td><td>11.35</td></tr><tr><td>0090436</td><td>PILEX FORTE TAB 60 S</td><td>38</td><td>8917.84</td><td>4</td><td></td><td>938.72</td><td>13</td><td>11.35</td></tr><tr><td>0090110</td><td>PILEX TAB</td><td>832</td><td>155301.12</td><td>451</td><td></td><td>80404.28</td><td>511</td><td>11.35</td></tr><tr><td>0090116</td><td>PURIM TAB</td><td>0</td><td>0.00</td><td>0</td><td></td><td>0.00</td><td>0</td><td>10.90</td></tr><tr><td>0090482</td><td>QUISTA DN 200G VANILA</td><td>0</td><td>0.00</td><td>0</td><td></td><td>0.00</td><td>0</td><td>8.92</td></tr><tr><td>0090422</td><td>QUISTA DN 400G VANILA</td><td>0</td><td>0.00</td><td>0</td><td></td><td>0.00</td><td>0</td><td>8.92</td></tr><tr><td>0090126</td><td>RENALKA SYRUP 100ML</td><td>40</td><td>3413.60</td><td>4</td><td></td><td>341.36</td><td>11</td><td>11.35</td></tr><tr><td>0090197</td><td>RENALKA SYRUP 200ML</td><td>22</td><td>3520.00</td><td>12</td><td></td><td>1920.00</td><td>23</td><td>15.78</td></tr><tr><td>0090142</td><td>SHALLAKI TAB</td><td>49</td><td>11200.42</td><td>0</td><td></td><td>0.00</td><td>13</td><td>10.90</td></tr><tr><td>0090470</td><td>SHIGRU TAB 60 S</td><td>0</td><td>0.00</td><td>0</td><td></td><td>0.00</td><td>0</td><td>10.90</td></tr><tr><td>0090169</td><td>TAGARA CAP</td><td>15</td><td>3371.40</td><td>0</td><td></td><td>0.00</td><td>7</td><td>0.00</td></tr><tr><td>0090165</td><td>TENTEX FORTE</td><td>189</td><td>20158.74</td><td>100</td><td></td><td>10670.80</td><td>36</td><td>17.56</td></tr><tr><td>0090167</td><td>TRIPHALA TAB</td><td>47</td><td>10743.26</td><td>34</td><td></td><td>7771.72</td><td>34</td><td>15.36</td></tr><tr><td>0090488</td><td>VASAKA TAB</td><td>37</td><td>7752.24</td><td>0</td><td></td><td>0.00</td><td>0</td><td>19.81</td></tr><tr><td>0090156</td><td>VRIKSHAMLA TAB</td><td>36</td><td>8091.72</td><td>3</td><td></td><td>674.31</td><td>0</td><td>18.45</td></tr><tr><td>0090181</td><td>YASHTI-MADHU CAP</td><td>33</td><td>7543.14</td><td>3</td><td></td><td>685.74</td><td>4</td><td>10.90</td></tr><tr><td>-</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>0090198</td><td>549791.98</td><td></td><td></td><td></td><td>205371.75</td><td></td><td></td><td></td></tr></table>",
+      "normalized_text": "12:07 Fri, 4 Sept 88% \u2190 ZEAL.TXT PRESAGE PHARMA STOCK STATUS REPORT AS ON 31-08-2026 HIMALAYA WELLNESS 701012(DIVISION - ZEAL) PAGE NO : 1 <table><tr><td>ITEMCODE</td><td>ITEMNAME</td><td>CLSTOCK</td><td>CLVALUE</td><td>SALES</td><td>SALESVALUE</td><td>LM</td><td>SALE</td><td>%</td></tr><tr><td>-</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>0090466</td><td>AACTARIL SOAP 75G</td><td>88</td><td>7710.56</td><td>8</td><td></td><td>688.44</td><td>31</td><td>15.77</td></tr><tr><td>0090005</td><td>ABANA TABLETS</td><td>79</td><td>13241.98</td><td>3</td><td></td><td>502.86</td><td>42</td><td>11.35</td></tr><tr><td>0090225</td><td>BLEMINOR CREAM</td><td>33</td><td>6461.40</td><td>12</td><td></td><td>2349.60</td><td>5</td><td>11.35</td></tr><tr><td>0090022</td><td>CLARINA CREAM</td><td>51</td><td>7460.28</td><td>6</td><td></td><td>877.68</td><td>14</td><td>11.35</td></tr><tr><td>0090217</td><td>CLARINA FACE WASH GEL#</td><td>41</td><td>5003.64</td><td>8</td><td></td><td>976.32</td><td>6</td><td>11.35</td></tr><tr><td>0090150</td><td>CONFIDO</td><td>6</td><td>1110.84</td><td>15</td><td></td><td>2777.10</td><td>26</td><td>20.21</td></tr><tr><td>0090191</td><td>DIABECON DS TAB</td><td>30</td><td>6514.20</td><td>32</td><td></td><td>6951.36</td><td>35</td><td>11.35</td></tr><tr><td>0090170</td><td>DIABECON TAB</td><td>108</td><td>16128.72</td><td>5</td><td></td><td>746.70</td><td>7</td><td>17.56</td></tr><tr><td>0090264</td><td>HADJOD CAP</td><td>36</td><td>8914.32</td><td>6</td><td></td><td>1485.72</td><td>6</td><td>17.14</td></tr><tr><td>0090215</td><td>HAIR ZONE SOLUTION 60ML</td><td>15</td><td>4474.50</td><td>13</td><td></td><td>3877.90</td><td>6</td><td>11.35</td></tr><tr><td>0090050</td><td>HERBOLAX CAP</td><td>106</td><td>6784.00</td><td>46</td><td></td><td>2944.84</td><td>68</td><td>15.78</td></tr><tr><td>0090055</td><td>HIMCOLIN GEL</td><td>64</td><td>14823.68</td><td>6</td><td></td><td>1290.86</td><td>8</td><td>11.35</td></tr><tr><td>0090063</td><td>KAPIKACHHU CAP</td><td>19</td><td>4343.02</td><td>6</td><td></td><td>1371.48</td><td>10</td><td>10.90</td></tr><tr><td>0090234</td><td>LIV 52 HB CAPS</td><td>65</td><td>11142.30</td><td>2</td><td></td><td>342.84</td><td>13</td><td>14.01</td></tr><tr><td>0090080</td><td>LIV 52 SYRUP 100ML</td><td>54</td><td>5759.64</td><td>34</td><td></td><td>3626.44</td><td>31</td><td>11.35</td></tr><tr><td>0090474</td><td>LIV 52 SYRUP 100ML SUG FR</td><td>70</td><td>8960.00</td><td>0</td><td></td><td>0.00</td><td>0</td><td>17.55</td></tr><tr><td>0090085</td><td>LIV 52 SYRUP 200ML</td><td>20</td><td>3565.60</td><td>54</td><td></td><td>9627.12</td><td>115</td><td>14.01</td></tr><tr><td>0090087</td><td>LIV 52 TAB</td><td>848</td><td>142141.76</td><td>179</td><td></td><td>30003.98</td><td>366</td><td>14.01</td></tr><tr><td>0090108</td><td>MANJISHTHA TAB</td><td>14</td><td>2823.38</td><td>2</td><td></td><td>419.04</td><td>0</td><td>10.90</td></tr><tr><td>0090180</td><td>OPHTHACARE EYE DROP</td><td>309</td><td>24250.32</td><td>118</td><td></td><td>9254.18</td><td>191</td><td>18.74</td></tr><tr><td>0090198</td><td>OXITARD CAP 10 S</td><td>41</td><td>3936.00</td><td>5</td><td></td><td>480.00</td><td>17</td><td>11.35</td></tr><tr><td>0090115</td><td>PILEX FORTE OINTMENT</td><td>37</td><td>4228.36</td><td>187</td><td></td><td>21370.36</td><td>370</td><td>11.35</td></tr><tr><td>0090436</td><td>PILEX FORTE TAB 60 S</td><td>38</td><td>8917.84</td><td>4</td><td></td><td>938.72</td><td>13</td><td>11.35</td></tr><tr><td>0090110</td><td>PILEX TAB</td><td>832</td><td>155301.12</td><td>451</td><td></td><td>80404.28</td><td>511</td><td>11.35</td></tr><tr><td>0090116</td><td>PURIM TAB</td><td>0</td><td>0.00</td><td>0</td><td></td><td>0.00</td><td>0</td><td>10.90</td></tr><tr><td>0090482</td><td>QUISTA DN 200G VANILA</td><td>0</td><td>0.00</td><td>0</td><td></td><td>0.00</td><td>0</td><td>8.92</td></tr><tr><td>0090422</td><td>QUISTA DN 400G VANILA</td><td>0</td><td>0.00</td><td>0</td><td></td><td>0.00</td><td>0</td><td>8.92</td></tr><tr><td>0090126</td><td>RENALKA SYRUP 100ML</td><td>40</td><td>3413.60</td><td>4</td><td></td><td>341.36</td><td>11</td><td>11.35</td></tr><tr><td>0090197</td><td>RENALKA SYRUP 200ML</td><td>22</td><td>3520.00</td><td>12</td><td></td><td>1920.00</td><td>23</td><td>15.78</td></tr><tr><td>0090142</td><td>SHALLAKI TAB</td><td>49</td><td>11200.42</td><td>0</td><td></td><td>0.00</td><td>13</td><td>10.90</td></tr><tr><td>0090470</td><td>SHIGRU TAB 60 S</td><td>0</td><td>0.00</td><td>0</td><td></td><td>0.00</td><td>0</td><td>10.90</td></tr><tr><td>0090169</td><td>TAGARA CAP</td><td>15</td><td>3371.40</td><td>0</td><td></td><td>0.00</td><td>7</td><td>0.00</td></tr><tr><td>0090165</td><td>TENTEX FORTE</td><td>189</td><td>20158.74</td><td>100</td><td></td><td>10670.80</td><td>36</td><td>17.56</td></tr><tr><td>0090167</td><td>TRIPHALA TAB</td><td>47</td><td>10743.26</td><td>34</td><td></td><td>7771.72</td><td>34</td><td>15.36</td></tr><tr><td>0090488</td><td>VASAKA TAB</td><td>37</td><td>7752.24</td><td>0</td><td></td><td>0.00</td><td>0</td><td>19.81</td></tr><tr><td>0090156</td><td>VRIKSHAMLA TAB</td><td>36</td><td>8091.72</td><td>3</td><td></td><td>674.31</td><td>0</td><td>18.45</td></tr><tr><td>0090181</td><td>YASHTI-MADHU CAP</td><td>33</td><td>7543.14</td><td>3</td><td></td><td>685.74</td><td>4</td><td>10.90</td></tr><tr><td>-</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>0090198</td><td>549791.98</td><td></td><td></td><td></td><td>205371.75</td><td></td><td></td><td></td></tr></table>",
+      "word_count": 93,
+      "line_count": 6,
+      "numeric_tokens": [
+        "12",
+        "07",
+        "4",
+        "88",
+        "701012",
+        "1",
+        "0090466",
+        "88",
+        "7710.56",
+        "8",
+        "688.44",
+        "31",
+        "15.77",
+        "0090005",
+        "79",
+        "13241.98",
+        "3",
+        "502.86",
+        "42",
+        "11.35",
+        "0090225",
+        "33",
+        "6461.40",
+        "12",
+        "2349.60",
+        "5",
+        "11.35",
+        "0090022",
+        "51",
+        "7460.28",
+        "6",
+        "877.68",
+        "14",
+        "11.35",
+        "0090217",
+        "41",
+        "5003.64",
+        "8",
+        "976.32",
+        "6",
+        "11.35",
+        "0090150",
+        "6",
+        "1110.84",
+        "15",
+        "2777.10",
+        "26",
+        "20.21",
+        "0090191",
+        "30",
+        "6514.20",
+        "32",
+        "6951.36",
+        "35",
+        "11.35",
+        "0090170",
+        "108",
+        "16128.72",
+        "5",
+        "746.70",
+        "7",
+        "17.56",
+        "0090264",
+        "36",
+        "8914.32",
+        "6",
+        "1485.72",
+        "6",
+        "17.14",
+        "0090215",
+        "15",
+        "4474.50",
+        "13",
+        "3877.90",
+        "6",
+        "11.35",
+        "0090050",
+        "106",
+        "6784.00",
+        "46",
+        "2944.84",
+        "68",
+        "15.78",
+        "0090055",
+        "64",
+        "14823.68",
+        "6",
+        "1290.86",
+        "8",
+        "11.35",
+        "0090063",
+        "19",
+        "4343.02",
+        "6",
+        "1371.48",
+        "10",
+        "10.90",
+        "0090234",
+        "52",
+        "65",
+        "11142.30",
+        "2",
+        "342.84",
+        "13",
+        "14.01",
+        "0090080",
+        "52",
+        "54",
+        "5759.64",
+        "34",
+        "3626.44",
+        "31",
+        "11.35",
+        "0090474",
+        "52",
+        "70",
+        "8960.00",
+        "0",
+        "0.00",
+        "0",
+        "17.55",
+        "0090085",
+        "52",
+        "20",
+        "3565.60",
+        "54",
+        "9627.12",
+        "115",
+        "14.01",
+        "0090087",
+        "52",
+        "848",
+        "142141.76",
+        "179",
+        "30003.98",
+        "366",
+        "14.01",
+        "0090108",
+        "14",
+        "2823.38",
+        "2",
+        "419.04",
+        "0",
+        "10.90",
+        "0090180",
+        "309",
+        "24250.32",
+        "118",
+        "9254.18",
+        "191",
+        "18.74",
+        "0090198",
+        "10",
+        "41",
+        "3936.00",
+        "5",
+        "480.00",
+        "17",
+        "11.35",
+        "0090115",
+        "37",
+        "4228.36",
+        "187",
+        "21370.36",
+        "370",
+        "11.35",
+        "0090436",
+        "60",
+        "38",
+        "8917.84",
+        "4",
+        "938.72",
+        "13",
+        "11.35",
+        "0090110",
+        "832",
+        "155301.12",
+        "451",
+        "80404.28",
+        "511",
+        "11.35",
+        "0090116",
+        "0",
+        "0.00",
+        "0",
+        "0.00",
+        "0",
+        "10.90",
+        "0090482",
+        "0",
+        "0.00",
+        "0",
+        "0.00",
+        "0",
+        "8.92",
+        "0090422",
+        "0",
+        "0.00",
+        "0",
+        "0.00",
+        "0",
+        "8.92",
+        "0090126",
+        "40",
+        "3413.60",
+        "4",
+        "341.36",
+        "11",
+        "11.35",
+        "0090197",
+        "22",
+        "3520.00",
+        "12",
+        "1920.00",
+        "23",
+        "15.78",
+        "0090142",
+        "49",
+        "11200.42",
+        "0",
+        "0.00",
+        "13",
+        "10.90",
+        "0090470",
+        "60",
+        "0",
+        "0.00",
+        "0",
+        "0.00",
+        "0",
+        "10.90",
+        "0090169",
+        "15",
+        "3371.40",
+        "0",
+        "0.00",
+        "7",
+        "0.00",
+        "0090165",
+        "189",
+        "20158.74",
+        "100",
+        "10670.80",
+        "36",
+        "17.56",
+        "0090167",
+        "47",
+        "10743.26",
+        "34",
+        "7771.72",
+        "34",
+        "15.36",
+        "0090488",
+        "37",
+        "7752.24",
+        "0",
+        "0.00",
+        "0",
+        "19.81",
+        "0090156",
+        "36",
+        "8091.72",
+        "3",
+        "674.31",
+        "0",
+        "18.45",
+        "0090181",
+        "33",
+        "7543.14",
+        "3",
+        "685.74",
+        "4",
+        "10.90",
+        "0090198",
+        "549791.98",
+        "205371.75"
+      ],
+      "words": [
+        {
+          "text": "12:07 Fri, 4 Sept",
+          "bbox": [
+            26.0,
+            3.0,
+            341.0,
+            32.0
+          ],
+          "confidence": null,
+          "page": 1
+        },
+        {
+          "text": "88%",
+          "bbox": [
+            1044.0,
+            1.0,
+            1174.0,
+            32.0
+          ],
+          "confidence": null,
+          "page": 1
+        },
+        {
+          "text": "\u2190 ZEAL.TXT",
+          "bbox": [
+            25.0,
+            60.0,
+            237.0,
+            97.0
+          ],
+          "confidence": null,
+          "page": 1
+        },
+        {
+          "text": "PRESAGE PHARMA\nSTOCK STATUS REPORT AS ON 31-08-2026\nHIMALAYA WELLNESS 701012(DIVISION - ZEAL)",
+          "bbox": [
+            8.0,
+            145.0,
+            543.0,
+            229.0
+          ],
+          "confidence": null,
+          "page": 1
+        },
+        {
+          "text": "PAGE NO : 1",
+          "bbox": [
+            773.0,
+            168.0,
+            923.0,
+            199.0
+          ],
+          "confidence": null,
+          "page": 1
+        },
+        {
+          "text": "<table><tr><td>ITEMCODE</td><td>ITEMNAME</td><td>CLSTOCK</td><td>CLVALUE</td><td>SALES</td><td>SALESVALUE</td><td>LM</td><td>SALE</td><td>%</td></tr><tr><td>-</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>0090466</td><td>AACTARIL SOAP 75G</td><td>88</td><td>7710.56</td><td>8</td><td></td><td>688.44</td><td>31</td><td>15.77</td></tr><tr><td>0090005</td><td>ABANA TABLETS</td><td>79</td><td>13241.98</td><td>3</td><td></td><td>502.86</td><td>42</td><td>11.35</td></tr><tr><td>0090225</td><td>BLEMINOR CREAM</td><td>33</td><td>6461.40</td><td>12</td><td></td><td>2349.60</td><td>5</td><td>11.35</td></tr><tr><td>0090022</td><td>CLARINA CREAM</td><td>51</td><td>7460.28</td><td>6</td><td></td><td>877.68</td><td>14</td><td>11.35</td></tr><tr><td>0090217</td><td>CLARINA FACE WASH GEL#</td><td>41</td><td>5003.64</td><td>8</td><td></td><td>976.32</td><td>6</td><td>11.35</td></tr><tr><td>0090150</td><td>CONFIDO</td><td>6</td><td>1110.84</td><td>15</td><td></td><td>2777.10</td><td>26</td><td>20.21</td></tr><tr><td>0090191</td><td>DIABECON DS TAB</td><td>30</td><td>6514.20</td><td>32</td><td></td><td>6951.36</td><td>35</td><td>11.35</td></tr><tr><td>0090170</td><td>DIABECON TAB</td><td>108</td><td>16128.72</td><td>5</td><td></td><td>746.70</td><td>7</td><td>17.56</td></tr><tr><td>0090264</td><td>HADJOD CAP</td><td>36</td><td>8914.32</td><td>6</td><td></td><td>1485.72</td><td>6</td><td>17.14</td></tr><tr><td>0090215</td><td>HAIR ZONE SOLUTION 60ML</td><td>15</td><td>4474.50</td><td>13</td><td></td><td>3877.90</td><td>6</td><td>11.35</td></tr><tr><td>0090050</td><td>HERBOLAX CAP</td><td>106</td><td>6784.00</td><td>46</td><td></td><td>2944.84</td><td>68</td><td>15.78</td></tr><tr><td>0090055</td><td>HIMCOLIN GEL</td><td>64</td><td>14823.68</td><td>6</td><td></td><td>1290.86</td><td>8</td><td>11.35</td></tr><tr><td>0090063</td><td>KAPIKACHHU CAP</td><td>19</td><td>4343.02</td><td>6</td><td></td><td>1371.48</td><td>10</td><td>10.90</td></tr><tr><td>0090234</td><td>LIV 52 HB CAPS</td><td>65</td><td>11142.30</td><td>2</td><td></td><td>342.84</td><td>13</td><td>14.01</td></tr><tr><td>0090080</td><td>LIV 52 SYRUP 100ML</td><td>54</td><td>5759.64</td><td>34</td><td></td><td>3626.44</td><td>31</td><td>11.35</td></tr><tr><td>0090474</td><td>LIV 52 SYRUP 100ML SUG FR</td><td>70</td><td>8960.00</td><td>0</td><td></td><td>0.00</td><td>0</td><td>17.55</td></tr><tr><td>0090085</td><td>LIV 52 SYRUP 200ML</td><td>20</td><td>3565.60</td><td>54</td><td></td><td>9627.12</td><td>115</td><td>14.01</td></tr><tr><td>0090087</td><td>LIV 52 TAB</td><td>848</td><td>142141.76</td><td>179</td><td></td><td>30003.98</td><td>366</td><td>14.01</td></tr><tr><td>0090108</td><td>MANJISHTHA TAB</td><td>14</td><td>2823.38</td><td>2</td><td></td><td>419.04</td><td>0</td><td>10.90</td></tr><tr><td>0090180</td><td>OPHTHACARE EYE DROP</td><td>309</td><td>24250.32</td><td>118</td><td></td><td>9254.18</td><td>191</td><td>18.74</td></tr><tr><td>0090198</td><td>OXITARD CAP 10 S</td><td>41</td><td>3936.00</td><td>5</td><td></td><td>480.00</td><td>17</td><td>11.35</td></tr><tr><td>0090115</td><td>PILEX FORTE OINTMENT</td><td>37</td><td>4228.36</td><td>187</td><td></td><td>21370.36</td><td>370</td><td>11.35</td></tr><tr><td>0090436</td><td>PILEX FORTE TAB 60 S</td><td>38</td><td>8917.84</td><td>4</td><td></td><td>938.72</td><td>13</td><td>11.35</td></tr><tr><td>0090110</td><td>PILEX TAB</td><td>832</td><td>155301.12</td><td>451</td><td></td><td>80404.28</td><td>511</td><td>11.35</td></tr><tr><td>0090116</td><td>PURIM TAB</td><td>0</td><td>0.00</td><td>0</td><td></td><td>0.00</td><td>0</td><td>10.90</td></tr><tr><td>0090482</td><td>QUISTA DN 200G VANILA</td><td>0</td><td>0.00</td><td>0</td><td></td><td>0.00</td><td>0</td><td>8.92</td></tr><tr><td>0090422</td><td>QUISTA DN 400G VANILA</td><td>0</td><td>0.00</td><td>0</td><td></td><td>0.00</td><td>0</td><td>8.92</td></tr><tr><td>0090126</td><td>RENALKA SYRUP 100ML</td><td>40</td><td>3413.60</td><td>4</td><td></td><td>341.36</td><td>11</td><td>11.35</td></tr><tr><td>0090197</td><td>RENALKA SYRUP 200ML</td><td>22</td><td>3520.00</td><td>12</td><td></td><td>1920.00</td><td>23</td><td>15.78</td></tr><tr><td>0090142</td><td>SHALLAKI TAB</td><td>49</td><td>11200.42</td><td>0</td><td></td><td>0.00</td><td>13</td><td>10.90</td></tr><tr><td>0090470</td><td>SHIGRU TAB 60 S</td><td>0</td><td>0.00</td><td>0</td><td></td><td>0.00</td><td>0</td><td>10.90</td></tr><tr><td>0090169</td><td>TAGARA CAP</td><td>15</td><td>3371.40</td><td>0</td><td></td><td>0.00</td><td>7</td><td>0.00</td></tr><tr><td>0090165</td><td>TENTEX FORTE</td><td>189</td><td>20158.74</td><td>100</td><td></td><td>10670.80</td><td>36</td><td>17.56</td></tr><tr><td>0090167</td><td>TRIPHALA TAB</td><td>47</td><td>10743.26</td><td>34</td><td></td><td>7771.72</td><td>34</td><td>15.36</td></tr><tr><td>0090488</td><td>VASAKA TAB</td><td>37</td><td>7752.24</td><td>0</td><td></td><td>0.00</td><td>0</td><td>19.81</td></tr><tr><td>0090156</td><td>VRIKSHAMLA TAB</td><td>36</td><td>8091.72</td><td>3</td><td></td><td>674.31</td><td>0</td><td>18.45</td></tr><tr><td>0090181</td><td>YASHTI-MADHU CAP</td><td>33</td><td>7543.14</td><td>3</td><td></td><td>685.74</td><td>4</td><td>10.90</td></tr><tr><td>-</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>0090198</td><td>549791.98</td><td></td><td></td><td></td><td>205371.75</td><td></td><td></td><td></td></tr></table>",
+          "bbox": [
+            0.0,
+            257.0,
+            1199.0,
+            1327.0
+          ],
+          "confidence": null,
+          "page": 1
+        }
+      ],
+      "boxes": [
+        [
+          26.0,
+          3.0,
+          341.0,
+          32.0
+        ],
+        [
+          1044.0,
+          1.0,
+          1174.0,
+          32.0
+        ],
+        [
+          25.0,
+          60.0,
+          237.0,
+          97.0
+        ],
+        [
+          8.0,
+          145.0,
+          543.0,
+          229.0
+        ],
+        [
+          773.0,
+          168.0,
+          923.0,
+          199.0
+        ],
+        [
+          0.0,
+          257.0,
+          1199.0,
+          1327.0
+        ]
+      ],
+      "confidence": {
+        "mean": null,
+        "count": 0,
+        "available": false
+      },
+      "layout": {
+        "regions": [
+          {
+            "index": 0,
+            "label": "header",
+            "text": "12:07 Fri, 4 Sept",
+            "bbox": [
+              26.0,
+              3.0,
+              341.0,
+              32.0
+            ],
+            "order": 0
+          },
+          {
+            "index": 1,
+            "label": "header",
+            "text": "88%",
+            "bbox": [
+              1044.0,
+              1.0,
+              1174.0,
+              32.0
+            ],
+            "order": 1
+          },
+          {
+            "index": 2,
+            "label": "paragraph_title",
+            "text": "\u2190 ZEAL.TXT",
+            "bbox": [
+              25.0,
+              60.0,
+              237.0,
+              97.0
+            ],
+            "order": 2
+          },
+          {
+            "index": 3,
+            "label": "text",
+            "text": "PRESAGE PHARMA\nSTOCK STATUS REPORT AS ON 31-08-2026\nHIMALAYA WELLNESS 701012(DIVISION - ZEAL)",
+            "bbox": [
+              8.0,
+              145.0,
+              543.0,
+              229.0
+            ],
+            "order": 3
+          },
+          {
+            "index": 4,
+            "label": "text",
+            "text": "PAGE NO : 1",
+            "bbox": [
+              773.0,
+              168.0,
+              923.0,
+              199.0
+            ],
+            "order": 4
+          },
+          {
+            "index": 5,
+            "label": "table",
+            "text": "<table><tr><td>ITEMCODE</td><td>ITEMNAME</td><td>CLSTOCK</td><td>CLVALUE</td><td>SALES</td><td>SALESVALUE</td><td>LM</td><td>SALE</td><td>%</td></tr><tr><td>-</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>0090466</td><td>AACTARIL SOAP 75G</td><td>88</td><td>7710.56</td><td>8</td><td></td><td>688.44</td><td>31</td><td>15.77</td></tr><tr><td>0090005</td><td>ABANA TABLETS</td><td>79</td><td>13241.98</td><td>3</td><td></td><td>502.86</td><td>42</td><td>11.35</td></tr><tr><td>0090225</td><td>BLEMINOR CREAM</td><td>33</td><td>6461.40</td><td>12</td><td></td><td>2349.60</td><td>5</td><td>11.35</td></tr><tr><td>0090022</td><td>CLARINA CREAM</td><td>51</td><td>7460.28</td><td>6</td><td></td><td>877.68</td><td>14</td><td>11.35</td></tr><tr><td>0090217</td><td>CLARINA FACE WASH GEL#</td><td>41</td><td>5003.64</td><td>8</td><td></td><td>976.32</td><td>6</td><td>11.35</td></tr><tr><td>0090150</td><td>CONFIDO</td><td>6</td><td>1110.84</td><td>15</td><td></td><td>2777.10</td><td>26</td><td>20.21</td></tr><tr><td>0090191</td><td>DIABECON DS TAB</td><td>30</td><td>6514.20</td><td>32</td><td></td><td>6951.36</td><td>35</td><td>11.35</td></tr><tr><td>0090170</td><td>DIABECON TAB</td><td>108</td><td>16128.72</td><td>5</td><td></td><td>746.70</td><td>7</td><td>17.56</td></tr><tr><td>0090264</td><td>HADJOD CAP</td><td>36</td><td>8914.32</td><td>6</td><td></td><td>1485.72</td><td>6</td><td>17.14</td></tr><tr><td>0090215</td><td>HAIR ZONE SOLUTION 60ML</td><td>15</td><td>4474.50</td><td>13</td><td></td><td>3877.90</td><td>6</td><td>11.35</td></tr><tr><td>0090050</td><td>HERBOLAX CAP</td><td>106</td><td>6784.00</td><td>46</td><td></td><td>2944.84</td><td>68</td><td>15.78</td></tr><tr><td>0090055</td><td>HIMCOLIN GEL</td><td>64</td><td>14823.68</td><td>6</td><td></td><td>1290.86</td><td>8</td><td>11.35</td></tr><tr><td>0090063</td><td>KAPIKACHHU CAP</td><td>19</td><td>4343.02</td><td>6</td><td></td><td>1371.48</td><td>10</td><td>10.90</td></tr><tr><td>0090234</td><td>LIV 52 HB CAPS</td><td>65</td><td>11142.30</td><td>2</td><td></td><td>342.84</td><td>13</td><td>14.01</td></tr><tr><td>0090080</td><td>LIV 52 SYRUP 100ML</td><td>54</td><td>5759.64</td><td>34</td><td></td><td>3626.44</td><td>31</td><td>11.35</td></tr><tr><td>0090474</td><td>LIV 52 SYRUP 100ML SUG FR</td><td>70</td><td>8960.00</td><td>0</td><td></td><td>0.00</td><td>0</td><td>17.55</td></tr><tr><td>0090085</td><td>LIV 52 SYRUP 200ML</td><td>20</td><td>3565.60</td><td>54</td><td></td><td>9627.12</td><td>115</td><td>14.01</td></tr><tr><td>0090087</td><td>LIV 52 TAB</td><td>848</td><td>142141.76</td><td>179</td><td></td><td>30003.98</td><td>366</td><td>14.01</td></tr><tr><td>0090108</td><td>MANJISHTHA TAB</td><td>14</td><td>2823.38</td><td>2</td><td></td><td>419.04</td><td>0</td><td>10.90</td></tr><tr><td>0090180</td><td>OPHTHACARE EYE DROP</td><td>309</td><td>24250.32</td><td>118</td><td></td><td>9254.18</td><td>191</td><td>18.74</td></tr><tr><td>0090198</td><td>OXITARD CAP 10 S</td><td>41</td><td>3936.00</td><td>5</td><td></td><td>480.00</td><td>17</td><td>11.35</td></tr><tr><td>0090115</td><td>PILEX FORTE OINTMENT</td><td>37</td><td>4228.36</td><td>187</td><td></td><td>21370.36</td><td>370</td><td>11.35</td></tr><tr><td>0090436</td><td>PILEX FORTE TAB 60 S</td><td>38</td><td>8917.84</td><td>4</td><td></td><td>938.72</td><td>13</td><td>11.35</td></tr><tr><td>0090110</td><td>PILEX TAB</td><td>832</td><td>155301.12</td><td>451</td><td></td><td>80404.28</td><td>511</td><td>11.35</td></tr><tr><td>0090116</td><td>PURIM TAB</td><td>0</td><td>0.00</td><td>0</td><td></td><td>0.00</td><td>0</td><td>10.90</td></tr><tr><td>0090482</td><td>QUISTA DN 200G VANILA</td><td>0</td><td>0.00</td><td>0</td><td></td><td>0.00</td><td>0</td><td>8.92</td></tr><tr><td>0090422</td><td>QUISTA DN 400G VANILA</td><td>0</td><td>0.00</td><td>0</td><td></td><td>0.00</td><td>0</td><td>8.92</td></tr><tr><td>0090126</td><td>RENALKA SYRUP 100ML</td><td>40</td><td>3413.60</td><td>4</td><td></td><td>341.36</td><td>11</td><td>11.35</td></tr><tr><td>0090197</td><td>RENALKA SYRUP 200ML</td><td>22</td><td>3520.00</td><td>12</td><td></td><td>1920.00</td><td>23</td><td>15.78</td></tr><tr><td>0090142</td><td>SHALLAKI TAB</td><td>49</td><td>11200.42</td><td>0</td><td></td><td>0.00</td><td>13</td><td>10.90</td></tr><tr><td>0090470</td><td>SHIGRU TAB 60 S</td><td>0</td><td>0.00</td><td>0</td><td></td><td>0.00</td><td>0</td><td>10.90</td></tr><tr><td>0090169</td><td>TAGARA CAP</td><td>15</td><td>3371.40</td><td>0</td><td></td><td>0.00</td><td>7</td><td>0.00</td></tr><tr><td>0090165</td><td>TENTEX FORTE</td><td>189</td><td>20158.74</td><td>100</td><td></td><td>10670.80</td><td>36</td><td>17.56</td></tr><tr><td>0090167</td><td>TRIPHALA TAB</td><td>47</td><td>10743.26</td><td>34</td><td></td><td>7771.72</td><td>34</td><td>15.36</td></tr><tr><td>0090488</td><td>VASAKA TAB</td><td>37</td><td>7752.24</td><td>0</td><td></td><td>0.00</td><td>0</td><td>19.81</td></tr><tr><td>0090156</td><td>VRIKSHAMLA TAB</td><td>36</td><td>8091.72</td><td>3</td><td></td><td>674.31</td><td>0</td><td>18.45</td></tr><tr><td>0090181</td><td>YASHTI-MADHU CAP</td><td>33</td><td>7543.14</td><td>3</td><td></td><td>685.74</td><td>4</td><td>10.90</td></tr><tr><td>-</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>0090198</td><td>549791.98</td><td></td><td></td><td></td><td>205371.75</td><td></td><td></td><td></td></tr></table>",
+            "bbox": [
+              0.0,
+              257.0,
+              1199.0,
+              1327.0
+            ],
+            "order": 5
+          },
+          {
+            "index": 6,
+            "label": "footer_image",
+            "text": "",
+            "bbox": [
+              1038.0,
+              1769.0,
+              1124.0,
+              1839.0
+            ],
+            "order": 6
+          },
+          {
+            "index": 7,
+            "label": "footer_image",
+            "text": "",
+            "bbox": [
+              509.0,
+              1859.0,
+              694.0,
+              1905.0
+            ],
+            "order": 7
+          }
+        ],
+        "available": true
+      },
+      "tables": {
+        "items": [
+          {
+            "index": 5,
+            "label": "table",
+            "text": "<table><tr><td>ITEMCODE</td><td>ITEMNAME</td><td>CLSTOCK</td><td>CLVALUE</td><td>SALES</td><td>SALESVALUE</td><td>LM</td><td>SALE</td><td>%</td></tr><tr><td>-</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>0090466</td><td>AACTARIL SOAP 75G</td><td>88</td><td>7710.56</td><td>8</td><td></td><td>688.44</td><td>31</td><td>15.77</td></tr><tr><td>0090005</td><td>ABANA TABLETS</td><td>79</td><td>13241.98</td><td>3</td><td></td><td>502.86</td><td>42</td><td>11.35</td></tr><tr><td>0090225</td><td>BLEMINOR CREAM</td><td>33</td><td>6461.40</td><td>12</td><td></td><td>2349.60</td><td>5</td><td>11.35</td></tr><tr><td>0090022</td><td>CLARINA CREAM</td><td>51</td><td>7460.28</td><td>6</td><td></td><td>877.68</td><td>14</td><td>11.35</td></tr><tr><td>0090217</td><td>CLARINA FACE WASH GEL#</td><td>41</td><td>5003.64</td><td>8</td><td></td><td>976.32</td><td>6</td><td>11.35</td></tr><tr><td>0090150</td><td>CONFIDO</td><td>6</td><td>1110.84</td><td>15</td><td></td><td>2777.10</td><td>26</td><td>20.21</td></tr><tr><td>0090191</td><td>DIABECON DS TAB</td><td>30</td><td>6514.20</td><td>32</td><td></td><td>6951.36</td><td>35</td><td>11.35</td></tr><tr><td>0090170</td><td>DIABECON TAB</td><td>108</td><td>16128.72</td><td>5</td><td></td><td>746.70</td><td>7</td><td>17.56</td></tr><tr><td>0090264</td><td>HADJOD CAP</td><td>36</td><td>8914.32</td><td>6</td><td></td><td>1485.72</td><td>6</td><td>17.14</td></tr><tr><td>0090215</td><td>HAIR ZONE SOLUTION 60ML</td><td>15</td><td>4474.50</td><td>13</td><td></td><td>3877.90</td><td>6</td><td>11.35</td></tr><tr><td>0090050</td><td>HERBOLAX CAP</td><td>106</td><td>6784.00</td><td>46</td><td></td><td>2944.84</td><td>68</td><td>15.78</td></tr><tr><td>0090055</td><td>HIMCOLIN GEL</td><td>64</td><td>14823.68</td><td>6</td><td></td><td>1290.86</td><td>8</td><td>11.35</td></tr><tr><td>0090063</td><td>KAPIKACHHU CAP</td><td>19</td><td>4343.02</td><td>6</td><td></td><td>1371.48</td><td>10</td><td>10.90</td></tr><tr><td>0090234</td><td>LIV 52 HB CAPS</td><td>65</td><td>11142.30</td><td>2</td><td></td><td>342.84</td><td>13</td><td>14.01</td></tr><tr><td>0090080</td><td>LIV 52 SYRUP 100ML</td><td>54</td><td>5759.64</td><td>34</td><td></td><td>3626.44</td><td>31</td><td>11.35</td></tr><tr><td>0090474</td><td>LIV 52 SYRUP 100ML SUG FR</td><td>70</td><td>8960.00</td><td>0</td><td></td><td>0.00</td><td>0</td><td>17.55</td></tr><tr><td>0090085</td><td>LIV 52 SYRUP 200ML</td><td>20</td><td>3565.60</td><td>54</td><td></td><td>9627.12</td><td>115</td><td>14.01</td></tr><tr><td>0090087</td><td>LIV 52 TAB</td><td>848</td><td>142141.76</td><td>179</td><td></td><td>30003.98</td><td>366</td><td>14.01</td></tr><tr><td>0090108</td><td>MANJISHTHA TAB</td><td>14</td><td>2823.38</td><td>2</td><td></td><td>419.04</td><td>0</td><td>10.90</td></tr><tr><td>0090180</td><td>OPHTHACARE EYE DROP</td><td>309</td><td>24250.32</td><td>118</td><td></td><td>9254.18</td><td>191</td><td>18.74</td></tr><tr><td>0090198</td><td>OXITARD CAP 10 S</td><td>41</td><td>3936.00</td><td>5</td><td></td><td>480.00</td><td>17</td><td>11.35</td></tr><tr><td>0090115</td><td>PILEX FORTE OINTMENT</td><td>37</td><td>4228.36</td><td>187</td><td></td><td>21370.36</td><td>370</td><td>11.35</td></tr><tr><td>0090436</td><td>PILEX FORTE TAB 60 S</td><td>38</td><td>8917.84</td><td>4</td><td></td><td>938.72</td><td>13</td><td>11.35</td></tr><tr><td>0090110</td><td>PILEX TAB</td><td>832</td><td>155301.12</td><td>451</td><td></td><td>80404.28</td><td>511</td><td>11.35</td></tr><tr><td>0090116</td><td>PURIM TAB</td><td>0</td><td>0.00</td><td>0</td><td></td><td>0.00</td><td>0</td><td>10.90</td></tr><tr><td>0090482</td><td>QUISTA DN 200G VANILA</td><td>0</td><td>0.00</td><td>0</td><td></td><td>0.00</td><td>0</td><td>8.92</td></tr><tr><td>0090422</td><td>QUISTA DN 400G VANILA</td><td>0</td><td>0.00</td><td>0</td><td></td><td>0.00</td><td>0</td><td>8.92</td></tr><tr><td>0090126</td><td>RENALKA SYRUP 100ML</td><td>40</td><td>3413.60</td><td>4</td><td></td><td>341.36</td><td>11</td><td>11.35</td></tr><tr><td>0090197</td><td>RENALKA SYRUP 200ML</td><td>22</td><td>3520.00</td><td>12</td><td></td><td>1920.00</td><td>23</td><td>15.78</td></tr><tr><td>0090142</td><td>SHALLAKI TAB</td><td>49</td><td>11200.42</td><td>0</td><td></td><td>0.00</td><td>13</td><td>10.90</td></tr><tr><td>0090470</td><td>SHIGRU TAB 60 S</td><td>0</td><td>0.00</td><td>0</td><td></td><td>0.00</td><td>0</td><td>10.90</td></tr><tr><td>0090169</td><td>TAGARA CAP</td><td>15</td><td>3371.40</td><td>0</td><td></td><td>0.00</td><td>7</td><td>0.00</td></tr><tr><td>0090165</td><td>TENTEX FORTE</td><td>189</td><td>20158.74</td><td>100</td><td></td><td>10670.80</td><td>36</td><td>17.56</td></tr><tr><td>0090167</td><td>TRIPHALA TAB</td><td>47</td><td>10743.26</td><td>34</td><td></td><td>7771.72</td><td>34</td><td>15.36</td></tr><tr><td>0090488</td><td>VASAKA TAB</td><td>37</td><td>7752.24</td><td>0</td><td></td><td>0.00</td><td>0</td><td>19.81</td></tr><tr><td>0090156</td><td>VRIKSHAMLA TAB</td><td>36</td><td>8091.72</td><td>3</td><td></td><td>674.31</td><td>0</td><td>18.45</td></tr><tr><td>0090181</td><td>YASHTI-MADHU CAP</td><td>33</td><td>7543.14</td><td>3</td><td></td><td>685.74</td><td>4</td><td>10.90</td></tr><tr><td>-</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>0090198</td><td>549791.98</td><td></td><td></td><td></td><td>205371.75</td><td></td><td></td><td></td></tr></table>",
+            "bbox": [
+              0.0,
+              257.0,
+              1199.0,
+              1327.0
+            ],
+            "html": null,
+            "cells": null
+          }
+        ],
+        "available": true,
+        "count": 1
+      },
+      "latency_ms": 132500.59539999985,
+      "image_width": 1200,
+      "image_height": 1920,
+      "device": "gpu:0",
+      "metadata": {
+        "document_id": "0000701012_2026_08_ZL_11_423_03092026183736.jpg",
+        "source_path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000701012_2026_08_ZL_11_423_03092026183736.jpg",
+        "original_width": 1200,
+        "original_height": 1920,
+        "processed_width": 1200,
+        "processed_height": 1920,
+        "orientation": 0,
+        "preprocessing": [
+          "exif_transpose",
+          "rgb"
+        ],
+        "engine": "paddleocr-vl-1.6",
+        "model": "PaddleOCR-VL-1.6",
+        "model_version": "v1.6",
+        "pipeline_version": "v1.6",
+        "device": "gpu:0",
+        "init_latency_ms": 12079.41050000045,
+        "model_loaded": true,
+        "init_error": null,
+        "available": true,
+        "status": "success",
+        "latency_ms": 132500.59539999985,
+        "image_width": 1200,
+        "image_height": 1920,
+        "word_count": 93,
+        "block_count": 6,
+        "line_count": 6,
+        "lines": [
+          {
+            "text": "12:07 Fri, 4 Sept",
+            "bbox": [
+              26.0,
+              3.0,
+              341.0,
+              32.0
+            ],
+            "label": "header",
+            "order": 0
+          },
+          {
+            "text": "88%",
+            "bbox": [
+              1044.0,
+              1.0,
+              1174.0,
+              32.0
+            ],
+            "label": "header",
+            "order": 1
+          },
+          {
+            "text": "\u2190 ZEAL.TXT",
+            "bbox": [
+              25.0,
+              60.0,
+              237.0,
+              97.0
+            ],
+            "label": "paragraph_title",
+            "order": 2
+          },
+          {
+            "text": "PRESAGE PHARMA\nSTOCK STATUS REPORT AS ON 31-08-2026\nHIMALAYA WELLNESS 701012(DIVISION - ZEAL)",
+            "bbox": [
+              8.0,
+              145.0,
+              543.0,
+              229.0
+            ],
+            "label": "text",
+            "order": 3
+          },
+          {
+            "text": "PAGE NO : 1",
+            "bbox": [
+              773.0,
+              168.0,
+              923.0,
+              199.0
+            ],
+            "label": "text",
+            "order": 4
+          },
+          {
+            "text": "<table><tr><td>ITEMCODE</td><td>ITEMNAME</td><td>CLSTOCK</td><td>CLVALUE</td><td>SALES</td><td>SALESVALUE</td><td>LM</td><td>SALE</td><td>%</td></tr><tr><td>-</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>0090466</td><td>AACTARIL SOAP 75G</td><td>88</td><td>7710.56</td><td>8</td><td></td><td>688.44</td><td>31</td><td>15.77</td></tr><tr><td>0090005</td><td>ABANA TABLETS</td><td>79</td><td>13241.98</td><td>3</td><td></td><td>502.86</td><td>42</td><td>11.35</td></tr><tr><td>0090225</td><td>BLEMINOR CREAM</td><td>33</td><td>6461.40</td><td>12</td><td></td><td>2349.60</td><td>5</td><td>11.35</td></tr><tr><td>0090022</td><td>CLARINA CREAM</td><td>51</td><td>7460.28</td><td>6</td><td></td><td>877.68</td><td>14</td><td>11.35</td></tr><tr><td>0090217</td><td>CLARINA FACE WASH GEL#</td><td>41</td><td>5003.64</td><td>8</td><td></td><td>976.32</td><td>6</td><td>11.35</td></tr><tr><td>0090150</td><td>CONFIDO</td><td>6</td><td>1110.84</td><td>15</td><td></td><td>2777.10</td><td>26</td><td>20.21</td></tr><tr><td>0090191</td><td>DIABECON DS TAB</td><td>30</td><td>6514.20</td><td>32</td><td></td><td>6951.36</td><td>35</td><td>11.35</td></tr><tr><td>0090170</td><td>DIABECON TAB</td><td>108</td><td>16128.72</td><td>5</td><td></td><td>746.70</td><td>7</td><td>17.56</td></tr><tr><td>0090264</td><td>HADJOD CAP</td><td>36</td><td>8914.32</td><td>6</td><td></td><td>1485.72</td><td>6</td><td>17.14</td></tr><tr><td>0090215</td><td>HAIR ZONE SOLUTION 60ML</td><td>15</td><td>4474.50</td><td>13</td><td></td><td>3877.90</td><td>6</td><td>11.35</td></tr><tr><td>0090050</td><td>HERBOLAX CAP</td><td>106</td><td>6784.00</td><td>46</td><td></td><td>2944.84</td><td>68</td><td>15.78</td></tr><tr><td>0090055</td><td>HIMCOLIN GEL</td><td>64</td><td>14823.68</td><td>6</td><td></td><td>1290.86</td><td>8</td><td>11.35</td></tr><tr><td>0090063</td><td>KAPIKACHHU CAP</td><td>19</td><td>4343.02</td><td>6</td><td></td><td>1371.48</td><td>10</td><td>10.90</td></tr><tr><td>0090234</td><td>LIV 52 HB CAPS</td><td>65</td><td>11142.30</td><td>2</td><td></td><td>342.84</td><td>13</td><td>14.01</td></tr><tr><td>0090080</td><td>LIV 52 SYRUP 100ML</td><td>54</td><td>5759.64</td><td>34</td><td></td><td>3626.44</td><td>31</td><td>11.35</td></tr><tr><td>0090474</td><td>LIV 52 SYRUP 100ML SUG FR</td><td>70</td><td>8960.00</td><td>0</td><td></td><td>0.00</td><td>0</td><td>17.55</td></tr><tr><td>0090085</td><td>LIV 52 SYRUP 200ML</td><td>20</td><td>3565.60</td><td>54</td><td></td><td>9627.12</td><td>115</td><td>14.01</td></tr><tr><td>0090087</td><td>LIV 52 TAB</td><td>848</td><td>142141.76</td><td>179</td><td></td><td>30003.98</td><td>366</td><td>14.01</td></tr><tr><td>0090108</td><td>MANJISHTHA TAB</td><td>14</td><td>2823.38</td><td>2</td><td></td><td>419.04</td><td>0</td><td>10.90</td></tr><tr><td>0090180</td><td>OPHTHACARE EYE DROP</td><td>309</td><td>24250.32</td><td>118</td><td></td><td>9254.18</td><td>191</td><td>18.74</td></tr><tr><td>0090198</td><td>OXITARD CAP 10 S</td><td>41</td><td>3936.00</td><td>5</td><td></td><td>480.00</td><td>17</td><td>11.35</td></tr><tr><td>0090115</td><td>PILEX FORTE OINTMENT</td><td>37</td><td>4228.36</td><td>187</td><td></td><td>21370.36</td><td>370</td><td>11.35</td></tr><tr><td>0090436</td><td>PILEX FORTE TAB 60 S</td><td>38</td><td>8917.84</td><td>4</td><td></td><td>938.72</td><td>13</td><td>11.35</td></tr><tr><td>0090110</td><td>PILEX TAB</td><td>832</td><td>155301.12</td><td>451</td><td></td><td>80404.28</td><td>511</td><td>11.35</td></tr><tr><td>0090116</td><td>PURIM TAB</td><td>0</td><td>0.00</td><td>0</td><td></td><td>0.00</td><td>0</td><td>10.90</td></tr><tr><td>0090482</td><td>QUISTA DN 200G VANILA</td><td>0</td><td>0.00</td><td>0</td><td></td><td>0.00</td><td>0</td><td>8.92</td></tr><tr><td>0090422</td><td>QUISTA DN 400G VANILA</td><td>0</td><td>0.00</td><td>0</td><td></td><td>0.00</td><td>0</td><td>8.92</td></tr><tr><td>0090126</td><td>RENALKA SYRUP 100ML</td><td>40</td><td>3413.60</td><td>4</td><td></td><td>341.36</td><td>11</td><td>11.35</td></tr><tr><td>0090197</td><td>RENALKA SYRUP 200ML</td><td>22</td><td>3520.00</td><td>12</td><td></td><td>1920.00</td><td>23</td><td>15.78</td></tr><tr><td>0090142</td><td>SHALLAKI TAB</td><td>49</td><td>11200.42</td><td>0</td><td></td><td>0.00</td><td>13</td><td>10.90</td></tr><tr><td>0090470</td><td>SHIGRU TAB 60 S</td><td>0</td><td>0.00</td><td>0</td><td></td><td>0.00</td><td>0</td><td>10.90</td></tr><tr><td>0090169</td><td>TAGARA CAP</td><td>15</td><td>3371.40</td><td>0</td><td></td><td>0.00</td><td>7</td><td>0.00</td></tr><tr><td>0090165</td><td>TENTEX FORTE</td><td>189</td><td>20158.74</td><td>100</td><td></td><td>10670.80</td><td>36</td><td>17.56</td></tr><tr><td>0090167</td><td>TRIPHALA TAB</td><td>47</td><td>10743.26</td><td>34</td><td></td><td>7771.72</td><td>34</td><td>15.36</td></tr><tr><td>0090488</td><td>VASAKA TAB</td><td>37</td><td>7752.24</td><td>0</td><td></td><td>0.00</td><td>0</td><td>19.81</td></tr><tr><td>0090156</td><td>VRIKSHAMLA TAB</td><td>36</td><td>8091.72</td><td>3</td><td></td><td>674.31</td><td>0</td><td>18.45</td></tr><tr><td>0090181</td><td>YASHTI-MADHU CAP</td><td>33</td><td>7543.14</td><td>3</td><td></td><td>685.74</td><td>4</td><td>10.90</td></tr><tr><td>-</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>0090198</td><td>549791.98</td><td></td><td></td><td></td><td>205371.75</td><td></td><td></td><td></td></tr></table>",
+            "bbox": [
+              0.0,
+              257.0,
+              1199.0,
+              1327.0
+            ],
+            "label": "table",
+            "order": 5
+          }
+        ],
+        "reading_order": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "bbox_stats": {
+          "valid": 6,
+          "invalid": 0,
+          "total": 6
+        }
+      },
+      "error": null,
+      "error_type": null,
+      "page": 1,
+      "native_text": false,
+      "ocr_required": true,
+      "paddle_vl_status": "success",
+      "image_meta": {
+        "original_width": 1200,
+        "original_height": 1920,
+        "processed_width": 1200,
+        "processed_height": 1920,
+        "orientation": 0,
+        "preprocessing": [
+          "exif_transpose",
+          "rgb"
+        ]
+      },
+      "resources": {
+        "cpu_percent": 1.2,
+        "ram_used_gb": 10.91,
+        "ram_total_gb": 15.31,
+        "gpu": "NVIDIA GeForce RTX 3050 6GB Laptop GPU",
+        "vram_used_gb": 7.974,
+        "vram_total_gb": 6.0
+      }
+    }
+  ],
+  "status": "success",
+  "errors": [],
+  "latency_ms": 132726.48709999977,
+  "finished_at": "2026-10-08T13:21:47.543418+00:00",
+  "resources": {
+    "cpu_percent": 5.4,
+    "ram_used_gb": 10.91,
+    "ram_total_gb": 15.31,
+    "gpu": "NVIDIA GeForce RTX 3050 6GB Laptop GPU",
+    "vram_used_gb": 7.974,
+    "vram_total_gb": 6.0
+  }
+}

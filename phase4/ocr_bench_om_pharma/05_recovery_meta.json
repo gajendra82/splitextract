@@ -1,0 +1,77 @@
+{
+  "seconds": 48.7,
+  "meta": {
+    "recovery_attempted": true,
+    "recovery_reason": "empty_or_timeout",
+    "recovery_chain": [
+      "tesseract",
+      "gemini"
+    ],
+    "recovery_log": [
+      {
+        "engine": "tesseract",
+        "ok": false,
+        "error": "timeout:45.0"
+      },
+      {
+        "engine": "gemini",
+        "ok": true,
+        "text_length": 789,
+        "error": null
+      }
+    ],
+    "accepted_engine": "gemini"
+  },
+  "bundle": {
+    "primary": {
+      "text": "OM PHARMA\nStock & Sales from 01/10/2026 to 31/10/2026 for HIMALAYA WELLNESS COMPANY (DIV.: HIM-OTX-DIVI) Page : 1\nProduct Name\nPack\nLstSL Open Recd. Sales Close Order Pend\nGASEX TABLETS\n100TAB\n70\n30 100\n26 104\n-104\nHIMCOCID-SF(MINT FLAVOUR) 200 ML\n2\n5\n4\n1\n-1\nHIMCOCID-SF(SAUNF FLAVOUR 200 ML\n3\n6\n6\n0\n0\nKOFLET LOZENGES(160+40)\n1 TAB\n4\n0\n0\nKOFLET SYRUP\n100 ML\n20 29 56\n14\n71\n-71\nKOFLET-H GINGER\n6 TAB\n75\n98\n160\n108\n150\n-150\nKOFLET-H ORANGE\n6 TAB\n110\n31 160\n41\n150\n-150\nRUMALAYA FORTE TABLETS\n30 TAB\n-\n24\n24\n0\n0\nRUMALAYA LINIMENT\n60 ML\n30\n4\n50\n17\n37\n-37\nTENTEXT ROYAL CAPSULES\n10 CAP\n10\n3\n1\n2\n-2\nLast Month Sales\n25,091.69 Open. Value\n16,574.03\nReceipt Value\n35,609.11 Sales Value\n11,917.17\nClosing Value\n35,975.98 [Order Value +0.00 -34262.84 ]\n* - Near Expiry Product, # - Scheme On Product",
+      "words": [],
+      "confidence": null,
+      "page": 1,
+      "engine": "gemini",
+      "metadata": {
+        "status": "success",
+        "model": "gemini-2.5-flash-lite",
+        "source": "gemini_ocr_fallback",
+        "ocr_source": "gemini",
+        "ocr_recovery": true,
+        "recovery_from": "empty_or_timeout",
+        "transcription_only": true,
+        "unverified_fallback": true
+      },
+      "timed_out": false,
+      "timeout_s": null,
+      "retry_count": 0
+    },
+    "secondary": {
+      "text": "",
+      "words": [],
+      "confidence": null,
+      "page": 1,
+      "engine": "paddleocr-vl-1.6",
+      "metadata": {
+        "status": "error",
+        "error": "empty"
+      },
+      "timed_out": false,
+      "timeout_s": null,
+      "retry_count": 0
+    },
+    "disagreement": false,
+    "engines_used": [
+      "paddleocr-vl-1.6",
+      "gemini"
+    ],
+    "unverified_fallback": true,
+    "metadata": {
+      "status": "fallback",
+      "configured_primary": "paddleocr-vl",
+      "fallback_used": true,
+      "fallback_from": "paddleocr-vl-1.6",
+      "fallback_to": "gemini",
+      "fallback_reason": "empty_or_timeout",
+      "ocr_source": "gemini",
+      "unverified_fallback": true
+    }
+  }
+}

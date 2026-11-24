@@ -1,0 +1,1632 @@
+{
+  "authoritative_split": "verified",
+  "warning": "Verified metrics are the only accuracy result. Preliminary metrics are not authoritative.",
+  "verified": {
+    "images": 2,
+    "verified_rows": 51,
+    "product_correct": 24,
+    "product_incorrect": 0,
+    "product_missing": 27,
+    "product_extra": 24,
+    "product_precision": 0.5,
+    "product_recall": 0.47058823529411764,
+    "product_f1": 0.48484848484848486,
+    "quantity_correct": 88,
+    "quantity_incorrect": 8,
+    "quantity_missing": 66,
+    "quantity_scored": 162,
+    "quantity_accuracy": 0.5432098765432098,
+    "quantity_both_present_accuracy": 0.9166666666666666,
+    "quantity_mae": 1.1041666666666667,
+    "silent_wrong": 8,
+    "silent_wrong_rate": 0.08333333333333333,
+    "image_exact_match": 0,
+    "image_exact_match_rate": 0.0,
+    "by_field": {
+      "opening_qty": {
+        "correct": 21,
+        "incorrect": 3,
+        "missing": 6,
+        "unscored": 21,
+        "abs_error_sum": 44.0,
+        "both_present": 24,
+        "accuracy": 0.7,
+        "mae": 1.8333333333333333
+      },
+      "receipt_qty": {
+        "correct": 24,
+        "incorrect": 0,
+        "missing": 6,
+        "unscored": 21,
+        "abs_error_sum": 0.0,
+        "both_present": 24,
+        "accuracy": 0.8,
+        "mae": 0.0
+      },
+      "sales_qty": {
+        "correct": 21,
+        "incorrect": 3,
+        "missing": 27,
+        "unscored": 0,
+        "abs_error_sum": 37.0,
+        "both_present": 24,
+        "accuracy": 0.4117647058823529,
+        "mae": 1.5416666666666667
+      },
+      "sales_scheme_qty": {
+        "correct": 0,
+        "incorrect": 0,
+        "missing": 0,
+        "unscored": 51,
+        "abs_error_sum": 0.0,
+        "both_present": 0,
+        "accuracy": null,
+        "mae": null
+      },
+      "stock_out_qty": {
+        "correct": 0,
+        "incorrect": 0,
+        "missing": 0,
+        "unscored": 51,
+        "abs_error_sum": 0.0,
+        "both_present": 0,
+        "accuracy": null,
+        "mae": null
+      },
+      "closing_qty": {
+        "correct": 22,
+        "incorrect": 2,
+        "missing": 27,
+        "unscored": 0,
+        "abs_error_sum": 25.0,
+        "both_present": 24,
+        "accuracy": 0.43137254901960786,
+        "mae": 1.0416666666666667
+      }
+    },
+    "documents": [
+      {
+        "document_id": "0000719004_2026_08_ZA_04_550_02092026014949.jpg",
+        "verification_status": "verified",
+        "gt_rows": 21,
+        "predicted_rows": 1,
+        "product_correct": 0,
+        "product_incorrect": 0,
+        "product_missing": 21,
+        "product_extra": 1,
+        "product_unscored": 0,
+        "product_precision": 0.0,
+        "product_recall": 0.0,
+        "product_f1": null,
+        "quantity_fields": {
+          "opening_qty": {
+            "correct": 0,
+            "incorrect": 0,
+            "missing": 0,
+            "unscored": 21,
+            "abs_error_sum": 0.0,
+            "both_present": 0
+          },
+          "receipt_qty": {
+            "correct": 0,
+            "incorrect": 0,
+            "missing": 0,
+            "unscored": 21,
+            "abs_error_sum": 0.0,
+            "both_present": 0
+          },
+          "sales_qty": {
+            "correct": 0,
+            "incorrect": 0,
+            "missing": 21,
+            "unscored": 0,
+            "abs_error_sum": 0.0,
+            "both_present": 0
+          },
+          "sales_scheme_qty": {
+            "correct": 0,
+            "incorrect": 0,
+            "missing": 0,
+            "unscored": 21,
+            "abs_error_sum": 0.0,
+            "both_present": 0
+          },
+          "stock_out_qty": {
+            "correct": 0,
+            "incorrect": 0,
+            "missing": 0,
+            "unscored": 21,
+            "abs_error_sum": 0.0,
+            "both_present": 0
+          },
+          "closing_qty": {
+            "correct": 0,
+            "incorrect": 0,
+            "missing": 21,
+            "unscored": 0,
+            "abs_error_sum": 0.0,
+            "both_present": 0
+          }
+        },
+        "quantity_correct": 0,
+        "quantity_incorrect": 0,
+        "quantity_missing": 42,
+        "quantity_scored": 42,
+        "quantity_accuracy": 0.0,
+        "quantity_both_present": 0,
+        "quantity_both_present_accuracy": null,
+        "quantity_mae": null,
+        "silent_wrong": 0,
+        "silent_wrong_rate": null,
+        "image_exact_match": false,
+        "name_note": "A product is correct when the full printed name occurs in the OCR text. One occurrence is consumed per ground-truth row. An extracted fragment of a labeled name is not an extra product.",
+        "cache_engine": "tesseract"
+      },
+      {
+        "document_id": "0000722289_2026_08_ZA_04_589_04092026043529.jpg",
+        "verification_status": "verified",
+        "gt_rows": 30,
+        "predicted_rows": 48,
+        "product_correct": 24,
+        "product_incorrect": 0,
+        "product_missing": 6,
+        "product_extra": 23,
+        "product_unscored": 0,
+        "product_precision": 0.5106382978723404,
+        "product_recall": 0.8,
+        "product_f1": 0.6233766233766233,
+        "quantity_fields": {
+          "opening_qty": {
+            "correct": 21,
+            "incorrect": 3,
+            "missing": 6,
+            "unscored": 0,
+            "abs_error_sum": 44.0,
+            "both_present": 24
+          },
+          "receipt_qty": {
+            "correct": 24,
+            "incorrect": 0,
+            "missing": 6,
+            "unscored": 0,
+            "abs_error_sum": 0.0,
+            "both_present": 24
+          },
+          "sales_qty": {
+            "correct": 21,
+            "incorrect": 3,
+            "missing": 6,
+            "unscored": 0,
+            "abs_error_sum": 37.0,
+            "both_present": 24
+          },
+          "sales_scheme_qty": {
+            "correct": 0,
+            "incorrect": 0,
+            "missing": 0,
+            "unscored": 30,
+            "abs_error_sum": 0.0,
+            "both_present": 0
+          },
+          "stock_out_qty": {
+            "correct": 0,
+            "incorrect": 0,
+            "missing": 0,
+            "unscored": 30,
+            "abs_error_sum": 0.0,
+            "both_present": 0
+          },
+          "closing_qty": {
+            "correct": 22,
+            "incorrect": 2,
+            "missing": 6,
+            "unscored": 0,
+            "abs_error_sum": 25.0,
+            "both_present": 24
+          }
+        },
+        "quantity_correct": 88,
+        "quantity_incorrect": 8,
+        "quantity_missing": 24,
+        "quantity_scored": 120,
+        "quantity_accuracy": 0.7333333333333333,
+        "quantity_both_present": 96,
+        "quantity_both_present_accuracy": 0.9166666666666666,
+        "quantity_mae": 1.1041666666666667,
+        "silent_wrong": 8,
+        "silent_wrong_rate": 0.08333333333333333,
+        "image_exact_match": false,
+        "name_note": "A product is correct when the full printed name occurs in the OCR text. One occurrence is consumed per ground-truth row. An extracted fragment of a labeled name is not an extra product.",
+        "cache_engine": "tesseract"
+      }
+    ],
+    "field_rows": [
+      {
+        "row_id": "r01",
+        "field": "sales_qty",
+        "result": "missing",
+        "expected": 25.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r01",
+        "field": "closing_qty",
+        "result": "missing",
+        "expected": 12.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r02",
+        "field": "sales_qty",
+        "result": "missing",
+        "expected": 76.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r02",
+        "field": "closing_qty",
+        "result": "missing",
+        "expected": 35.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r03",
+        "field": "sales_qty",
+        "result": "missing",
+        "expected": 59.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r03",
+        "field": "closing_qty",
+        "result": "missing",
+        "expected": 29.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r04",
+        "field": "sales_qty",
+        "result": "missing",
+        "expected": 6.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r04",
+        "field": "closing_qty",
+        "result": "missing",
+        "expected": 0.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r05",
+        "field": "sales_qty",
+        "result": "missing",
+        "expected": 0.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r05",
+        "field": "closing_qty",
+        "result": "missing",
+        "expected": 18.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r06",
+        "field": "sales_qty",
+        "result": "missing",
+        "expected": 12.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r06",
+        "field": "closing_qty",
+        "result": "missing",
+        "expected": 87.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r07",
+        "field": "sales_qty",
+        "result": "missing",
+        "expected": 106.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r07",
+        "field": "closing_qty",
+        "result": "missing",
+        "expected": 4.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r08",
+        "field": "sales_qty",
+        "result": "missing",
+        "expected": 27.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r08",
+        "field": "closing_qty",
+        "result": "missing",
+        "expected": 4.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r09",
+        "field": "sales_qty",
+        "result": "missing",
+        "expected": 0.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r09",
+        "field": "closing_qty",
+        "result": "missing",
+        "expected": 0.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r10",
+        "field": "sales_qty",
+        "result": "missing",
+        "expected": 1.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r10",
+        "field": "closing_qty",
+        "result": "missing",
+        "expected": 47.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r11",
+        "field": "sales_qty",
+        "result": "missing",
+        "expected": 6.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r11",
+        "field": "closing_qty",
+        "result": "missing",
+        "expected": 16.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r12",
+        "field": "sales_qty",
+        "result": "missing",
+        "expected": 38.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r12",
+        "field": "closing_qty",
+        "result": "missing",
+        "expected": 23.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r13",
+        "field": "sales_qty",
+        "result": "missing",
+        "expected": 0.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r13",
+        "field": "closing_qty",
+        "result": "missing",
+        "expected": 0.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r14",
+        "field": "sales_qty",
+        "result": "missing",
+        "expected": 28.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r14",
+        "field": "closing_qty",
+        "result": "missing",
+        "expected": 48.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r15",
+        "field": "sales_qty",
+        "result": "missing",
+        "expected": 0.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r15",
+        "field": "closing_qty",
+        "result": "missing",
+        "expected": 3.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r16",
+        "field": "sales_qty",
+        "result": "missing",
+        "expected": 148.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r16",
+        "field": "closing_qty",
+        "result": "missing",
+        "expected": 71.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r17",
+        "field": "sales_qty",
+        "result": "missing",
+        "expected": 41.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r17",
+        "field": "closing_qty",
+        "result": "missing",
+        "expected": 98.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r18",
+        "field": "sales_qty",
+        "result": "missing",
+        "expected": 0.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r18",
+        "field": "closing_qty",
+        "result": "missing",
+        "expected": 85.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r19",
+        "field": "sales_qty",
+        "result": "missing",
+        "expected": 18.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r19",
+        "field": "closing_qty",
+        "result": "missing",
+        "expected": 12.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r20",
+        "field": "sales_qty",
+        "result": "missing",
+        "expected": 16.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r20",
+        "field": "closing_qty",
+        "result": "missing",
+        "expected": 0.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r21",
+        "field": "sales_qty",
+        "result": "missing",
+        "expected": 0.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r21",
+        "field": "closing_qty",
+        "result": "missing",
+        "expected": 0.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r01",
+        "field": "opening_qty",
+        "result": "incorrect",
+        "expected": 44.0,
+        "predicted": 24.0
+      },
+      {
+        "row_id": "r01",
+        "field": "receipt_qty",
+        "result": "correct",
+        "expected": 0.0,
+        "predicted": 0.0
+      },
+      {
+        "row_id": "r01",
+        "field": "sales_qty",
+        "result": "correct",
+        "expected": 6.0,
+        "predicted": 6.0
+      },
+      {
+        "row_id": "r01",
+        "field": "closing_qty",
+        "result": "correct",
+        "expected": 18.0,
+        "predicted": 18.0
+      },
+      {
+        "row_id": "r02",
+        "field": "opening_qty",
+        "result": "correct",
+        "expected": 1.0,
+        "predicted": 1.0
+      },
+      {
+        "row_id": "r02",
+        "field": "receipt_qty",
+        "result": "correct",
+        "expected": 0.0,
+        "predicted": 0.0
+      },
+      {
+        "row_id": "r02",
+        "field": "sales_qty",
+        "result": "correct",
+        "expected": 0.0,
+        "predicted": 0.0
+      },
+      {
+        "row_id": "r02",
+        "field": "closing_qty",
+        "result": "correct",
+        "expected": 1.0,
+        "predicted": 1.0
+      },
+      {
+        "row_id": "r03",
+        "field": "opening_qty",
+        "result": "missing",
+        "expected": 24.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r03",
+        "field": "receipt_qty",
+        "result": "missing",
+        "expected": 0.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r03",
+        "field": "sales_qty",
+        "result": "missing",
+        "expected": 2.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r03",
+        "field": "closing_qty",
+        "result": "missing",
+        "expected": 42.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r04",
+        "field": "opening_qty",
+        "result": "correct",
+        "expected": 0.0,
+        "predicted": 0.0
+      },
+      {
+        "row_id": "r04",
+        "field": "receipt_qty",
+        "result": "correct",
+        "expected": 0.0,
+        "predicted": 0.0
+      },
+      {
+        "row_id": "r04",
+        "field": "sales_qty",
+        "result": "correct",
+        "expected": 0.0,
+        "predicted": 0.0
+      },
+      {
+        "row_id": "r04",
+        "field": "closing_qty",
+        "result": "correct",
+        "expected": 0.0,
+        "predicted": 0.0
+      },
+      {
+        "row_id": "r05",
+        "field": "opening_qty",
+        "result": "correct",
+        "expected": 0.0,
+        "predicted": 0.0
+      },
+      {
+        "row_id": "r05",
+        "field": "receipt_qty",
+        "result": "correct",
+        "expected": 0.0,
+        "predicted": 0.0
+      },
+      {
+        "row_id": "r05",
+        "field": "sales_qty",
+        "result": "correct",
+        "expected": 0.0,
+        "predicted": 0.0
+      },
+      {
+        "row_id": "r05",
+        "field": "closing_qty",
+        "result": "correct",
+        "expected": 0.0,
+        "predicted": 0.0
+      },
+      {
+        "row_id": "r06",
+        "field": "opening_qty",
+        "result": "correct",
+        "expected": 117.0,
+        "predicted": 117.0
+      },
+      {
+        "row_id": "r06",
+        "field": "receipt_qty",
+        "result": "correct",
+        "expected": 0.0,
+        "predicted": 0.0
+      },
+      {
+        "row_id": "r06",
+        "field": "sales_qty",
+        "result": "correct",
+        "expected": 88.0,
+        "predicted": 88.0
+      },
+      {
+        "row_id": "r06",
+        "field": "closing_qty",
+        "result": "correct",
+        "expected": 29.0,
+        "predicted": 29.0
+      },
+      {
+        "row_id": "r07",
+        "field": "opening_qty",
+        "result": "correct",
+        "expected": 0.0,
+        "predicted": 0.0
+      },
+      {
+        "row_id": "r07",
+        "field": "receipt_qty",
+        "result": "correct",
+        "expected": 0.0,
+        "predicted": 0.0
+      },
+      {
+        "row_id": "r07",
+        "field": "sales_qty",
+        "result": "correct",
+        "expected": 0.0,
+        "predicted": 0.0
+      },
+      {
+        "row_id": "r07",
+        "field": "closing_qty",
+        "result": "correct",
+        "expected": 0.0,
+        "predicted": 0.0
+      },
+      {
+        "row_id": "r08",
+        "field": "opening_qty",
+        "result": "correct",
+        "expected": 0.0,
+        "predicted": 0.0
+      },
+      {
+        "row_id": "r08",
+        "field": "receipt_qty",
+        "result": "correct",
+        "expected": 0.0,
+        "predicted": 0.0
+      },
+      {
+        "row_id": "r08",
+        "field": "sales_qty",
+        "result": "correct",
+        "expected": 0.0,
+        "predicted": 0.0
+      },
+      {
+        "row_id": "r08",
+        "field": "closing_qty",
+        "result": "correct",
+        "expected": 0.0,
+        "predicted": 0.0
+      },
+      {
+        "row_id": "r09",
+        "field": "opening_qty",
+        "result": "correct",
+        "expected": 58.0,
+        "predicted": 58.0
+      },
+      {
+        "row_id": "r09",
+        "field": "receipt_qty",
+        "result": "correct",
+        "expected": 0.0,
+        "predicted": 0.0
+      },
+      {
+        "row_id": "r09",
+        "field": "sales_qty",
+        "result": "correct",
+        "expected": 48.0,
+        "predicted": 48.0
+      },
+      {
+        "row_id": "r09",
+        "field": "closing_qty",
+        "result": "correct",
+        "expected": 10.0,
+        "predicted": 10.0
+      },
+      {
+        "row_id": "r10",
+        "field": "opening_qty",
+        "result": "missing",
+        "expected": 28.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r10",
+        "field": "receipt_qty",
+        "result": "missing",
+        "expected": 0.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r10",
+        "field": "sales_qty",
+        "result": "missing",
+        "expected": 0.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r10",
+        "field": "closing_qty",
+        "result": "missing",
+        "expected": 28.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r11",
+        "field": "opening_qty",
+        "result": "correct",
+        "expected": 104.0,
+        "predicted": 104.0
+      },
+      {
+        "row_id": "r11",
+        "field": "receipt_qty",
+        "result": "correct",
+        "expected": 100.0,
+        "predicted": 100.0
+      },
+      {
+        "row_id": "r11",
+        "field": "sales_qty",
+        "result": "incorrect",
+        "expected": 200.0,
+        "predicted": 204.0
+      },
+      {
+        "row_id": "r11",
+        "field": "closing_qty",
+        "result": "correct",
+        "expected": 4.0,
+        "predicted": 4.0
+      },
+      {
+        "row_id": "r12",
+        "field": "opening_qty",
+        "result": "incorrect",
+        "expected": 32.0,
+        "predicted": 30.0
+      },
+      {
+        "row_id": "r12",
+        "field": "receipt_qty",
+        "result": "correct",
+        "expected": 0.0,
+        "predicted": 0.0
+      },
+      {
+        "row_id": "r12",
+        "field": "sales_qty",
+        "result": "correct",
+        "expected": 60.0,
+        "predicted": 60.0
+      },
+      {
+        "row_id": "r12",
+        "field": "closing_qty",
+        "result": "correct",
+        "expected": 2.0,
+        "predicted": 2.0
+      },
+      {
+        "row_id": "r13",
+        "field": "opening_qty",
+        "result": "incorrect",
+        "expected": 62.0,
+        "predicted": 84.0
+      },
+      {
+        "row_id": "r13",
+        "field": "receipt_qty",
+        "result": "correct",
+        "expected": 84.0,
+        "predicted": 84.0
+      },
+      {
+        "row_id": "r13",
+        "field": "sales_qty",
+        "result": "correct",
+        "expected": 31.0,
+        "predicted": 31.0
+      },
+      {
+        "row_id": "r13",
+        "field": "closing_qty",
+        "result": "incorrect",
+        "expected": 51.0,
+        "predicted": 32.0
+      },
+      {
+        "row_id": "r14",
+        "field": "opening_qty",
+        "result": "correct",
+        "expected": 21.0,
+        "predicted": 21.0
+      },
+      {
+        "row_id": "r14",
+        "field": "receipt_qty",
+        "result": "correct",
+        "expected": 12.0,
+        "predicted": 12.0
+      },
+      {
+        "row_id": "r14",
+        "field": "sales_qty",
+        "result": "correct",
+        "expected": 6.0,
+        "predicted": 6.0
+      },
+      {
+        "row_id": "r14",
+        "field": "closing_qty",
+        "result": "incorrect",
+        "expected": 27.0,
+        "predicted": 21.0
+      },
+      {
+        "row_id": "r15",
+        "field": "opening_qty",
+        "result": "missing",
+        "expected": 37.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r15",
+        "field": "receipt_qty",
+        "result": "missing",
+        "expected": 56.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r15",
+        "field": "sales_qty",
+        "result": "missing",
+        "expected": 3.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r15",
+        "field": "closing_qty",
+        "result": "missing",
+        "expected": 90.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r16",
+        "field": "opening_qty",
+        "result": "correct",
+        "expected": 43.0,
+        "predicted": 43.0
+      },
+      {
+        "row_id": "r16",
+        "field": "receipt_qty",
+        "result": "correct",
+        "expected": 0.0,
+        "predicted": 0.0
+      },
+      {
+        "row_id": "r16",
+        "field": "sales_qty",
+        "result": "correct",
+        "expected": 12.0,
+        "predicted": 12.0
+      },
+      {
+        "row_id": "r16",
+        "field": "closing_qty",
+        "result": "correct",
+        "expected": 31.0,
+        "predicted": 31.0
+      },
+      {
+        "row_id": "r17",
+        "field": "opening_qty",
+        "result": "correct",
+        "expected": 0.0,
+        "predicted": 0.0
+      },
+      {
+        "row_id": "r17",
+        "field": "receipt_qty",
+        "result": "correct",
+        "expected": 0.0,
+        "predicted": 0.0
+      },
+      {
+        "row_id": "r17",
+        "field": "sales_qty",
+        "result": "correct",
+        "expected": 0.0,
+        "predicted": 0.0
+      },
+      {
+        "row_id": "r17",
+        "field": "closing_qty",
+        "result": "correct",
+        "expected": 0.0,
+        "predicted": 0.0
+      },
+      {
+        "row_id": "r18",
+        "field": "opening_qty",
+        "result": "correct",
+        "expected": 90.0,
+        "predicted": 90.0
+      },
+      {
+        "row_id": "r18",
+        "field": "receipt_qty",
+        "result": "correct",
+        "expected": 0.0,
+        "predicted": 0.0
+      },
+      {
+        "row_id": "r18",
+        "field": "sales_qty",
+        "result": "correct",
+        "expected": 5.0,
+        "predicted": 5.0
+      },
+      {
+        "row_id": "r18",
+        "field": "closing_qty",
+        "result": "correct",
+        "expected": 85.0,
+        "predicted": 85.0
+      },
+      {
+        "row_id": "r19",
+        "field": "opening_qty",
+        "result": "correct",
+        "expected": 46.0,
+        "predicted": 46.0
+      },
+      {
+        "row_id": "r19",
+        "field": "receipt_qty",
+        "result": "correct",
+        "expected": 56.0,
+        "predicted": 56.0
+      },
+      {
+        "row_id": "r19",
+        "field": "sales_qty",
+        "result": "correct",
+        "expected": 10.0,
+        "predicted": 10.0
+      },
+      {
+        "row_id": "r19",
+        "field": "closing_qty",
+        "result": "correct",
+        "expected": 92.0,
+        "predicted": 92.0
+      },
+      {
+        "row_id": "r20",
+        "field": "opening_qty",
+        "result": "correct",
+        "expected": 62.0,
+        "predicted": 62.0
+      },
+      {
+        "row_id": "r20",
+        "field": "receipt_qty",
+        "result": "correct",
+        "expected": 0.0,
+        "predicted": 0.0
+      },
+      {
+        "row_id": "r20",
+        "field": "sales_qty",
+        "result": "correct",
+        "expected": 6.0,
+        "predicted": 6.0
+      },
+      {
+        "row_id": "r20",
+        "field": "closing_qty",
+        "result": "correct",
+        "expected": 56.0,
+        "predicted": 56.0
+      },
+      {
+        "row_id": "r21",
+        "field": "opening_qty",
+        "result": "correct",
+        "expected": 157.0,
+        "predicted": 157.0
+      },
+      {
+        "row_id": "r21",
+        "field": "receipt_qty",
+        "result": "correct",
+        "expected": 0.0,
+        "predicted": 0.0
+      },
+      {
+        "row_id": "r21",
+        "field": "sales_qty",
+        "result": "incorrect",
+        "expected": 127.0,
+        "predicted": 157.0
+      },
+      {
+        "row_id": "r21",
+        "field": "closing_qty",
+        "result": "correct",
+        "expected": 30.0,
+        "predicted": 30.0
+      },
+      {
+        "row_id": "r22",
+        "field": "opening_qty",
+        "result": "correct",
+        "expected": 28.0,
+        "predicted": 28.0
+      },
+      {
+        "row_id": "r22",
+        "field": "receipt_qty",
+        "result": "correct",
+        "expected": 200.0,
+        "predicted": 200.0
+      },
+      {
+        "row_id": "r22",
+        "field": "sales_qty",
+        "result": "correct",
+        "expected": 94.0,
+        "predicted": 94.0
+      },
+      {
+        "row_id": "r22",
+        "field": "closing_qty",
+        "result": "correct",
+        "expected": 134.0,
+        "predicted": 134.0
+      },
+      {
+        "row_id": "r23",
+        "field": "opening_qty",
+        "result": "missing",
+        "expected": 55.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r23",
+        "field": "receipt_qty",
+        "result": "missing",
+        "expected": 0.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r23",
+        "field": "sales_qty",
+        "result": "missing",
+        "expected": 14.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r23",
+        "field": "closing_qty",
+        "result": "missing",
+        "expected": 41.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r24",
+        "field": "opening_qty",
+        "result": "missing",
+        "expected": 25.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r24",
+        "field": "receipt_qty",
+        "result": "missing",
+        "expected": 100.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r24",
+        "field": "sales_qty",
+        "result": "missing",
+        "expected": 80.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r24",
+        "field": "closing_qty",
+        "result": "missing",
+        "expected": 45.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r25",
+        "field": "opening_qty",
+        "result": "correct",
+        "expected": 63.0,
+        "predicted": 63.0
+      },
+      {
+        "row_id": "r25",
+        "field": "receipt_qty",
+        "result": "correct",
+        "expected": 0.0,
+        "predicted": 0.0
+      },
+      {
+        "row_id": "r25",
+        "field": "sales_qty",
+        "result": "incorrect",
+        "expected": 11.0,
+        "predicted": 14.0
+      },
+      {
+        "row_id": "r25",
+        "field": "closing_qty",
+        "result": "correct",
+        "expected": 52.0,
+        "predicted": 52.0
+      },
+      {
+        "row_id": "r26",
+        "field": "opening_qty",
+        "result": "missing",
+        "expected": 14.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r26",
+        "field": "receipt_qty",
+        "result": "missing",
+        "expected": 56.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r26",
+        "field": "sales_qty",
+        "result": "missing",
+        "expected": 19.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r26",
+        "field": "closing_qty",
+        "result": "missing",
+        "expected": 51.0,
+        "predicted": null
+      },
+      {
+        "row_id": "r27",
+        "field": "opening_qty",
+        "result": "correct",
+        "expected": 114.0,
+        "predicted": 114.0
+      },
+      {
+        "row_id": "r27",
+        "field": "receipt_qty",
+        "result": "correct",
+        "expected": 0.0,
+        "predicted": 0.0
+      },
+      {
+        "row_id": "r27",
+        "field": "sales_qty",
+        "result": "correct",
+        "expected": 114.0,
+        "predicted": 114.0
+      },
+      {
+        "row_id": "r27",
+        "field": "closing_qty",
+        "result": "correct",
+        "expected": 0.0,
+        "predicted": 0.0
+      },
+      {
+        "row_id": "r28",
+        "field": "opening_qty",
+        "result": "correct",
+        "expected": 49.0,
+        "predicted": 49.0
+      },
+      {
+        "row_id": "r28",
+        "field": "receipt_qty",
+        "result": "correct",
+        "expected": 0.0,
+        "predicted": 0.0
+      },
+      {
+        "row_id": "r28",
+        "field": "sales_qty",
+        "result": "correct",
+        "expected": 13.0,
+        "predicted": 13.0
+      },
+      {
+        "row_id": "r28",
+        "field": "closing_qty",
+        "result": "correct",
+        "expected": 36.0,
+        "predicted": 36.0
+      },
+      {
+        "row_id": "r29",
+        "field": "opening_qty",
+        "result": "correct",
+        "expected": 65.0,
+        "predicted": 65.0
+      },
+      {
+        "row_id": "r29",
+        "field": "receipt_qty",
+        "result": "correct",
+        "expected": 0.0,
+        "predicted": 0.0
+      },
+      {
+        "row_id": "r29",
+        "field": "sales_qty",
+        "result": "correct",
+        "expected": 32.0,
+        "predicted": 32.0
+      },
+      {
+        "row_id": "r29",
+        "field": "closing_qty",
+        "result": "correct",
+        "expected": 33.0,
+        "predicted": 33.0
+      },
+      {
+        "row_id": "r30",
+        "field": "opening_qty",
+        "result": "correct",
+        "expected": 40.0,
+        "predicted": 40.0
+      },
+      {
+        "row_id": "r30",
+        "field": "receipt_qty",
+        "result": "correct",
+        "expected": 0.0,
+        "predicted": 0.0
+      },
+      {
+        "row_id": "r30",
+        "field": "sales_qty",
+        "result": "correct",
+        "expected": 8.0,
+        "predicted": 8.0
+      },
+      {
+        "row_id": "r30",
+        "field": "closing_qty",
+        "result": "correct",
+        "expected": 32.0,
+        "predicted": 32.0
+      }
+    ]
+  },
+  "preliminary": {
+    "images": 1,
+    "verified_rows": 22,
+    "product_correct": 0,
+    "product_incorrect": 0,
+    "product_missing": 22,
+    "product_extra": 2,
+    "product_precision": 0.0,
+    "product_recall": 0.0,
+    "product_f1": null,
+    "quantity_correct": 0,
+    "quantity_incorrect": 0,
+    "quantity_missing": 0,
+    "quantity_scored": 0,
+    "quantity_accuracy": null,
+    "quantity_both_present_accuracy": null,
+    "quantity_mae": null,
+    "silent_wrong": 0,
+    "silent_wrong_rate": null,
+    "image_exact_match": 0,
+    "image_exact_match_rate": 0.0,
+    "by_field": {
+      "opening_qty": {
+        "correct": 0,
+        "incorrect": 0,
+        "missing": 0,
+        "unscored": 22,
+        "abs_error_sum": 0.0,
+        "both_present": 0,
+        "accuracy": null,
+        "mae": null
+      },
+      "receipt_qty": {
+        "correct": 0,
+        "incorrect": 0,
+        "missing": 0,
+        "unscored": 22,
+        "abs_error_sum": 0.0,
+        "both_present": 0,
+        "accuracy": null,
+        "mae": null
+      },
+      "sales_qty": {
+        "correct": 0,
+        "incorrect": 0,
+        "missing": 0,
+        "unscored": 22,
+        "abs_error_sum": 0.0,
+        "both_present": 0,
+        "accuracy": null,
+        "mae": null
+      },
+      "sales_scheme_qty": {
+        "correct": 0,
+        "incorrect": 0,
+        "missing": 0,
+        "unscored": 22,
+        "abs_error_sum": 0.0,
+        "both_present": 0,
+        "accuracy": null,
+        "mae": null
+      },
+      "stock_out_qty": {
+        "correct": 0,
+        "incorrect": 0,
+        "missing": 0,
+        "unscored": 22,
+        "abs_error_sum": 0.0,
+        "both_present": 0,
+        "accuracy": null,
+        "mae": null
+      },
+      "closing_qty": {
+        "correct": 0,
+        "incorrect": 0,
+        "missing": 0,
+        "unscored": 22,
+        "abs_error_sum": 0.0,
+        "both_present": 0,
+        "accuracy": null,
+        "mae": null
+      }
+    },
+    "documents": [
+      {
+        "document_id": "0000700026_2026_08_ZA_06_333_04092026081643.png",
+        "verification_status": "unverified",
+        "gt_rows": 22,
+        "predicted_rows": 2,
+        "product_correct": 0,
+        "product_incorrect": 0,
+        "product_missing": 22,
+        "product_extra": 2,
+        "product_unscored": 0,
+        "product_precision": 0.0,
+        "product_recall": 0.0,
+        "product_f1": null,
+        "quantity_fields": {
+          "opening_qty": {
+            "correct": 0,
+            "incorrect": 0,
+            "missing": 0,
+            "unscored": 22,
+            "abs_error_sum": 0.0,
+            "both_present": 0
+          },
+          "receipt_qty": {
+            "correct": 0,
+            "incorrect": 0,
+            "missing": 0,
+            "unscored": 22,
+            "abs_error_sum": 0.0,
+            "both_present": 0
+          },
+          "sales_qty": {
+            "correct": 0,
+            "incorrect": 0,
+            "missing": 0,
+            "unscored": 22,
+            "abs_error_sum": 0.0,
+            "both_present": 0
+          },
+          "sales_scheme_qty": {
+            "correct": 0,
+            "incorrect": 0,
+            "missing": 0,
+            "unscored": 22,
+            "abs_error_sum": 0.0,
+            "both_present": 0
+          },
+          "stock_out_qty": {
+            "correct": 0,
+            "incorrect": 0,
+            "missing": 0,
+            "unscored": 22,
+            "abs_error_sum": 0.0,
+            "both_present": 0
+          },
+          "closing_qty": {
+            "correct": 0,
+            "incorrect": 0,
+            "missing": 0,
+            "unscored": 22,
+            "abs_error_sum": 0.0,
+            "both_present": 0
+          }
+        },
+        "quantity_correct": 0,
+        "quantity_incorrect": 0,
+        "quantity_missing": 0,
+        "quantity_scored": 0,
+        "quantity_accuracy": null,
+        "quantity_both_present": 0,
+        "quantity_both_present_accuracy": null,
+        "quantity_mae": null,
+        "silent_wrong": 0,
+        "silent_wrong_rate": null,
+        "image_exact_match": false,
+        "name_note": "A product is correct when the full printed name occurs in the OCR text. One occurrence is consumed per ground-truth row. An extracted fragment of a labeled name is not an extra product.",
+        "cache_engine": "tesseract"
+      }
+    ],
+    "field_rows": []
+  },
+  "legacy_window_score_on_existing_files": {
+    "0000719004_2026_08_ZA_04_550_02092026014949.jpg": {
+      "product_name": {
+        "correct": 0,
+        "total": 21,
+        "rate": 0.0
+      },
+      "packing": {
+        "correct": 0,
+        "total": 0,
+        "rate": null
+      },
+      "header": {
+        "correct": 0,
+        "total": 2,
+        "rate": 0.0
+      },
+      "quantity_nonzero": {
+        "correct": 0,
+        "total": 31,
+        "rate": 0.0
+      },
+      "quantity_zero_excluded_from_primary": {
+        "correct": 0,
+        "total": 11,
+        "rate": 0.0
+      },
+      "silent_wrong_nonzero_qty": {
+        "count": 0,
+        "denominator": 31
+      },
+      "document_exact": {
+        "correct": 0,
+        "total": 1
+      },
+      "by_layout_nonzero_qty": {
+        "photo_summary_out_and_closing": {
+          "correct": 0,
+          "total": 31,
+          "rate": 0.0
+        }
+      },
+      "fuzzy_product_not_counted_correct": 0
+    },
+    "0000722289_2026_08_ZA_04_589_04092026043529.jpg": {
+      "product_name": {
+        "correct": 24,
+        "total": 30,
+        "rate": 0.8
+      },
+      "packing": {
+        "correct": 0,
+        "total": 30,
+        "rate": 0.0
+      },
+      "header": {
+        "correct": 2,
+        "total": 2,
+        "rate": 1.0
+      },
+      "quantity_nonzero": {
+        "correct": 52,
+        "total": 80,
+        "rate": 0.65
+      },
+      "quantity_zero_excluded_from_primary": {
+        "correct": 36,
+        "total": 40,
+        "rate": 0.9
+      },
+      "silent_wrong_nonzero_qty": {
+        "count": 8,
+        "denominator": 80
+      },
+      "document_exact": {
+        "correct": 0,
+        "total": 1
+      },
+      "by_layout_nonzero_qty": {
+        "digital_full_stock_statement": {
+          "correct": 52,
+          "total": 80,
+          "rate": 0.65
+        }
+      },
+      "fuzzy_product_not_counted_correct": 0
+    }
+  }
+}

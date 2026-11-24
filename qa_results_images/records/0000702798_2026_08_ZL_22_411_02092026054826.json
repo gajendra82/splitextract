@@ -1,0 +1,222 @@
+{
+  "file": "0000702798_2026_08_ZL_22_411_02092026054826.jpeg",
+  "path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000702798_2026_08_ZL_22_411_02092026054826.jpeg",
+  "format": "Stock & Sales Statement",
+  "api_method": "gemini_extraction_fallback",
+  "status": "FAIL",
+  "expected_rows": 24,
+  "extracted_rows": 0,
+  "matched_rows": 0,
+  "missing_rows": [
+    {
+      "product": "ILIV 52 SYP",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "ABANA TAB",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "CLARINA CREAM",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "CONFIDO TAB",
+      "opening_qty": 76,
+      "receipts_qty": 0,
+      "sales_qty": 26,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "DIABECON TAB",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "DIABECON DS TAB",
+      "opening_qty": 80,
+      "receipts_qty": 0,
+      "sales_qty": 5,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "EVECARE FORTE LIQ",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "HERBOLAX CAP",
+      "opening_qty": 98,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "HIOWNA MOMZ VANILL",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "LIV 52 SYP",
+      "opening_qty": 2470,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "LIV 52 SYP",
+      "opening_qty": 78,
+      "receipts_qty": 0,
+      "sales_qty": 30,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "LIV 52 TAB",
+      "opening_qty": 58100,
+      "receipts_qty": 0,
+      "sales_qty": 37,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "LIV 52 DS SYP",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "OPHTHACARE EYE DRO",
+      "opening_qty": 41,
+      "receipts_qty": 0,
+      "sales_qty": 5,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "ORO-T ORAL RINSE L",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "PILEX FORTE OINT",
+      "opening_qty": null,
+      "receipts_qty": 0,
+      "sales_qty": 64,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "PILEX TAB",
+      "opening_qty": 44,
+      "receipts_qty": 0,
+      "sales_qty": 57,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "RENALKA SYR",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "RUMALAYA GEL JAR P",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "TENTEX FORTE TAB",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "* ---> Non Moving",
+      "opening_qty": 30,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "OPENING VALUE",
+      "opening_qty": 78,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "SALES VALUE",
+      "opening_qty": 37926.62,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "LAST MONTH SALES:",
+      "opening_qty": 43,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    }
+  ],
+  "extra_rows": [],
+  "duplicates": [
+    {
+      "side": "ground_truth",
+      "product": "LIV 52 SYP",
+      "count": 2
+    }
+  ],
+  "mismatches": [],
+  "ocr_review": [],
+  "accounting": [],
+  "confidence": "medium",
+  "notes": [
+    "OCR used tesseract psm 6."
+  ],
+  "result_key": "0000702798_2026_08_ZL_22_411_02092026054826",
+  "unavailable_fields": {},
+  "formula_checked": "none"
+}

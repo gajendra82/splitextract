@@ -1,0 +1,455 @@
+{
+  "file": "0000700325_2026_08_ZL_18_379_03092026175634.jpg",
+  "path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700325_2026_08_ZL_18_379_03092026175634.jpg",
+  "format": "Product wise stock statement",
+  "api_method": "product_wise_stock_statement_image",
+  "status": "FAIL",
+  "expected_rows": 10,
+  "extracted_rows": 44,
+  "matched_rows": 4,
+  "missing_rows": [
+    {
+      "product": "ALTHEA CREAM ALTHEA LOTION BLEMINOR CREAM CHIROPEX CREAM CLARINA ANTI ACNE CLARINA ANTIACNE CREAM CLARINA CREAM CLARINA FACE WASH GEL 60M CLARINA FACE WASHGEL\" CONFIDO TAB",
+      "opening_qty": 5,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": 6,
+      "kind": "missing_product"
+    },
+    {
+      "product": "HAIR ZONE SOLU HAIR ZONE SOLU* HEAL LIP GEL HERBOLAX CAP HERBOLAX TAB HIMCOCID SYP (BANANA FLAV HIMCOCID SYP (MINT FLAVOU HIMCOCID SYP (SAUNF FLAVO HIMCOLIN CR HIOWNA KIDZ (CHOC) HIOWNA KIDZ (VANI) HIOWNA POW HIOWNA POW (CHOCOLATE) HIOWNA POW (VAN) HIOWNA POW(CHOCO) UV 52SUGARFREE SYP",
+      "opening_qty": 15,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": 12,
+      "kind": "missing_product"
+    },
+    {
+      "product": "UV 52 SYP",
+      "opening_qty": 403,
+      "receipts_qty": 420,
+      "sales_qty": null,
+      "closing_qty": 3,
+      "kind": "missing_product"
+    },
+    {
+      "product": "UV 52 SYP (SF) UV 52 SYP",
+      "opening_qty": 119,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "ORO-T ORAL RINSE LIQ ORO-T ORAL RINSE LIQ PILEX FORTE OINT",
+      "opening_qty": 224,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": 83,
+      "kind": "missing_product"
+    },
+    {
+      "product": "PILEX FORTE TAB PILEX OINT PILEX TAB",
+      "opening_qty": 293,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": 80,
+      "kind": "missing_product"
+    }
+  ],
+  "extra_rows": [
+    {
+      "product": "ALTHEA CREAM",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "ALTHEA LOTION",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "BLEMINOR CREAM",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "CHIROPEX CREAM",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "CLARINA ANTIACNE CREAM",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "CLARINA CREAM",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "CLARINA FACE WASH GEL 60M",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "CLARINA FACE WASHGEL* =",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "CONFIDO TAB",
+      "opening_qty": 51,
+      "sales_qty": 0,
+      "closing_qty": 36,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HAIR ZONE SOLU",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HAIR ZONE SOLU*",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HEAL LIP GEL",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HERBOLAX CAP",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HERBOLAX TAB",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HIMCOCID SYP (BANANA FLAV",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HIMCOCID SYP (MINT FLAVOU",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HIMCOCID SYP (SAUNF FLAVO",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HIMCOLIN CR",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HIOWNA KIDZ (CHOC)",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HIOWNA KIDZ (VANI)",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HIOWNA POW",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HIOWNA POW (CHOCOLATE)",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HIOWNA POW (VAN)",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HIOWNA POW(CHOCO)",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "LIV SUGAR FREE SYP",
+      "opening_qty": 15,
+      "sales_qty": 0,
+      "closing_qty": 12,
+      "kind": "extra_product"
+    },
+    {
+      "product": "LIV SYP",
+      "opening_qty": 403,
+      "sales_qty": 0,
+      "closing_qty": 443,
+      "kind": "extra_product"
+    },
+    {
+      "product": "LIV SYP (SF)",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "LIV SYP 100ml",
+      "opening_qty": 119,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "ORO-T ORAL RINSE LIQ",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "ORO-T ORAL RINSE LIQ",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "PILEX FORTE OINT",
+      "opening_qty": 224,
+      "sales_qty": 0,
+      "closing_qty": 83,
+      "kind": "extra_product"
+    },
+    {
+      "product": "PILEX FORTE TAB",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "PILEX OINT",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "PILEX TAB",
+      "opening_qty": 293,
+      "sales_qty": 0,
+      "closing_qty": 80,
+      "kind": "extra_product"
+    },
+    {
+      "product": "PURE HANDS SANITIZER",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "PUREHANDS SANITIZER(ORA",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "TALEKT CAP",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "TALEKT SYP",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "TENTEX FORTE TAB",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "VEGECORT CREAM",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    }
+  ],
+  "duplicates": [
+    {
+      "side": "extracted",
+      "product": "HAIR ZONE SOLU",
+      "count": 2
+    }
+  ],
+  "mismatches": [
+    {
+      "product": "CYSTONE FORTE TAB",
+      "field": "closing_qty",
+      "expected": 4,
+      "actual": 44,
+      "kind": "wrong_closing_qty"
+    },
+    {
+      "product": "AACTARIL SOAP",
+      "field": "opening_qty",
+      "expected": 2,
+      "actual": 72,
+      "kind": "wrong_opening_qty"
+    },
+    {
+      "product": "AACTARIL SOAP",
+      "field": "closing_qty",
+      "expected": 5,
+      "actual": 51,
+      "kind": "wrong_closing_qty"
+    },
+    {
+      "product": "4 rows",
+      "field": "closing_value",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 4,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    }
+  ],
+  "ocr_review": [
+    {
+      "product": "OPTHACARE EYE DROP",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 23,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "OPTHACARE EYE DROP",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "UV 52 TAB",
+      "api_product": "UV TAB",
+      "similarity": 0.8,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "UV 52 TAB",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 106,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "UV 52 TAB",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "CYSTONE FORTE TAB",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 2,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "CYSTONE FORTE TAB",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "AACTARIL SOAP",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 21,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "AACTARIL SOAP",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    }
+  ],
+  "accounting": [],
+  "confidence": "medium",
+  "notes": [
+    "OCR used tesseract psm 6."
+  ],
+  "result_key": "0000700325_2026_08_ZL_18_379_03092026175634",
+  "unavailable_fields": {
+    "closing_value": 4
+  },
+  "formula_checked": "none"
+}

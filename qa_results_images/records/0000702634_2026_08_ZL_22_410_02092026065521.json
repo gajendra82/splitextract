@@ -1,0 +1,216 @@
+{
+  "file": "0000702634_2026_08_ZL_22_410_02092026065521.jpg",
+  "path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000702634_2026_08_ZL_22_410_02092026065521.jpg",
+  "format": "gemini_extraction_fallback",
+  "api_method": "gemini_extraction_fallback",
+  "status": "FAIL",
+  "expected_rows": 24,
+  "extracted_rows": 0,
+  "matched_rows": 0,
+  "missing_rows": [
+    {
+      "product": "AACTARIL SOAP 75am",
+      "opening_qty": 64,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "ABANA TAB",
+      "opening_qty": 114,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "BLEMINOR ANTI-BLEMIS CLARINA ANTIACNE CRE ANTIACNE FAC 60m)",
+      "opening_qty": 37,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "CLARINA @ 60’s—s-'115 conripo DIABECON TAB 60’s",
+      "opening_qty": 101,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "DIABECON-DS TAB 60’s",
+      "opening_qty": 55,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "DIAREX SYP 100m] TAB 30’s DIAREX TAB 60’s",
+      "opening_qty": 78,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "HADJOD ® HAIR ZONE SOLUTION 60m] HERBOLAX CAP 10’s HERBOLAX TAB 100’s",
+      "opening_qty": 52,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "HIMCOLIN GFL",
+      "opening_qty": 40,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "KAPIKACHHU TAB 60’s",
+      "opening_qty": 30,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "LIV. 52 - HB CAP 10’s ® LIV. 52 SYP (100m) ) 100m1",
+      "opening_qty": 105,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "LIV. 52 SYP (200m1)",
+      "opening_qty": 6,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "LIV. 52 SYP - SF 100m] ® LIV. 52 TAB 100’s",
+      "opening_qty": 206,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "OPTHACARE EYE DROPS 10m]",
+      "opening_qty": 154,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "ORO-T ORAL RINSE 100m) a OXITARD CAP 10’s PILEX FORTE OINT 302em",
+      "opening_qty": 100,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "PILEX FORTE TAB 30’s @ Ld PILEX TAB 60’s",
+      "opening_qty": 114,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "PURIM TAB 60’s",
+      "opening_qty": 50,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "QUISTA-DN VANILLA FL S RENALKA ) SYP (100m)",
+      "opening_qty": 56,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "RENALKA SYP (20@m1) 200m1 SHALLAKI TAB 60’s",
+      "opening_qty": 1,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "SHIGRU TAB 60’s",
+      "opening_qty": 39,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "TAGARA TAB 60’s",
+      "opening_qty": 33,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "TALEKT CAP 60’s TALEKT SYP 120m] TENTEX FORTE TAB 10’s",
+      "opening_qty": 341,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "TRIKATU TAB 60’s",
+      "opening_qty": 50,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "TRIPHALA SYP 200m) TRIPHALA TAB 60’s",
+      "opening_qty": 81,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "YASHTIMADHU TAB 60’s",
+      "opening_qty": 36,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    }
+  ],
+  "extra_rows": [],
+  "duplicates": [],
+  "mismatches": [],
+  "ocr_review": [],
+  "accounting": [],
+  "confidence": "medium",
+  "notes": [
+    "OCR used tesseract psm 6."
+  ],
+  "result_key": "0000702634_2026_08_ZL_22_410_02092026065521",
+  "unavailable_fields": {},
+  "formula_checked": "none"
+}

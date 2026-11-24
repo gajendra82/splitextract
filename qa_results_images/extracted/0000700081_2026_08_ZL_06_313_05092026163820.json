@@ -1,0 +1,342 @@
+{
+  "source_file": "0000700081_2026_08_ZL_06_313_05092026163820.jpg",
+  "source_format": "jpg",
+  "stockist_name": "SHREE JAY AMBE MEDICAL AGENCY",
+  "stockist_address": "12/2856,A/B SAIYEDPURA BIBI NI WADI, SURAT,",
+  "company_name": "SHREE JAY AMBE MEDICAL AGENCY",
+  "period_from": "2026-08-01",
+  "period_to": "2026-08-31",
+  "report_title": "Stock Statement",
+  "line_items": [
+    {
+      "product_code": null,
+      "product_name": "AACTARIL SOAP",
+      "packing": null,
+      "opening_qty": 22.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 4.0,
+      "sales_value": 0.0,
+      "closing_qty": 18.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_out_qty": 0,
+        "june_sale_qty": 0,
+        "july_sale_qty": 0,
+        "stock_in_qty": 0,
+        "layout": "pharma_hub_jun_jul",
+        "expected_total": 22.0,
+        "expected_closing": 18.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ABANA TAB. 60",
+      "packing": null,
+      "opening_qty": 46.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 8.0,
+      "sales_value": 0.0,
+      "closing_qty": 38.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_out_qty": 0,
+        "june_sale_qty": 0,
+        "july_sale_qty": 0,
+        "stock_in_qty": 0,
+        "layout": "pharma_hub_jun_jul",
+        "expected_total": 46.0,
+        "expected_closing": 38.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "BLEMINOR CREAM",
+      "packing": null,
+      "opening_qty": 41.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 1.0,
+      "sales_value": 0.0,
+      "closing_qty": 40.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_out_qty": 0,
+        "june_sale_qty": 0,
+        "july_sale_qty": 0,
+        "stock_in_qty": 0,
+        "layout": "pharma_hub_jun_jul",
+        "expected_total": 41.0,
+        "expected_closing": 40.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "CONFIDO TAB. 60",
+      "packing": null,
+      "opening_qty": 36.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 7.0,
+      "sales_value": 0.0,
+      "closing_qty": 29.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_out_qty": 0,
+        "june_sale_qty": 0,
+        "july_sale_qty": 0,
+        "stock_in_qty": 0,
+        "layout": "pharma_hub_jun_jul",
+        "expected_total": 36.0,
+        "expected_closing": 29.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "DIABECON DS TAB. 60",
+      "packing": null,
+      "opening_qty": 35.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 8.0,
+      "sales_value": 0.0,
+      "closing_qty": 27.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_out_qty": 0,
+        "june_sale_qty": 0,
+        "july_sale_qty": 0,
+        "stock_in_qty": 0,
+        "layout": "pharma_hub_jun_jul",
+        "expected_total": 35.0,
+        "expected_closing": 27.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "DIABECON TAB. 60",
+      "packing": null,
+      "opening_qty": 74.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 6.0,
+      "sales_value": 0.0,
+      "closing_qty": 68.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_out_qty": 0,
+        "june_sale_qty": 0,
+        "july_sale_qty": 0,
+        "stock_in_qty": 0,
+        "layout": "pharma_hub_jun_jul",
+        "expected_total": 74.0,
+        "expected_closing": 68.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "DIAREX TAB. 100",
+      "packing": null,
+      "opening_qty": 24.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 4.0,
+      "sales_value": 0.0,
+      "closing_qty": 20.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_out_qty": 0,
+        "june_sale_qty": 0,
+        "july_sale_qty": 0,
+        "stock_in_qty": 0,
+        "layout": "pharma_hub_jun_jul",
+        "expected_total": 24.0,
+        "expected_closing": 20.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "HADJOD CAPS",
+      "packing": null,
+      "opening_qty": 15.0,
+      "opening_value": null,
+      "receipts_qty": 60.0,
+      "receipts_value": null,
+      "sales_qty": 16.0,
+      "sales_value": 0.0,
+      "closing_qty": 58.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_out_qty": 0,
+        "june_sale_qty": 0,
+        "july_sale_qty": 0,
+        "stock_in_qty": 0,
+        "layout": "pharma_hub_jun_jul",
+        "expected_total": 75.0,
+        "expected_closing": 59.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "HAIRZONE SOLUTION",
+      "packing": null,
+      "opening_qty": 28.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 6.0,
+      "sales_value": 0.0,
+      "closing_qty": 21.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_out_qty": 0,
+        "june_sale_qty": 0,
+        "july_sale_qty": 0,
+        "stock_in_qty": 0,
+        "layout": "pharma_hub_jun_jul",
+        "expected_total": 28.0,
+        "expected_closing": 22.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "HIMICOLIN GEL 30GM",
+      "packing": null,
+      "opening_qty": 29.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 4.0,
+      "sales_value": 0.0,
+      "closing_qty": 25.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_out_qty": 0,
+        "june_sale_qty": 0,
+        "july_sale_qty": 0,
+        "stock_in_qty": 0,
+        "layout": "pharma_hub_jun_jul",
+        "expected_total": 29.0,
+        "expected_closing": 25.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV 52 HB CAP",
+      "packing": null,
+      "opening_qty": 87.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 6.0,
+      "sales_value": 0.0,
+      "closing_qty": 81.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_out_qty": 0,
+        "june_sale_qty": 0,
+        "july_sale_qty": 0,
+        "stock_in_qty": 0,
+        "layout": "pharma_hub_jun_jul",
+        "expected_total": 87.0,
+        "expected_closing": 81.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV 52 SYRUP (SUGAR FREE) 200ML",
+      "packing": null,
+      "opening_qty": 76.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 9.0,
+      "sales_value": 0.0,
+      "closing_qty": 69.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_out_qty": 0,
+        "june_sale_qty": 0,
+        "july_sale_qty": 0,
+        "stock_in_qty": 0,
+        "layout": "pharma_hub_jun_jul",
+        "expected_total": 76.0,
+        "expected_closing": 67.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV 5Z SYRUP (SUGAR FREE) 100ML",
+      "packing": null,
+      "opening_qty": 90.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 21.0,
+      "sales_value": 0.0,
+      "closing_qty": 69.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_out_qty": 0,
+        "june_sale_qty": 0,
+        "july_sale_qty": 0,
+        "stock_in_qty": 0,
+        "layout": "pharma_hub_jun_jul",
+        "expected_total": 90.0,
+        "expected_closing": 69.0,
+        "stock_identity_ok": true
+      }
+    }
+  ],
+  "totals": {
+    "sales_value": null,
+    "closing_value": null,
+    "extra": {
+      "extraction_method": "pharma_hub_jun_jul_photo",
+      "layout": "pharma_hub_jun_jul",
+      "line_sales_value_sum": 0.0,
+      "line_closing_value_sum": 0.0,
+      "sales_qty": 100.0,
+      "closing_qty": 563.0,
+      "stock_identity_kind": "opening_receipts_sales_closing",
+      "stock_identity_formula": "closing=opening+receipts-sales",
+      "stock_identity_fail_count": 3,
+      "stock_validation": {
+        "opening_plus_purchase": 663.0,
+        "expected_total": 663.0,
+        "calculated_closing": 563.0,
+        "extracted_closing": 563.0,
+        "is_valid": false
+      },
+      "extraction_quality": {
+        "quality": "poor",
+        "score": 75,
+        "reasons": [
+          "stock_identity_failure"
+        ],
+        "threshold": 75.0
+      },
+      "gemini_fallback": "unavailable"
+    }
+  }
+}

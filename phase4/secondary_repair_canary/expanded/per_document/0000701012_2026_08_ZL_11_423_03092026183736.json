@@ -1,0 +1,272 @@
+{
+  "document_id": "0000701012_2026_08_ZL_11_423_03092026183736.jpg",
+  "role": "ordinary",
+  "source_path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000701012_2026_08_ZL_11_423_03092026183736.jpg",
+  "off": {
+    "correct_count": 14,
+    "field_count": 14,
+    "silent_wrong_count": 0,
+    "missing_count": 0,
+    "secondary_ocr_ms": 5.7,
+    "pipeline_helper_ms": 6.4,
+    "text_sha": "c4ca3d6d74717ac3",
+    "repair_report": {
+      "document_id": "0000701012_2026_08_ZL_11_423_03092026183736.jpg",
+      "repairs": [],
+      "unresolved": [
+        {
+          "reason": "secondary_repair_disabled"
+        }
+      ]
+    }
+  },
+  "on": {
+    "correct_count": 14,
+    "field_count": 14,
+    "silent_wrong_count": 0,
+    "missing_count": 0,
+    "secondary_ocr_ms": 2128.0,
+    "pipeline_helper_ms": 2243.3,
+    "text_sha": "c4ca3d6d74717ac3",
+    "repair_report": {
+      "document_id": "0000701012_2026_08_ZL_11_423_03092026183736.jpg",
+      "repairs": [],
+      "unresolved": [
+        {
+          "reason": "total_footer_layout_not_himalaya_qty"
+        }
+      ]
+    },
+    "pipeline_text_matches": true
+  },
+  "deltas": [],
+  "repair_types_on": [],
+  "matches_off": [
+    {
+      "field_id": "vendor",
+      "expected_raw": "PRESAGE PHARMA",
+      "predicted_raw": "PRESAGE PHARMA",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_cl",
+      "expected_raw": "CLSTOCK",
+      "predicted_raw": "CLSTOCK",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_sales",
+      "expected_raw": "SALES",
+      "predicted_raw": "SALES",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "aact_cl",
+      "expected_raw": "88",
+      "predicted_raw": "88",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "aact_sales",
+      "expected_raw": "8",
+      "predicted_raw": "8",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "aact_clval",
+      "expected_raw": "7710.56",
+      "predicted_raw": "7710.56",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "abana_cl",
+      "expected_raw": "79",
+      "predicted_raw": "79",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "abana_sales",
+      "expected_raw": "3",
+      "predicted_raw": "3",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv_cl",
+      "expected_raw": "848",
+      "predicted_raw": "848",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv_sales",
+      "expected_raw": "179",
+      "predicted_raw": "179",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "pilex_cl",
+      "expected_raw": "832",
+      "predicted_raw": "832",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "pilex_sales",
+      "expected_raw": "451",
+      "predicted_raw": "451",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tot_clval",
+      "expected_raw": "549791.98",
+      "predicted_raw": "549791.98",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tot_sval",
+      "expected_raw": "205371.75",
+      "predicted_raw": "205371.75",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    }
+  ],
+  "matches_on": [
+    {
+      "field_id": "vendor",
+      "expected_raw": "PRESAGE PHARMA",
+      "predicted_raw": "PRESAGE PHARMA",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_cl",
+      "expected_raw": "CLSTOCK",
+      "predicted_raw": "CLSTOCK",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_sales",
+      "expected_raw": "SALES",
+      "predicted_raw": "SALES",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "aact_cl",
+      "expected_raw": "88",
+      "predicted_raw": "88",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "aact_sales",
+      "expected_raw": "8",
+      "predicted_raw": "8",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "aact_clval",
+      "expected_raw": "7710.56",
+      "predicted_raw": "7710.56",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "abana_cl",
+      "expected_raw": "79",
+      "predicted_raw": "79",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "abana_sales",
+      "expected_raw": "3",
+      "predicted_raw": "3",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv_cl",
+      "expected_raw": "848",
+      "predicted_raw": "848",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv_sales",
+      "expected_raw": "179",
+      "predicted_raw": "179",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "pilex_cl",
+      "expected_raw": "832",
+      "predicted_raw": "832",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "pilex_sales",
+      "expected_raw": "451",
+      "predicted_raw": "451",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tot_clval",
+      "expected_raw": "549791.98",
+      "predicted_raw": "549791.98",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tot_sval",
+      "expected_raw": "205371.75",
+      "predicted_raw": "205371.75",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    }
+  ]
+}

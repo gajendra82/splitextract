@@ -1,0 +1,2086 @@
+{
+  "aggregate": {
+    "created_at": "2026-11-20T11:16:07.076120+00:00",
+    "documents_requested": 20,
+    "documents_scored": 20,
+    "missing_sources": [],
+    "off_metrics": {
+      "verified_fields": 388,
+      "correct_fields": 201,
+      "field_accuracy": 0.5180412371134021,
+      "numeric_accuracy": 0.42948717948717946,
+      "quantity_accuracy": 0.4652777777777778,
+      "price_accuracy": 0.0,
+      "date_accuracy": 0.0,
+      "batch_accuracy": null,
+      "header_accuracy": 0.9473684210526315,
+      "table_column_accuracy": 0.4336569579288026,
+      "text_accuracy": 0.881578947368421,
+      "precision": 0.7730769230769231,
+      "recall": 0.5180412371134021,
+      "f1": 0.6203703703703705,
+      "silent_wrong_rate": 0.15206185567010308,
+      "silent_wrong_count": 59,
+      "silent_wrong_denominator_verified_fields": 388,
+      "accepted_field_silent_wrong_rate": 0.22692307692307692,
+      "accepted_field_silent_wrong_count": 59,
+      "accepted_field_denominator": 260,
+      "explicit_unresolved_rate": 0.0,
+      "missing_value_rate": 0.023195876288659795,
+      "critical_error_rate": 0.39690721649484534,
+      "by_type_prf": {
+        "numeric": {
+          "precision": 0.694300518134715,
+          "recall": 0.42948717948717946,
+          "f1": 0.5306930693069306,
+          "n": 312
+        },
+        "text": {
+          "precision": 1.0,
+          "recall": 0.881578947368421,
+          "f1": 0.9370629370629371,
+          "n": 76
+        },
+        "table": {
+          "precision": 0.694300518134715,
+          "recall": 0.4336569579288026,
+          "f1": 0.5338645418326693,
+          "n": 309
+        }
+      },
+      "error_type_counts": {
+        "UNMAPPED_HEADER": 13,
+        "UNSUPPORTED_FIELD_TYPE": 3,
+        "MISSING_PRODUCT": 103,
+        "MISSING": 9,
+        "WRONG_VALUE": 59
+      }
+    },
+    "on_metrics": {
+      "verified_fields": 388,
+      "correct_fields": 201,
+      "field_accuracy": 0.5180412371134021,
+      "numeric_accuracy": 0.42948717948717946,
+      "quantity_accuracy": 0.4652777777777778,
+      "price_accuracy": 0.0,
+      "date_accuracy": 0.0,
+      "batch_accuracy": null,
+      "header_accuracy": 0.9473684210526315,
+      "table_column_accuracy": 0.4336569579288026,
+      "text_accuracy": 0.881578947368421,
+      "precision": 0.7730769230769231,
+      "recall": 0.5180412371134021,
+      "f1": 0.6203703703703705,
+      "silent_wrong_rate": 0.15206185567010308,
+      "silent_wrong_count": 59,
+      "silent_wrong_denominator_verified_fields": 388,
+      "accepted_field_silent_wrong_rate": 0.22692307692307692,
+      "accepted_field_silent_wrong_count": 59,
+      "accepted_field_denominator": 260,
+      "explicit_unresolved_rate": 0.0,
+      "missing_value_rate": 0.023195876288659795,
+      "critical_error_rate": 0.39690721649484534,
+      "by_type_prf": {
+        "numeric": {
+          "precision": 0.694300518134715,
+          "recall": 0.42948717948717946,
+          "f1": 0.5306930693069306,
+          "n": 312
+        },
+        "text": {
+          "precision": 1.0,
+          "recall": 0.881578947368421,
+          "f1": 0.9370629370629371,
+          "n": 76
+        },
+        "table": {
+          "precision": 0.694300518134715,
+          "recall": 0.4336569579288026,
+          "f1": 0.5338645418326693,
+          "n": 309
+        }
+      },
+      "error_type_counts": {
+        "UNMAPPED_HEADER": 21,
+        "UNSUPPORTED_FIELD_TYPE": 3,
+        "MISSING_PRODUCT": 95,
+        "MISSING": 9,
+        "WRONG_VALUE": 59
+      }
+    },
+    "field_accuracy_off": 0.5180412371134021,
+    "field_accuracy_on": 0.5180412371134021,
+    "field_accuracy_delta": 0.0,
+    "quantity_accuracy_off": 0.4652777777777778,
+    "quantity_accuracy_on": 0.4652777777777778,
+    "quantity_accuracy_delta": 0.0,
+    "missing_values_off": 128,
+    "missing_values_on": 128,
+    "missing_values_delta": 0,
+    "comparison": {
+      "field_accuracy_off": 0.5180412371134021,
+      "field_accuracy_on": 0.5180412371134021,
+      "field_accuracy_delta": 0.0,
+      "quantity_accuracy_off": 0.4652777777777778,
+      "quantity_accuracy_on": 0.4652777777777778,
+      "quantity_accuracy_delta": 0.0,
+      "missing_values_off": 128,
+      "missing_values_on": 128,
+      "missing_values_delta": 0
+    },
+    "stock_equation": {
+      "docs_failing_rows_improved": 0,
+      "docs_failing_rows_worsened": 0
+    },
+    "healthy_rows": {
+      "docs_with_healthy_row_changes": 0
+    },
+    "gemini": {
+      "total_calls": 32,
+      "successful_calls": 32,
+      "failed_calls": 0,
+      "prompt_tokens": 94910,
+      "output_tokens": 84907,
+      "estimated_cost_usd": 0.043454,
+      "pricing_note": "estimate using flash-lite ballpark $0.1/1M in + $0.4/1M out"
+    },
+    "phase2_outcomes": {
+      "recovered": 1,
+      "not_needed": 6,
+      "unresolved": 13
+    },
+    "phase2_default_after_run": "false",
+    "ocr_mode": "stored_vl_ocr_identical_inputs",
+    "claims": {
+      "accuracy_improvement_claimed": false,
+      "note": "Deltas below are measured only; do not treat as production claims without review."
+    },
+    "ocr_mode_note": "Live PaddleOCR was not used by default because CPU OCR timed out during smoke testing. Both arms reuse the same stored PaddleOCR-VL page text so Phase 2 is the only intentional variable. Pass --live-ocr to force live OCR."
+  },
+  "documents": [
+    {
+      "document_id": "0000700084_2026_08_ZL_06_8236_03092026155136.pdf",
+      "error": null,
+      "comparison": {
+        "field_accuracy_off": 0.5333333333333333,
+        "field_accuracy_on": 0.5333333333333333,
+        "field_accuracy_delta": 0.0,
+        "quantity_accuracy_off": 0.5714285714285714,
+        "quantity_accuracy_on": 0.5714285714285714,
+        "quantity_accuracy_delta": 0.0,
+        "product_identity_recall_off": 1.0,
+        "product_identity_recall_on": 1.0,
+        "missing_values_off": 7,
+        "missing_values_on": 7,
+        "missing_values_delta": 0
+      },
+      "healthy_row_check": {
+        "healthy_rows_checked": 49,
+        "healthy_rows_changed": 0,
+        "unchanged": true
+      },
+      "off_telemetry": {
+        "gemini_calls": 0,
+        "prompt_tokens": 0,
+        "output_tokens": 0,
+        "latency_ms": 0,
+        "estimated_cost_usd": 0.0,
+        "pricing_note": "estimate using flash-lite ballpark $0.1/1M in + $0.4/1M out",
+        "calls": [],
+        "wall_latency_ms": 148,
+        "phase2_enabled": false,
+        "ocr_mode": "stored_vl_ocr",
+        "phase2_status": null,
+        "phase2_attempts": null,
+        "phase2_failure_type": null,
+        "extraction_method": "vl_html_table_parse"
+      },
+      "on_telemetry": {
+        "gemini_calls": 0,
+        "prompt_tokens": 0,
+        "output_tokens": 0,
+        "latency_ms": 0,
+        "estimated_cost_usd": 0.0,
+        "pricing_note": "estimate using flash-lite ballpark $0.1/1M in + $0.4/1M out",
+        "calls": [],
+        "wall_latency_ms": 23,
+        "phase2_enabled": true,
+        "ocr_mode": "stored_vl_ocr",
+        "phase2_status": "not_needed",
+        "phase2_attempts": 0,
+        "phase2_failure_type": null,
+        "extraction_method": "vl_html_table_parse"
+      },
+      "off_stock": {
+        "accepted": true,
+        "fail_count": 0,
+        "is_valid": true,
+        "healthy_rows": 50,
+        "failing_rows": 0,
+        "reasons": []
+      },
+      "on_stock": {
+        "accepted": true,
+        "fail_count": 0,
+        "is_valid": true,
+        "healthy_rows": 50,
+        "failing_rows": 0,
+        "reasons": []
+      }
+    },
+    {
+      "document_id": "0000700124_2026_08_ZL_06_521_02092026204703.pdf",
+      "error": null,
+      "comparison": {
+        "field_accuracy_off": 0.08333333333333333,
+        "field_accuracy_on": 0.08333333333333333,
+        "field_accuracy_delta": 0.0,
+        "quantity_accuracy_off": 0.0,
+        "quantity_accuracy_on": 0.0,
+        "quantity_accuracy_delta": 0.0,
+        "product_identity_recall_off": 0.0,
+        "product_identity_recall_on": 0.0,
+        "missing_values_off": 11,
+        "missing_values_on": 11,
+        "missing_values_delta": 0
+      },
+      "healthy_row_check": {
+        "healthy_rows_checked": 0,
+        "healthy_rows_changed": 0,
+        "unchanged": true
+      },
+      "off_telemetry": {
+        "gemini_calls": 0,
+        "prompt_tokens": 0,
+        "output_tokens": 0,
+        "latency_ms": 0,
+        "estimated_cost_usd": 0.0,
+        "pricing_note": "estimate using flash-lite ballpark $0.1/1M in + $0.4/1M out",
+        "calls": [],
+        "wall_latency_ms": 32,
+        "phase2_enabled": false,
+        "ocr_mode": "stored_vl_ocr",
+        "phase2_status": null,
+        "phase2_attempts": null,
+        "phase2_failure_type": null,
+        "extraction_method": "di_ocr_html_override"
+      },
+      "on_telemetry": {
+        "gemini_calls": 2,
+        "prompt_tokens": 6590,
+        "output_tokens": 16360,
+        "latency_ms": 36019,
+        "estimated_cost_usd": 0.007203,
+        "pricing_note": "estimate using flash-lite ballpark $0.1/1M in + $0.4/1M out",
+        "calls": [
+          {
+            "model": "gemini-2.5-flash-lite",
+            "timeout": 60,
+            "latency_ms": 18414,
+            "prompt_tokens": 3295,
+            "output_tokens": 8180,
+            "error": null,
+            "response_mime_type": "application/json",
+            "schema_title": "SalesExtractionOutput",
+            "part_kinds": [
+              "text",
+              "text"
+            ]
+          },
+          {
+            "model": "gemini-2.5-flash-lite",
+            "timeout": 60,
+            "latency_ms": 17605,
+            "prompt_tokens": 3295,
+            "output_tokens": 8180,
+            "error": null,
+            "response_mime_type": "application/json",
+            "schema_title": "SalesExtractionOutput",
+            "part_kinds": [
+              "text",
+              "text"
+            ]
+          }
+        ],
+        "wall_latency_ms": 36060,
+        "phase2_enabled": true,
+        "ocr_mode": "stored_vl_ocr",
+        "phase2_status": "unresolved",
+        "phase2_attempts": 2,
+        "phase2_failure_type": "EMPTY_OUTPUT",
+        "extraction_method": "di_ocr_html_override"
+      },
+      "off_stock": {
+        "accepted": false,
+        "fail_count": 0,
+        "is_valid": false,
+        "healthy_rows": 0,
+        "failing_rows": 0,
+        "reasons": [
+          "empty_line_items",
+          "low_ocr_quality_score"
+        ]
+      },
+      "on_stock": {
+        "accepted": false,
+        "fail_count": 0,
+        "is_valid": false,
+        "healthy_rows": 0,
+        "failing_rows": 0,
+        "reasons": [
+          "empty_line_items",
+          "low_ocr_quality_score"
+        ]
+      }
+    },
+    {
+      "document_id": "0000700209_2026_08_ZL_18_374_04092026060313.pdf",
+      "error": null,
+      "comparison": {
+        "field_accuracy_off": 0.6875,
+        "field_accuracy_on": 0.6875,
+        "field_accuracy_delta": 0.0,
+        "quantity_accuracy_off": 0.6923076923076923,
+        "quantity_accuracy_on": 0.6923076923076923,
+        "quantity_accuracy_delta": 0.0,
+        "product_identity_recall_off": 1.0,
+        "product_identity_recall_on": 1.0,
+        "missing_values_off": 1,
+        "missing_values_on": 1,
+        "missing_values_delta": 0
+      },
+      "healthy_row_check": {
+        "healthy_rows_checked": 38,
+        "healthy_rows_changed": 0,
+        "unchanged": true
+      },
+      "off_telemetry": {
+        "gemini_calls": 0,
+        "prompt_tokens": 0,
+        "output_tokens": 0,
+        "latency_ms": 0,
+        "estimated_cost_usd": 0.0,
+        "pricing_note": "estimate using flash-lite ballpark $0.1/1M in + $0.4/1M out",
+        "calls": [],
+        "wall_latency_ms": 18,
+        "phase2_enabled": false,
+        "ocr_mode": "stored_vl_ocr",
+        "phase2_status": null,
+        "phase2_attempts": null,
+        "phase2_failure_type": null,
+        "extraction_method": "vl_html_table_parse"
+      },
+      "on_telemetry": {
+        "gemini_calls": 2,
+        "prompt_tokens": 6250,
+        "output_tokens": 542,
+        "latency_ms": 7351,
+        "estimated_cost_usd": 0.000842,
+        "pricing_note": "estimate using flash-lite ballpark $0.1/1M in + $0.4/1M out",
+        "calls": [
+          {
+            "model": "gemini-2.5-flash-lite",
+            "timeout": 60,
+            "latency_ms": 1680,
+            "prompt_tokens": 3125,
+            "output_tokens": 271,
+            "error": null,
+            "response_mime_type": "application/json",
+            "schema_title": "SalesExtractionOutput",
+            "part_kinds": [
+              "text",
+              "text"
+            ]
+          },
+          {
+            "model": "gemini-2.5-flash-lite",
+            "timeout": 60,
+            "latency_ms": 5671,
+            "prompt_tokens": 3125,
+            "output_tokens": 271,
+            "error": null,
+            "response_mime_type": "application/json",
+            "schema_title": "SalesExtractionOutput",
+            "part_kinds": [
+              "text",
+              "text"
+            ]
+          }
+        ],
+        "wall_latency_ms": 18264,
+        "phase2_enabled": true,
+        "ocr_mode": "stored_vl_ocr",
+        "phase2_status": "unresolved",
+        "phase2_attempts": 2,
+        "phase2_failure_type": "STOCK_IDENTITY_FAILURE",
+        "extraction_method": "vl_html_table_parse"
+      },
+      "off_stock": {
+        "accepted": false,
+        "fail_count": 5,
+        "is_valid": false,
+        "healthy_rows": 40,
+        "failing_rows": 5,
+        "reasons": [
+          "stock_identity_failure"
+        ]
+      },
+      "on_stock": {
+        "accepted": false,
+        "fail_count": 5,
+        "is_valid": false,
+        "healthy_rows": 40,
+        "failing_rows": 5,
+        "reasons": [
+          "stock_identity_failure"
+        ]
+      }
+    },
+    {
+      "document_id": "0000700275_2026_08_ZL_18_374_04092026171615.pdf",
+      "error": null,
+      "comparison": {
+        "field_accuracy_off": 0.6190476190476191,
+        "field_accuracy_on": 0.6190476190476191,
+        "field_accuracy_delta": 0.0,
+        "quantity_accuracy_off": 0.5294117647058824,
+        "quantity_accuracy_on": 0.5294117647058824,
+        "quantity_accuracy_delta": 0.0,
+        "product_identity_recall_off": 1.0,
+        "product_identity_recall_on": 1.0,
+        "missing_values_off": 0,
+        "missing_values_on": 0,
+        "missing_values_delta": 0
+      },
+      "healthy_row_check": {
+        "healthy_rows_checked": 31,
+        "healthy_rows_changed": 0,
+        "unchanged": true
+      },
+      "off_telemetry": {
+        "gemini_calls": 0,
+        "prompt_tokens": 0,
+        "output_tokens": 0,
+        "latency_ms": 0,
+        "estimated_cost_usd": 0.0,
+        "pricing_note": "estimate using flash-lite ballpark $0.1/1M in + $0.4/1M out",
+        "calls": [],
+        "wall_latency_ms": 13,
+        "phase2_enabled": false,
+        "ocr_mode": "stored_vl_ocr",
+        "phase2_status": null,
+        "phase2_attempts": null,
+        "phase2_failure_type": null,
+        "extraction_method": "vl_html_table_parse"
+      },
+      "on_telemetry": {
+        "gemini_calls": 2,
+        "prompt_tokens": 6498,
+        "output_tokens": 2282,
+        "latency_ms": 6543,
+        "estimated_cost_usd": 0.001563,
+        "pricing_note": "estimate using flash-lite ballpark $0.1/1M in + $0.4/1M out",
+        "calls": [
+          {
+            "model": "gemini-2.5-flash-lite",
+            "timeout": 60,
+            "latency_ms": 3495,
+            "prompt_tokens": 3249,
+            "output_tokens": 1141,
+            "error": null,
+            "response_mime_type": "application/json",
+            "schema_title": "SalesExtractionOutput",
+            "part_kinds": [
+              "text",
+              "text"
+            ]
+          },
+          {
+            "model": "gemini-2.5-flash-lite",
+            "timeout": 60,
+            "latency_ms": 3048,
+            "prompt_tokens": 3249,
+            "output_tokens": 1141,
+            "error": null,
+            "response_mime_type": "application/json",
+            "schema_title": "SalesExtractionOutput",
+            "part_kinds": [
+              "text",
+              "text"
+            ]
+          }
+        ],
+        "wall_latency_ms": 32544,
+        "phase2_enabled": true,
+        "ocr_mode": "stored_vl_ocr",
+        "phase2_status": "unresolved",
+        "phase2_attempts": 2,
+        "phase2_failure_type": "STOCK_IDENTITY_FAILURE",
+        "extraction_method": "vl_html_table_parse"
+      },
+      "off_stock": {
+        "accepted": false,
+        "fail_count": 15,
+        "is_valid": false,
+        "healthy_rows": 32,
+        "failing_rows": 15,
+        "reasons": [
+          "stock_identity_failure"
+        ]
+      },
+      "on_stock": {
+        "accepted": false,
+        "fail_count": 15,
+        "is_valid": false,
+        "healthy_rows": 32,
+        "failing_rows": 15,
+        "reasons": [
+          "stock_identity_failure"
+        ]
+      }
+    },
+    {
+      "document_id": "0000700308_2026_08_ZL_18_8175_03092026072320.jpg",
+      "error": null,
+      "comparison": {
+        "field_accuracy_off": 0.4444444444444444,
+        "field_accuracy_on": 0.4444444444444444,
+        "field_accuracy_delta": 0.0,
+        "quantity_accuracy_off": 0.0,
+        "quantity_accuracy_on": 0.0,
+        "quantity_accuracy_delta": 0.0,
+        "product_identity_recall_off": 1.0,
+        "product_identity_recall_on": 1.0,
+        "missing_values_off": 2,
+        "missing_values_on": 2,
+        "missing_values_delta": 0
+      },
+      "healthy_row_check": {
+        "healthy_rows_checked": 14,
+        "healthy_rows_changed": 0,
+        "unchanged": true
+      },
+      "off_telemetry": {
+        "gemini_calls": 0,
+        "prompt_tokens": 0,
+        "output_tokens": 0,
+        "latency_ms": 0,
+        "estimated_cost_usd": 0.0,
+        "pricing_note": "estimate using flash-lite ballpark $0.1/1M in + $0.4/1M out",
+        "calls": [],
+        "wall_latency_ms": 9,
+        "phase2_enabled": false,
+        "ocr_mode": "stored_vl_ocr",
+        "phase2_status": null,
+        "phase2_attempts": null,
+        "phase2_failure_type": null,
+        "extraction_method": "vl_html_table_parse"
+      },
+      "on_telemetry": {
+        "gemini_calls": 2,
+        "prompt_tokens": 2570,
+        "output_tokens": 300,
+        "latency_ms": 3271,
+        "estimated_cost_usd": 0.000377,
+        "pricing_note": "estimate using flash-lite ballpark $0.1/1M in + $0.4/1M out",
+        "calls": [
+          {
+            "model": "gemini-2.5-flash-lite",
+            "timeout": 60,
+            "latency_ms": 1451,
+            "prompt_tokens": 1285,
+            "output_tokens": 150,
+            "error": null,
+            "response_mime_type": "application/json",
+            "schema_title": "SalesExtractionOutput",
+            "part_kinds": [
+              "text",
+              "text"
+            ]
+          },
+          {
+            "model": "gemini-2.5-flash-lite",
+            "timeout": 60,
+            "latency_ms": 1820,
+            "prompt_tokens": 1285,
+            "output_tokens": 150,
+            "error": null,
+            "response_mime_type": "application/json",
+            "schema_title": "SalesExtractionOutput",
+            "part_kinds": [
+              "text",
+              "text"
+            ]
+          }
+        ],
+        "wall_latency_ms": 6326,
+        "phase2_enabled": true,
+        "ocr_mode": "stored_vl_ocr",
+        "phase2_status": "unresolved",
+        "phase2_attempts": 2,
+        "phase2_failure_type": "STOCK_IDENTITY_FAILURE",
+        "extraction_method": "vl_html_table_parse"
+      },
+      "off_stock": {
+        "accepted": false,
+        "fail_count": 1,
+        "is_valid": false,
+        "healthy_rows": 14,
+        "failing_rows": 1,
+        "reasons": [
+          "stock_identity_failure"
+        ]
+      },
+      "on_stock": {
+        "accepted": false,
+        "fail_count": 1,
+        "is_valid": false,
+        "healthy_rows": 14,
+        "failing_rows": 1,
+        "reasons": [
+          "stock_identity_failure"
+        ]
+      }
+    },
+    {
+      "document_id": "0000700317_2026_08_ZL_18_374_02092026171443.pdf",
+      "error": null,
+      "comparison": {
+        "field_accuracy_off": 0.35,
+        "field_accuracy_on": 0.35,
+        "field_accuracy_delta": 0.0,
+        "quantity_accuracy_off": 0.21428571428571427,
+        "quantity_accuracy_on": 0.21428571428571427,
+        "quantity_accuracy_delta": 0.0,
+        "product_identity_recall_off": 1.0,
+        "product_identity_recall_on": 1.0,
+        "missing_values_off": 2,
+        "missing_values_on": 2,
+        "missing_values_delta": 0
+      },
+      "healthy_row_check": {
+        "healthy_rows_checked": 13,
+        "healthy_rows_changed": 0,
+        "unchanged": true
+      },
+      "off_telemetry": {
+        "gemini_calls": 0,
+        "prompt_tokens": 0,
+        "output_tokens": 0,
+        "latency_ms": 0,
+        "estimated_cost_usd": 0.0,
+        "pricing_note": "estimate using flash-lite ballpark $0.1/1M in + $0.4/1M out",
+        "calls": [],
+        "wall_latency_ms": 9,
+        "phase2_enabled": false,
+        "ocr_mode": "stored_vl_ocr",
+        "phase2_status": null,
+        "phase2_attempts": null,
+        "phase2_failure_type": null,
+        "extraction_method": "vl_html_table_parse"
+      },
+      "on_telemetry": {
+        "gemini_calls": 2,
+        "prompt_tokens": 4712,
+        "output_tokens": 1418,
+        "latency_ms": 9070,
+        "estimated_cost_usd": 0.001038,
+        "pricing_note": "estimate using flash-lite ballpark $0.1/1M in + $0.4/1M out",
+        "calls": [
+          {
+            "model": "gemini-2.5-flash-lite",
+            "timeout": 60,
+            "latency_ms": 2412,
+            "prompt_tokens": 2356,
+            "output_tokens": 709,
+            "error": null,
+            "response_mime_type": "application/json",
+            "schema_title": "SalesExtractionOutput",
+            "part_kinds": [
+              "text",
+              "text"
+            ]
+          },
+          {
+            "model": "gemini-2.5-flash-lite",
+            "timeout": 60,
+            "latency_ms": 6658,
+            "prompt_tokens": 2356,
+            "output_tokens": 709,
+            "error": null,
+            "response_mime_type": "application/json",
+            "schema_title": "SalesExtractionOutput",
+            "part_kinds": [
+              "text",
+              "text"
+            ]
+          }
+        ],
+        "wall_latency_ms": 13999,
+        "phase2_enabled": true,
+        "ocr_mode": "stored_vl_ocr",
+        "phase2_status": "unresolved",
+        "phase2_attempts": 2,
+        "phase2_failure_type": "STOCK_IDENTITY_FAILURE",
+        "extraction_method": "vl_html_table_parse"
+      },
+      "off_stock": {
+        "accepted": false,
+        "fail_count": 10,
+        "is_valid": false,
+        "healthy_rows": 13,
+        "failing_rows": 10,
+        "reasons": [
+          "stock_identity_failure"
+        ]
+      },
+      "on_stock": {
+        "accepted": false,
+        "fail_count": 10,
+        "is_valid": false,
+        "healthy_rows": 13,
+        "failing_rows": 10,
+        "reasons": [
+          "stock_identity_failure"
+        ]
+      }
+    },
+    {
+      "document_id": "0000700346_2026_08_ZL_18_8189_05092026025159.pdf",
+      "error": null,
+      "comparison": {
+        "field_accuracy_off": 0.16666666666666666,
+        "field_accuracy_on": 0.16666666666666666,
+        "field_accuracy_delta": 0.0,
+        "quantity_accuracy_off": 0.0,
+        "quantity_accuracy_on": 0.0,
+        "quantity_accuracy_delta": 0.0,
+        "product_identity_recall_off": 0.0,
+        "product_identity_recall_on": 0.0,
+        "missing_values_off": 15,
+        "missing_values_on": 15,
+        "missing_values_delta": 0
+      },
+      "healthy_row_check": {
+        "healthy_rows_checked": 0,
+        "healthy_rows_changed": 0,
+        "unchanged": true
+      },
+      "off_telemetry": {
+        "gemini_calls": 0,
+        "prompt_tokens": 0,
+        "output_tokens": 0,
+        "latency_ms": 0,
+        "estimated_cost_usd": 0.0,
+        "pricing_note": "estimate using flash-lite ballpark $0.1/1M in + $0.4/1M out",
+        "calls": [],
+        "wall_latency_ms": 50,
+        "phase2_enabled": false,
+        "ocr_mode": "stored_vl_ocr",
+        "phase2_status": null,
+        "phase2_attempts": null,
+        "phase2_failure_type": null,
+        "extraction_method": "di_ocr_html_override"
+      },
+      "on_telemetry": {
+        "gemini_calls": 2,
+        "prompt_tokens": 11108,
+        "output_tokens": 16360,
+        "latency_ms": 34374,
+        "estimated_cost_usd": 0.007655,
+        "pricing_note": "estimate using flash-lite ballpark $0.1/1M in + $0.4/1M out",
+        "calls": [
+          {
+            "model": "gemini-2.5-flash-lite",
+            "timeout": 60,
+            "latency_ms": 17256,
+            "prompt_tokens": 5554,
+            "output_tokens": 8180,
+            "error": null,
+            "response_mime_type": "application/json",
+            "schema_title": "SalesExtractionOutput",
+            "part_kinds": [
+              "text",
+              "text"
+            ]
+          },
+          {
+            "model": "gemini-2.5-flash-lite",
+            "timeout": 60,
+            "latency_ms": 17118,
+            "prompt_tokens": 5554,
+            "output_tokens": 8180,
+            "error": null,
+            "response_mime_type": "application/json",
+            "schema_title": "SalesExtractionOutput",
+            "part_kinds": [
+              "text",
+              "text"
+            ]
+          }
+        ],
+        "wall_latency_ms": 34433,
+        "phase2_enabled": true,
+        "ocr_mode": "stored_vl_ocr",
+        "phase2_status": "unresolved",
+        "phase2_attempts": 2,
+        "phase2_failure_type": "EMPTY_OUTPUT",
+        "extraction_method": "di_ocr_html_override"
+      },
+      "off_stock": {
+        "accepted": false,
+        "fail_count": 0,
+        "is_valid": false,
+        "healthy_rows": 0,
+        "failing_rows": 0,
+        "reasons": [
+          "empty_line_items",
+          "low_ocr_quality_score"
+        ]
+      },
+      "on_stock": {
+        "accepted": false,
+        "fail_count": 0,
+        "is_valid": false,
+        "healthy_rows": 0,
+        "failing_rows": 0,
+        "reasons": [
+          "empty_line_items",
+          "low_ocr_quality_score"
+        ]
+      }
+    },
+    {
+      "document_id": "0000700358_2026_08_ZL_18_8173_05092026185826.pdf",
+      "error": null,
+      "comparison": {
+        "field_accuracy_off": 0.5714285714285714,
+        "field_accuracy_on": 0.5714285714285714,
+        "field_accuracy_delta": 0.0,
+        "quantity_accuracy_off": 0.5333333333333333,
+        "quantity_accuracy_on": 0.5333333333333333,
+        "quantity_accuracy_delta": 0.0,
+        "product_identity_recall_off": 1.0,
+        "product_identity_recall_on": 1.0,
+        "missing_values_off": 2,
+        "missing_values_on": 2,
+        "missing_values_delta": 0
+      },
+      "healthy_row_check": {
+        "healthy_rows_checked": 13,
+        "healthy_rows_changed": 0,
+        "unchanged": true
+      },
+      "off_telemetry": {
+        "gemini_calls": 0,
+        "prompt_tokens": 0,
+        "output_tokens": 0,
+        "latency_ms": 0,
+        "estimated_cost_usd": 0.0,
+        "pricing_note": "estimate using flash-lite ballpark $0.1/1M in + $0.4/1M out",
+        "calls": [],
+        "wall_latency_ms": 40,
+        "phase2_enabled": false,
+        "ocr_mode": "stored_vl_ocr",
+        "phase2_status": null,
+        "phase2_attempts": null,
+        "phase2_failure_type": null,
+        "extraction_method": "vl_html_table_parse"
+      },
+      "on_telemetry": {
+        "gemini_calls": 2,
+        "prompt_tokens": 4482,
+        "output_tokens": 1382,
+        "latency_ms": 6141,
+        "estimated_cost_usd": 0.001001,
+        "pricing_note": "estimate using flash-lite ballpark $0.1/1M in + $0.4/1M out",
+        "calls": [
+          {
+            "model": "gemini-2.5-flash-lite",
+            "timeout": 60,
+            "latency_ms": 3233,
+            "prompt_tokens": 2241,
+            "output_tokens": 691,
+            "error": null,
+            "response_mime_type": "application/json",
+            "schema_title": "SalesExtractionOutput",
+            "part_kinds": [
+              "text",
+              "text"
+            ]
+          },
+          {
+            "model": "gemini-2.5-flash-lite",
+            "timeout": 60,
+            "latency_ms": 2908,
+            "prompt_tokens": 2241,
+            "output_tokens": 691,
+            "error": null,
+            "response_mime_type": "application/json",
+            "schema_title": "SalesExtractionOutput",
+            "part_kinds": [
+              "text",
+              "text"
+            ]
+          }
+        ],
+        "wall_latency_ms": 18334,
+        "phase2_enabled": true,
+        "ocr_mode": "stored_vl_ocr",
+        "phase2_status": "unresolved",
+        "phase2_attempts": 2,
+        "phase2_failure_type": "STOCK_IDENTITY_FAILURE",
+        "extraction_method": "vl_html_table_parse"
+      },
+      "off_stock": {
+        "accepted": false,
+        "fail_count": 10,
+        "is_valid": false,
+        "healthy_rows": 13,
+        "failing_rows": 10,
+        "reasons": [
+          "stock_identity_failure"
+        ]
+      },
+      "on_stock": {
+        "accepted": false,
+        "fail_count": 10,
+        "is_valid": false,
+        "healthy_rows": 13,
+        "failing_rows": 10,
+        "reasons": [
+          "stock_identity_failure"
+        ]
+      }
+    },
+    {
+      "document_id": "0000700364_2026_08_ZL_18_8173_05092026190156.pdf",
+      "error": null,
+      "comparison": {
+        "field_accuracy_off": 0.9,
+        "field_accuracy_on": 0.9,
+        "field_accuracy_delta": 0.0,
+        "quantity_accuracy_off": 0.875,
+        "quantity_accuracy_on": 0.875,
+        "quantity_accuracy_delta": 0.0,
+        "product_identity_recall_off": 0.8,
+        "product_identity_recall_on": 0.8,
+        "missing_values_off": 2,
+        "missing_values_on": 2,
+        "missing_values_delta": 0
+      },
+      "healthy_row_check": {
+        "healthy_rows_checked": 30,
+        "healthy_rows_changed": 0,
+        "unchanged": true
+      },
+      "off_telemetry": {
+        "gemini_calls": 0,
+        "prompt_tokens": 0,
+        "output_tokens": 0,
+        "latency_ms": 0,
+        "estimated_cost_usd": 0.0,
+        "pricing_note": "estimate using flash-lite ballpark $0.1/1M in + $0.4/1M out",
+        "calls": [],
+        "wall_latency_ms": 81,
+        "phase2_enabled": false,
+        "ocr_mode": "stored_vl_ocr",
+        "phase2_status": null,
+        "phase2_attempts": null,
+        "phase2_failure_type": null,
+        "extraction_method": "vl_html_table_parse"
+      },
+      "on_telemetry": {
+        "gemini_calls": 0,
+        "prompt_tokens": 0,
+        "output_tokens": 0,
+        "latency_ms": 0,
+        "estimated_cost_usd": 0.0,
+        "pricing_note": "estimate using flash-lite ballpark $0.1/1M in + $0.4/1M out",
+        "calls": [],
+        "wall_latency_ms": 82,
+        "phase2_enabled": true,
+        "ocr_mode": "stored_vl_ocr",
+        "phase2_status": "not_needed",
+        "phase2_attempts": 0,
+        "phase2_failure_type": null,
+        "extraction_method": "vl_html_table_parse"
+      },
+      "off_stock": {
+        "accepted": true,
+        "fail_count": 0,
+        "is_valid": true,
+        "healthy_rows": 31,
+        "failing_rows": 0,
+        "reasons": []
+      },
+      "on_stock": {
+        "accepted": true,
+        "fail_count": 0,
+        "is_valid": true,
+        "healthy_rows": 31,
+        "failing_rows": 0,
+        "reasons": []
+      }
+    },
+    {
+      "document_id": "0000700406_2026_08_ZL_10_384_05092026140711.jpg",
+      "error": null,
+      "comparison": {
+        "field_accuracy_off": 0.11428571428571428,
+        "field_accuracy_on": 0.11428571428571428,
+        "field_accuracy_delta": 0.0,
+        "quantity_accuracy_off": 0.0,
+        "quantity_accuracy_on": 0.0,
+        "quantity_accuracy_delta": 0.0,
+        "product_identity_recall_off": 0.42857142857142855,
+        "product_identity_recall_on": 0.42857142857142855,
+        "missing_values_off": 21,
+        "missing_values_on": 21,
+        "missing_values_delta": 0
+      },
+      "healthy_row_check": {
+        "healthy_rows_checked": 0,
+        "healthy_rows_changed": 0,
+        "unchanged": true
+      },
+      "off_telemetry": {
+        "gemini_calls": 0,
+        "prompt_tokens": 0,
+        "output_tokens": 0,
+        "latency_ms": 0,
+        "estimated_cost_usd": 0.0,
+        "pricing_note": "estimate using flash-lite ballpark $0.1/1M in + $0.4/1M out",
+        "calls": [],
+        "wall_latency_ms": 8,
+        "phase2_enabled": false,
+        "ocr_mode": "stored_vl_ocr",
+        "phase2_status": null,
+        "phase2_attempts": null,
+        "phase2_failure_type": null,
+        "extraction_method": "vl_html_table_parse"
+      },
+      "on_telemetry": {
+        "gemini_calls": 2,
+        "prompt_tokens": 6092,
+        "output_tokens": 3508,
+        "latency_ms": 9453,
+        "estimated_cost_usd": 0.002012,
+        "pricing_note": "estimate using flash-lite ballpark $0.1/1M in + $0.4/1M out",
+        "calls": [
+          {
+            "model": "gemini-2.5-flash-lite",
+            "timeout": 60,
+            "latency_ms": 4496,
+            "prompt_tokens": 3046,
+            "output_tokens": 1754,
+            "error": null,
+            "response_mime_type": "application/json",
+            "schema_title": "SalesExtractionOutput",
+            "part_kinds": [
+              "text",
+              "text"
+            ]
+          },
+          {
+            "model": "gemini-2.5-flash-lite",
+            "timeout": 60,
+            "latency_ms": 4957,
+            "prompt_tokens": 3046,
+            "output_tokens": 1754,
+            "error": null,
+            "response_mime_type": "application/json",
+            "schema_title": "SalesExtractionOutput",
+            "part_kinds": [
+              "text",
+              "text"
+            ]
+          }
+        ],
+        "wall_latency_ms": 10888,
+        "phase2_enabled": true,
+        "ocr_mode": "stored_vl_ocr",
+        "phase2_status": "unresolved",
+        "phase2_attempts": 2,
+        "phase2_failure_type": "STOCK_IDENTITY_FAILURE",
+        "extraction_method": "vl_html_table_parse"
+      },
+      "off_stock": {
+        "accepted": false,
+        "fail_count": 20,
+        "is_valid": false,
+        "healthy_rows": 0,
+        "failing_rows": 20,
+        "reasons": [
+          "stock_identity_failure",
+          "missing_product_names"
+        ]
+      },
+      "on_stock": {
+        "accepted": false,
+        "fail_count": 20,
+        "is_valid": false,
+        "healthy_rows": 0,
+        "failing_rows": 20,
+        "reasons": [
+          "stock_identity_failure",
+          "missing_product_names"
+        ]
+      }
+    },
+    {
+      "document_id": "0000700434_2026_08_ZL_10_386_05092026034503.jpg",
+      "error": null,
+      "comparison": {
+        "field_accuracy_off": 0.7391304347826086,
+        "field_accuracy_on": 0.7391304347826086,
+        "field_accuracy_delta": 0.0,
+        "quantity_accuracy_off": 0.6842105263157895,
+        "quantity_accuracy_on": 0.6842105263157895,
+        "quantity_accuracy_delta": 0.0,
+        "product_identity_recall_off": 1.0,
+        "product_identity_recall_on": 1.0,
+        "missing_values_off": 6,
+        "missing_values_on": 6,
+        "missing_values_delta": 0
+      },
+      "healthy_row_check": {
+        "healthy_rows_checked": 55,
+        "healthy_rows_changed": 0,
+        "unchanged": true
+      },
+      "off_telemetry": {
+        "gemini_calls": 1,
+        "prompt_tokens": 187,
+        "output_tokens": 149,
+        "latency_ms": 1139,
+        "estimated_cost_usd": 7.8e-05,
+        "pricing_note": "estimate using flash-lite ballpark $0.1/1M in + $0.4/1M out",
+        "calls": [
+          {
+            "model": "gemini-2.5-flash-lite",
+            "timeout": 30,
+            "latency_ms": 1139,
+            "prompt_tokens": 187,
+            "output_tokens": 149,
+            "error": null,
+            "response_mime_type": "application/json",
+            "schema_title": null,
+            "part_kinds": [
+              "text"
+            ]
+          }
+        ],
+        "wall_latency_ms": 1175,
+        "phase2_enabled": false,
+        "ocr_mode": "stored_vl_ocr",
+        "phase2_status": null,
+        "phase2_attempts": null,
+        "phase2_failure_type": null,
+        "extraction_method": "vl_html_table_parse"
+      },
+      "on_telemetry": {
+        "gemini_calls": 2,
+        "prompt_tokens": 8790,
+        "output_tokens": 5698,
+        "latency_ms": 13893,
+        "estimated_cost_usd": 0.003158,
+        "pricing_note": "estimate using flash-lite ballpark $0.1/1M in + $0.4/1M out",
+        "calls": [
+          {
+            "model": "gemini-2.5-flash-lite",
+            "timeout": 60,
+            "latency_ms": 7175,
+            "prompt_tokens": 4395,
+            "output_tokens": 2849,
+            "error": null,
+            "response_mime_type": "application/json",
+            "schema_title": "SalesExtractionOutput",
+            "part_kinds": [
+              "text",
+              "text"
+            ]
+          },
+          {
+            "model": "gemini-2.5-flash-lite",
+            "timeout": 60,
+            "latency_ms": 6718,
+            "prompt_tokens": 4395,
+            "output_tokens": 2849,
+            "error": null,
+            "response_mime_type": "application/json",
+            "schema_title": "SalesExtractionOutput",
+            "part_kinds": [
+              "text",
+              "text"
+            ]
+          }
+        ],
+        "wall_latency_ms": 16670,
+        "phase2_enabled": true,
+        "ocr_mode": "stored_vl_ocr",
+        "phase2_status": "unresolved",
+        "phase2_attempts": 2,
+        "phase2_failure_type": "STOCK_IDENTITY_FAILURE",
+        "extraction_method": "vl_html_table_parse"
+      },
+      "off_stock": {
+        "accepted": false,
+        "fail_count": 2,
+        "is_valid": false,
+        "healthy_rows": 59,
+        "failing_rows": 2,
+        "reasons": [
+          "stock_identity_failure"
+        ]
+      },
+      "on_stock": {
+        "accepted": false,
+        "fail_count": 2,
+        "is_valid": false,
+        "healthy_rows": 59,
+        "failing_rows": 2,
+        "reasons": [
+          "stock_identity_failure"
+        ]
+      }
+    },
+    {
+      "document_id": "0000700835_2026_08_ZL_25_447_03092026105819.jpeg",
+      "error": null,
+      "comparison": {
+        "field_accuracy_off": 0.6896551724137931,
+        "field_accuracy_on": 0.6896551724137931,
+        "field_accuracy_delta": 0.0,
+        "quantity_accuracy_off": 0.625,
+        "quantity_accuracy_on": 0.625,
+        "quantity_accuracy_delta": 0.0,
+        "product_identity_recall_off": 0.7142857142857143,
+        "product_identity_recall_on": 0.7142857142857143,
+        "missing_values_off": 9,
+        "missing_values_on": 9,
+        "missing_values_delta": 0
+      },
+      "healthy_row_check": {
+        "healthy_rows_checked": 24,
+        "healthy_rows_changed": 0,
+        "unchanged": true
+      },
+      "off_telemetry": {
+        "gemini_calls": 0,
+        "prompt_tokens": 0,
+        "output_tokens": 0,
+        "latency_ms": 0,
+        "estimated_cost_usd": 0.0,
+        "pricing_note": "estimate using flash-lite ballpark $0.1/1M in + $0.4/1M out",
+        "calls": [],
+        "wall_latency_ms": 13,
+        "phase2_enabled": false,
+        "ocr_mode": "stored_vl_ocr",
+        "phase2_status": null,
+        "phase2_attempts": null,
+        "phase2_failure_type": null,
+        "extraction_method": "vl_html_table_parse"
+      },
+      "on_telemetry": {
+        "gemini_calls": 0,
+        "prompt_tokens": 0,
+        "output_tokens": 0,
+        "latency_ms": 0,
+        "estimated_cost_usd": 0.0,
+        "pricing_note": "estimate using flash-lite ballpark $0.1/1M in + $0.4/1M out",
+        "calls": [],
+        "wall_latency_ms": 13,
+        "phase2_enabled": true,
+        "ocr_mode": "stored_vl_ocr",
+        "phase2_status": "not_needed",
+        "phase2_attempts": 0,
+        "phase2_failure_type": null,
+        "extraction_method": "vl_html_table_parse"
+      },
+      "off_stock": {
+        "accepted": true,
+        "fail_count": 0,
+        "is_valid": true,
+        "healthy_rows": 25,
+        "failing_rows": 0,
+        "reasons": []
+      },
+      "on_stock": {
+        "accepted": true,
+        "fail_count": 0,
+        "is_valid": true,
+        "healthy_rows": 25,
+        "failing_rows": 0,
+        "reasons": []
+      }
+    },
+    {
+      "document_id": "0000701012_2026_08_ZL_11_423_03092026183736.jpg",
+      "error": null,
+      "comparison": {
+        "field_accuracy_off": 0.7142857142857143,
+        "field_accuracy_on": 0.7142857142857143,
+        "field_accuracy_delta": 0.0,
+        "quantity_accuracy_off": 1.0,
+        "quantity_accuracy_on": 1.0,
+        "quantity_accuracy_delta": 0.0,
+        "product_identity_recall_off": 1.0,
+        "product_identity_recall_on": 1.0,
+        "missing_values_off": 4,
+        "missing_values_on": 4,
+        "missing_values_delta": 0
+      },
+      "healthy_row_check": {
+        "healthy_rows_checked": 5,
+        "healthy_rows_changed": 0,
+        "unchanged": true
+      },
+      "off_telemetry": {
+        "gemini_calls": 0,
+        "prompt_tokens": 0,
+        "output_tokens": 0,
+        "latency_ms": 0,
+        "estimated_cost_usd": 0.0,
+        "pricing_note": "estimate using flash-lite ballpark $0.1/1M in + $0.4/1M out",
+        "calls": [],
+        "wall_latency_ms": 16,
+        "phase2_enabled": false,
+        "ocr_mode": "stored_vl_ocr",
+        "phase2_status": null,
+        "phase2_attempts": null,
+        "phase2_failure_type": null,
+        "extraction_method": "vl_html_table_parse"
+      },
+      "on_telemetry": {
+        "gemini_calls": 2,
+        "prompt_tokens": 8862,
+        "output_tokens": 9494,
+        "latency_ms": 20612,
+        "estimated_cost_usd": 0.004684,
+        "pricing_note": "estimate using flash-lite ballpark $0.1/1M in + $0.4/1M out",
+        "calls": [
+          {
+            "model": "gemini-2.5-flash-lite",
+            "timeout": 60,
+            "latency_ms": 10152,
+            "prompt_tokens": 4431,
+            "output_tokens": 4747,
+            "error": null,
+            "response_mime_type": "application/json",
+            "schema_title": "SalesExtractionOutput",
+            "part_kinds": [
+              "text",
+              "text"
+            ]
+          },
+          {
+            "model": "gemini-2.5-flash-lite",
+            "timeout": 60,
+            "latency_ms": 10460,
+            "prompt_tokens": 4431,
+            "output_tokens": 4747,
+            "error": null,
+            "response_mime_type": "application/json",
+            "schema_title": "SalesExtractionOutput",
+            "part_kinds": [
+              "text",
+              "text"
+            ]
+          }
+        ],
+        "wall_latency_ms": 23145,
+        "phase2_enabled": true,
+        "ocr_mode": "stored_vl_ocr",
+        "phase2_status": "unresolved",
+        "phase2_attempts": 2,
+        "phase2_failure_type": "STOCK_IDENTITY_FAILURE",
+        "extraction_method": "vl_html_table_parse"
+      },
+      "off_stock": {
+        "accepted": false,
+        "fail_count": 33,
+        "is_valid": false,
+        "healthy_rows": 5,
+        "failing_rows": 33,
+        "reasons": [
+          "stock_identity_failure"
+        ]
+      },
+      "on_stock": {
+        "accepted": false,
+        "fail_count": 33,
+        "is_valid": false,
+        "healthy_rows": 5,
+        "failing_rows": 33,
+        "reasons": [
+          "stock_identity_failure"
+        ]
+      }
+    },
+    {
+      "document_id": "0000701078_2026_08_ZL_03_362_05092026080346.jpeg",
+      "error": null,
+      "comparison": {
+        "field_accuracy_off": 0.5555555555555556,
+        "field_accuracy_on": 0.5555555555555556,
+        "field_accuracy_delta": 0.0,
+        "quantity_accuracy_off": 0.4666666666666667,
+        "quantity_accuracy_on": 0.4666666666666667,
+        "quantity_accuracy_delta": 0.0,
+        "product_identity_recall_off": 0.6,
+        "product_identity_recall_on": 0.6,
+        "missing_values_off": 7,
+        "missing_values_on": 7,
+        "missing_values_delta": 0
+      },
+      "healthy_row_check": {
+        "healthy_rows_checked": 57,
+        "healthy_rows_changed": 0,
+        "unchanged": true
+      },
+      "off_telemetry": {
+        "gemini_calls": 0,
+        "prompt_tokens": 0,
+        "output_tokens": 0,
+        "latency_ms": 0,
+        "estimated_cost_usd": 0.0,
+        "pricing_note": "estimate using flash-lite ballpark $0.1/1M in + $0.4/1M out",
+        "calls": [],
+        "wall_latency_ms": 24,
+        "phase2_enabled": false,
+        "ocr_mode": "stored_vl_ocr",
+        "phase2_status": null,
+        "phase2_attempts": null,
+        "phase2_failure_type": null,
+        "extraction_method": "vl_html_table_parse"
+      },
+      "on_telemetry": {
+        "gemini_calls": 2,
+        "prompt_tokens": 8238,
+        "output_tokens": 364,
+        "latency_ms": 2751,
+        "estimated_cost_usd": 0.000969,
+        "pricing_note": "estimate using flash-lite ballpark $0.1/1M in + $0.4/1M out",
+        "calls": [
+          {
+            "model": "gemini-2.5-flash-lite",
+            "timeout": 60,
+            "latency_ms": 1511,
+            "prompt_tokens": 4119,
+            "output_tokens": 182,
+            "error": null,
+            "response_mime_type": "application/json",
+            "schema_title": "SalesExtractionOutput",
+            "part_kinds": [
+              "text",
+              "text"
+            ]
+          },
+          {
+            "model": "gemini-2.5-flash-lite",
+            "timeout": 60,
+            "latency_ms": 1240,
+            "prompt_tokens": 4119,
+            "output_tokens": 182,
+            "error": null,
+            "response_mime_type": "application/json",
+            "schema_title": "SalesExtractionOutput",
+            "part_kinds": [
+              "text",
+              "text"
+            ]
+          }
+        ],
+        "wall_latency_ms": 6124,
+        "phase2_enabled": true,
+        "ocr_mode": "stored_vl_ocr",
+        "phase2_status": "unresolved",
+        "phase2_attempts": 2,
+        "phase2_failure_type": "STOCK_IDENTITY_FAILURE",
+        "extraction_method": "vl_html_table_parse"
+      },
+      "off_stock": {
+        "accepted": false,
+        "fail_count": 3,
+        "is_valid": false,
+        "healthy_rows": 59,
+        "failing_rows": 3,
+        "reasons": [
+          "stock_identity_failure"
+        ]
+      },
+      "on_stock": {
+        "accepted": false,
+        "fail_count": 3,
+        "is_valid": false,
+        "healthy_rows": 59,
+        "failing_rows": 3,
+        "reasons": [
+          "stock_identity_failure"
+        ]
+      }
+    },
+    {
+      "document_id": "0000701151_2026_08_ZL_14_361_03092026025650.jpg",
+      "error": null,
+      "comparison": {
+        "field_accuracy_off": 0.8947368421052632,
+        "field_accuracy_on": 0.8947368421052632,
+        "field_accuracy_delta": 0.0,
+        "quantity_accuracy_off": 0.8666666666666667,
+        "quantity_accuracy_on": 0.8666666666666667,
+        "quantity_accuracy_delta": 0.0,
+        "product_identity_recall_off": 0.8,
+        "product_identity_recall_on": 0.8,
+        "missing_values_off": 2,
+        "missing_values_on": 2,
+        "missing_values_delta": 0
+      },
+      "healthy_row_check": {
+        "healthy_rows_checked": 42,
+        "healthy_rows_changed": 0,
+        "unchanged": true
+      },
+      "off_telemetry": {
+        "gemini_calls": 0,
+        "prompt_tokens": 0,
+        "output_tokens": 0,
+        "latency_ms": 0,
+        "estimated_cost_usd": 0.0,
+        "pricing_note": "estimate using flash-lite ballpark $0.1/1M in + $0.4/1M out",
+        "calls": [],
+        "wall_latency_ms": 24,
+        "phase2_enabled": false,
+        "ocr_mode": "stored_vl_ocr",
+        "phase2_status": null,
+        "phase2_attempts": null,
+        "phase2_failure_type": null,
+        "extraction_method": "vl_html_table_parse"
+      },
+      "on_telemetry": {
+        "gemini_calls": 0,
+        "prompt_tokens": 0,
+        "output_tokens": 0,
+        "latency_ms": 0,
+        "estimated_cost_usd": 0.0,
+        "pricing_note": "estimate using flash-lite ballpark $0.1/1M in + $0.4/1M out",
+        "calls": [],
+        "wall_latency_ms": 24,
+        "phase2_enabled": true,
+        "ocr_mode": "stored_vl_ocr",
+        "phase2_status": "not_needed",
+        "phase2_attempts": 0,
+        "phase2_failure_type": null,
+        "extraction_method": "vl_html_table_parse"
+      },
+      "off_stock": {
+        "accepted": true,
+        "fail_count": 0,
+        "is_valid": true,
+        "healthy_rows": 42,
+        "failing_rows": 0,
+        "reasons": []
+      },
+      "on_stock": {
+        "accepted": true,
+        "fail_count": 0,
+        "is_valid": true,
+        "healthy_rows": 42,
+        "failing_rows": 0,
+        "reasons": []
+      }
+    },
+    {
+      "document_id": "0000701275_2026_08_ZL_03_360_02092026152716.jpg",
+      "error": null,
+      "comparison": {
+        "field_accuracy_off": 0.16666666666666666,
+        "field_accuracy_on": 0.16666666666666666,
+        "field_accuracy_delta": 0.0,
+        "quantity_accuracy_off": 0.0,
+        "quantity_accuracy_on": 0.0,
+        "quantity_accuracy_delta": 0.0,
+        "product_identity_recall_off": 0.8333333333333334,
+        "product_identity_recall_on": 0.8333333333333334,
+        "missing_values_off": 5,
+        "missing_values_on": 5,
+        "missing_values_delta": 0
+      },
+      "healthy_row_check": {
+        "healthy_rows_checked": 24,
+        "healthy_rows_changed": 0,
+        "unchanged": true
+      },
+      "off_telemetry": {
+        "gemini_calls": 0,
+        "prompt_tokens": 0,
+        "output_tokens": 0,
+        "latency_ms": 0,
+        "estimated_cost_usd": 0.0,
+        "pricing_note": "estimate using flash-lite ballpark $0.1/1M in + $0.4/1M out",
+        "calls": [],
+        "wall_latency_ms": 17,
+        "phase2_enabled": false,
+        "ocr_mode": "stored_vl_ocr",
+        "phase2_status": null,
+        "phase2_attempts": null,
+        "phase2_failure_type": null,
+        "extraction_method": "vl_html_table_parse"
+      },
+      "on_telemetry": {
+        "gemini_calls": 2,
+        "prompt_tokens": 6376,
+        "output_tokens": 1846,
+        "latency_ms": 5560,
+        "estimated_cost_usd": 0.001376,
+        "pricing_note": "estimate using flash-lite ballpark $0.1/1M in + $0.4/1M out",
+        "calls": [
+          {
+            "model": "gemini-2.5-flash-lite",
+            "timeout": 60,
+            "latency_ms": 2700,
+            "prompt_tokens": 3188,
+            "output_tokens": 923,
+            "error": null,
+            "response_mime_type": "application/json",
+            "schema_title": "SalesExtractionOutput",
+            "part_kinds": [
+              "text",
+              "text"
+            ]
+          },
+          {
+            "model": "gemini-2.5-flash-lite",
+            "timeout": 60,
+            "latency_ms": 2860,
+            "prompt_tokens": 3188,
+            "output_tokens": 923,
+            "error": null,
+            "response_mime_type": "application/json",
+            "schema_title": "SalesExtractionOutput",
+            "part_kinds": [
+              "text",
+              "text"
+            ]
+          }
+        ],
+        "wall_latency_ms": 8181,
+        "phase2_enabled": true,
+        "ocr_mode": "stored_vl_ocr",
+        "phase2_status": "unresolved",
+        "phase2_attempts": 2,
+        "phase2_failure_type": "STOCK_IDENTITY_FAILURE",
+        "extraction_method": "vl_html_table_parse"
+      },
+      "off_stock": {
+        "accepted": false,
+        "fail_count": 20,
+        "is_valid": false,
+        "healthy_rows": 24,
+        "failing_rows": 20,
+        "reasons": [
+          "stock_identity_failure"
+        ]
+      },
+      "on_stock": {
+        "accepted": false,
+        "fail_count": 20,
+        "is_valid": false,
+        "healthy_rows": 24,
+        "failing_rows": 20,
+        "reasons": [
+          "stock_identity_failure"
+        ]
+      }
+    },
+    {
+      "document_id": "0000701851_2026_08_ZL_20_302_03092026134940.jpg",
+      "error": null,
+      "comparison": {
+        "field_accuracy_off": 0.9090909090909091,
+        "field_accuracy_on": 0.9090909090909091,
+        "field_accuracy_delta": 0.0,
+        "quantity_accuracy_off": 0.9444444444444444,
+        "quantity_accuracy_on": 0.9444444444444444,
+        "quantity_accuracy_delta": 0.0,
+        "product_identity_recall_off": 1.0,
+        "product_identity_recall_on": 1.0,
+        "missing_values_off": 2,
+        "missing_values_on": 2,
+        "missing_values_delta": 0
+      },
+      "healthy_row_check": {
+        "healthy_rows_checked": 28,
+        "healthy_rows_changed": 0,
+        "unchanged": true
+      },
+      "off_telemetry": {
+        "gemini_calls": 0,
+        "prompt_tokens": 0,
+        "output_tokens": 0,
+        "latency_ms": 0,
+        "estimated_cost_usd": 0.0,
+        "pricing_note": "estimate using flash-lite ballpark $0.1/1M in + $0.4/1M out",
+        "calls": [],
+        "wall_latency_ms": 15,
+        "phase2_enabled": false,
+        "ocr_mode": "stored_vl_ocr",
+        "phase2_status": null,
+        "phase2_attempts": null,
+        "phase2_failure_type": null,
+        "extraction_method": "vl_html_table_parse"
+      },
+      "on_telemetry": {
+        "gemini_calls": 0,
+        "prompt_tokens": 0,
+        "output_tokens": 0,
+        "latency_ms": 0,
+        "estimated_cost_usd": 0.0,
+        "pricing_note": "estimate using flash-lite ballpark $0.1/1M in + $0.4/1M out",
+        "calls": [],
+        "wall_latency_ms": 17,
+        "phase2_enabled": true,
+        "ocr_mode": "stored_vl_ocr",
+        "phase2_status": "not_needed",
+        "phase2_attempts": 0,
+        "phase2_failure_type": null,
+        "extraction_method": "vl_html_table_parse"
+      },
+      "off_stock": {
+        "accepted": true,
+        "fail_count": 0,
+        "is_valid": true,
+        "healthy_rows": 29,
+        "failing_rows": 0,
+        "reasons": []
+      },
+      "on_stock": {
+        "accepted": true,
+        "fail_count": 0,
+        "is_valid": true,
+        "healthy_rows": 29,
+        "failing_rows": 0,
+        "reasons": []
+      }
+    },
+    {
+      "document_id": "0000701864_2026_08_ZL_20_5015_03092026091037.jpg",
+      "error": null,
+      "comparison": {
+        "field_accuracy_off": 0.85,
+        "field_accuracy_on": 0.85,
+        "field_accuracy_delta": 0.0,
+        "quantity_accuracy_off": 0.875,
+        "quantity_accuracy_on": 0.875,
+        "quantity_accuracy_delta": 0.0,
+        "product_identity_recall_off": 0.8,
+        "product_identity_recall_on": 0.8,
+        "missing_values_off": 3,
+        "missing_values_on": 3,
+        "missing_values_delta": 0
+      },
+      "healthy_row_check": {
+        "healthy_rows_checked": 18,
+        "healthy_rows_changed": 0,
+        "unchanged": true
+      },
+      "off_telemetry": {
+        "gemini_calls": 0,
+        "prompt_tokens": 0,
+        "output_tokens": 0,
+        "latency_ms": 0,
+        "estimated_cost_usd": 0.0,
+        "pricing_note": "estimate using flash-lite ballpark $0.1/1M in + $0.4/1M out",
+        "calls": [],
+        "wall_latency_ms": 10,
+        "phase2_enabled": false,
+        "ocr_mode": "stored_vl_ocr",
+        "phase2_status": null,
+        "phase2_attempts": null,
+        "phase2_failure_type": null,
+        "extraction_method": "vl_html_table_parse"
+      },
+      "on_telemetry": {
+        "gemini_calls": 0,
+        "prompt_tokens": 0,
+        "output_tokens": 0,
+        "latency_ms": 0,
+        "estimated_cost_usd": 0.0,
+        "pricing_note": "estimate using flash-lite ballpark $0.1/1M in + $0.4/1M out",
+        "calls": [],
+        "wall_latency_ms": 11,
+        "phase2_enabled": true,
+        "ocr_mode": "stored_vl_ocr",
+        "phase2_status": "not_needed",
+        "phase2_attempts": 0,
+        "phase2_failure_type": null,
+        "extraction_method": "vl_html_table_parse"
+      },
+      "off_stock": {
+        "accepted": true,
+        "fail_count": 0,
+        "is_valid": true,
+        "healthy_rows": 18,
+        "failing_rows": 0,
+        "reasons": []
+      },
+      "on_stock": {
+        "accepted": true,
+        "fail_count": 0,
+        "is_valid": true,
+        "healthy_rows": 18,
+        "failing_rows": 0,
+        "reasons": []
+      }
+    },
+    {
+      "document_id": "0000701904_2026_08_ZL_20_8227_05092026154848.jpg",
+      "error": null,
+      "comparison": {
+        "field_accuracy_off": 0.15,
+        "field_accuracy_on": 0.15,
+        "field_accuracy_delta": 0.0,
+        "quantity_accuracy_off": 0.0,
+        "quantity_accuracy_on": 0.0,
+        "quantity_accuracy_delta": 0.0,
+        "product_identity_recall_off": 0.0,
+        "product_identity_recall_on": 0.0,
+        "missing_values_off": 17,
+        "missing_values_on": 17,
+        "missing_values_delta": 0
+      },
+      "healthy_row_check": {
+        "healthy_rows_checked": 0,
+        "healthy_rows_changed": 0,
+        "unchanged": true
+      },
+      "off_telemetry": {
+        "gemini_calls": 2,
+        "prompt_tokens": 773,
+        "output_tokens": 91,
+        "latency_ms": 1800,
+        "estimated_cost_usd": 0.000114,
+        "pricing_note": "estimate using flash-lite ballpark $0.1/1M in + $0.4/1M out",
+        "calls": [
+          {
+            "model": "gemini-2.5-flash-lite",
+            "timeout": 30,
+            "latency_ms": 884,
+            "prompt_tokens": 123,
+            "output_tokens": 16,
+            "error": null,
+            "response_mime_type": "application/json",
+            "schema_title": null,
+            "part_kinds": [
+              "text"
+            ]
+          },
+          {
+            "model": "gemini-2.5-flash-lite",
+            "timeout": 30,
+            "latency_ms": 916,
+            "prompt_tokens": 650,
+            "output_tokens": 75,
+            "error": null,
+            "response_mime_type": "application/json",
+            "schema_title": null,
+            "part_kinds": [
+              "text"
+            ]
+          }
+        ],
+        "wall_latency_ms": 1847,
+        "phase2_enabled": false,
+        "ocr_mode": "stored_vl_ocr",
+        "phase2_status": null,
+        "phase2_attempts": null,
+        "phase2_failure_type": null,
+        "extraction_method": "di_ocr_html_override"
+      },
+      "on_telemetry": {
+        "gemini_calls": 2,
+        "prompt_tokens": 8806,
+        "output_tokens": 16360,
+        "latency_ms": 33971,
+        "estimated_cost_usd": 0.007425,
+        "pricing_note": "estimate using flash-lite ballpark $0.1/1M in + $0.4/1M out",
+        "calls": [
+          {
+            "model": "gemini-2.5-flash-lite",
+            "timeout": 60,
+            "latency_ms": 17068,
+            "prompt_tokens": 4403,
+            "output_tokens": 8180,
+            "error": null,
+            "response_mime_type": "application/json",
+            "schema_title": "SalesExtractionOutput",
+            "part_kinds": [
+              "text",
+              "text"
+            ]
+          },
+          {
+            "model": "gemini-2.5-flash-lite",
+            "timeout": 60,
+            "latency_ms": 16903,
+            "prompt_tokens": 4403,
+            "output_tokens": 8180,
+            "error": null,
+            "response_mime_type": "application/json",
+            "schema_title": "SalesExtractionOutput",
+            "part_kinds": [
+              "text",
+              "text"
+            ]
+          }
+        ],
+        "wall_latency_ms": 34017,
+        "phase2_enabled": true,
+        "ocr_mode": "stored_vl_ocr",
+        "phase2_status": "unresolved",
+        "phase2_attempts": 2,
+        "phase2_failure_type": "EMPTY_OUTPUT",
+        "extraction_method": "di_ocr_html_override"
+      },
+      "off_stock": {
+        "accepted": false,
+        "fail_count": 0,
+        "is_valid": false,
+        "healthy_rows": 0,
+        "failing_rows": 0,
+        "reasons": [
+          "empty_line_items",
+          "low_ocr_quality_score"
+        ]
+      },
+      "on_stock": {
+        "accepted": false,
+        "fail_count": 0,
+        "is_valid": false,
+        "healthy_rows": 0,
+        "failing_rows": 0,
+        "reasons": [
+          "empty_line_items",
+          "low_ocr_quality_score"
+        ]
+      }
+    },
+    {
+      "document_id": "0000704337_2026_08_ZL_24_259_03092026042213.pdf",
+      "error": null,
+      "comparison": {
+        "field_accuracy_off": 0.16666666666666666,
+        "field_accuracy_on": 0.16666666666666666,
+        "field_accuracy_delta": 0.0,
+        "quantity_accuracy_off": 0.0,
+        "quantity_accuracy_on": 0.0,
+        "quantity_accuracy_delta": 0.0,
+        "product_identity_recall_off": 0.0,
+        "product_identity_recall_on": 0.8,
+        "missing_values_off": 10,
+        "missing_values_on": 10,
+        "missing_values_delta": 0
+      },
+      "healthy_row_check": {
+        "healthy_rows_checked": 0,
+        "healthy_rows_changed": 0,
+        "unchanged": true
+      },
+      "off_telemetry": {
+        "gemini_calls": 1,
+        "prompt_tokens": 167,
+        "output_tokens": 88,
+        "latency_ms": 1118,
+        "estimated_cost_usd": 5.2e-05,
+        "pricing_note": "estimate using flash-lite ballpark $0.1/1M in + $0.4/1M out",
+        "calls": [
+          {
+            "model": "gemini-2.5-flash-lite",
+            "timeout": 30,
+            "latency_ms": 1118,
+            "prompt_tokens": 167,
+            "output_tokens": 88,
+            "error": null,
+            "response_mime_type": "application/json",
+            "schema_title": null,
+            "part_kinds": [
+              "text"
+            ]
+          }
+        ],
+        "wall_latency_ms": 1148,
+        "phase2_enabled": false,
+        "ocr_mode": "stored_vl_ocr",
+        "phase2_status": null,
+        "phase2_attempts": null,
+        "phase2_failure_type": null,
+        "extraction_method": "di_ocr_html_override"
+      },
+      "on_telemetry": {
+        "gemini_calls": 2,
+        "prompt_tokens": 4409,
+        "output_tokens": 8665,
+        "latency_ms": 20553,
+        "estimated_cost_usd": 0.003907,
+        "pricing_note": "estimate using flash-lite ballpark $0.1/1M in + $0.4/1M out",
+        "calls": [
+          {
+            "model": "gemini-2.5-flash-lite",
+            "timeout": 60,
+            "latency_ms": 15762,
+            "prompt_tokens": 2435,
+            "output_tokens": 7500,
+            "error": null,
+            "response_mime_type": "application/json",
+            "schema_title": "SalesExtractionOutput",
+            "part_kinds": [
+              "text",
+              "text"
+            ]
+          },
+          {
+            "model": "gemini-2.5-flash-lite",
+            "timeout": 60,
+            "latency_ms": 4791,
+            "prompt_tokens": 1974,
+            "output_tokens": 1165,
+            "error": null,
+            "response_mime_type": null,
+            "schema_title": null,
+            "part_kinds": [
+              "text",
+              "inline_data"
+            ]
+          }
+        ],
+        "wall_latency_ms": 321512,
+        "phase2_enabled": true,
+        "ocr_mode": "stored_vl_ocr",
+        "phase2_status": "recovered",
+        "phase2_attempts": 1,
+        "phase2_failure_type": "EMPTY_OUTPUT",
+        "extraction_method": "di_ocr_html_override"
+      },
+      "off_stock": {
+        "accepted": false,
+        "fail_count": 0,
+        "is_valid": false,
+        "healthy_rows": 0,
+        "failing_rows": 0,
+        "reasons": [
+          "empty_line_items",
+          "low_ocr_quality_score"
+        ]
+      },
+      "on_stock": {
+        "accepted": true,
+        "fail_count": 0,
+        "is_valid": false,
+        "healthy_rows": 0,
+        "failing_rows": 0,
+        "reasons": []
+      }
+    }
+  ]
+}

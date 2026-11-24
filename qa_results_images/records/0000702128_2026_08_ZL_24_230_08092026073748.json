@@ -1,0 +1,301 @@
+{
+  "file": "0000702128_2026_08_ZL_24_230_08092026073748.jpg",
+  "path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000702128_2026_08_ZL_24_230_08092026073748.jpg",
+  "format": "STOCK & SALES ANALYSIS",
+  "api_method": "gemini_extraction_fallback",
+  "status": "FAIL",
+  "expected_rows": 19,
+  "extracted_rows": 21,
+  "matched_rows": 10,
+  "missing_rows": [
+    {
+      "product": "WASH 50ML",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": null,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "50ML =",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "ANTISEPTIC",
+      "opening_qty": 654.16,
+      "receipts_qty": 0,
+      "sales_qty": null,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "AYURSLIM 1x60 3x60 AYURSLIM 3x60 “Ati : TEA AYURSLIM",
+      "opening_qty": null,
+      "receipts_qty": 0,
+      "sales_qty": null,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "ms",
+      "opening_qty": null,
+      "receipts_qty": 0,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "CREAM",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "BABY pore",
+      "opening_qty": null,
+      "receipts_qty": 0,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "CREAM lee",
+      "opening_qty": null,
+      "receipts_qty": 0,
+      "sales_qty": null,
+      "closing_qty": 9,
+      "kind": "missing_product"
+    },
+    {
+      "product": "BABY",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    }
+  ],
+  "extra_rows": [
+    {
+      "product": "THE HIMALAYA DRUG CO.",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "ANTISEPTIC CREAM",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 1,
+      "kind": "extra_product"
+    },
+    {
+      "product": "AYURSLIM 1X60",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 3,
+      "kind": "extra_product"
+    },
+    {
+      "product": "AYURSLIM 3X60",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "AYURSLIM TEA 2G",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "BABY CREAM",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "BABY CREAM",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 19,
+      "kind": "extra_product"
+    },
+    {
+      "product": "BABY CREAM",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 3,
+      "kind": "extra_product"
+    },
+    {
+      "product": "BABY HAIR OIL",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "BABY LOTION",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 4,
+      "kind": "extra_product"
+    },
+    {
+      "product": "BABY LOTION",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 21,
+      "kind": "extra_product"
+    }
+  ],
+  "duplicates": [],
+  "mismatches": [
+    {
+      "product": "ABANA TABS 1x60 =",
+      "field": "closing_qty",
+      "expected": 2893.3,
+      "actual": 41,
+      "kind": "wrong_closing_qty"
+    },
+    {
+      "product": "BABY HAIR OIL",
+      "field": "closing_qty",
+      "expected": 7543,
+      "actual": 0,
+      "kind": "wrong_closing_qty"
+    },
+    {
+      "product": "10 rows",
+      "field": "sales_value",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 10,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    },
+    {
+      "product": "10 rows",
+      "field": "closing_value",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 10,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    },
+    {
+      "product": "10 rows",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 10,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    }
+  ],
+  "ocr_review": [
+    {
+      "product": "ALTHEA CREAM ; =",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "ALOE VERA FACE ~",
+      "api_product": "ALOE VERA FACE WASH",
+      "similarity": 0.848,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "AACTARIL 75GM",
+      "api_product": "AACTARIL",
+      "similarity": 0.762,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "BABY CREAM",
+      "field": "opening_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "BABY CREAM",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "BABY HAIR OIL",
+      "field": "opening_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "ANTI HAIR LOSS CREAM 1 CREAM",
+      "api_product": "ANTI HAIR LOSS CREAM",
+      "similarity": 0.833,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "ANTI HAIR LOSS CREAM 1 CREAM",
+      "field": "opening_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "ANTI HAIR LOSS CREAM 1 CREAM",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "ABY HAIR OIL LGAs",
+      "api_product": "BABY HAIR OIL",
+      "similarity": 0.8,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "ABY HAIR OIL LGAs",
+      "field": "opening_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "ABY HAIR OIL LGAs",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    }
+  ],
+  "accounting": [],
+  "confidence": "medium",
+  "notes": [
+    "OCR used tesseract psm 6."
+  ],
+  "result_key": "0000702128_2026_08_ZL_24_230_08092026073748",
+  "unavailable_fields": {
+    "sales_value": 10,
+    "closing_value": 10,
+    "sales_qty": 10
+  },
+  "formula_checked": "none"
+}

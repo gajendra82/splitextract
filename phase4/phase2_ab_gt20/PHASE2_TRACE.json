@@ -1,0 +1,751 @@
+{
+  "documents": [
+    {
+      "document_id": "0000700084_2026_08_ZL_06_8236_03092026155136.pdf",
+      "source_exists": true,
+      "stored_ocr_chars": 8634,
+      "accepted": false,
+      "validation_reasons": [
+        "stock_identity_failure"
+      ],
+      "extraction_method": "vl_html_table_parse",
+      "line_item_count": 50,
+      "failing_row_count": 3,
+      "failing_rows_sample": [
+        "CONFIDO TAB.",
+        "LIV 52 SYP. 200",
+        "LIV 52 TAB."
+      ],
+      "failure_type": "STOCK_IDENTITY_FAILURE",
+      "policy_strategy": "targeted_stock_extraction",
+      "policy_call_gemini": true,
+      "policy_max_attempts": 2,
+      "gemini_trigger": "would_call",
+      "trigger_reason": "failure=STOCK_IDENTITY_FAILURE strategy=targeted_stock_extraction",
+      "payload_count": 1,
+      "responseMimeType": "application/json",
+      "schema_title": "SalesExtractionOutput",
+      "schema_dynamic_additionalProperties": true,
+      "evidence": {
+        "part_count": 2,
+        "part_kinds": [
+          "text",
+          "text"
+        ],
+        "text_chars": 9861,
+        "has_ocr_evidence_marker": true
+      },
+      "failing_names_in_evidence": 3,
+      "failing_names_in_evidence_sample": [
+        "CONFIDO TAB.",
+        "LIV 52 SYP. 200",
+        "LIV 52 TAB."
+      ]
+    },
+    {
+      "document_id": "0000700124_2026_08_ZL_06_521_02092026204703.pdf",
+      "source_exists": true,
+      "stored_ocr_chars": 7572,
+      "accepted": false,
+      "validation_reasons": [
+        "empty_line_items",
+        "low_ocr_quality_score"
+      ],
+      "extraction_method": "di_ocr_html_override",
+      "line_item_count": 0,
+      "failing_row_count": 0,
+      "failing_rows_sample": [],
+      "failure_type": "EMPTY_OUTPUT",
+      "policy_strategy": "structured_reread",
+      "policy_call_gemini": true,
+      "policy_max_attempts": 2,
+      "gemini_trigger": "would_call",
+      "trigger_reason": "failure=EMPTY_OUTPUT strategy=structured_reread",
+      "payload_count": 1,
+      "responseMimeType": "application/json",
+      "schema_title": "SalesExtractionOutput",
+      "schema_dynamic_additionalProperties": true,
+      "evidence": {
+        "part_count": 2,
+        "part_kinds": [
+          "text",
+          "text"
+        ],
+        "text_chars": 8103,
+        "has_ocr_evidence_marker": true
+      },
+      "failing_names_in_evidence": 0,
+      "failing_names_in_evidence_sample": []
+    },
+    {
+      "document_id": "0000700209_2026_08_ZL_18_374_04092026060313.pdf",
+      "source_exists": true,
+      "stored_ocr_chars": 7265,
+      "accepted": false,
+      "validation_reasons": [
+        "stock_identity_failure"
+      ],
+      "extraction_method": "vl_html_table_parse",
+      "line_item_count": 45,
+      "failing_row_count": 5,
+      "failing_rows_sample": [
+        "CLARINA ANTI ACNE KIT",
+        "CONFIDO TAB",
+        "DIABECON DS TABS",
+        "DIABECON TABS",
+        "PILEX FOTE tabs"
+      ],
+      "failure_type": "STOCK_IDENTITY_FAILURE",
+      "policy_strategy": "targeted_stock_extraction",
+      "policy_call_gemini": true,
+      "policy_max_attempts": 2,
+      "gemini_trigger": "would_call",
+      "trigger_reason": "failure=STOCK_IDENTITY_FAILURE strategy=targeted_stock_extraction",
+      "payload_count": 1,
+      "responseMimeType": "application/json",
+      "schema_title": "SalesExtractionOutput",
+      "schema_dynamic_additionalProperties": true,
+      "evidence": {
+        "part_count": 2,
+        "part_kinds": [
+          "text",
+          "text"
+        ],
+        "text_chars": 9039,
+        "has_ocr_evidence_marker": true
+      },
+      "failing_names_in_evidence": 5,
+      "failing_names_in_evidence_sample": [
+        "CLARINA ANTI ACNE KIT",
+        "CONFIDO TAB",
+        "DIABECON DS TABS",
+        "DIABECON TABS",
+        "PILEX FOTE tabs"
+      ]
+    },
+    {
+      "document_id": "0000700275_2026_08_ZL_18_374_04092026171615.pdf",
+      "source_exists": true,
+      "stored_ocr_chars": 6556,
+      "accepted": false,
+      "validation_reasons": [
+        "stock_identity_failure"
+      ],
+      "extraction_method": "vl_html_table_parse",
+      "line_item_count": 47,
+      "failing_row_count": 15,
+      "failing_rows_sample": [
+        "ABANA TAB",
+        "CONFIDO TAB",
+        "DIBECON-DS TABS",
+        "HIMCOLIN GEL",
+        "LIV-52 HB CAPSULES",
+        "LIV-52 SYRUP",
+        "LIV-52 SYRUP",
+        "LIV-52 TAB"
+      ],
+      "failure_type": "STOCK_IDENTITY_FAILURE",
+      "policy_strategy": "targeted_stock_extraction",
+      "policy_call_gemini": true,
+      "policy_max_attempts": 2,
+      "gemini_trigger": "would_call",
+      "trigger_reason": "failure=STOCK_IDENTITY_FAILURE strategy=targeted_stock_extraction",
+      "payload_count": 1,
+      "responseMimeType": "application/json",
+      "schema_title": "SalesExtractionOutput",
+      "schema_dynamic_additionalProperties": true,
+      "evidence": {
+        "part_count": 2,
+        "part_kinds": [
+          "text",
+          "text"
+        ],
+        "text_chars": 9837,
+        "has_ocr_evidence_marker": true
+      },
+      "failing_names_in_evidence": 15,
+      "failing_names_in_evidence_sample": [
+        "ABANA TAB",
+        "CONFIDO TAB",
+        "DIBECON-DS TABS",
+        "HIMCOLIN GEL",
+        "LIV-52 HB CAPSULES",
+        "LIV-52 SYRUP",
+        "LIV-52 SYRUP",
+        "LIV-52 TAB"
+      ]
+    },
+    {
+      "document_id": "0000700308_2026_08_ZL_18_8175_03092026072320.jpg",
+      "source_exists": true,
+      "stored_ocr_chars": 1998,
+      "accepted": false,
+      "validation_reasons": [
+        "stock_identity_failure"
+      ],
+      "extraction_method": "vl_html_table_parse",
+      "line_item_count": 15,
+      "failing_row_count": 1,
+      "failing_rows_sample": [
+        "LIV-52 SYP"
+      ],
+      "failure_type": "STOCK_IDENTITY_FAILURE",
+      "policy_strategy": "targeted_stock_extraction",
+      "policy_call_gemini": true,
+      "policy_max_attempts": 2,
+      "gemini_trigger": "would_call",
+      "trigger_reason": "failure=STOCK_IDENTITY_FAILURE strategy=targeted_stock_extraction",
+      "payload_count": 1,
+      "responseMimeType": "application/json",
+      "schema_title": "SalesExtractionOutput",
+      "schema_dynamic_additionalProperties": true,
+      "evidence": {
+        "part_count": 2,
+        "part_kinds": [
+          "text",
+          "text"
+        ],
+        "text_chars": 3339,
+        "has_ocr_evidence_marker": true
+      },
+      "failing_names_in_evidence": 1,
+      "failing_names_in_evidence_sample": [
+        "LIV-52 SYP"
+      ]
+    },
+    {
+      "document_id": "0000700317_2026_08_ZL_18_374_02092026171443.pdf",
+      "source_exists": true,
+      "stored_ocr_chars": 3668,
+      "accepted": false,
+      "validation_reasons": [
+        "stock_identity_failure"
+      ],
+      "extraction_method": "vl_html_table_parse",
+      "line_item_count": 23,
+      "failing_row_count": 10,
+      "failing_rows_sample": [
+        "CONFIDO TABLET",
+        "HIMCOLIN GEL",
+        "LIV 52 TABS",
+        "LIV-52 HB CAPS",
+        "LIV-52 SYP.",
+        "LIV-52 SYP.",
+        "OPTHACARE EYE DROP",
+        "PILEX FORTE ONIT"
+      ],
+      "failure_type": "STOCK_IDENTITY_FAILURE",
+      "policy_strategy": "targeted_stock_extraction",
+      "policy_call_gemini": true,
+      "policy_max_attempts": 2,
+      "gemini_trigger": "would_call",
+      "trigger_reason": "failure=STOCK_IDENTITY_FAILURE strategy=targeted_stock_extraction",
+      "payload_count": 1,
+      "responseMimeType": "application/json",
+      "schema_title": "SalesExtractionOutput",
+      "schema_dynamic_additionalProperties": true,
+      "evidence": {
+        "part_count": 2,
+        "part_kinds": [
+          "text",
+          "text"
+        ],
+        "text_chars": 6201,
+        "has_ocr_evidence_marker": true
+      },
+      "failing_names_in_evidence": 10,
+      "failing_names_in_evidence_sample": [
+        "CONFIDO TABLET",
+        "HIMCOLIN GEL",
+        "LIV 52 TABS",
+        "LIV-52 HB CAPS",
+        "LIV-52 SYP.",
+        "LIV-52 SYP.",
+        "OPTHACARE EYE DROP",
+        "PILEX FORTE ONIT"
+      ]
+    },
+    {
+      "document_id": "0000700346_2026_08_ZL_18_8189_05092026025159.pdf",
+      "source_exists": true,
+      "stored_ocr_chars": 14291,
+      "accepted": false,
+      "validation_reasons": [
+        "empty_line_items",
+        "low_ocr_quality_score"
+      ],
+      "extraction_method": "di_ocr_html_override",
+      "line_item_count": 0,
+      "failing_row_count": 0,
+      "failing_rows_sample": [],
+      "failure_type": "EMPTY_OUTPUT",
+      "policy_strategy": "structured_reread",
+      "policy_call_gemini": true,
+      "policy_max_attempts": 2,
+      "gemini_trigger": "would_call",
+      "trigger_reason": "failure=EMPTY_OUTPUT strategy=structured_reread",
+      "payload_count": 1,
+      "responseMimeType": "application/json",
+      "schema_title": "SalesExtractionOutput",
+      "schema_dynamic_additionalProperties": true,
+      "evidence": {
+        "part_count": 2,
+        "part_kinds": [
+          "text",
+          "text"
+        ],
+        "text_chars": 14822,
+        "has_ocr_evidence_marker": true
+      },
+      "failing_names_in_evidence": 0,
+      "failing_names_in_evidence_sample": []
+    },
+    {
+      "document_id": "0000700358_2026_08_ZL_18_8173_05092026185826.pdf",
+      "source_exists": true,
+      "stored_ocr_chars": 3323,
+      "accepted": false,
+      "validation_reasons": [
+        "stock_identity_failure"
+      ],
+      "extraction_method": "vl_html_table_parse",
+      "line_item_count": 23,
+      "failing_row_count": 10,
+      "failing_rows_sample": [
+        "CLARINA ANTI ACNE FACE WA",
+        "CLARINA CREAM",
+        "CONFIDO TAB",
+        "HIMCOLIN GEL",
+        "LIV-52 SYP",
+        "LIV-52 SYP 200ML",
+        "LIV-52 TABS",
+        "OPTHACARE EYE DROPS"
+      ],
+      "failure_type": "STOCK_IDENTITY_FAILURE",
+      "policy_strategy": "targeted_stock_extraction",
+      "policy_call_gemini": true,
+      "policy_max_attempts": 2,
+      "gemini_trigger": "would_call",
+      "trigger_reason": "failure=STOCK_IDENTITY_FAILURE strategy=targeted_stock_extraction",
+      "payload_count": 1,
+      "responseMimeType": "application/json",
+      "schema_title": "SalesExtractionOutput",
+      "schema_dynamic_additionalProperties": true,
+      "evidence": {
+        "part_count": 2,
+        "part_kinds": [
+          "text",
+          "text"
+        ],
+        "text_chars": 5914,
+        "has_ocr_evidence_marker": true
+      },
+      "failing_names_in_evidence": 10,
+      "failing_names_in_evidence_sample": [
+        "CLARINA ANTI ACNE FACE WA",
+        "CLARINA CREAM",
+        "CONFIDO TAB",
+        "HIMCOLIN GEL",
+        "LIV-52 SYP",
+        "LIV-52 SYP 200ML",
+        "LIV-52 TABS",
+        "OPTHACARE EYE DROPS"
+      ]
+    },
+    {
+      "document_id": "0000700364_2026_08_ZL_18_8173_05092026190156.pdf",
+      "source_exists": true,
+      "stored_ocr_chars": 4342,
+      "accepted": true,
+      "validation_reasons": [],
+      "extraction_method": "vl_html_table_parse",
+      "line_item_count": 31,
+      "failing_row_count": 0,
+      "failing_rows_sample": [],
+      "failure_type": null,
+      "policy_strategy": null,
+      "policy_call_gemini": null,
+      "policy_max_attempts": null,
+      "gemini_trigger": "not_needed",
+      "trigger_reason": "validation_accepted_or_unclassified"
+    },
+    {
+      "document_id": "0000700406_2026_08_ZL_10_384_05092026140711.jpg",
+      "source_exists": true,
+      "stored_ocr_chars": 3800,
+      "accepted": false,
+      "validation_reasons": [
+        "stock_identity_failure",
+        "missing_product_names"
+      ],
+      "extraction_method": "vl_html_table_parse",
+      "line_item_count": 20,
+      "failing_row_count": 20,
+      "failing_rows_sample": [
+        "8",
+        "9",
+        "10",
+        "11",
+        "12",
+        "13",
+        "14",
+        "15"
+      ],
+      "failure_type": "STOCK_IDENTITY_FAILURE",
+      "policy_strategy": "targeted_stock_extraction",
+      "policy_call_gemini": true,
+      "policy_max_attempts": 2,
+      "gemini_trigger": "would_call",
+      "trigger_reason": "failure=STOCK_IDENTITY_FAILURE strategy=targeted_stock_extraction",
+      "payload_count": 1,
+      "responseMimeType": "application/json",
+      "schema_title": "SalesExtractionOutput",
+      "schema_dynamic_additionalProperties": true,
+      "evidence": {
+        "part_count": 2,
+        "part_kinds": [
+          "text",
+          "text"
+        ],
+        "text_chars": 7276,
+        "has_ocr_evidence_marker": true
+      },
+      "failing_names_in_evidence": 20,
+      "failing_names_in_evidence_sample": [
+        "8",
+        "9",
+        "10",
+        "11",
+        "12",
+        "13",
+        "14",
+        "15"
+      ]
+    },
+    {
+      "document_id": "0000700434_2026_08_ZL_10_386_05092026034503.jpg",
+      "source_exists": true,
+      "stored_ocr_chars": 12397,
+      "accepted": false,
+      "validation_reasons": [
+        "stock_identity_failure"
+      ],
+      "extraction_method": "vl_html_table_parse",
+      "line_item_count": 61,
+      "failing_row_count": 2,
+      "failing_rows_sample": [
+        "Opening Val.:",
+        "Sales :"
+      ],
+      "failure_type": "STOCK_IDENTITY_FAILURE",
+      "policy_strategy": "targeted_stock_extraction",
+      "policy_call_gemini": true,
+      "policy_max_attempts": 2,
+      "gemini_trigger": "would_call",
+      "trigger_reason": "failure=STOCK_IDENTITY_FAILURE strategy=targeted_stock_extraction",
+      "payload_count": 1,
+      "responseMimeType": "application/json",
+      "schema_title": "SalesExtractionOutput",
+      "schema_dynamic_additionalProperties": true,
+      "evidence": {
+        "part_count": 2,
+        "part_kinds": [
+          "text",
+          "text"
+        ],
+        "text_chars": 13629,
+        "has_ocr_evidence_marker": true
+      },
+      "failing_names_in_evidence": 2,
+      "failing_names_in_evidence_sample": [
+        "Opening Val.:",
+        "Sales :"
+      ]
+    },
+    {
+      "document_id": "0000700835_2026_08_ZL_25_447_03092026105819.jpeg",
+      "source_exists": true,
+      "stored_ocr_chars": 3215,
+      "accepted": true,
+      "validation_reasons": [],
+      "extraction_method": "vl_html_table_parse",
+      "line_item_count": 25,
+      "failing_row_count": 0,
+      "failing_rows_sample": [],
+      "failure_type": null,
+      "policy_strategy": null,
+      "policy_call_gemini": null,
+      "policy_max_attempts": null,
+      "gemini_trigger": "not_needed",
+      "trigger_reason": "validation_accepted_or_unclassified"
+    },
+    {
+      "document_id": "0000701012_2026_08_ZL_11_423_03092026183736.jpg",
+      "source_exists": true,
+      "stored_ocr_chars": 5601,
+      "accepted": false,
+      "validation_reasons": [
+        "stock_identity_failure"
+      ],
+      "extraction_method": "vl_html_table_parse",
+      "line_item_count": 38,
+      "failing_row_count": 33,
+      "failing_rows_sample": [
+        "AACTARIL SOAP 75G",
+        "ABANA TABLETS",
+        "BLEMINOR CREAM",
+        "CLARINA CREAM",
+        "CLARINA FACE WASH GEL#",
+        "CONFIDO",
+        "DIABECON DS TAB",
+        "DIABECON TAB"
+      ],
+      "failure_type": "STOCK_IDENTITY_FAILURE",
+      "policy_strategy": "targeted_stock_extraction",
+      "policy_call_gemini": true,
+      "policy_max_attempts": 2,
+      "gemini_trigger": "would_call",
+      "trigger_reason": "failure=STOCK_IDENTITY_FAILURE strategy=targeted_stock_extraction",
+      "payload_count": 1,
+      "responseMimeType": "application/json",
+      "schema_title": "SalesExtractionOutput",
+      "schema_dynamic_additionalProperties": true,
+      "evidence": {
+        "part_count": 2,
+        "part_kinds": [
+          "text",
+          "text"
+        ],
+        "text_chars": 11367,
+        "has_ocr_evidence_marker": true
+      },
+      "failing_names_in_evidence": 33,
+      "failing_names_in_evidence_sample": [
+        "AACTARIL SOAP 75G",
+        "ABANA TABLETS",
+        "BLEMINOR CREAM",
+        "CLARINA CREAM",
+        "CLARINA FACE WASH GEL#",
+        "CONFIDO",
+        "DIABECON DS TAB",
+        "DIABECON TAB"
+      ]
+    },
+    {
+      "document_id": "0000701078_2026_08_ZL_03_362_05092026080346.jpeg",
+      "source_exists": true,
+      "stored_ocr_chars": 9914,
+      "accepted": false,
+      "validation_reasons": [
+        "stock_identity_failure"
+      ],
+      "extraction_method": "vl_html_table_parse",
+      "line_item_count": 62,
+      "failing_row_count": 3,
+      "failing_rows_sample": [
+        "AACTARIL SOAP",
+        "RENALKA SYP",
+        "TALEKT CAPS."
+      ],
+      "failure_type": "STOCK_IDENTITY_FAILURE",
+      "policy_strategy": "targeted_stock_extraction",
+      "policy_call_gemini": true,
+      "policy_max_attempts": 2,
+      "gemini_trigger": "would_call",
+      "trigger_reason": "failure=STOCK_IDENTITY_FAILURE strategy=targeted_stock_extraction",
+      "payload_count": 1,
+      "responseMimeType": "application/json",
+      "schema_title": "SalesExtractionOutput",
+      "schema_dynamic_additionalProperties": true,
+      "evidence": {
+        "part_count": 2,
+        "part_kinds": [
+          "text",
+          "text"
+        ],
+        "text_chars": 11454,
+        "has_ocr_evidence_marker": true
+      },
+      "failing_names_in_evidence": 3,
+      "failing_names_in_evidence_sample": [
+        "AACTARIL SOAP",
+        "RENALKA SYP",
+        "TALEKT CAPS."
+      ]
+    },
+    {
+      "document_id": "0000701151_2026_08_ZL_14_361_03092026025650.jpg",
+      "source_exists": true,
+      "stored_ocr_chars": 5278,
+      "accepted": true,
+      "validation_reasons": [],
+      "extraction_method": "vl_html_table_parse",
+      "line_item_count": 42,
+      "failing_row_count": 0,
+      "failing_rows_sample": [],
+      "failure_type": null,
+      "policy_strategy": null,
+      "policy_call_gemini": null,
+      "policy_max_attempts": null,
+      "gemini_trigger": "not_needed",
+      "trigger_reason": "validation_accepted_or_unclassified"
+    },
+    {
+      "document_id": "0000701275_2026_08_ZL_03_360_02092026152716.jpg",
+      "source_exists": true,
+      "stored_ocr_chars": 5012,
+      "accepted": false,
+      "validation_reasons": [
+        "stock_identity_failure"
+      ],
+      "extraction_method": "vl_html_table_parse",
+      "line_item_count": 44,
+      "failing_row_count": 20,
+      "failing_rows_sample": [
+        "AACTARIL SOAP",
+        "ABANA TABLET",
+        "CLARINA CREAM",
+        "CLARINA FACE WASH",
+        "CONFIDO TAB",
+        "DIABECON TAB",
+        "HAIR ZONE SOLUTION",
+        "HIMCOLIN OINTMENT"
+      ],
+      "failure_type": "STOCK_IDENTITY_FAILURE",
+      "policy_strategy": "targeted_stock_extraction",
+      "policy_call_gemini": true,
+      "policy_max_attempts": 2,
+      "gemini_trigger": "would_call",
+      "trigger_reason": "failure=STOCK_IDENTITY_FAILURE strategy=targeted_stock_extraction",
+      "payload_count": 1,
+      "responseMimeType": "application/json",
+      "schema_title": "SalesExtractionOutput",
+      "schema_dynamic_additionalProperties": true,
+      "evidence": {
+        "part_count": 2,
+        "part_kinds": [
+          "text",
+          "text"
+        ],
+        "text_chars": 8826,
+        "has_ocr_evidence_marker": true
+      },
+      "failing_names_in_evidence": 20,
+      "failing_names_in_evidence_sample": [
+        "AACTARIL SOAP",
+        "ABANA TABLET",
+        "CLARINA CREAM",
+        "CLARINA FACE WASH",
+        "CONFIDO TAB",
+        "DIABECON TAB",
+        "HAIR ZONE SOLUTION",
+        "HIMCOLIN OINTMENT"
+      ]
+    },
+    {
+      "document_id": "0000701851_2026_08_ZL_20_302_03092026134940.jpg",
+      "source_exists": true,
+      "stored_ocr_chars": 4934,
+      "accepted": true,
+      "validation_reasons": [],
+      "extraction_method": "vl_html_table_parse",
+      "line_item_count": 29,
+      "failing_row_count": 0,
+      "failing_rows_sample": [],
+      "failure_type": null,
+      "policy_strategy": null,
+      "policy_call_gemini": null,
+      "policy_max_attempts": null,
+      "gemini_trigger": "not_needed",
+      "trigger_reason": "validation_accepted_or_unclassified"
+    },
+    {
+      "document_id": "0000701864_2026_08_ZL_20_5015_03092026091037.jpg",
+      "source_exists": true,
+      "stored_ocr_chars": 2839,
+      "accepted": true,
+      "validation_reasons": [],
+      "extraction_method": "vl_html_table_parse",
+      "line_item_count": 18,
+      "failing_row_count": 0,
+      "failing_rows_sample": [],
+      "failure_type": null,
+      "policy_strategy": null,
+      "policy_call_gemini": null,
+      "policy_max_attempts": null,
+      "gemini_trigger": "not_needed",
+      "trigger_reason": "validation_accepted_or_unclassified"
+    },
+    {
+      "document_id": "0000701904_2026_08_ZL_20_8227_05092026154848.jpg",
+      "source_exists": true,
+      "stored_ocr_chars": 9467,
+      "accepted": false,
+      "validation_reasons": [
+        "empty_line_items",
+        "low_ocr_quality_score"
+      ],
+      "extraction_method": "di_ocr_html_override",
+      "line_item_count": 0,
+      "failing_row_count": 0,
+      "failing_rows_sample": [],
+      "failure_type": "EMPTY_OUTPUT",
+      "policy_strategy": "structured_reread",
+      "policy_call_gemini": true,
+      "policy_max_attempts": 2,
+      "gemini_trigger": "would_call",
+      "trigger_reason": "failure=EMPTY_OUTPUT strategy=structured_reread",
+      "payload_count": 1,
+      "responseMimeType": "application/json",
+      "schema_title": "SalesExtractionOutput",
+      "schema_dynamic_additionalProperties": true,
+      "evidence": {
+        "part_count": 2,
+        "part_kinds": [
+          "text",
+          "text"
+        ],
+        "text_chars": 9998,
+        "has_ocr_evidence_marker": true
+      },
+      "failing_names_in_evidence": 0,
+      "failing_names_in_evidence_sample": []
+    },
+    {
+      "document_id": "0000704337_2026_08_ZL_24_259_03092026042213.pdf",
+      "source_exists": true,
+      "stored_ocr_chars": 6109,
+      "accepted": false,
+      "validation_reasons": [
+        "empty_line_items",
+        "low_ocr_quality_score"
+      ],
+      "extraction_method": "di_ocr_html_override",
+      "line_item_count": 0,
+      "failing_row_count": 0,
+      "failing_rows_sample": [],
+      "failure_type": "EMPTY_OUTPUT",
+      "policy_strategy": "structured_reread",
+      "policy_call_gemini": true,
+      "policy_max_attempts": 2,
+      "gemini_trigger": "would_call",
+      "trigger_reason": "failure=EMPTY_OUTPUT strategy=structured_reread",
+      "payload_count": 1,
+      "responseMimeType": "application/json",
+      "schema_title": "SalesExtractionOutput",
+      "schema_dynamic_additionalProperties": true,
+      "evidence": {
+        "part_count": 2,
+        "part_kinds": [
+          "text",
+          "text"
+        ],
+        "text_chars": 6640,
+        "has_ocr_evidence_marker": true
+      },
+      "failing_names_in_evidence": 0,
+      "failing_names_in_evidence_sample": []
+    }
+  ],
+  "phase2_default_env_check": false
+}

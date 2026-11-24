@@ -32,15 +32,41 @@ def _word(x, y, text, w=36):
     return (x, y, x + w, y + 12, text)
 
 
+_SAVED_GEMINI = {}
+
+
+def _live_opt_in() -> bool:
+    return os.environ.get("RUN_LIVE_EXTRACTION", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
 def _block_gemini():
     import services.sales_extraction_runtime as runtime
     import services.vertex_gemini_client as vertex
+
+    if "runtime" not in _SAVED_GEMINI:
+        _SAVED_GEMINI["runtime"] = runtime.sales_generate_content_via_vertex
+        _SAVED_GEMINI["vertex"] = vertex.generate_content_via_vertex
 
     def _blocked(*_a, **_k):
         raise RuntimeError("gemini blocked for phase 3.8 tests")
 
     runtime.sales_generate_content_via_vertex = _blocked
     vertex.generate_content_via_vertex = _blocked
+
+
+def _restore_gemini():
+    if "runtime" not in _SAVED_GEMINI:
+        return
+    import services.sales_extraction_runtime as runtime
+    import services.vertex_gemini_client as vertex
+
+    runtime.sales_generate_content_via_vertex = _SAVED_GEMINI.pop("runtime")
+    vertex.generate_content_via_vertex = _SAVED_GEMINI.pop("vertex")
 
 
 class TestPhotoFoldDecision(unittest.TestCase):
@@ -129,12 +155,19 @@ class TestPhotoFoldDecision(unittest.TestCase):
         self.assertEqual(issues_expected_closing(item), 8.0)
 
 
-@unittest.skipUnless(DOC_0259.is_file(), "0259 fixture missing")
+@unittest.skipUnless(
+    DOC_0259.is_file() and _live_opt_in(),
+    "live 0259 photo is opt-in via RUN_LIVE_EXTRACTION=1",
+)
 class TestLive0259(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         _block_gemini()
         cls.result = extract_sales_statement(DOC_0259.read_bytes(), DOC_0259.name)
+
+    @classmethod
+    def tearDownClass(cls):
+        _restore_gemini()
 
     def test_method_and_pilex_forte(self):
         extra = (self.result.get("totals") or {}).get("extra") or {}
@@ -163,12 +196,19 @@ class TestLive0259(unittest.TestCase):
         self.assertTrue(clarina["extra"].get("stock_identity_ok"))
 
 
-@unittest.skipUnless(DOC_0325.is_file(), "0325 fixture missing")
+@unittest.skipUnless(
+    DOC_0325.is_file() and _live_opt_in(),
+    "live 0325 photo is opt-in via RUN_LIVE_EXTRACTION=1",
+)
 class TestLive0325(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         _block_gemini()
         cls.result = extract_sales_statement(DOC_0325.read_bytes(), DOC_0325.name)
+
+    @classmethod
+    def tearDownClass(cls):
+        _restore_gemini()
 
     def test_document_valid(self):
         extra = (self.result.get("totals") or {}).get("extra") or {}
@@ -194,10 +234,19 @@ class TestLive0325(unittest.TestCase):
         self.assertEqual(liv["closing_qty"], 443.0)
 
 
-@unittest.skipUnless(all(p.is_file() for p in PASS_PHOTOS), "PASS photo fixtures missing")
+@unittest.skipUnless(
+    all(p.is_file() for p in PASS_PHOTOS) and _live_opt_in(),
+    "live pass photos are opt-in via RUN_LIVE_EXTRACTION=1",
+)
 class TestPassPhotoRegression(unittest.TestCase):
     def test_pass_photos_stay_valid(self):
         _block_gemini()
+        try:
+            self._assert_pass_photos()
+        finally:
+            _restore_gemini()
+
+    def _assert_pass_photos(self):
         for path in PASS_PHOTOS:
             with self.subTest(path.name):
                 result = extract_sales_statement(path.read_bytes(), path.name)

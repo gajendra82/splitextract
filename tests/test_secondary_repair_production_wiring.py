@@ -52,6 +52,39 @@ def _gt_qty(doc: str, field_id: str) -> str:
     raise AssertionError(field_id)
 
 
+class OverrideSkipsCropCascadeTests(unittest.TestCase):
+    """Unreadable VL headers must not fall through into PDF crop OCR."""
+
+    def test_unreadable_qty_headers_skip_pdf_and_image_ocr(self):
+        html = (
+            "<table><tr><td>Sr. Product Name</td><td>Pack</td>"
+            "<td>0g 0tv</td><td>Sales 0tv</td><td>Closure 0tv</td></tr>"
+            "<tr><td>1 ANTIBIOL SOP</td><td>750ml</td><td>20</td><td>40</td>"
+            "<td>124</td></tr></table>"
+        )
+        import services.sales_statement_extractor as sse
+
+        def _forbidden(*_a, **_k):
+            raise AssertionError("crop cascade must not run")
+
+        with ocr_text_override(html):
+            with mock.patch.object(sse, "_parse_pdf", side_effect=_forbidden):
+                with mock.patch.object(sse, "_parse_image", side_effect=_forbidden):
+                    with mock.patch(
+                        "services.gemini_extraction_fallback.maybe_apply_gemini_fallback",
+                        side_effect=_forbidden,
+                    ):
+                        result = sse.extract_sales_statement_core(
+                            b"%PDF-1.4\n", "0000700124_unreadable.pdf"
+                        )
+        extra = ((result.get("totals") or {}).get("extra") or {})
+        self.assertTrue(extra.get("di_ocr_override"))
+        self.assertEqual(extra.get("extraction_method"), "di_ocr_html_override")
+        for item in result.get("line_items") or []:
+            self.assertIsNone(item.get("opening_qty"))
+            self.assertNotEqual(item.get("opening_qty"), 20)
+
+
 class _StubOrchestrator(OCROrchestrator):
     """Return stored VL HTML as primary OCR; skip live VL."""
 
@@ -228,9 +261,9 @@ def _run_production_entrypoint(doc: str, flag: str) -> Dict[str, Any]:
     """``DocumentIntelligencePipeline.run`` — production extraction entrypoint.
 
     - Stub primary OCR only (stored VL HTML).
-    - Flag ON: real ``extract_sales_statement_core`` via DI override (no Gemini).
-    - Flag OFF: parse unrepaired VL HTML through the same helper without
-      secondary repair (avoids live vision hangs; proves OFF skips overlay).
+    - Flag ON/OFF: DI always reuses OCR / VL table HTML via ``ocr_text_override``
+      (prefers ``vl_html_table_parse`` over Gemini). Secondary repair overlay
+      remains flag-gated.
     - Vision APIs raise if accidentally invoked.
     """
     path = sr.resolve_source_path(doc)
@@ -263,31 +296,8 @@ def _run_production_entrypoint(doc: str, flag: str) -> Dict[str, Any]:
                     "services.vertex_gemini_client.generate_content_via_vertex",
                     side_effect=_vision_forbidden,
                 ):
-                    if str(flag).strip().lower() in {"1", "true", "yes", "on"}:
-                        # Real core — DI sets ocr_text_override when flag ON.
-                        return pipe.run(file_bytes, doc)
-
-                    # OFF: real core on unrepaired VL HTML (same post-processing
-                    # as ON) without secondary repair / overlay.
-                    import services.sales_statement_extractor as sse
-
-                    real_core = sse.extract_sales_statement_core
-
-                    def _core_off(b, n):
-                        if get_ocr_text_override() is not None:
-                            raise AssertionError("override must be unset when flag OFF")
-                        with ocr_text_override(vl_text):
-                            return real_core(b, n)
-
-                    with mock.patch(
-                        "services.sales_statement_extractor.extract_sales_statement_core",
-                        side_effect=_core_off,
-                    ):
-                        with mock.patch(
-                            "services.sales_statement_extractor.maybe_apply_phase2_recovery",
-                            side_effect=lambda result, *a, **k: result,
-                        ):
-                            return pipe.run(file_bytes, doc)
+                    # DI sets ocr_text_override whenever OCR text / table HTML exists.
+                    return pipe.run(file_bytes, doc)
 
     with ThreadPoolExecutor(max_workers=1) as pool:
         fut = pool.submit(_call)

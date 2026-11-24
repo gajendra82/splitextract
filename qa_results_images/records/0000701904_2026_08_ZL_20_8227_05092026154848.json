@@ -1,0 +1,416 @@
+{
+  "file": "0000701904_2026_08_ZL_20_8227_05092026154848.jpg",
+  "path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000701904_2026_08_ZL_20_8227_05092026154848.jpg",
+  "format": "Stock & Sales Statement",
+  "api_method": "gemini_extraction_fallback",
+  "status": "FAIL",
+  "expected_rows": 52,
+  "extracted_rows": 56,
+  "matched_rows": 40,
+  "missing_rows": [
+    {
+      "product": "AACTARL SOAP 75qn",
+      "opening_qty": 8642,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "9. ABANA TAB",
+      "opening_qty": 2,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "CLARINA ANTIACNE FACEWASH 60m CONFIDO TAB 603",
+      "opening_qty": 221,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "HEAL. 106M",
+      "opening_qty": 0,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "29. KAPKACHHU TAB 6OTAB",
+      "opening_qty": 5010188,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "UVS2HBCAP",
+      "opening_qty": 45663305,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "UVS2S¥P UVS2 SYP 200m",
+      "opening_qty": 150,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "UVS2 SYP SUGAR FREE 100M",
+      "opening_qty": 36450814,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "85. UVS2 TAB",
+      "opening_qty": 2153099053,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "45. QUISTA DN POW. 206M 46. QUISTA DN POW.",
+      "opening_qty": 0,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "RENALKA SYRUP 200M. 49. SHALLAK TAB 6OTAB",
+      "opening_qty": 44,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "51. TAGARA TAB",
+      "opening_qty": 1522333,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    }
+  ],
+  "extra_rows": [
+    {
+      "product": "AACTARIL SOAP 75gm",
+      "opening_qty": 24,
+      "sales_qty": 67,
+      "closing_qty": 101,
+      "kind": "extra_product"
+    },
+    {
+      "product": "ABANA TAB 60s",
+      "opening_qty": 92,
+      "sales_qty": 11,
+      "closing_qty": 81,
+      "kind": "extra_product"
+    },
+    {
+      "product": "CLARINA ANTIACNE FACEWASH 60ml",
+      "opening_qty": 78,
+      "sales_qty": 3,
+      "closing_qty": 75,
+      "kind": "extra_product"
+    },
+    {
+      "product": "CONFIDO TAB 60s",
+      "opening_qty": 221,
+      "sales_qty": 107,
+      "closing_qty": 114,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HEAL LIP 10GM",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "KAPIKACHHU TAB 60TAB",
+      "opening_qty": 50,
+      "sales_qty": 0,
+      "closing_qty": 50,
+      "kind": "extra_product"
+    },
+    {
+      "product": "LIV.52 HB CAP 10 s",
+      "opening_qty": 45,
+      "sales_qty": 15,
+      "closing_qty": 30,
+      "kind": "extra_product"
+    },
+    {
+      "product": "LIV.52 SYP 100ml",
+      "opening_qty": 160,
+      "sales_qty": 336,
+      "closing_qty": 104,
+      "kind": "extra_product"
+    },
+    {
+      "product": "LIV.52 SYP 200ml",
+      "opening_qty": 150,
+      "sales_qty": 435,
+      "closing_qty": 65,
+      "kind": "extra_product"
+    },
+    {
+      "product": "LIV.52 SYP SUGAR FREE 100ML",
+      "opening_qty": 36,
+      "sales_qty": 0,
+      "closing_qty": 36,
+      "kind": "extra_product"
+    },
+    {
+      "product": "LIV.52 TAB 100s",
+      "opening_qty": 215,
+      "sales_qty": 188,
+      "closing_qty": 27,
+      "kind": "extra_product"
+    },
+    {
+      "product": "QUISTA DN POW. 200GM",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "QUISTA DN POW. 400gm",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "RENALKA SYRUP 200ML",
+      "opening_qty": 60,
+      "sales_qty": 45,
+      "closing_qty": 15,
+      "kind": "extra_product"
+    },
+    {
+      "product": "SHALLAKI TAB 60TAB",
+      "opening_qty": 44,
+      "sales_qty": 4,
+      "closing_qty": 40,
+      "kind": "extra_product"
+    },
+    {
+      "product": "TAGARA TAB 60 S",
+      "opening_qty": 69,
+      "sales_qty": 4,
+      "closing_qty": 65,
+      "kind": "extra_product"
+    }
+  ],
+  "duplicates": [],
+  "mismatches": [
+    {
+      "product": "HAIR ZONE SOL 60m",
+      "field": "opening_qty",
+      "expected": 1538666,
+      "actual": 15,
+      "kind": "wrong_opening_qty"
+    },
+    {
+      "product": "TRIKATU SYP 200M",
+      "field": "opening_qty",
+      "expected": 2,
+      "actual": 21,
+      "kind": "wrong_opening_qty"
+    },
+    {
+      "product": "TENTEX FORTE TAB 103",
+      "field": "opening_qty",
+      "expected": 2,
+      "actual": 602,
+      "kind": "wrong_opening_qty"
+    },
+    {
+      "product": "TALEKT TAB",
+      "field": "opening_qty",
+      "expected": 36510624,
+      "actual": 36,
+      "kind": "wrong_opening_qty"
+    },
+    {
+      "product": "PILEX FORTE ONIT.",
+      "field": "opening_qty",
+      "expected": 1481499388,
+      "actual": 148,
+      "kind": "wrong_opening_qty"
+    },
+    {
+      "product": "CLARINA ANTI ACNE CREAM",
+      "field": "opening_qty",
+      "expected": 7,
+      "actual": 71,
+      "kind": "wrong_opening_qty"
+    },
+    {
+      "product": "HADJOD TAB 6OTAB",
+      "field": "opening_qty",
+      "expected": 2,
+      "actual": 52,
+      "kind": "wrong_opening_qty"
+    },
+    {
+      "product": "LIV SYP SUGAR FREE 200M",
+      "field": "opening_qty",
+      "expected": 7,
+      "actual": 37,
+      "kind": "wrong_opening_qty"
+    },
+    {
+      "product": "38. ORO-T ORAL RINSE 100m!",
+      "field": "opening_qty",
+      "expected": 31716,
+      "actual": 28,
+      "kind": "wrong_opening_qty"
+    },
+    {
+      "product": "4) PILEX FORTE TAB 30t0b",
+      "field": "opening_qty",
+      "expected": 1083472,
+      "actual": 112,
+      "kind": "wrong_opening_qty"
+    },
+    {
+      "product": "40 rows",
+      "field": "sales_value",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 40,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    },
+    {
+      "product": "40 rows",
+      "field": "closing_value",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 40,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    },
+    {
+      "product": "40 rows",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 40,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    },
+    {
+      "product": "40 rows",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 40,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    },
+    {
+      "product": "40 rows",
+      "field": "closing_qty",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 40,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    }
+  ],
+  "ocr_review": [
+    {
+      "product": "ANTI HAIRLOSS CREAM SOML",
+      "api_product": "ANTI HAIR LOSS CREAM 50ML",
+      "similarity": 0.898,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "10. ALTHEA LOT. 100M",
+      "api_product": "ALTHEA LOT. 100ML",
+      "similarity": 0.882,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "5B TRIPHALA TAB 6OTAB",
+      "api_product": "TRIPHALA TAB 60TAB",
+      "similarity": 0.872,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "96. MANISHTHA TAB 6OTAB",
+      "api_product": "MANJISHTHA TAB 60TAB",
+      "similarity": 0.857,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "21. DIAREXSUS 100m",
+      "api_product": "DIAREX SUS 100ml",
+      "similarity": 0.848,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "PILEXTAB",
+      "api_product": "PILEX TAB 60s",
+      "similarity": 0.762,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "‘59 VASAKA SYP",
+      "api_product": "VASAKA SYP 200ML",
+      "similarity": 0.759,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "HIMCOUIN GEL",
+      "api_product": "HIMCOLIN GEL 30gm",
+      "similarity": 0.759,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "11. AMALAK TAB",
+      "api_product": "AMALAKI TAB 60 S",
+      "similarity": 0.759,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "DIAREXTAB",
+      "api_product": "DIAREX TAB 30 S",
+      "similarity": 0.75,
+      "note": "Product names differ but the row quantities correspond."
+    }
+  ],
+  "accounting": [],
+  "confidence": "medium",
+  "notes": [
+    "OCR used tesseract psm 6."
+  ],
+  "result_key": "0000701904_2026_08_ZL_20_8227_05092026154848",
+  "unavailable_fields": {
+    "sales_value": 40,
+    "closing_value": 40,
+    "receipts_qty": 40,
+    "sales_qty": 40,
+    "closing_qty": 40
+  },
+  "formula_checked": "none"
+}

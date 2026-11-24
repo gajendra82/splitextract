@@ -1,0 +1,12 @@
+{
+  "unset_enabled": false,
+  "unset_noop": true,
+  "false_enabled": false,
+  "value_'0'": true,
+  "value_'no'": true,
+  "value_'TRUE'": true,
+  "value_'on'": true,
+  "pipeline_off_unchanged": true,
+  "pipeline_off_meta_disabled": true,
+  "pass": true
+}

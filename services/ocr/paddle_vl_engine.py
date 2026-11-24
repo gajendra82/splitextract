@@ -17,6 +17,8 @@ import os
 import re
 import subprocess
 import time
+import urllib.error
+import urllib.request
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -34,6 +36,56 @@ _WORKER = Path(__file__).resolve().parent / "vl_worker.py"
 _SERVE_LOCK = None  # lazy threading.Lock
 _SERVE_PROC: Optional[subprocess.Popen] = None
 _SERVE_PYTHON: Optional[str] = None
+_PERSISTENT_INIT_ERROR: Optional[str] = None
+_CPU_RETRY_USED = False
+def paddle_init_blocked() -> Optional[str]:
+    """Error text after a cudnn/tensor init failure survived the one CPU retry."""
+    return _PERSISTENT_INIT_ERROR
+
+
+def reset_paddle_init_state() -> None:
+    """Test helper. Clears the process-wide init failure cache."""
+    global _PERSISTENT_INIT_ERROR, _CPU_RETRY_USED
+    _PERSISTENT_INIT_ERROR = None
+    _CPU_RETRY_USED = False
+
+
+def _is_poisoned_paddle_error(message: str) -> bool:
+    text = str(message or "").lower()
+    return any(
+        token in text
+        for token in (
+            "cudnn",
+            "winerror 127",
+            "specified procedure could not be found",
+            "has no attribute 'tensor'",
+            "has no attribute \"tensor\"",
+            "partially initialized module 'paddle'",
+            "partially initialized module \"paddle\"",
+        )
+    )
+
+
+def _mark_persistent_init_failure(message: str) -> None:
+    global _PERSISTENT_INIT_ERROR
+    _PERSISTENT_INIT_ERROR = str(message or "paddle_init_failed")
+
+
+def _blocked_result(page: int, metadata: Dict[str, Any]) -> OCRResult:
+    return OCRResult(
+        text="",
+        words=[],
+        confidence=None,
+        page=page,
+        engine=ENGINE_NAME,
+        metadata={
+            **metadata,
+            "available": False,
+            "status": "error",
+            "error": _PERSISTENT_INIT_ERROR or "paddle_init_failed",
+            "persistent_init_failure": True,
+        },
+    )
 NUMERIC_TOKEN_RE = re.compile(
     r"(?<![\w./-])"  # avoid mid-token matches
     r"(?:"
@@ -298,14 +350,14 @@ class PaddleVLEngine(OCREngine):
             (python_executable or os.getenv("PADDLE_VL_PYTHON") or "").strip()
             or None
         )
-        raw_timeout = timeout_s
-        if raw_timeout is None:
-            try:
-                # Cold VL load is often 60–120s; keep-alive reuses the process.
-                raw_timeout = float(os.getenv("PADDLE_VL_TIMEOUT_S", "300") or "300")
-            except (TypeError, ValueError):
-                raw_timeout = 300.0
-        self._timeout_s = float(raw_timeout)
+        self._timeout_explicit = timeout_s is not None
+        if timeout_s is None:
+            from services.ocr.bounded import ocr_execution_timeout_s
+
+            # Cold VL load is often 60–120s; keep-alive reuses the process.
+            self._timeout_s = ocr_execution_timeout_s()
+        else:
+            self._timeout_s = float(timeout_s)
 
     def available(self) -> bool:
         """Cheap presence check. Avoids heavy model load.
@@ -318,6 +370,11 @@ class PaddleVLEngine(OCREngine):
         - ``PADDLE_VL_ALLOW_INPROCESS=true``
         - ``sys.executable`` is the VL venv python (would recurse forever)
         """
+        if os.getenv("PADDLE_VL_API_URL", "").strip():
+            self._backend = "remote"
+            self._init_error = None
+            return bool(os.getenv("PADDLE_VL_API_KEY", "").strip())
+
         if self._force_inprocess or _worker_child() or _env_flag("PADDLE_VL_ALLOW_INPROCESS"):
             if self._specs_present():
                 self._backend = "inprocess"
@@ -389,7 +446,7 @@ class PaddleVLEngine(OCREngine):
             "device": self._resolved_device or self._device or "auto",
             "backend": self._backend,
             "python_executable": self._resolve_python() if self._backend == "subprocess" else None,
-            "timeout_s": self._timeout_s,
+            "timeout_s": self._deadline(),
             "init_latency_ms": self._init_latency_ms,
             "model_loaded": self._pipeline is not None,
             "init_error": self._init_error,
@@ -440,6 +497,46 @@ class PaddleVLEngine(OCREngine):
         except Exception:
             return "unknown"
 
+    def _deadline(self) -> float:
+        if self._timeout_explicit:
+            return float(self._timeout_s)
+        from services.ocr.bounded import ocr_execution_timeout_s
+
+        return ocr_execution_timeout_s()
+
+    def _predict_bounded(self, client: Any, array: Any, predict_kwargs: Dict[str, Any], page: int, base_meta: Dict[str, Any]):
+        """Return the raw prediction, or an OCRResult when the deadline passes.
+
+        The worker child is stopped by the parent process deadline. Timing it
+        out in-thread would leave a predict running inside the keep-alive worker.
+        """
+        def _predict() -> Any:
+            return client.predict(array, **predict_kwargs)
+
+        if _worker_child():
+            return _predict()
+        from services.ocr.bounded import OcrExecutionTimeout, call_bounded
+
+        try:
+            return call_bounded(_predict, self._deadline(), label="paddleocr-vl")
+        except OcrExecutionTimeout as exc:
+            return OCRResult(
+                text="",
+                words=[],
+                confidence=None,
+                page=page,
+                engine=self.name,
+                metadata={
+                    **base_meta,
+                    "available": False,
+                    "status": "error",
+                    "error": "ocr_timeout",
+                    "error_type": "OcrExecutionTimeout",
+                    "provider_error": True,
+                    "timeout_s": exc.timeout_s,
+                },
+            )
+
     def recognize(
         self,
         image_bytes: bytes,
@@ -449,6 +546,12 @@ class PaddleVLEngine(OCREngine):
     ) -> OCRResult:
         base_meta = dict(metadata or {})
         base_meta.update(self.model_info())
+        if os.getenv("PADDLE_VL_API_URL", "").strip():
+            prepared, scale_meta = _downscale_image_bytes(image_bytes)
+            base_meta["image_prep"] = scale_meta
+            return self._recognize_remote(prepared, page=page, metadata=base_meta)
+        if _PERSISTENT_INIT_ERROR:
+            return _blocked_result(page, base_meta)
         if not self.available():
             return OCRResult(
                 text="",
@@ -484,7 +587,9 @@ class PaddleVLEngine(OCREngine):
                 _vl_pipeline_speed_kwargs()
             )
             started = time.perf_counter()
-            raw = client.predict(array, **predict_kwargs)
+            raw = self._predict_bounded(client, array, predict_kwargs, page, base_meta)
+            if isinstance(raw, OCRResult):
+                return raw
             latency_ms = (time.perf_counter() - started) * 1000.0
             parsed = self._normalize_prediction(raw, page=page)
             base_meta["pipeline_flags"] = dict(predict_kwargs)
@@ -524,6 +629,88 @@ class PaddleVLEngine(OCREngine):
             latency_ms=latency_ms,
             width=width,
             height=height,
+        )
+
+    def _recognize_remote(
+        self, image_bytes: bytes, *, page: int, metadata: Dict[str, Any]
+    ) -> OCRResult:
+        """Call the opt-in authenticated cloud PaddleOCR-VL worker."""
+        url = os.getenv("PADDLE_VL_API_URL", "").strip().rstrip("/") + "/v1/ocr"
+        api_key = os.getenv("PADDLE_VL_API_KEY", "").strip()
+        timeout = min(max(self._deadline(), 1.0), 600.0)
+        attempts = 2
+        started = time.perf_counter()
+        deadline = started + timeout
+        last_error = "remote_ocr_failed"
+        attempts_made = 0
+        for attempt in range(attempts):
+            remaining = deadline - time.perf_counter()
+            if remaining <= 0:
+                last_error = "TimeoutError:remote_ocr_deadline_exceeded"
+                break
+            attempts_made += 1
+            boundary = "----PaddleOCRVL" + str(time.time_ns())
+            body = (
+                f"--{boundary}\r\nContent-Disposition: form-data; name=\"file\"; filename=\"page.bin\"\r\n"
+                "Content-Type: application/octet-stream\r\n\r\n"
+            ).encode("ascii") + image_bytes + f"\r\n--{boundary}--\r\n".encode("ascii")
+            request = urllib.request.Request(
+                url,
+                data=body,
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": f"multipart/form-data; boundary={boundary}",
+                    "X-OCR-Page": str(int(page)),
+                },
+                method="POST",
+            )
+            try:
+                with urllib.request.urlopen(request, timeout=remaining) as response:
+                    payload = json.loads(response.read().decode("utf-8"))
+                payload["page"] = int(page)
+                result = _result_from_evidence(
+                    payload,
+                    page=page,
+                    latency_ms=(time.perf_counter() - started) * 1000.0,
+                )
+                result.metadata.update(metadata)
+                result.metadata.update(
+                    backend="remote_api",
+                    remote_attempts=attempts_made,
+                    remote_latency_ms=(time.perf_counter() - started) * 1000.0,
+                    remote_tables=payload.get("tables"),
+                    headers=payload.get("headers", []),
+                    rows=payload.get("rows", []),
+                    page_info=payload.get("page_info"),
+                )
+                return result
+            except urllib.error.HTTPError as exc:
+                last_error = f"remote_http_{exc.code}"
+                if exc.code not in (408, 429, 500, 502, 503, 504) or attempt + 1 >= attempts:
+                    break
+            except (
+                urllib.error.URLError,
+                TimeoutError,
+                json.JSONDecodeError,
+                OSError,
+                TypeError,
+                ValueError,
+                AttributeError,
+            ) as exc:
+                last_error = f"{type(exc).__name__}:{exc}"
+                if attempt + 1 >= attempts:
+                    break
+            delay = min(0.2 * (attempt + 1), max(0.0, deadline - time.perf_counter()))
+            if delay:
+                time.sleep(delay)
+        return OCRResult(
+            text="", words=[], confidence=None, page=page, engine=self.name,
+            metadata={
+                **metadata, "available": False, "status": "error",
+                "error": last_error, "backend": "remote_api",
+                "remote_attempts": attempts_made, "timeout_s": timeout,
+                "latency_ms": (time.perf_counter() - started) * 1000.0,
+            },
         )
 
     def _recognize_subprocess(
@@ -573,7 +760,7 @@ class PaddleVLEngine(OCREngine):
                 image_bytes,
                 page=page,
                 device=self._device,
-                timeout_s=self._timeout_s,
+                timeout_s=self._deadline(),
             )
         except subprocess.TimeoutExpired:
             _kill_serve_proc()
@@ -587,28 +774,34 @@ class PaddleVLEngine(OCREngine):
                     **metadata,
                     "available": False,
                     "status": "error",
-                    "error": "paddleocr_vl_timeout",
+                    "error": "ocr_timeout",
                     "error_type": "TimeoutExpired",
+                    "provider_error": True,
                     "backend": "subprocess",
-                    "timeout_s": self._timeout_s,
+                    "timeout_s": self._deadline(),
                 },
             )
         except Exception as exc:
             _kill_serve_proc()
-            return OCRResult(
-                text="",
-                words=[],
-                confidence=None,
+            return self._absorb_init_failure(
+                OCRResult(
+                    text="",
+                    words=[],
+                    confidence=None,
+                    page=page,
+                    engine=self.name,
+                    metadata={
+                        **metadata,
+                        "available": False,
+                        "status": "error",
+                        "error": str(exc),
+                        "error_type": type(exc).__name__,
+                        "backend": "subprocess",
+                    },
+                ),
+                image_bytes,
                 page=page,
-                engine=self.name,
-                metadata={
-                    **metadata,
-                    "available": False,
-                    "status": "error",
-                    "error": str(exc),
-                    "error_type": type(exc).__name__,
-                    "backend": "subprocess",
-                },
+                metadata=metadata,
             )
         latency_ms = (time.perf_counter() - started) * 1000.0
         if not evidence:
@@ -627,7 +820,39 @@ class PaddleVLEngine(OCREngine):
                     "latency_ms": latency_ms,
                 },
             )
-        return _result_from_evidence(evidence, page=page, latency_ms=latency_ms)
+        return self._absorb_init_failure(
+            _result_from_evidence(evidence, page=page, latency_ms=latency_ms),
+            image_bytes,
+            page=page,
+            metadata=metadata,
+        )
+
+    def _absorb_init_failure(
+        self,
+        result: OCRResult,
+        image_bytes: bytes,
+        *,
+        page: int,
+        metadata: Dict[str, Any],
+    ) -> OCRResult:
+        """Retry a poisoned GPU worker once on CPU, then stop calling it."""
+        global _CPU_RETRY_USED
+        error = str((result.metadata or {}).get("error") or "")
+        if not _is_poisoned_paddle_error(error):
+            return result
+        _kill_serve_proc()
+        if not _CPU_RETRY_USED:
+            _CPU_RETRY_USED = True
+            self._device = "cpu"
+            os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+            return self._recognize_subprocess(
+                image_bytes, page=page, metadata=metadata
+            )
+        _mark_persistent_init_failure(error)
+        meta = dict(result.metadata or {})
+        meta["persistent_init_failure"] = True
+        result.metadata = meta
+        return result
 
     def _result_from_parsed(
         self,
@@ -951,6 +1176,12 @@ def _kill_serve_proc() -> None:
         pass
 
 
+def kill_paddle_vl_serve() -> None:
+    """Public hook for page-level timeouts to abandon a stuck VL predict."""
+    _kill_serve_proc()
+    logger.warning("paddle_vl_serve_killed reason=page_or_execution_timeout")
+
+
 def _ensure_serve_proc(python: str, *, device: Optional[str], timeout_s: float):
     """Start keep-alive worker once; reuse across pages."""
     global _SERVE_PROC, _SERVE_PYTHON
@@ -973,6 +1204,10 @@ def _ensure_serve_proc(python: str, *, device: Optional[str], timeout_s: float):
     child_env = os.environ.copy()
     child_env["PYTHONIOENCODING"] = "utf-8"
     child_env["PYTHONUTF8"] = "1"
+    if str(device or "").strip().lower() == "cpu":
+        # Set before the child imports paddle. A GPU wheel that cannot load
+        # cudnn_cnn64_9.dll otherwise poisons later imports in that process.
+        child_env["CUDA_VISIBLE_DEVICES"] = "-1"
     proc = subprocess.Popen(
         cmd,
         stdin=subprocess.PIPE,
@@ -1010,6 +1245,31 @@ def _ensure_serve_proc(python: str, *, device: Optional[str], timeout_s: float):
     raise TimeoutError(f"vl_worker_ready_timeout log={log_path}")
 
 
+def _read_stdout_line(proc: subprocess.Popen, deadline: float) -> Optional[str]:
+    """Read one stdout line, or None when the deadline passes first."""
+    import threading
+
+    if proc.stdout is None:
+        return None
+    box: Dict[str, Any] = {}
+
+    def _read() -> None:
+        try:
+            box["line"] = proc.stdout.readline()
+        except Exception as exc:
+            box["error"] = exc
+
+    thread = threading.Thread(target=_read, daemon=True)
+    thread.start()
+    thread.join(max(0.0, deadline - time.perf_counter()))
+    if thread.is_alive():
+        return None
+    error = box.get("error")
+    if error is not None:
+        raise error
+    return box.get("line")
+
+
 def _serve_request(
     python: str,
     image_bytes: bytes,
@@ -1032,7 +1292,11 @@ def _serve_request(
             if proc.poll() is not None:
                 _kill_serve_proc()
                 raise RuntimeError(f"vl_worker_died:exit={proc.returncode}")
-            line = proc.stdout.readline()
+            # readline() blocks, so the deadline above is not checked until a
+            # line arrives. A stuck predict must still raise TimeoutExpired.
+            line = _read_stdout_line(proc, deadline)
+            if line is None:
+                break
             if not line:
                 time.sleep(0.05)
                 continue

@@ -1,0 +1,327 @@
+{
+  "file": "0000700223_2026_08_ZL_18_377_04092026043208.png",
+  "path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700223_2026_08_ZL_18_377_04092026043208.png",
+  "format": "Product wise stock statement",
+  "api_method": "product_wise_stock_statement_image",
+  "status": "FAIL",
+  "expected_rows": 5,
+  "extracted_rows": 35,
+  "matched_rows": 3,
+  "missing_rows": [
+    {
+      "product": "CLARINA ANTI ACNE KIT [CM AKIT CLARINA ANTI-ACNE CREAM FLORASANTE CAP GASEX SYP /200ML GASEX SYP[GINGER-LEMON] GASEX SYRUP (ELAICHI FLA) — GASEX TAB",
+      "opening_qty": 35,
+      "receipts_qty": null,
+      "sales_qty": 5,
+      "closing_qty": 30,
+      "kind": "missing_product"
+    },
+    {
+      "product": "GUDUCHI CAP HAIR ZONE LOTION HERBOLAX CAPS. HIMCOCID SUSP [BANANA FL] 200ML HIMCOCID SUSP [MINT FLAV] HIMCOCID SUSP [SNF FLAV] /200ML HIMCOCID-SF SYP (MINT) HIMCOCID-SF SYP [BANANA] HIMCOCID-SF SYP [SAUNF] HIOWNA CHOCOLATE FLAVOUR HIOWNA CHOCOLATE FLAVOUR HIOWNA JR CHOCOLATE FLAV HIOWNA JR STRABERRY FLAV KOFLET LOZENGES 175+25 JAR KOFLET SF LINCTUS 100ML KOFLET SYP KOFLET-EX LINCTUS 100ML LIV 52 SYP 100ML",
+      "opening_qty": 64,
+      "receipts_qty": null,
+      "sales_qty": 27,
+      "closing_qty": 37,
+      "kind": "missing_product"
+    }
+  ],
+  "extra_rows": [
+    {
+      "product": "CLARINA ANTI ACNE KIT [CM",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "CLARINA ANTI-ACNE CREAM",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "FLORASANTE CAP",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "GASEX SYP",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "GASEX SYP[GINGER-LEMON]",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "GASEX SYRUP (ELAICHI FLA)",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "GASEX TAB",
+      "opening_qty": 35,
+      "sales_qty": 5,
+      "closing_qty": 30,
+      "kind": "extra_product"
+    },
+    {
+      "product": "GUDUCHI CAP",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HAIR ZONE LOTION",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HERBOLAX CAPS",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HIMCOCID SUSP [BANANA FL]",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HIMCOCID SUSP [MINT FLAV]",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HIMCOCID SUSP [SNF FLAV]",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HIMCOCID-SF SYP (MINT)",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HIMCOCID-SF SYP [BANANA]",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HIMCOCID-SF SYP [SAUNF]",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HIOWNA CHOCOLATE FLAVOUR",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HIOWNA CHOCOLATE FLAVOUR",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HIOWNA JR CHOCOLATE FLAV",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HIOWNA JR STRABERRY FLAV",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "KOFLET SF LINCTUS",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "KOFLET SYP",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "KOFLET-EX LINCTUS",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "LIV SYP",
+      "opening_qty": 64,
+      "sales_qty": 27,
+      "closing_qty": 37,
+      "kind": "extra_product"
+    },
+    {
+      "product": "RUMALAYA FORTE TAB",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "RUMALAYA GEL",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "RUMALAYA LINIMENT",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "RUMALAYA TAB",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "TALEKT CAP",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "TALEKT SYP",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "TENTEX FORTE TAB",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "TENTEX ROYAL CAP",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    }
+  ],
+  "duplicates": [],
+  "mismatches": [],
+  "ocr_review": [
+    {
+      "product": "LIV 52 TAB",
+      "api_product": "LIV TAB",
+      "similarity": 0.824,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "LIV 52 TAB",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "CLARINA ANTI ACNE FACE WA",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "CLARINA ANTI ACNE FACE WA",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "CLARINA ANTI ACNE FACE WA",
+      "field": "sales_value",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "Liv 52 SYP",
+      "api_product": "LIV SYP",
+      "similarity": 0.824,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "Liv 52 SYP",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "Liv 52 SYP",
+      "field": "closing_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "Liv 52 SYP",
+      "field": "closing_value",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    }
+  ],
+  "accounting": [],
+  "confidence": "medium",
+  "notes": [
+    "OCR used tesseract psm 6."
+  ],
+  "result_key": "0000700223_2026_08_ZL_18_377_04092026043208",
+  "unavailable_fields": {},
+  "formula_checked": "none"
+}

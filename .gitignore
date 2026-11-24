@@ -3,6 +3,7 @@
 !.env.example
 
 .venv/
+.venvs/
 venv/
 __pycache__/
 *.py[cod]
@@ -23,6 +24,10 @@ logs/
 .DS_Store
 Thumbs.db
 
+# OCR model / tool caches (regenerable)
+.paddleocr/
+.tools/
+
 # Vertex / GCP service account keys
 credentials/
 
@@ -31,3 +36,6 @@ output_sales_statements/
 
 # Batch QA outputs (history is regenerated locally)
 qa_results/
+
+# Disposable local sample dumps (fixtures live under test_images/test_pdfs)
+samples/tmp/

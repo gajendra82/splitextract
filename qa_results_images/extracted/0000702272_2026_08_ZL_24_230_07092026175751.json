@@ -1,0 +1,436 @@
+{
+  "source_file": "0000702272_2026_08_ZL_24_230_07092026175751.jpg",
+  "source_format": "jpg",
+  "stockist_name": null,
+  "stockist_address": null,
+  "company_name": "KRISHNA PHARMA",
+  "period_from": "2026-08-01",
+  "period_to": "2026-08-31",
+  "report_title": "STOCK & SALES ANALYSIS",
+  "line_items": [
+    {
+      "product_code": null,
+      "product_name": "HIMALAYA (LIV 52 DIVISION)",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ABANA TAB",
+      "packing": "BOTTAL",
+      "opening_qty": 11.0,
+      "opening_value": null,
+      "receipts_qty": 300.0,
+      "receipts_value": null,
+      "sales_qty": 313.0,
+      "sales_value": 0.0,
+      "closing_qty": -2.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 311.0,
+        "expected_closing": -2.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "CLARINA CREAM 30 GM",
+      "packing": "30GM",
+      "opening_qty": 116.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 118.0,
+      "sales_value": 0.0,
+      "closing_qty": -2.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 116.0,
+        "expected_closing": -2.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "CONFIDO TABS",
+      "packing": "60",
+      "opening_qty": 5.0,
+      "opening_value": null,
+      "receipts_qty": 600.0,
+      "receipts_value": null,
+      "sales_qty": 417.0,
+      "sales_value": 0.0,
+      "closing_qty": 188.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 605.0,
+        "expected_closing": 188.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "DIABECON DS TAB (60TAB)",
+      "packing": "60TAB",
+      "opening_qty": 4.0,
+      "opening_value": null,
+      "receipts_qty": 150.0,
+      "receipts_value": null,
+      "sales_qty": 104.0,
+      "sales_value": 0.0,
+      "closing_qty": 50.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 154.0,
+        "expected_closing": 50.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "DIABECON TAB",
+      "packing": "1*60",
+      "opening_qty": 31.0,
+      "opening_value": null,
+      "receipts_qty": 100.0,
+      "receipts_value": null,
+      "sales_qty": 44.0,
+      "sales_value": 0.0,
+      "closing_qty": 87.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 131.0,
+        "expected_closing": 87.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "DIAREX TABLETS",
+      "packing": "30TAB",
+      "opening_qty": 1.0,
+      "opening_value": null,
+      "receipts_qty": 50.0,
+      "receipts_value": null,
+      "sales_qty": 6.0,
+      "sales_value": 0.0,
+      "closing_qty": 45.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 51.0,
+        "expected_closing": 45.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "HADJOD TABLETS 60'S",
+      "packing": "60'S",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 120.0,
+      "receipts_value": null,
+      "sales_qty": 85.0,
+      "sales_value": 0.0,
+      "closing_qty": 35.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 120.0,
+        "expected_closing": 35.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "HAIR ZONE SOLUTION 60ML",
+      "packing": "60ML",
+      "opening_qty": 38.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 11.0,
+      "sales_value": 0.0,
+      "closing_qty": 27.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 38.0,
+        "expected_closing": 27.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "HERBOLAX CAP",
+      "packing": "1*10",
+      "opening_qty": 1720.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 260.0,
+      "sales_value": 0.0,
+      "closing_qty": 1460.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 1720.0,
+        "expected_closing": 1460.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "HERBOLAX TABS",
+      "packing": "100",
+      "opening_qty": 591.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 545.0,
+      "sales_value": 0.0,
+      "closing_qty": 46.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 591.0,
+        "expected_closing": 46.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "HIMCOLIN GEL 30 GM",
+      "packing": "30 GM",
+      "opening_qty": 216.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 187.0,
+      "sales_value": 0.0,
+      "closing_qty": 29.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 216.0,
+        "expected_closing": 29.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV 52 HB CAPSULES",
+      "packing": "10 CAP",
+      "opening_qty": 119.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 60.0,
+      "sales_value": 0.0,
+      "closing_qty": 59.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 119.0,
+        "expected_closing": 59.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV 52 SYP 100ML",
+      "packing": "100ML",
+      "opening_qty": 216.0,
+      "opening_value": null,
+      "receipts_qty": 3150.0,
+      "receipts_value": null,
+      "sales_qty": 3359.0,
+      "sales_value": 0.0,
+      "closing_qty": 7.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 3366.0,
+        "expected_closing": 7.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV 52 SYP 200ML (N/R)",
+      "packing": "200ML",
+      "opening_qty": 2.0,
+      "opening_value": null,
+      "receipts_qty": 8925.0,
+      "receipts_value": null,
+      "sales_qty": 5930.0,
+      "sales_value": 0.0,
+      "closing_qty": 2997.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 8927.0,
+        "expected_closing": 2997.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "OPTHACARE EYE DROPS",
+      "packing": "10 ML",
+      "opening_qty": 23.0,
+      "opening_value": null,
+      "receipts_qty": 72.0,
+      "receipts_value": null,
+      "sales_qty": 93.0,
+      "sales_value": 0.0,
+      "closing_qty": 2.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 95.0,
+        "expected_closing": 2.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "OXITARD CAP 3X10",
+      "packing": "3X10",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 56.0,
+      "sales_value": 0.0,
+      "closing_qty": 56.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": -56.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PILEX FORT TAB",
+      "packing": "2*30TAB",
+      "opening_qty": 11.0,
+      "opening_value": null,
+      "receipts_qty": 56.0,
+      "receipts_value": null,
+      "sales_qty": 41.0,
+      "sales_value": 0.0,
+      "closing_qty": 26.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 67.0,
+        "expected_closing": 26.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PILEX FORTE OINT",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 400.0,
+      "receipts_value": null,
+      "sales_qty": 392.0,
+      "sales_value": 0.0,
+      "closing_qty": 8.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 400.0,
+        "expected_closing": 8.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PILEX TAB",
+      "packing": "160s",
+      "opening_qty": 3.0,
+      "opening_value": null,
+      "receipts_qty": 1200.0,
+      "receipts_value": null,
+      "sales_qty": 1091.0,
+      "sales_value": 0.0,
+      "closing_qty": 112.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 1203.0,
+        "expected_closing": 112.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PURIM TAB",
+      "packing": "60s",
+      "opening_qty": 37.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 10.0,
+      "sales_value": 0.0,
+      "closing_qty": 27.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 37.0,
+        "expected_closing": 27.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "RENALKA SYP 100ML",
+      "packing": "100ML",
+      "opening_qty": 54.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 53.0,
+      "sales_value": 0.0,
+      "closing_qty": 1.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 54.0,
+        "expected_closing": 1.0,
+        "stock_identity_ok": true
+      }
+    }
+  ],
+  "totals": {
+    "sales_value": null,
+    "closing_value": 776030.0,
+    "extra": {
+      "extraction_method": "gemini_extraction_fallback",
+      "line_sales_value_sum": 0.0,
+      "line_closing_value_sum": 0.0,
+      "sales_qty": 13175.0,
+      "closing_qty": 5258.0,
+      "stock_identity_kind": "opening_receipts_sales_closing",
+      "stock_identity_formula": "closing=opening+receipts-sales",
+      "stock_identity_fail_count": 1,
+      "stock_validation": {
+        "opening_plus_purchase": 18321.0,
+        "expected_total": 18321.0,
+        "calculated_closing": 5146.0,
+        "extracted_closing": 5258.0,
+        "is_valid": false
+      },
+      "extraction_quality": {
+        "quality": "good",
+        "score": 100,
+        "reasons": [],
+        "threshold": 75.0
+      },
+      "gemini_fallback": "not_called"
+    }
+  }
+}

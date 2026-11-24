@@ -148,7 +148,7 @@ See [ROLLBACK.md](./ROLLBACK.md):
 
 1. Disable flags or restore code
 2. `systemctl stop` both services
-3. Optional: return to tmux via `start-tmux.sh`
+3. Optional: return to tmux via `deploy/start-tmux.sh`
 4. Verify health + Laravel pipeline
 
 ---

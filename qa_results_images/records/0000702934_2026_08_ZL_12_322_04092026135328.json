@@ -1,0 +1,27 @@
+{
+  "file": "0000702934_2026_08_ZL_12_322_04092026135328.jpg",
+  "path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000702934_2026_08_ZL_12_322_04092026135328.jpg",
+  "format": "STOCK & SALES ANALYSIS",
+  "api_method": "gemini_extraction_fallback",
+  "status": "REVIEW",
+  "expected_rows": 1,
+  "extracted_rows": 0,
+  "matched_rows": 0,
+  "missing_rows": [],
+  "extra_rows": [],
+  "duplicates": [],
+  "mismatches": [],
+  "ocr_review": [
+    {
+      "note": "The independent read was not confident, so unmatched rows were not scored (1 read, 0 extracted)."
+    }
+  ],
+  "accounting": [],
+  "confidence": "low",
+  "notes": [
+    "OCR used tesseract psm 6."
+  ],
+  "result_key": "0000702934_2026_08_ZL_12_322_04092026135328",
+  "unavailable_fields": {},
+  "formula_checked": "none"
+}

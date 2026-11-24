@@ -1,0 +1,52 @@
+{
+  "file": "0000701478_2026_08_ZA_01_224_08092026054726.jpg",
+  "error": null,
+  "seconds": 48.8394,
+  "rows": 2,
+  "method": "gemini_extraction_fallback",
+  "decision": {
+    "status": "UNRESOLVED",
+    "reason": "insufficient_source_evidence",
+    "verified": false
+  },
+  "phase2": {
+    "status": "unresolved",
+    "failure_type": "UNVERIFIED_OCR_FALLBACK",
+    "strategy": "ocr_path",
+    "attempts": 0,
+    "applied": false,
+    "accepted": false,
+    "recovery_log": [],
+    "original_values": [],
+    "manual_review": "UNRESOLVED"
+  },
+  "validation_status": "unresolved",
+  "source_evidence": false,
+  "source_agreement": null,
+  "stock_identity_fail_count": 0,
+  "grounding": {
+    "status": "insufficient_source_evidence",
+    "reader": "ocr_text",
+    "compared_rows": 0,
+    "discrepancy_count": 0,
+    "blank_read_as_zero": 0,
+    "blocks_verification": true,
+    "discrepancies": []
+  },
+  "ocr_calls": 1,
+  "watched_rows": [
+    {
+      "product_name": "SPEMAN Tab",
+      "packing": "60s",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 0.0,
+      "sales_value": 15.0,
+      "closing_value": 15.0,
+      "qty_cell_state": null,
+      "total_stock": null,
+      "scheme_out_qty": null
+    }
+  ]
+}

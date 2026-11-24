@@ -1,0 +1,19 @@
+{
+  "tesseract": {
+    "ok": true,
+    "seconds": 93.06,
+    "text_len": 0,
+    "engine": "tesseract",
+    "confidence": 0.8219371727748691,
+    "meta": {
+      "word_count": 191,
+      "page_segmentation_mode": 6
+    },
+    "text_preview": ""
+  },
+  "paddle_classic": {
+    "ok": false,
+    "error": "OSError: [WinError 127] The specified procedure could not be found. Error loading \"C:\\Users\\amnsa\\AppData\\Roaming\\Python\\Python312\\site-packages\\torch\\lib\\shm.dll\" or one of its dependencies.",
+    "tb": "\n    from .paddleocr import (\n  File \"C:\\Users\\amnsa\\AppData\\Roaming\\Python\\Python312\\site-packages\\paddleocr\\paddleocr.py\", line 64, in <module>\n    from tools.infer import predict_system\n  File \"C:\\Users\\amnsa\\AppData\\Roaming\\Python\\Python312\\site-packages\\paddleocr\\tools\\infer\\predict_system.py\", line 33, in <module>\n    import tools.infer.predict_det as predict_det\n  File \"C:\\Users\\amnsa\\AppData\\Roaming\\Python\\Python312\\site-packages\\paddleocr\\tools\\infer\\predict_det.py\", line 31, in <module>\n    from ppocr.data import create_operators, transform\n  File \"C:\\Users\\amnsa\\AppData\\Roaming\\Python\\Python312\\site-packages\\paddleocr\\ppocr\\data\\__init__.py\", line 35, in <module>\n    from ppocr.data.imaug import transform, create_operators\n  File \"C:\\Users\\amnsa\\AppData\\Roaming\\Python\\Python312\\site-packages\\paddleocr\\ppocr\\data\\imaug\\__init__.py\", line 19, in <module>\n    from .iaa_augment import IaaAugment\n  File \"C:\\Users\\amnsa\\AppData\\Roaming\\Python\\Python312\\site-packages\\paddleocr\\ppocr\\data\\imaug\\iaa_augment.py\", line 24, in <module>\n    import albumentations as A\n  File \"C:\\Users\\amnsa\\AppData\\Roaming\\Python\\Python312\\site-packages\\albumentations\\__init__.py\", line 24, in <module>\n    from .pytorch import *\n  File \"C:\\Users\\amnsa\\AppData\\Roaming\\Python\\Python312\\site-packages\\albumentations\\pytorch\\__init__.py\", line 1, in <module>\n    from .transforms import *\n  File \"C:\\Users\\amnsa\\AppData\\Roaming\\Python\\Python312\\site-packages\\albumentations\\pytorch\\transforms.py\", line 15, in <module>\n    import torch\n  File \"C:\\Users\\amnsa\\AppData\\Roaming\\Python\\Python312\\site-packages\\torch\\__init__.py\", line 309, in <module>\n    _load_dll_libraries()\n  File \"C:\\Users\\amnsa\\AppData\\Roaming\\Python\\Python312\\site-packages\\torch\\__init__.py\", line 292, in _load_dll_libraries\n    raise err\nOSError: [WinError 127] The specified procedure could not be found. Error loading \"C:\\Users\\amnsa\\AppData\\Roaming\\Python\\Python312\\site-packages\\torch\\lib\\shm.dll\" or one of its dependencies.\n"
+  }
+}

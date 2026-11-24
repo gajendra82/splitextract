@@ -1,0 +1,1801 @@
+{
+  "document_id": "0000730089_2026_08_ZL_24_244_05092026160041.pdf",
+  "relative_path": "0000730089_2026_08_ZL_24_244_05092026160041.pdf",
+  "source_path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000730089_2026_08_ZL_24_244_05092026160041.pdf",
+  "file_type": "pdf",
+  "pdf_kind": "scanned",
+  "manifest_ocr_required": true,
+  "engine": "paddleocr-vl-1.6",
+  "model": "PaddleOCR-VL-1.6",
+  "model_version": "v1.6",
+  "started_at": "2026-10-08T12:28:31.400107+00:00",
+  "pages": [
+    {
+      "engine": "paddleocr-vl-1.6",
+      "status": "success",
+      "model": "PaddleOCR-VL-1.6",
+      "model_version": "v1.6",
+      "text": "27-03-2026|Fri|P1 17:13:25 D/NOTE\nSTOCK & SALES ANALYSIS (HIMALAYA)\n01-03-2026-27-03-2026\nITEM DESCRIPTION\n<table><tr><td>LIV</td><td>52</td><td>DROPS</td><td>100ML</td><td>56*1*100ML</td><td>0538.16</td><td>13</td><td>1593.96</td><td>1</td></tr><tr><td>LIV</td><td>52</td><td>DROPS</td><td>60ML</td><td>100*1*60ML</td><td>5399.35</td><td>100</td><td>9769.51</td><td>100</td></tr><tr><td>LIV</td><td>52</td><td>DS</td><td>SYP 100ML</td><td>56*1*100ML</td><td>8559.03</td><td>97</td><td>13462.83</td><td>97</td></tr><tr><td>LIV</td><td>52</td><td>DS</td><td>SYP 200ML</td><td>28*1*200ML</td><td>8015.97</td><td>206</td><td>48714.32</td><td>101</td></tr><tr><td>LIV</td><td>52</td><td>DS</td><td>TAB</td><td>100*1*60</td><td>7238.04</td><td>1012</td><td>191597.41</td><td>1012</td></tr><tr><td>LIV</td><td>52</td><td>SYP</td><td>100ML</td><td>5*56</td><td>1363.25</td><td>483</td><td>45553.47</td><td>209</td></tr><tr><td>LIV</td><td>52</td><td>SYP</td><td>200ML</td><td>63*20</td><td>5619.27</td><td>2011</td><td>317044.00</td><td>2011</td></tr><tr><td>LIV</td><td>52</td><td>TAB</td><td></td><td>100*1*100</td><td>3666.06</td><td>1207</td><td>180795.08</td><td>1202</td></tr><tr><td>LIV</td><td>52HB</td><td>CAP</td><td></td><td>34*(1*3)10</td><td>0.00</td><td>-2</td><td>-319.12</td><td>-</td></tr><tr><td>LUKOL</td><td>TAB</td><td></td><td></td><td>50*1*60</td><td>5304.79</td><td>285</td><td>46022.26</td><td>285</td></tr><tr><td>MENTAT</td><td>SYP</td><td>200ML</td><td></td><td>28*1*200ML</td><td>5566.63</td><td>-</td><td>0.00</td><td>-</td></tr><tr><td>OPHTHACARE</td><td>EYE DROP</td><td>10 ML</td><td></td><td></td><td>0.00</td><td>48</td><td>3120.03</td><td>48</td></tr><tr><td>PILEX</td><td>FORTE OINT</td><td>30G</td><td></td><td>1*100</td><td>6206.69</td><td>107</td><td>10357.78</td><td>102</td></tr><tr><td>PILEX</td><td>TAB</td><td>60&#x27;S</td><td></td><td>1*100</td><td>9486.81</td><td>641</td><td>102120.53</td><td>641</td></tr><tr><td>PLATENZA</td><td>SYP</td><td>100ML</td><td></td><td>56*1*100ML</td><td>632.39</td><td>112</td><td>18803.68</td><td>56</td></tr><tr><td>PLATENZA</td><td>TAB</td><td></td><td></td><td>56*3*20</td><td>2280.15</td><td>168</td><td>21553.26</td><td>168</td></tr></table>\nHELP FIND?\nAuthorised MARG MASTER PARTNER\nAuthorised User",
+      "normalized_text": "27-03-2026|Fri|P1 17:13:25 D/NOTE STOCK & SALES ANALYSIS (HIMALAYA) 01-03-2026-27-03-2026 ITEM DESCRIPTION <table><tr><td>LIV</td><td>52</td><td>DROPS</td><td>100ML</td><td>56*1*100ML</td><td>0538.16</td><td>13</td><td>1593.96</td><td>1</td></tr><tr><td>LIV</td><td>52</td><td>DROPS</td><td>60ML</td><td>100*1*60ML</td><td>5399.35</td><td>100</td><td>9769.51</td><td>100</td></tr><tr><td>LIV</td><td>52</td><td>DS</td><td>SYP 100ML</td><td>56*1*100ML</td><td>8559.03</td><td>97</td><td>13462.83</td><td>97</td></tr><tr><td>LIV</td><td>52</td><td>DS</td><td>SYP 200ML</td><td>28*1*200ML</td><td>8015.97</td><td>206</td><td>48714.32</td><td>101</td></tr><tr><td>LIV</td><td>52</td><td>DS</td><td>TAB</td><td>100*1*60</td><td>7238.04</td><td>1012</td><td>191597.41</td><td>1012</td></tr><tr><td>LIV</td><td>52</td><td>SYP</td><td>100ML</td><td>5*56</td><td>1363.25</td><td>483</td><td>45553.47</td><td>209</td></tr><tr><td>LIV</td><td>52</td><td>SYP</td><td>200ML</td><td>63*20</td><td>5619.27</td><td>2011</td><td>317044.00</td><td>2011</td></tr><tr><td>LIV</td><td>52</td><td>TAB</td><td></td><td>100*1*100</td><td>3666.06</td><td>1207</td><td>180795.08</td><td>1202</td></tr><tr><td>LIV</td><td>52HB</td><td>CAP</td><td></td><td>34*(1*3)10</td><td>0.00</td><td>-2</td><td>-319.12</td><td>-</td></tr><tr><td>LUKOL</td><td>TAB</td><td></td><td></td><td>50*1*60</td><td>5304.79</td><td>285</td><td>46022.26</td><td>285</td></tr><tr><td>MENTAT</td><td>SYP</td><td>200ML</td><td></td><td>28*1*200ML</td><td>5566.63</td><td>-</td><td>0.00</td><td>-</td></tr><tr><td>OPHTHACARE</td><td>EYE DROP</td><td>10 ML</td><td></td><td></td><td>0.00</td><td>48</td><td>3120.03</td><td>48</td></tr><tr><td>PILEX</td><td>FORTE OINT</td><td>30G</td><td></td><td>1*100</td><td>6206.69</td><td>107</td><td>10357.78</td><td>102</td></tr><tr><td>PILEX</td><td>TAB</td><td>60&#x27;S</td><td></td><td>1*100</td><td>9486.81</td><td>641</td><td>102120.53</td><td>641</td></tr><tr><td>PLATENZA</td><td>SYP</td><td>100ML</td><td></td><td>56*1*100ML</td><td>632.39</td><td>112</td><td>18803.68</td><td>56</td></tr><tr><td>PLATENZA</td><td>TAB</td><td></td><td></td><td>56*3*20</td><td>2280.15</td><td>168</td><td>21553.26</td><td>168</td></tr></table> HELP FIND? Authorised MARG MASTER PARTNER Authorised User",
+      "word_count": 25,
+      "line_count": 7,
+      "numeric_tokens": [
+        "17",
+        "13",
+        "25",
+        "52",
+        "56",
+        "1",
+        "0538.16",
+        "13",
+        "1593.96",
+        "1",
+        "52",
+        "100",
+        "1",
+        "5399.35",
+        "100",
+        "9769.51",
+        "100",
+        "52",
+        "56",
+        "1",
+        "8559.03",
+        "97",
+        "13462.83",
+        "97",
+        "52",
+        "28",
+        "1",
+        "8015.97",
+        "206",
+        "48714.32",
+        "101",
+        "52",
+        "100",
+        "1",
+        "60",
+        "7238.04",
+        "1012",
+        "191597.41",
+        "1012",
+        "52",
+        "5",
+        "56",
+        "1363.25",
+        "483",
+        "45553.47",
+        "209",
+        "52",
+        "63",
+        "20",
+        "5619.27",
+        "2011",
+        "317044.00",
+        "2011",
+        "52",
+        "100",
+        "1",
+        "100",
+        "3666.06",
+        "1207",
+        "180795.08",
+        "1202",
+        "34",
+        "1",
+        "3",
+        "10",
+        "0.00",
+        "50",
+        "1",
+        "60",
+        "5304.79",
+        "285",
+        "46022.26",
+        "285",
+        "28",
+        "1",
+        "5566.63",
+        "0.00",
+        "10",
+        "0.00",
+        "48",
+        "3120.03",
+        "48",
+        "1",
+        "100",
+        "6206.69",
+        "107",
+        "10357.78",
+        "102",
+        "60",
+        "1",
+        "100",
+        "9486.81",
+        "641",
+        "102120.53",
+        "641",
+        "56",
+        "1",
+        "632.39",
+        "112",
+        "18803.68",
+        "56",
+        "56",
+        "3",
+        "20",
+        "2280.15",
+        "168",
+        "21553.26",
+        "168"
+      ],
+      "words": [
+        {
+          "text": "27-03-2026|Fri|P1 17:13:25 D/NOTE",
+          "bbox": [
+            6306.0,
+            352.0,
+            7972.0,
+            556.0
+          ],
+          "confidence": null,
+          "page": 1
+        },
+        {
+          "text": "STOCK & SALES ANALYSIS (HIMALAYA)\n01-03-2026-27-03-2026",
+          "bbox": [
+            2457.0,
+            320.0,
+            5643.0,
+            752.0
+          ],
+          "confidence": null,
+          "page": 1
+        },
+        {
+          "text": "ITEM DESCRIPTION",
+          "bbox": [
+            293.0,
+            759.0,
+            1928.0,
+            960.0
+          ],
+          "confidence": null,
+          "page": 1
+        },
+        {
+          "text": "<table><tr><td>LIV</td><td>52</td><td>DROPS</td><td>100ML</td><td>56*1*100ML</td><td>0538.16</td><td>13</td><td>1593.96</td><td>1</td></tr><tr><td>LIV</td><td>52</td><td>DROPS</td><td>60ML</td><td>100*1*60ML</td><td>5399.35</td><td>100</td><td>9769.51</td><td>100</td></tr><tr><td>LIV</td><td>52</td><td>DS</td><td>SYP 100ML</td><td>56*1*100ML</td><td>8559.03</td><td>97</td><td>13462.83</td><td>97</td></tr><tr><td>LIV</td><td>52</td><td>DS</td><td>SYP 200ML</td><td>28*1*200ML</td><td>8015.97</td><td>206</td><td>48714.32</td><td>101</td></tr><tr><td>LIV</td><td>52</td><td>DS</td><td>TAB</td><td>100*1*60</td><td>7238.04</td><td>1012</td><td>191597.41</td><td>1012</td></tr><tr><td>LIV</td><td>52</td><td>SYP</td><td>100ML</td><td>5*56</td><td>1363.25</td><td>483</td><td>45553.47</td><td>209</td></tr><tr><td>LIV</td><td>52</td><td>SYP</td><td>200ML</td><td>63*20</td><td>5619.27</td><td>2011</td><td>317044.00</td><td>2011</td></tr><tr><td>LIV</td><td>52</td><td>TAB</td><td></td><td>100*1*100</td><td>3666.06</td><td>1207</td><td>180795.08</td><td>1202</td></tr><tr><td>LIV</td><td>52HB</td><td>CAP</td><td></td><td>34*(1*3)10</td><td>0.00</td><td>-2</td><td>-319.12</td><td>-</td></tr><tr><td>LUKOL</td><td>TAB</td><td></td><td></td><td>50*1*60</td><td>5304.79</td><td>285</td><td>46022.26</td><td>285</td></tr><tr><td>MENTAT</td><td>SYP</td><td>200ML</td><td></td><td>28*1*200ML</td><td>5566.63</td><td>-</td><td>0.00</td><td>-</td></tr><tr><td>OPHTHACARE</td><td>EYE DROP</td><td>10 ML</td><td></td><td></td><td>0.00</td><td>48</td><td>3120.03</td><td>48</td></tr><tr><td>PILEX</td><td>FORTE OINT</td><td>30G</td><td></td><td>1*100</td><td>6206.69</td><td>107</td><td>10357.78</td><td>102</td></tr><tr><td>PILEX</td><td>TAB</td><td>60&#x27;S</td><td></td><td>1*100</td><td>9486.81</td><td>641</td><td>102120.53</td><td>641</td></tr><tr><td>PLATENZA</td><td>SYP</td><td>100ML</td><td></td><td>56*1*100ML</td><td>632.39</td><td>112</td><td>18803.68</td><td>56</td></tr><tr><td>PLATENZA</td><td>TAB</td><td></td><td></td><td>56*3*20</td><td>2280.15</td><td>168</td><td>21553.26</td><td>168</td></tr></table>",
+          "bbox": [
+            269.0,
+            1240.0,
+            7495.0,
+            3984.0
+          ],
+          "confidence": null,
+          "page": 1
+        },
+        {
+          "text": "HELP FIND?",
+          "bbox": [
+            336.0,
+            4199.0,
+            1066.0,
+            4311.0
+          ],
+          "confidence": null,
+          "page": 1
+        },
+        {
+          "text": "Authorised MARG MASTER PARTNER",
+          "bbox": [
+            340.0,
+            4339.0,
+            1972.0,
+            4452.0
+          ],
+          "confidence": null,
+          "page": 1
+        },
+        {
+          "text": "Authorised User",
+          "bbox": [
+            4694.0,
+            4308.0,
+            5395.0,
+            4415.0
+          ],
+          "confidence": null,
+          "page": 1
+        }
+      ],
+      "boxes": [
+        [
+          6306.0,
+          352.0,
+          7972.0,
+          556.0
+        ],
+        [
+          2457.0,
+          320.0,
+          5643.0,
+          752.0
+        ],
+        [
+          293.0,
+          759.0,
+          1928.0,
+          960.0
+        ],
+        [
+          269.0,
+          1240.0,
+          7495.0,
+          3984.0
+        ],
+        [
+          336.0,
+          4199.0,
+          1066.0,
+          4311.0
+        ],
+        [
+          340.0,
+          4339.0,
+          1972.0,
+          4452.0
+        ],
+        [
+          4694.0,
+          4308.0,
+          5395.0,
+          4415.0
+        ]
+      ],
+      "confidence": {
+        "mean": null,
+        "count": 0,
+        "available": false
+      },
+      "layout": {
+        "regions": [
+          {
+            "index": 0,
+            "label": "header",
+            "text": "27-03-2026|Fri|P1 17:13:25 D/NOTE",
+            "bbox": [
+              6306.0,
+              352.0,
+              7972.0,
+              556.0
+            ],
+            "order": 0
+          },
+          {
+            "index": 1,
+            "label": "header",
+            "text": "STOCK & SALES ANALYSIS (HIMALAYA)\n01-03-2026-27-03-2026",
+            "bbox": [
+              2457.0,
+              320.0,
+              5643.0,
+              752.0
+            ],
+            "order": 1
+          },
+          {
+            "index": 2,
+            "label": "text",
+            "text": "ITEM DESCRIPTION",
+            "bbox": [
+              293.0,
+              759.0,
+              1928.0,
+              960.0
+            ],
+            "order": 2
+          },
+          {
+            "index": 3,
+            "label": "table",
+            "text": "<table><tr><td>LIV</td><td>52</td><td>DROPS</td><td>100ML</td><td>56*1*100ML</td><td>0538.16</td><td>13</td><td>1593.96</td><td>1</td></tr><tr><td>LIV</td><td>52</td><td>DROPS</td><td>60ML</td><td>100*1*60ML</td><td>5399.35</td><td>100</td><td>9769.51</td><td>100</td></tr><tr><td>LIV</td><td>52</td><td>DS</td><td>SYP 100ML</td><td>56*1*100ML</td><td>8559.03</td><td>97</td><td>13462.83</td><td>97</td></tr><tr><td>LIV</td><td>52</td><td>DS</td><td>SYP 200ML</td><td>28*1*200ML</td><td>8015.97</td><td>206</td><td>48714.32</td><td>101</td></tr><tr><td>LIV</td><td>52</td><td>DS</td><td>TAB</td><td>100*1*60</td><td>7238.04</td><td>1012</td><td>191597.41</td><td>1012</td></tr><tr><td>LIV</td><td>52</td><td>SYP</td><td>100ML</td><td>5*56</td><td>1363.25</td><td>483</td><td>45553.47</td><td>209</td></tr><tr><td>LIV</td><td>52</td><td>SYP</td><td>200ML</td><td>63*20</td><td>5619.27</td><td>2011</td><td>317044.00</td><td>2011</td></tr><tr><td>LIV</td><td>52</td><td>TAB</td><td></td><td>100*1*100</td><td>3666.06</td><td>1207</td><td>180795.08</td><td>1202</td></tr><tr><td>LIV</td><td>52HB</td><td>CAP</td><td></td><td>34*(1*3)10</td><td>0.00</td><td>-2</td><td>-319.12</td><td>-</td></tr><tr><td>LUKOL</td><td>TAB</td><td></td><td></td><td>50*1*60</td><td>5304.79</td><td>285</td><td>46022.26</td><td>285</td></tr><tr><td>MENTAT</td><td>SYP</td><td>200ML</td><td></td><td>28*1*200ML</td><td>5566.63</td><td>-</td><td>0.00</td><td>-</td></tr><tr><td>OPHTHACARE</td><td>EYE DROP</td><td>10 ML</td><td></td><td></td><td>0.00</td><td>48</td><td>3120.03</td><td>48</td></tr><tr><td>PILEX</td><td>FORTE OINT</td><td>30G</td><td></td><td>1*100</td><td>6206.69</td><td>107</td><td>10357.78</td><td>102</td></tr><tr><td>PILEX</td><td>TAB</td><td>60&#x27;S</td><td></td><td>1*100</td><td>9486.81</td><td>641</td><td>102120.53</td><td>641</td></tr><tr><td>PLATENZA</td><td>SYP</td><td>100ML</td><td></td><td>56*1*100ML</td><td>632.39</td><td>112</td><td>18803.68</td><td>56</td></tr><tr><td>PLATENZA</td><td>TAB</td><td></td><td></td><td>56*3*20</td><td>2280.15</td><td>168</td><td>21553.26</td><td>168</td></tr></table>",
+            "bbox": [
+              269.0,
+              1240.0,
+              7495.0,
+              3984.0
+            ],
+            "order": 3
+          },
+          {
+            "index": 4,
+            "label": "footer",
+            "text": "HELP FIND?",
+            "bbox": [
+              336.0,
+              4199.0,
+              1066.0,
+              4311.0
+            ],
+            "order": 4
+          },
+          {
+            "index": 5,
+            "label": "footer",
+            "text": "Authorised MARG MASTER PARTNER",
+            "bbox": [
+              340.0,
+              4339.0,
+              1972.0,
+              4452.0
+            ],
+            "order": 5
+          },
+          {
+            "index": 6,
+            "label": "footer",
+            "text": "Authorised User",
+            "bbox": [
+              4694.0,
+              4308.0,
+              5395.0,
+              4415.0
+            ],
+            "order": 6
+          }
+        ],
+        "available": true
+      },
+      "tables": {
+        "items": [
+          {
+            "index": 3,
+            "label": "table",
+            "text": "<table><tr><td>LIV</td><td>52</td><td>DROPS</td><td>100ML</td><td>56*1*100ML</td><td>0538.16</td><td>13</td><td>1593.96</td><td>1</td></tr><tr><td>LIV</td><td>52</td><td>DROPS</td><td>60ML</td><td>100*1*60ML</td><td>5399.35</td><td>100</td><td>9769.51</td><td>100</td></tr><tr><td>LIV</td><td>52</td><td>DS</td><td>SYP 100ML</td><td>56*1*100ML</td><td>8559.03</td><td>97</td><td>13462.83</td><td>97</td></tr><tr><td>LIV</td><td>52</td><td>DS</td><td>SYP 200ML</td><td>28*1*200ML</td><td>8015.97</td><td>206</td><td>48714.32</td><td>101</td></tr><tr><td>LIV</td><td>52</td><td>DS</td><td>TAB</td><td>100*1*60</td><td>7238.04</td><td>1012</td><td>191597.41</td><td>1012</td></tr><tr><td>LIV</td><td>52</td><td>SYP</td><td>100ML</td><td>5*56</td><td>1363.25</td><td>483</td><td>45553.47</td><td>209</td></tr><tr><td>LIV</td><td>52</td><td>SYP</td><td>200ML</td><td>63*20</td><td>5619.27</td><td>2011</td><td>317044.00</td><td>2011</td></tr><tr><td>LIV</td><td>52</td><td>TAB</td><td></td><td>100*1*100</td><td>3666.06</td><td>1207</td><td>180795.08</td><td>1202</td></tr><tr><td>LIV</td><td>52HB</td><td>CAP</td><td></td><td>34*(1*3)10</td><td>0.00</td><td>-2</td><td>-319.12</td><td>-</td></tr><tr><td>LUKOL</td><td>TAB</td><td></td><td></td><td>50*1*60</td><td>5304.79</td><td>285</td><td>46022.26</td><td>285</td></tr><tr><td>MENTAT</td><td>SYP</td><td>200ML</td><td></td><td>28*1*200ML</td><td>5566.63</td><td>-</td><td>0.00</td><td>-</td></tr><tr><td>OPHTHACARE</td><td>EYE DROP</td><td>10 ML</td><td></td><td></td><td>0.00</td><td>48</td><td>3120.03</td><td>48</td></tr><tr><td>PILEX</td><td>FORTE OINT</td><td>30G</td><td></td><td>1*100</td><td>6206.69</td><td>107</td><td>10357.78</td><td>102</td></tr><tr><td>PILEX</td><td>TAB</td><td>60&#x27;S</td><td></td><td>1*100</td><td>9486.81</td><td>641</td><td>102120.53</td><td>641</td></tr><tr><td>PLATENZA</td><td>SYP</td><td>100ML</td><td></td><td>56*1*100ML</td><td>632.39</td><td>112</td><td>18803.68</td><td>56</td></tr><tr><td>PLATENZA</td><td>TAB</td><td></td><td></td><td>56*3*20</td><td>2280.15</td><td>168</td><td>21553.26</td><td>168</td></tr></table>",
+            "bbox": [
+              269.0,
+              1240.0,
+              7495.0,
+              3984.0
+            ],
+            "html": null,
+            "cells": null
+          }
+        ],
+        "available": true,
+        "count": 1
+      },
+      "latency_ms": 129532.41490000028,
+      "image_width": 8000,
+      "image_height": 4854,
+      "device": "gpu:0",
+      "metadata": {
+        "document_id": "0000730089_2026_08_ZL_24_244_05092026160041.pdf",
+        "source_path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000730089_2026_08_ZL_24_244_05092026160041.pdf",
+        "original_width": 4000.0,
+        "original_height": 2427.0,
+        "processed_width": 8000,
+        "processed_height": 4854,
+        "orientation": null,
+        "preprocessing": [
+          "pymupdf_render_zoom_2.0"
+        ],
+        "page_index": 0,
+        "page_count": 4,
+        "engine": "paddleocr-vl-1.6",
+        "model": "PaddleOCR-VL-1.6",
+        "model_version": "v1.6",
+        "pipeline_version": "v1.6",
+        "device": "gpu:0",
+        "init_latency_ms": 13877.782900000057,
+        "model_loaded": true,
+        "init_error": null,
+        "available": true,
+        "status": "success",
+        "latency_ms": 129532.41490000028,
+        "image_width": 8000,
+        "image_height": 4854,
+        "word_count": 25,
+        "block_count": 7,
+        "line_count": 7,
+        "lines": [
+          {
+            "text": "27-03-2026|Fri|P1 17:13:25 D/NOTE",
+            "bbox": [
+              6306.0,
+              352.0,
+              7972.0,
+              556.0
+            ],
+            "label": "header",
+            "order": 0
+          },
+          {
+            "text": "STOCK & SALES ANALYSIS (HIMALAYA)\n01-03-2026-27-03-2026",
+            "bbox": [
+              2457.0,
+              320.0,
+              5643.0,
+              752.0
+            ],
+            "label": "header",
+            "order": 1
+          },
+          {
+            "text": "ITEM DESCRIPTION",
+            "bbox": [
+              293.0,
+              759.0,
+              1928.0,
+              960.0
+            ],
+            "label": "text",
+            "order": 2
+          },
+          {
+            "text": "<table><tr><td>LIV</td><td>52</td><td>DROPS</td><td>100ML</td><td>56*1*100ML</td><td>0538.16</td><td>13</td><td>1593.96</td><td>1</td></tr><tr><td>LIV</td><td>52</td><td>DROPS</td><td>60ML</td><td>100*1*60ML</td><td>5399.35</td><td>100</td><td>9769.51</td><td>100</td></tr><tr><td>LIV</td><td>52</td><td>DS</td><td>SYP 100ML</td><td>56*1*100ML</td><td>8559.03</td><td>97</td><td>13462.83</td><td>97</td></tr><tr><td>LIV</td><td>52</td><td>DS</td><td>SYP 200ML</td><td>28*1*200ML</td><td>8015.97</td><td>206</td><td>48714.32</td><td>101</td></tr><tr><td>LIV</td><td>52</td><td>DS</td><td>TAB</td><td>100*1*60</td><td>7238.04</td><td>1012</td><td>191597.41</td><td>1012</td></tr><tr><td>LIV</td><td>52</td><td>SYP</td><td>100ML</td><td>5*56</td><td>1363.25</td><td>483</td><td>45553.47</td><td>209</td></tr><tr><td>LIV</td><td>52</td><td>SYP</td><td>200ML</td><td>63*20</td><td>5619.27</td><td>2011</td><td>317044.00</td><td>2011</td></tr><tr><td>LIV</td><td>52</td><td>TAB</td><td></td><td>100*1*100</td><td>3666.06</td><td>1207</td><td>180795.08</td><td>1202</td></tr><tr><td>LIV</td><td>52HB</td><td>CAP</td><td></td><td>34*(1*3)10</td><td>0.00</td><td>-2</td><td>-319.12</td><td>-</td></tr><tr><td>LUKOL</td><td>TAB</td><td></td><td></td><td>50*1*60</td><td>5304.79</td><td>285</td><td>46022.26</td><td>285</td></tr><tr><td>MENTAT</td><td>SYP</td><td>200ML</td><td></td><td>28*1*200ML</td><td>5566.63</td><td>-</td><td>0.00</td><td>-</td></tr><tr><td>OPHTHACARE</td><td>EYE DROP</td><td>10 ML</td><td></td><td></td><td>0.00</td><td>48</td><td>3120.03</td><td>48</td></tr><tr><td>PILEX</td><td>FORTE OINT</td><td>30G</td><td></td><td>1*100</td><td>6206.69</td><td>107</td><td>10357.78</td><td>102</td></tr><tr><td>PILEX</td><td>TAB</td><td>60&#x27;S</td><td></td><td>1*100</td><td>9486.81</td><td>641</td><td>102120.53</td><td>641</td></tr><tr><td>PLATENZA</td><td>SYP</td><td>100ML</td><td></td><td>56*1*100ML</td><td>632.39</td><td>112</td><td>18803.68</td><td>56</td></tr><tr><td>PLATENZA</td><td>TAB</td><td></td><td></td><td>56*3*20</td><td>2280.15</td><td>168</td><td>21553.26</td><td>168</td></tr></table>",
+            "bbox": [
+              269.0,
+              1240.0,
+              7495.0,
+              3984.0
+            ],
+            "label": "table",
+            "order": 3
+          },
+          {
+            "text": "HELP FIND?",
+            "bbox": [
+              336.0,
+              4199.0,
+              1066.0,
+              4311.0
+            ],
+            "label": "footer",
+            "order": 4
+          },
+          {
+            "text": "Authorised MARG MASTER PARTNER",
+            "bbox": [
+              340.0,
+              4339.0,
+              1972.0,
+              4452.0
+            ],
+            "label": "footer",
+            "order": 5
+          },
+          {
+            "text": "Authorised User",
+            "bbox": [
+              4694.0,
+              4308.0,
+              5395.0,
+              4415.0
+            ],
+            "label": "footer",
+            "order": 6
+          }
+        ],
+        "reading_order": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "bbox_stats": {
+          "valid": 7,
+          "invalid": 0,
+          "total": 7
+        }
+      },
+      "error": null,
+      "error_type": null,
+      "page": 1,
+      "native_text": false,
+      "ocr_required": true,
+      "paddle_vl_status": "success",
+      "image_meta": {
+        "original_width": 4000.0,
+        "original_height": 2427.0,
+        "processed_width": 8000,
+        "processed_height": 4854,
+        "orientation": null,
+        "preprocessing": [
+          "pymupdf_render_zoom_2.0"
+        ],
+        "page_index": 0,
+        "page_count": 4
+      },
+      "resources": {
+        "cpu_percent": 9.6,
+        "ram_used_gb": 13.98,
+        "ram_total_gb": 15.31,
+        "gpu": "NVIDIA GeForce RTX 3050 6GB Laptop GPU",
+        "vram_used_gb": 11.084,
+        "vram_total_gb": 6.0
+      }
+    },
+    {
+      "engine": "paddleocr-vl-1.6",
+      "status": "success",
+      "model": "PaddleOCR-VL-1.6",
+      "model_version": "v1.6",
+      "text": "27-03-2026|P r1|P 17:13:15\nSTOCK & SALES ANALYSTS (HIMALAYA)\n01-03-2026-27-03-2026\n<table><tr><td rowspan=\"2\">ITEM</td><td rowspan=\"2\">DESCRIPTION</td><td colspan=\"2\">E</td><td colspan=\"2\">CLOSING</td><td rowspan=\"2\">DUMP</td></tr><tr><td>VALUE</td><td>QTY.</td><td>VALUE</td><td>QTY.</td></tr><tr><td>OPHTHACARE.EYE DROP 10 ML</td><td></td><td>0.00</td><td>48</td><td>3120.03</td><td>48</td><td></td></tr><tr><td>PILEX FORTE OINT 30G</td><td>1*100</td><td>6206.69</td><td>107</td><td>10357.78</td><td>102</td><td></td></tr><tr><td>PILEX TAB 60&#x27;S</td><td>1*100</td><td>9486.81</td><td>641</td><td>102120.53</td><td>641</td><td></td></tr><tr><td>PLATENZA SYP 100ML</td><td>56*1*100ML</td><td>632.39</td><td>112</td><td>18803.68</td><td>56</td><td></td></tr><tr><td>PLATENZA TAB</td><td>56*3*20</td><td>2280.15</td><td>168</td><td>21553.26</td><td>168</td><td></td></tr><tr><td>QUISTA KIDZ 200G (CHOC)</td><td>12*1*200GM</td><td>0.00</td><td>4</td><td>1269.68</td><td>4</td><td></td></tr><tr><td>RUMALAYA FORTE TAB</td><td>1*(1*2)*30</td><td>0.00</td><td>-23</td><td>-3297.02</td><td>-</td><td></td></tr><tr><td>RUMALAYA LINIMENT 60 ML</td><td></td><td>2534.21</td><td>7</td><td>719.66</td><td>12</td><td></td></tr><tr><td>RUMALAYA TAB</td><td>60*1*60</td><td>0.00</td><td>52</td><td>6844.24</td><td>52</td><td></td></tr><tr><td>SEPTILIN TAB</td><td>100*1*60</td><td>0.00</td><td>12</td><td>2077.75</td><td>12</td><td></td></tr><tr><td>SPEMAN TAB 60&#x27;S</td><td>1*50</td><td>0.00</td><td>5</td><td>791.49</td><td>5</td><td></td></tr><tr><td>TENTEX FORTE TAB</td><td>300*10*10</td><td>9906.58</td><td>290</td><td>24845.63</td><td>290</td><td></td></tr><tr><td>ZENTHRIN LOTION</td><td></td><td>0.00</td><td>2</td><td>60.00</td><td>2</td><td></td></tr></table>\nTOTAL\n3493 1291250.54",
+      "normalized_text": "27-03-2026|P r1|P 17:13:15 STOCK & SALES ANALYSTS (HIMALAYA) 01-03-2026-27-03-2026 <table><tr><td rowspan=\"2\">ITEM</td><td rowspan=\"2\">DESCRIPTION</td><td colspan=\"2\">E</td><td colspan=\"2\">CLOSING</td><td rowspan=\"2\">DUMP</td></tr><tr><td>VALUE</td><td>QTY.</td><td>VALUE</td><td>QTY.</td></tr><tr><td>OPHTHACARE.EYE DROP 10 ML</td><td></td><td>0.00</td><td>48</td><td>3120.03</td><td>48</td><td></td></tr><tr><td>PILEX FORTE OINT 30G</td><td>1*100</td><td>6206.69</td><td>107</td><td>10357.78</td><td>102</td><td></td></tr><tr><td>PILEX TAB 60&#x27;S</td><td>1*100</td><td>9486.81</td><td>641</td><td>102120.53</td><td>641</td><td></td></tr><tr><td>PLATENZA SYP 100ML</td><td>56*1*100ML</td><td>632.39</td><td>112</td><td>18803.68</td><td>56</td><td></td></tr><tr><td>PLATENZA TAB</td><td>56*3*20</td><td>2280.15</td><td>168</td><td>21553.26</td><td>168</td><td></td></tr><tr><td>QUISTA KIDZ 200G (CHOC)</td><td>12*1*200GM</td><td>0.00</td><td>4</td><td>1269.68</td><td>4</td><td></td></tr><tr><td>RUMALAYA FORTE TAB</td><td>1*(1*2)*30</td><td>0.00</td><td>-23</td><td>-3297.02</td><td>-</td><td></td></tr><tr><td>RUMALAYA LINIMENT 60 ML</td><td></td><td>2534.21</td><td>7</td><td>719.66</td><td>12</td><td></td></tr><tr><td>RUMALAYA TAB</td><td>60*1*60</td><td>0.00</td><td>52</td><td>6844.24</td><td>52</td><td></td></tr><tr><td>SEPTILIN TAB</td><td>100*1*60</td><td>0.00</td><td>12</td><td>2077.75</td><td>12</td><td></td></tr><tr><td>SPEMAN TAB 60&#x27;S</td><td>1*50</td><td>0.00</td><td>5</td><td>791.49</td><td>5</td><td></td></tr><tr><td>TENTEX FORTE TAB</td><td>300*10*10</td><td>9906.58</td><td>290</td><td>24845.63</td><td>290</td><td></td></tr><tr><td>ZENTHRIN LOTION</td><td></td><td>0.00</td><td>2</td><td>60.00</td><td>2</td><td></td></tr></table> TOTAL 3493 1291250.54",
+      "word_count": 44,
+      "line_count": 5,
+      "numeric_tokens": [
+        "17",
+        "13",
+        "15",
+        "2",
+        "2",
+        "2",
+        "2",
+        "2",
+        "10",
+        "0.00",
+        "48",
+        "3120.03",
+        "48",
+        "1",
+        "100",
+        "6206.69",
+        "107",
+        "10357.78",
+        "102",
+        "60",
+        "1",
+        "100",
+        "9486.81",
+        "641",
+        "102120.53",
+        "641",
+        "56",
+        "1",
+        "632.39",
+        "112",
+        "18803.68",
+        "56",
+        "56",
+        "3",
+        "20",
+        "2280.15",
+        "168",
+        "21553.26",
+        "168",
+        "12",
+        "1",
+        "0.00",
+        "4",
+        "1269.68",
+        "4",
+        "1",
+        "1",
+        "2",
+        "30",
+        "0.00",
+        "60",
+        "2534.21",
+        "7",
+        "719.66",
+        "12",
+        "60",
+        "1",
+        "60",
+        "0.00",
+        "52",
+        "6844.24",
+        "52",
+        "100",
+        "1",
+        "60",
+        "0.00",
+        "12",
+        "2077.75",
+        "12",
+        "60",
+        "1",
+        "50",
+        "0.00",
+        "5",
+        "791.49",
+        "5",
+        "300",
+        "10",
+        "10",
+        "9906.58",
+        "290",
+        "24845.63",
+        "290",
+        "0.00",
+        "2",
+        "60.00",
+        "2",
+        "3493",
+        "1291250.54"
+      ],
+      "words": [
+        {
+          "text": "27-03-2026|P r1|P 17:13:15",
+          "bbox": [
+            6641.0,
+            188.0,
+            7997.0,
+            370.0
+          ],
+          "confidence": null,
+          "page": 2
+        },
+        {
+          "text": "STOCK & SALES ANALYSTS (HIMALAYA)\n01-03-2026-27-03-2026",
+          "bbox": [
+            2513.0,
+            240.0,
+            5915.0,
+            641.0
+          ],
+          "confidence": null,
+          "page": 2
+        },
+        {
+          "text": "<table><tr><td rowspan=\"2\">ITEM</td><td rowspan=\"2\">DESCRIPTION</td><td colspan=\"2\">E</td><td colspan=\"2\">CLOSING</td><td rowspan=\"2\">DUMP</td></tr><tr><td>VALUE</td><td>QTY.</td><td>VALUE</td><td>QTY.</td></tr><tr><td>OPHTHACARE.EYE DROP 10 ML</td><td></td><td>0.00</td><td>48</td><td>3120.03</td><td>48</td><td></td></tr><tr><td>PILEX FORTE OINT 30G</td><td>1*100</td><td>6206.69</td><td>107</td><td>10357.78</td><td>102</td><td></td></tr><tr><td>PILEX TAB 60&#x27;S</td><td>1*100</td><td>9486.81</td><td>641</td><td>102120.53</td><td>641</td><td></td></tr><tr><td>PLATENZA SYP 100ML</td><td>56*1*100ML</td><td>632.39</td><td>112</td><td>18803.68</td><td>56</td><td></td></tr><tr><td>PLATENZA TAB</td><td>56*3*20</td><td>2280.15</td><td>168</td><td>21553.26</td><td>168</td><td></td></tr><tr><td>QUISTA KIDZ 200G (CHOC)</td><td>12*1*200GM</td><td>0.00</td><td>4</td><td>1269.68</td><td>4</td><td></td></tr><tr><td>RUMALAYA FORTE TAB</td><td>1*(1*2)*30</td><td>0.00</td><td>-23</td><td>-3297.02</td><td>-</td><td></td></tr><tr><td>RUMALAYA LINIMENT 60 ML</td><td></td><td>2534.21</td><td>7</td><td>719.66</td><td>12</td><td></td></tr><tr><td>RUMALAYA TAB</td><td>60*1*60</td><td>0.00</td><td>52</td><td>6844.24</td><td>52</td><td></td></tr><tr><td>SEPTILIN TAB</td><td>100*1*60</td><td>0.00</td><td>12</td><td>2077.75</td><td>12</td><td></td></tr><tr><td>SPEMAN TAB 60&#x27;S</td><td>1*50</td><td>0.00</td><td>5</td><td>791.49</td><td>5</td><td></td></tr><tr><td>TENTEX FORTE TAB</td><td>300*10*10</td><td>9906.58</td><td>290</td><td>24845.63</td><td>290</td><td></td></tr><tr><td>ZENTHRIN LOTION</td><td></td><td>0.00</td><td>2</td><td>60.00</td><td>2</td><td></td></tr></table>",
+          "bbox": [
+            184.0,
+            751.0,
+            8000.0,
+            3705.0
+          ],
+          "confidence": null,
+          "page": 2
+        },
+        {
+          "text": "TOTAL",
+          "bbox": [
+            528.0,
+            3801.0,
+            1065.0,
+            3941.0
+          ],
+          "confidence": null,
+          "page": 2
+        },
+        {
+          "text": "3493 1291250.54",
+          "bbox": [
+            5468.0,
+            3750.0,
+            6989.0,
+            3910.0
+          ],
+          "confidence": null,
+          "page": 2
+        }
+      ],
+      "boxes": [
+        [
+          6641.0,
+          188.0,
+          7997.0,
+          370.0
+        ],
+        [
+          2513.0,
+          240.0,
+          5915.0,
+          641.0
+        ],
+        [
+          184.0,
+          751.0,
+          8000.0,
+          3705.0
+        ],
+        [
+          528.0,
+          3801.0,
+          1065.0,
+          3941.0
+        ],
+        [
+          5468.0,
+          3750.0,
+          6989.0,
+          3910.0
+        ]
+      ],
+      "confidence": {
+        "mean": null,
+        "count": 0,
+        "available": false
+      },
+      "layout": {
+        "regions": [
+          {
+            "index": 0,
+            "label": "header",
+            "text": "27-03-2026|P r1|P 17:13:15",
+            "bbox": [
+              6641.0,
+              188.0,
+              7997.0,
+              370.0
+            ],
+            "order": 0
+          },
+          {
+            "index": 1,
+            "label": "figure_title",
+            "text": "STOCK & SALES ANALYSTS (HIMALAYA)\n01-03-2026-27-03-2026",
+            "bbox": [
+              2513.0,
+              240.0,
+              5915.0,
+              641.0
+            ],
+            "order": 1
+          },
+          {
+            "index": 2,
+            "label": "table",
+            "text": "<table><tr><td rowspan=\"2\">ITEM</td><td rowspan=\"2\">DESCRIPTION</td><td colspan=\"2\">E</td><td colspan=\"2\">CLOSING</td><td rowspan=\"2\">DUMP</td></tr><tr><td>VALUE</td><td>QTY.</td><td>VALUE</td><td>QTY.</td></tr><tr><td>OPHTHACARE.EYE DROP 10 ML</td><td></td><td>0.00</td><td>48</td><td>3120.03</td><td>48</td><td></td></tr><tr><td>PILEX FORTE OINT 30G</td><td>1*100</td><td>6206.69</td><td>107</td><td>10357.78</td><td>102</td><td></td></tr><tr><td>PILEX TAB 60&#x27;S</td><td>1*100</td><td>9486.81</td><td>641</td><td>102120.53</td><td>641</td><td></td></tr><tr><td>PLATENZA SYP 100ML</td><td>56*1*100ML</td><td>632.39</td><td>112</td><td>18803.68</td><td>56</td><td></td></tr><tr><td>PLATENZA TAB</td><td>56*3*20</td><td>2280.15</td><td>168</td><td>21553.26</td><td>168</td><td></td></tr><tr><td>QUISTA KIDZ 200G (CHOC)</td><td>12*1*200GM</td><td>0.00</td><td>4</td><td>1269.68</td><td>4</td><td></td></tr><tr><td>RUMALAYA FORTE TAB</td><td>1*(1*2)*30</td><td>0.00</td><td>-23</td><td>-3297.02</td><td>-</td><td></td></tr><tr><td>RUMALAYA LINIMENT 60 ML</td><td></td><td>2534.21</td><td>7</td><td>719.66</td><td>12</td><td></td></tr><tr><td>RUMALAYA TAB</td><td>60*1*60</td><td>0.00</td><td>52</td><td>6844.24</td><td>52</td><td></td></tr><tr><td>SEPTILIN TAB</td><td>100*1*60</td><td>0.00</td><td>12</td><td>2077.75</td><td>12</td><td></td></tr><tr><td>SPEMAN TAB 60&#x27;S</td><td>1*50</td><td>0.00</td><td>5</td><td>791.49</td><td>5</td><td></td></tr><tr><td>TENTEX FORTE TAB</td><td>300*10*10</td><td>9906.58</td><td>290</td><td>24845.63</td><td>290</td><td></td></tr><tr><td>ZENTHRIN LOTION</td><td></td><td>0.00</td><td>2</td><td>60.00</td><td>2</td><td></td></tr></table>",
+            "bbox": [
+              184.0,
+              751.0,
+              8000.0,
+              3705.0
+            ],
+            "order": 2
+          },
+          {
+            "index": 3,
+            "label": "text",
+            "text": "TOTAL",
+            "bbox": [
+              528.0,
+              3801.0,
+              1065.0,
+              3941.0
+            ],
+            "order": 3
+          },
+          {
+            "index": 4,
+            "label": "text",
+            "text": "3493 1291250.54",
+            "bbox": [
+              5468.0,
+              3750.0,
+              6989.0,
+              3910.0
+            ],
+            "order": 4
+          }
+        ],
+        "available": true
+      },
+      "tables": {
+        "items": [
+          {
+            "index": 2,
+            "label": "table",
+            "text": "<table><tr><td rowspan=\"2\">ITEM</td><td rowspan=\"2\">DESCRIPTION</td><td colspan=\"2\">E</td><td colspan=\"2\">CLOSING</td><td rowspan=\"2\">DUMP</td></tr><tr><td>VALUE</td><td>QTY.</td><td>VALUE</td><td>QTY.</td></tr><tr><td>OPHTHACARE.EYE DROP 10 ML</td><td></td><td>0.00</td><td>48</td><td>3120.03</td><td>48</td><td></td></tr><tr><td>PILEX FORTE OINT 30G</td><td>1*100</td><td>6206.69</td><td>107</td><td>10357.78</td><td>102</td><td></td></tr><tr><td>PILEX TAB 60&#x27;S</td><td>1*100</td><td>9486.81</td><td>641</td><td>102120.53</td><td>641</td><td></td></tr><tr><td>PLATENZA SYP 100ML</td><td>56*1*100ML</td><td>632.39</td><td>112</td><td>18803.68</td><td>56</td><td></td></tr><tr><td>PLATENZA TAB</td><td>56*3*20</td><td>2280.15</td><td>168</td><td>21553.26</td><td>168</td><td></td></tr><tr><td>QUISTA KIDZ 200G (CHOC)</td><td>12*1*200GM</td><td>0.00</td><td>4</td><td>1269.68</td><td>4</td><td></td></tr><tr><td>RUMALAYA FORTE TAB</td><td>1*(1*2)*30</td><td>0.00</td><td>-23</td><td>-3297.02</td><td>-</td><td></td></tr><tr><td>RUMALAYA LINIMENT 60 ML</td><td></td><td>2534.21</td><td>7</td><td>719.66</td><td>12</td><td></td></tr><tr><td>RUMALAYA TAB</td><td>60*1*60</td><td>0.00</td><td>52</td><td>6844.24</td><td>52</td><td></td></tr><tr><td>SEPTILIN TAB</td><td>100*1*60</td><td>0.00</td><td>12</td><td>2077.75</td><td>12</td><td></td></tr><tr><td>SPEMAN TAB 60&#x27;S</td><td>1*50</td><td>0.00</td><td>5</td><td>791.49</td><td>5</td><td></td></tr><tr><td>TENTEX FORTE TAB</td><td>300*10*10</td><td>9906.58</td><td>290</td><td>24845.63</td><td>290</td><td></td></tr><tr><td>ZENTHRIN LOTION</td><td></td><td>0.00</td><td>2</td><td>60.00</td><td>2</td><td></td></tr></table>",
+            "bbox": [
+              184.0,
+              751.0,
+              8000.0,
+              3705.0
+            ],
+            "html": null,
+            "cells": null
+          }
+        ],
+        "available": true,
+        "count": 1
+      },
+      "latency_ms": 97323.35910000029,
+      "image_width": 8000,
+      "image_height": 4854,
+      "device": "gpu:0",
+      "metadata": {
+        "document_id": "0000730089_2026_08_ZL_24_244_05092026160041.pdf",
+        "source_path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000730089_2026_08_ZL_24_244_05092026160041.pdf",
+        "original_width": 4000.0,
+        "original_height": 2427.0,
+        "processed_width": 8000,
+        "processed_height": 4854,
+        "orientation": null,
+        "preprocessing": [
+          "pymupdf_render_zoom_2.0"
+        ],
+        "page_index": 1,
+        "page_count": 4,
+        "engine": "paddleocr-vl-1.6",
+        "model": "PaddleOCR-VL-1.6",
+        "model_version": "v1.6",
+        "pipeline_version": "v1.6",
+        "device": "gpu:0",
+        "init_latency_ms": 13877.782900000057,
+        "model_loaded": true,
+        "init_error": null,
+        "available": true,
+        "status": "success",
+        "latency_ms": 97323.35910000029,
+        "image_width": 8000,
+        "image_height": 4854,
+        "word_count": 44,
+        "block_count": 5,
+        "line_count": 5,
+        "lines": [
+          {
+            "text": "27-03-2026|P r1|P 17:13:15",
+            "bbox": [
+              6641.0,
+              188.0,
+              7997.0,
+              370.0
+            ],
+            "label": "header",
+            "order": 0
+          },
+          {
+            "text": "STOCK & SALES ANALYSTS (HIMALAYA)\n01-03-2026-27-03-2026",
+            "bbox": [
+              2513.0,
+              240.0,
+              5915.0,
+              641.0
+            ],
+            "label": "figure_title",
+            "order": 1
+          },
+          {
+            "text": "<table><tr><td rowspan=\"2\">ITEM</td><td rowspan=\"2\">DESCRIPTION</td><td colspan=\"2\">E</td><td colspan=\"2\">CLOSING</td><td rowspan=\"2\">DUMP</td></tr><tr><td>VALUE</td><td>QTY.</td><td>VALUE</td><td>QTY.</td></tr><tr><td>OPHTHACARE.EYE DROP 10 ML</td><td></td><td>0.00</td><td>48</td><td>3120.03</td><td>48</td><td></td></tr><tr><td>PILEX FORTE OINT 30G</td><td>1*100</td><td>6206.69</td><td>107</td><td>10357.78</td><td>102</td><td></td></tr><tr><td>PILEX TAB 60&#x27;S</td><td>1*100</td><td>9486.81</td><td>641</td><td>102120.53</td><td>641</td><td></td></tr><tr><td>PLATENZA SYP 100ML</td><td>56*1*100ML</td><td>632.39</td><td>112</td><td>18803.68</td><td>56</td><td></td></tr><tr><td>PLATENZA TAB</td><td>56*3*20</td><td>2280.15</td><td>168</td><td>21553.26</td><td>168</td><td></td></tr><tr><td>QUISTA KIDZ 200G (CHOC)</td><td>12*1*200GM</td><td>0.00</td><td>4</td><td>1269.68</td><td>4</td><td></td></tr><tr><td>RUMALAYA FORTE TAB</td><td>1*(1*2)*30</td><td>0.00</td><td>-23</td><td>-3297.02</td><td>-</td><td></td></tr><tr><td>RUMALAYA LINIMENT 60 ML</td><td></td><td>2534.21</td><td>7</td><td>719.66</td><td>12</td><td></td></tr><tr><td>RUMALAYA TAB</td><td>60*1*60</td><td>0.00</td><td>52</td><td>6844.24</td><td>52</td><td></td></tr><tr><td>SEPTILIN TAB</td><td>100*1*60</td><td>0.00</td><td>12</td><td>2077.75</td><td>12</td><td></td></tr><tr><td>SPEMAN TAB 60&#x27;S</td><td>1*50</td><td>0.00</td><td>5</td><td>791.49</td><td>5</td><td></td></tr><tr><td>TENTEX FORTE TAB</td><td>300*10*10</td><td>9906.58</td><td>290</td><td>24845.63</td><td>290</td><td></td></tr><tr><td>ZENTHRIN LOTION</td><td></td><td>0.00</td><td>2</td><td>60.00</td><td>2</td><td></td></tr></table>",
+            "bbox": [
+              184.0,
+              751.0,
+              8000.0,
+              3705.0
+            ],
+            "label": "table",
+            "order": 2
+          },
+          {
+            "text": "TOTAL",
+            "bbox": [
+              528.0,
+              3801.0,
+              1065.0,
+              3941.0
+            ],
+            "label": "text",
+            "order": 3
+          },
+          {
+            "text": "3493 1291250.54",
+            "bbox": [
+              5468.0,
+              3750.0,
+              6989.0,
+              3910.0
+            ],
+            "label": "text",
+            "order": 4
+          }
+        ],
+        "reading_order": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "bbox_stats": {
+          "valid": 5,
+          "invalid": 0,
+          "total": 5
+        }
+      },
+      "error": null,
+      "error_type": null,
+      "page": 2,
+      "native_text": false,
+      "ocr_required": true,
+      "paddle_vl_status": "success",
+      "image_meta": {
+        "original_width": 4000.0,
+        "original_height": 2427.0,
+        "processed_width": 8000,
+        "processed_height": 4854,
+        "orientation": null,
+        "preprocessing": [
+          "pymupdf_render_zoom_2.0"
+        ],
+        "page_index": 1,
+        "page_count": 4
+      },
+      "resources": {
+        "cpu_percent": 3.6,
+        "ram_used_gb": 14.0,
+        "ram_total_gb": 15.31,
+        "gpu": "NVIDIA GeForce RTX 3050 6GB Laptop GPU",
+        "vram_used_gb": 11.084,
+        "vram_total_gb": 6.0
+      }
+    },
+    {
+      "engine": "paddleocr-vl-1.6",
+      "status": "success",
+      "model": "PaddleOCR-VL-1.6",
+      "model_version": "v1.6",
+      "text": "STOCK & SALES ANALYSES (HIMALAYA)\n27-03-2026|Fri|P| 17:13:\n01-03-2026-27-03-2026\n<table><tr><td rowspan=\"2\">ITEM</td><td rowspan=\"2\">DESCRIPTION</td><td>E</td><td colspan=\"3\">CLOSING</td><td rowspan=\"2\">DUMP</td></tr><tr><td>VALUE</td><td>QTY.</td><td>VALUE</td><td>QTY.</td></tr><tr><td>GALACTOSURE GRANULES ELA FLA</td><td>200GM</td><td>0.00</td><td>12</td><td>3353.24</td><td>-</td><td></td></tr><tr><td>GASEX SYP GINER 200 ML</td><td>1X28</td><td>366.16</td><td>-</td><td>0.00</td><td>-</td><td></td></tr><tr><td>GASEX TABLETS</td><td>1X100</td><td>6421.76</td><td>250</td><td>26719.28</td><td>250</td><td></td></tr><tr><td>GERIFORTE TAB 100&#x27;S</td><td>1*50</td><td>2389.86</td><td>23</td><td>2407.81</td><td>-</td><td></td></tr><tr><td>HERBOLAX TAB</td><td>50*1*100</td><td>2965.40</td><td>65</td><td>9229.18</td><td>65</td><td></td></tr><tr><td>HIMPLASIA TAB 30&#x27;S</td><td>1*50</td><td>9788.97</td><td>20</td><td>6950.37</td><td>-</td><td></td></tr><tr><td>HIORA K TOOTHPASTE 100G</td><td>6*50</td><td>0.00</td><td>1</td><td>102.12</td><td>1</td><td></td></tr><tr><td>HIORA K TOOTHPASTE 50G</td><td>50*1*50GM</td><td>0.00</td><td>39</td><td>2638.45</td><td>39</td><td></td></tr><tr><td>LIV 52 DROPS 100ML</td><td>56*1*100ML</td><td>0538.16</td><td>13</td><td>1593.96</td><td>1</td><td></td></tr><tr><td>LIV 52 DROPS 60ML</td><td>100*1*60ML</td><td>5399.35</td><td>100</td><td>9769.51</td><td>100</td><td></td></tr><tr><td>LIV 52 DS SYP 100ML</td><td>56*1*100ML</td><td>8559.03</td><td>97</td><td>13462.83</td><td>97</td><td></td></tr><tr><td>LIV 52 DS SYP 200ML</td><td>28*1*200ML</td><td>8015.97</td><td>206</td><td>48714.32</td><td>101</td><td></td></tr><tr><td>LIV 52 DS TAB</td><td>100*1*60</td><td>7238.04</td><td>1012</td><td>191597.41</td><td>1012</td><td></td></tr><tr><td>LIV 52 SYP 100ML</td><td>5*56</td><td>1363.25</td><td>483</td><td>45553.47</td><td>209</td><td></td></tr><tr><td>LIV 52 SYP 200ML</td><td>63*28</td><td>5619.27</td><td>2011</td><td>317044.00</td><td>2011</td><td></td></tr><tr><td>LIV 52 TAB</td><td>100*1*100</td><td>3666.06</td><td>1207</td><td>180795.08</td><td>1202</td><td></td></tr></table>\nHELP HIND 2",
+      "normalized_text": "STOCK & SALES ANALYSES (HIMALAYA) 27-03-2026|Fri|P| 17:13: 01-03-2026-27-03-2026 <table><tr><td rowspan=\"2\">ITEM</td><td rowspan=\"2\">DESCRIPTION</td><td>E</td><td colspan=\"3\">CLOSING</td><td rowspan=\"2\">DUMP</td></tr><tr><td>VALUE</td><td>QTY.</td><td>VALUE</td><td>QTY.</td></tr><tr><td>GALACTOSURE GRANULES ELA FLA</td><td>200GM</td><td>0.00</td><td>12</td><td>3353.24</td><td>-</td><td></td></tr><tr><td>GASEX SYP GINER 200 ML</td><td>1X28</td><td>366.16</td><td>-</td><td>0.00</td><td>-</td><td></td></tr><tr><td>GASEX TABLETS</td><td>1X100</td><td>6421.76</td><td>250</td><td>26719.28</td><td>250</td><td></td></tr><tr><td>GERIFORTE TAB 100&#x27;S</td><td>1*50</td><td>2389.86</td><td>23</td><td>2407.81</td><td>-</td><td></td></tr><tr><td>HERBOLAX TAB</td><td>50*1*100</td><td>2965.40</td><td>65</td><td>9229.18</td><td>65</td><td></td></tr><tr><td>HIMPLASIA TAB 30&#x27;S</td><td>1*50</td><td>9788.97</td><td>20</td><td>6950.37</td><td>-</td><td></td></tr><tr><td>HIORA K TOOTHPASTE 100G</td><td>6*50</td><td>0.00</td><td>1</td><td>102.12</td><td>1</td><td></td></tr><tr><td>HIORA K TOOTHPASTE 50G</td><td>50*1*50GM</td><td>0.00</td><td>39</td><td>2638.45</td><td>39</td><td></td></tr><tr><td>LIV 52 DROPS 100ML</td><td>56*1*100ML</td><td>0538.16</td><td>13</td><td>1593.96</td><td>1</td><td></td></tr><tr><td>LIV 52 DROPS 60ML</td><td>100*1*60ML</td><td>5399.35</td><td>100</td><td>9769.51</td><td>100</td><td></td></tr><tr><td>LIV 52 DS SYP 100ML</td><td>56*1*100ML</td><td>8559.03</td><td>97</td><td>13462.83</td><td>97</td><td></td></tr><tr><td>LIV 52 DS SYP 200ML</td><td>28*1*200ML</td><td>8015.97</td><td>206</td><td>48714.32</td><td>101</td><td></td></tr><tr><td>LIV 52 DS TAB</td><td>100*1*60</td><td>7238.04</td><td>1012</td><td>191597.41</td><td>1012</td><td></td></tr><tr><td>LIV 52 SYP 100ML</td><td>5*56</td><td>1363.25</td><td>483</td><td>45553.47</td><td>209</td><td></td></tr><tr><td>LIV 52 SYP 200ML</td><td>63*28</td><td>5619.27</td><td>2011</td><td>317044.00</td><td>2011</td><td></td></tr><tr><td>LIV 52 TAB</td><td>100*1*100</td><td>3666.06</td><td>1207</td><td>180795.08</td><td>1202</td><td></td></tr></table> HELP HIND 2",
+      "word_count": 60,
+      "line_count": 4,
+      "numeric_tokens": [
+        "17",
+        "13",
+        "2",
+        "2",
+        "3",
+        "2",
+        "0.00",
+        "12",
+        "3353.24",
+        "200",
+        "366.16",
+        "0.00",
+        "6421.76",
+        "250",
+        "26719.28",
+        "250",
+        "100",
+        "1",
+        "50",
+        "2389.86",
+        "23",
+        "2407.81",
+        "50",
+        "1",
+        "100",
+        "2965.40",
+        "65",
+        "9229.18",
+        "65",
+        "30",
+        "1",
+        "50",
+        "9788.97",
+        "20",
+        "6950.37",
+        "6",
+        "50",
+        "0.00",
+        "1",
+        "102.12",
+        "1",
+        "50",
+        "1",
+        "0.00",
+        "39",
+        "2638.45",
+        "39",
+        "52",
+        "56",
+        "1",
+        "0538.16",
+        "13",
+        "1593.96",
+        "1",
+        "52",
+        "100",
+        "1",
+        "5399.35",
+        "100",
+        "9769.51",
+        "100",
+        "52",
+        "56",
+        "1",
+        "8559.03",
+        "97",
+        "13462.83",
+        "97",
+        "52",
+        "28",
+        "1",
+        "8015.97",
+        "206",
+        "48714.32",
+        "101",
+        "52",
+        "100",
+        "1",
+        "60",
+        "7238.04",
+        "1012",
+        "191597.41",
+        "1012",
+        "52",
+        "5",
+        "56",
+        "1363.25",
+        "483",
+        "45553.47",
+        "209",
+        "52",
+        "63",
+        "28",
+        "5619.27",
+        "2011",
+        "317044.00",
+        "2011",
+        "52",
+        "100",
+        "1",
+        "100",
+        "3666.06",
+        "1207",
+        "180795.08",
+        "1202",
+        "2"
+      ],
+      "words": [
+        {
+          "text": "STOCK & SALES ANALYSES (HIMALAYA)\n27-03-2026|Fri|P| 17:13:",
+          "bbox": [
+            2449.0,
+            6.0,
+            5958.0,
+            253.0
+          ],
+          "confidence": null,
+          "page": 3
+        },
+        {
+          "text": "01-03-2026-27-03-2026",
+          "bbox": [
+            3041.0,
+            194.0,
+            5430.0,
+            420.0
+          ],
+          "confidence": null,
+          "page": 3
+        },
+        {
+          "text": "<table><tr><td rowspan=\"2\">ITEM</td><td rowspan=\"2\">DESCRIPTION</td><td>E</td><td colspan=\"3\">CLOSING</td><td rowspan=\"2\">DUMP</td></tr><tr><td>VALUE</td><td>QTY.</td><td>VALUE</td><td>QTY.</td></tr><tr><td>GALACTOSURE GRANULES ELA FLA</td><td>200GM</td><td>0.00</td><td>12</td><td>3353.24</td><td>-</td><td></td></tr><tr><td>GASEX SYP GINER 200 ML</td><td>1X28</td><td>366.16</td><td>-</td><td>0.00</td><td>-</td><td></td></tr><tr><td>GASEX TABLETS</td><td>1X100</td><td>6421.76</td><td>250</td><td>26719.28</td><td>250</td><td></td></tr><tr><td>GERIFORTE TAB 100&#x27;S</td><td>1*50</td><td>2389.86</td><td>23</td><td>2407.81</td><td>-</td><td></td></tr><tr><td>HERBOLAX TAB</td><td>50*1*100</td><td>2965.40</td><td>65</td><td>9229.18</td><td>65</td><td></td></tr><tr><td>HIMPLASIA TAB 30&#x27;S</td><td>1*50</td><td>9788.97</td><td>20</td><td>6950.37</td><td>-</td><td></td></tr><tr><td>HIORA K TOOTHPASTE 100G</td><td>6*50</td><td>0.00</td><td>1</td><td>102.12</td><td>1</td><td></td></tr><tr><td>HIORA K TOOTHPASTE 50G</td><td>50*1*50GM</td><td>0.00</td><td>39</td><td>2638.45</td><td>39</td><td></td></tr><tr><td>LIV 52 DROPS 100ML</td><td>56*1*100ML</td><td>0538.16</td><td>13</td><td>1593.96</td><td>1</td><td></td></tr><tr><td>LIV 52 DROPS 60ML</td><td>100*1*60ML</td><td>5399.35</td><td>100</td><td>9769.51</td><td>100</td><td></td></tr><tr><td>LIV 52 DS SYP 100ML</td><td>56*1*100ML</td><td>8559.03</td><td>97</td><td>13462.83</td><td>97</td><td></td></tr><tr><td>LIV 52 DS SYP 200ML</td><td>28*1*200ML</td><td>8015.97</td><td>206</td><td>48714.32</td><td>101</td><td></td></tr><tr><td>LIV 52 DS TAB</td><td>100*1*60</td><td>7238.04</td><td>1012</td><td>191597.41</td><td>1012</td><td></td></tr><tr><td>LIV 52 SYP 100ML</td><td>5*56</td><td>1363.25</td><td>483</td><td>45553.47</td><td>209</td><td></td></tr><tr><td>LIV 52 SYP 200ML</td><td>63*28</td><td>5619.27</td><td>2011</td><td>317044.00</td><td>2011</td><td></td></tr><tr><td>LIV 52 TAB</td><td>100*1*100</td><td>3666.06</td><td>1207</td><td>180795.08</td><td>1202</td><td></td></tr></table>",
+          "bbox": [
+            0.0,
+            449.0,
+            7999.0,
+            4095.0
+          ],
+          "confidence": null,
+          "page": 3
+        },
+        {
+          "text": "HELP HIND 2",
+          "bbox": [
+            0.0,
+            4364.0,
+            832.0,
+            4487.0
+          ],
+          "confidence": null,
+          "page": 3
+        }
+      ],
+      "boxes": [
+        [
+          2449.0,
+          6.0,
+          5958.0,
+          253.0
+        ],
+        [
+          3041.0,
+          194.0,
+          5430.0,
+          420.0
+        ],
+        [
+          0.0,
+          449.0,
+          7999.0,
+          4095.0
+        ],
+        [
+          0.0,
+          4364.0,
+          832.0,
+          4487.0
+        ]
+      ],
+      "confidence": {
+        "mean": null,
+        "count": 0,
+        "available": false
+      },
+      "layout": {
+        "regions": [
+          {
+            "index": 0,
+            "label": "text",
+            "text": "STOCK & SALES ANALYSES (HIMALAYA)\n27-03-2026|Fri|P| 17:13:",
+            "bbox": [
+              2449.0,
+              6.0,
+              5958.0,
+              253.0
+            ],
+            "order": 0
+          },
+          {
+            "index": 1,
+            "label": "text",
+            "text": "",
+            "bbox": [
+              6690.0,
+              0.0,
+              8000.0,
+              169.0
+            ],
+            "order": 1
+          },
+          {
+            "index": 2,
+            "label": "text",
+            "text": "01-03-2026-27-03-2026",
+            "bbox": [
+              3041.0,
+              194.0,
+              5430.0,
+              420.0
+            ],
+            "order": 2
+          },
+          {
+            "index": 3,
+            "label": "table",
+            "text": "<table><tr><td rowspan=\"2\">ITEM</td><td rowspan=\"2\">DESCRIPTION</td><td>E</td><td colspan=\"3\">CLOSING</td><td rowspan=\"2\">DUMP</td></tr><tr><td>VALUE</td><td>QTY.</td><td>VALUE</td><td>QTY.</td></tr><tr><td>GALACTOSURE GRANULES ELA FLA</td><td>200GM</td><td>0.00</td><td>12</td><td>3353.24</td><td>-</td><td></td></tr><tr><td>GASEX SYP GINER 200 ML</td><td>1X28</td><td>366.16</td><td>-</td><td>0.00</td><td>-</td><td></td></tr><tr><td>GASEX TABLETS</td><td>1X100</td><td>6421.76</td><td>250</td><td>26719.28</td><td>250</td><td></td></tr><tr><td>GERIFORTE TAB 100&#x27;S</td><td>1*50</td><td>2389.86</td><td>23</td><td>2407.81</td><td>-</td><td></td></tr><tr><td>HERBOLAX TAB</td><td>50*1*100</td><td>2965.40</td><td>65</td><td>9229.18</td><td>65</td><td></td></tr><tr><td>HIMPLASIA TAB 30&#x27;S</td><td>1*50</td><td>9788.97</td><td>20</td><td>6950.37</td><td>-</td><td></td></tr><tr><td>HIORA K TOOTHPASTE 100G</td><td>6*50</td><td>0.00</td><td>1</td><td>102.12</td><td>1</td><td></td></tr><tr><td>HIORA K TOOTHPASTE 50G</td><td>50*1*50GM</td><td>0.00</td><td>39</td><td>2638.45</td><td>39</td><td></td></tr><tr><td>LIV 52 DROPS 100ML</td><td>56*1*100ML</td><td>0538.16</td><td>13</td><td>1593.96</td><td>1</td><td></td></tr><tr><td>LIV 52 DROPS 60ML</td><td>100*1*60ML</td><td>5399.35</td><td>100</td><td>9769.51</td><td>100</td><td></td></tr><tr><td>LIV 52 DS SYP 100ML</td><td>56*1*100ML</td><td>8559.03</td><td>97</td><td>13462.83</td><td>97</td><td></td></tr><tr><td>LIV 52 DS SYP 200ML</td><td>28*1*200ML</td><td>8015.97</td><td>206</td><td>48714.32</td><td>101</td><td></td></tr><tr><td>LIV 52 DS TAB</td><td>100*1*60</td><td>7238.04</td><td>1012</td><td>191597.41</td><td>1012</td><td></td></tr><tr><td>LIV 52 SYP 100ML</td><td>5*56</td><td>1363.25</td><td>483</td><td>45553.47</td><td>209</td><td></td></tr><tr><td>LIV 52 SYP 200ML</td><td>63*28</td><td>5619.27</td><td>2011</td><td>317044.00</td><td>2011</td><td></td></tr><tr><td>LIV 52 TAB</td><td>100*1*100</td><td>3666.06</td><td>1207</td><td>180795.08</td><td>1202</td><td></td></tr></table>",
+            "bbox": [
+              0.0,
+              449.0,
+              7999.0,
+              4095.0
+            ],
+            "order": 3
+          },
+          {
+            "index": 4,
+            "label": "text",
+            "text": "HELP HIND 2",
+            "bbox": [
+              0.0,
+              4364.0,
+              832.0,
+              4487.0
+            ],
+            "order": 4
+          }
+        ],
+        "available": true
+      },
+      "tables": {
+        "items": [
+          {
+            "index": 3,
+            "label": "table",
+            "text": "<table><tr><td rowspan=\"2\">ITEM</td><td rowspan=\"2\">DESCRIPTION</td><td>E</td><td colspan=\"3\">CLOSING</td><td rowspan=\"2\">DUMP</td></tr><tr><td>VALUE</td><td>QTY.</td><td>VALUE</td><td>QTY.</td></tr><tr><td>GALACTOSURE GRANULES ELA FLA</td><td>200GM</td><td>0.00</td><td>12</td><td>3353.24</td><td>-</td><td></td></tr><tr><td>GASEX SYP GINER 200 ML</td><td>1X28</td><td>366.16</td><td>-</td><td>0.00</td><td>-</td><td></td></tr><tr><td>GASEX TABLETS</td><td>1X100</td><td>6421.76</td><td>250</td><td>26719.28</td><td>250</td><td></td></tr><tr><td>GERIFORTE TAB 100&#x27;S</td><td>1*50</td><td>2389.86</td><td>23</td><td>2407.81</td><td>-</td><td></td></tr><tr><td>HERBOLAX TAB</td><td>50*1*100</td><td>2965.40</td><td>65</td><td>9229.18</td><td>65</td><td></td></tr><tr><td>HIMPLASIA TAB 30&#x27;S</td><td>1*50</td><td>9788.97</td><td>20</td><td>6950.37</td><td>-</td><td></td></tr><tr><td>HIORA K TOOTHPASTE 100G</td><td>6*50</td><td>0.00</td><td>1</td><td>102.12</td><td>1</td><td></td></tr><tr><td>HIORA K TOOTHPASTE 50G</td><td>50*1*50GM</td><td>0.00</td><td>39</td><td>2638.45</td><td>39</td><td></td></tr><tr><td>LIV 52 DROPS 100ML</td><td>56*1*100ML</td><td>0538.16</td><td>13</td><td>1593.96</td><td>1</td><td></td></tr><tr><td>LIV 52 DROPS 60ML</td><td>100*1*60ML</td><td>5399.35</td><td>100</td><td>9769.51</td><td>100</td><td></td></tr><tr><td>LIV 52 DS SYP 100ML</td><td>56*1*100ML</td><td>8559.03</td><td>97</td><td>13462.83</td><td>97</td><td></td></tr><tr><td>LIV 52 DS SYP 200ML</td><td>28*1*200ML</td><td>8015.97</td><td>206</td><td>48714.32</td><td>101</td><td></td></tr><tr><td>LIV 52 DS TAB</td><td>100*1*60</td><td>7238.04</td><td>1012</td><td>191597.41</td><td>1012</td><td></td></tr><tr><td>LIV 52 SYP 100ML</td><td>5*56</td><td>1363.25</td><td>483</td><td>45553.47</td><td>209</td><td></td></tr><tr><td>LIV 52 SYP 200ML</td><td>63*28</td><td>5619.27</td><td>2011</td><td>317044.00</td><td>2011</td><td></td></tr><tr><td>LIV 52 TAB</td><td>100*1*100</td><td>3666.06</td><td>1207</td><td>180795.08</td><td>1202</td><td></td></tr></table>",
+            "bbox": [
+              0.0,
+              449.0,
+              7999.0,
+              4095.0
+            ],
+            "html": null,
+            "cells": null
+          }
+        ],
+        "available": true,
+        "count": 1
+      },
+      "latency_ms": 106738.41889999995,
+      "image_width": 8000,
+      "image_height": 4854,
+      "device": "gpu:0",
+      "metadata": {
+        "document_id": "0000730089_2026_08_ZL_24_244_05092026160041.pdf",
+        "source_path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000730089_2026_08_ZL_24_244_05092026160041.pdf",
+        "original_width": 4000.0,
+        "original_height": 2427.0,
+        "processed_width": 8000,
+        "processed_height": 4854,
+        "orientation": null,
+        "preprocessing": [
+          "pymupdf_render_zoom_2.0"
+        ],
+        "page_index": 2,
+        "page_count": 4,
+        "engine": "paddleocr-vl-1.6",
+        "model": "PaddleOCR-VL-1.6",
+        "model_version": "v1.6",
+        "pipeline_version": "v1.6",
+        "device": "gpu:0",
+        "init_latency_ms": 13877.782900000057,
+        "model_loaded": true,
+        "init_error": null,
+        "available": true,
+        "status": "success",
+        "latency_ms": 106738.41889999995,
+        "image_width": 8000,
+        "image_height": 4854,
+        "word_count": 60,
+        "block_count": 4,
+        "line_count": 4,
+        "lines": [
+          {
+            "text": "STOCK & SALES ANALYSES (HIMALAYA)\n27-03-2026|Fri|P| 17:13:",
+            "bbox": [
+              2449.0,
+              6.0,
+              5958.0,
+              253.0
+            ],
+            "label": "text",
+            "order": 0
+          },
+          {
+            "text": "01-03-2026-27-03-2026",
+            "bbox": [
+              3041.0,
+              194.0,
+              5430.0,
+              420.0
+            ],
+            "label": "text",
+            "order": 2
+          },
+          {
+            "text": "<table><tr><td rowspan=\"2\">ITEM</td><td rowspan=\"2\">DESCRIPTION</td><td>E</td><td colspan=\"3\">CLOSING</td><td rowspan=\"2\">DUMP</td></tr><tr><td>VALUE</td><td>QTY.</td><td>VALUE</td><td>QTY.</td></tr><tr><td>GALACTOSURE GRANULES ELA FLA</td><td>200GM</td><td>0.00</td><td>12</td><td>3353.24</td><td>-</td><td></td></tr><tr><td>GASEX SYP GINER 200 ML</td><td>1X28</td><td>366.16</td><td>-</td><td>0.00</td><td>-</td><td></td></tr><tr><td>GASEX TABLETS</td><td>1X100</td><td>6421.76</td><td>250</td><td>26719.28</td><td>250</td><td></td></tr><tr><td>GERIFORTE TAB 100&#x27;S</td><td>1*50</td><td>2389.86</td><td>23</td><td>2407.81</td><td>-</td><td></td></tr><tr><td>HERBOLAX TAB</td><td>50*1*100</td><td>2965.40</td><td>65</td><td>9229.18</td><td>65</td><td></td></tr><tr><td>HIMPLASIA TAB 30&#x27;S</td><td>1*50</td><td>9788.97</td><td>20</td><td>6950.37</td><td>-</td><td></td></tr><tr><td>HIORA K TOOTHPASTE 100G</td><td>6*50</td><td>0.00</td><td>1</td><td>102.12</td><td>1</td><td></td></tr><tr><td>HIORA K TOOTHPASTE 50G</td><td>50*1*50GM</td><td>0.00</td><td>39</td><td>2638.45</td><td>39</td><td></td></tr><tr><td>LIV 52 DROPS 100ML</td><td>56*1*100ML</td><td>0538.16</td><td>13</td><td>1593.96</td><td>1</td><td></td></tr><tr><td>LIV 52 DROPS 60ML</td><td>100*1*60ML</td><td>5399.35</td><td>100</td><td>9769.51</td><td>100</td><td></td></tr><tr><td>LIV 52 DS SYP 100ML</td><td>56*1*100ML</td><td>8559.03</td><td>97</td><td>13462.83</td><td>97</td><td></td></tr><tr><td>LIV 52 DS SYP 200ML</td><td>28*1*200ML</td><td>8015.97</td><td>206</td><td>48714.32</td><td>101</td><td></td></tr><tr><td>LIV 52 DS TAB</td><td>100*1*60</td><td>7238.04</td><td>1012</td><td>191597.41</td><td>1012</td><td></td></tr><tr><td>LIV 52 SYP 100ML</td><td>5*56</td><td>1363.25</td><td>483</td><td>45553.47</td><td>209</td><td></td></tr><tr><td>LIV 52 SYP 200ML</td><td>63*28</td><td>5619.27</td><td>2011</td><td>317044.00</td><td>2011</td><td></td></tr><tr><td>LIV 52 TAB</td><td>100*1*100</td><td>3666.06</td><td>1207</td><td>180795.08</td><td>1202</td><td></td></tr></table>",
+            "bbox": [
+              0.0,
+              449.0,
+              7999.0,
+              4095.0
+            ],
+            "label": "table",
+            "order": 3
+          },
+          {
+            "text": "HELP HIND 2",
+            "bbox": [
+              0.0,
+              4364.0,
+              832.0,
+              4487.0
+            ],
+            "label": "text",
+            "order": 4
+          }
+        ],
+        "reading_order": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "bbox_stats": {
+          "valid": 4,
+          "invalid": 0,
+          "total": 4
+        }
+      },
+      "error": null,
+      "error_type": null,
+      "page": 3,
+      "native_text": false,
+      "ocr_required": true,
+      "paddle_vl_status": "success",
+      "image_meta": {
+        "original_width": 4000.0,
+        "original_height": 2427.0,
+        "processed_width": 8000,
+        "processed_height": 4854,
+        "orientation": null,
+        "preprocessing": [
+          "pymupdf_render_zoom_2.0"
+        ],
+        "page_index": 2,
+        "page_count": 4
+      },
+      "resources": {
+        "cpu_percent": 4.0,
+        "ram_used_gb": 13.98,
+        "ram_total_gb": 15.31,
+        "gpu": "NVIDIA GeForce RTX 3050 6GB Laptop GPU",
+        "vram_used_gb": 11.084,
+        "vram_total_gb": 6.0
+      }
+    },
+    {
+      "engine": "paddleocr-vl-1.6",
+      "status": "success",
+      "model": "PaddleOCR-VL-1.6",
+      "model_version": "v1.6",
+      "text": "STOCK & SALES ANALYSIS (HIMALAYA)\n27-03-2026 | 21 | 17:12:54 D/NOTE\n01-03-2026-27-03-2026\n<table><tr><td>ITEM DESCRIPTION</td><td>E</td><td>CLOSING VALUE</td><td>QTY.</td><td>VALUE</td><td>DUMP QTY.</td></tr><tr><td>HIMALAYA</td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>BONNISAN DROPS 30ML</td><td>50*1*30ML</td><td>0.00</td><td>2</td><td>125.10</td><td>2</td></tr><tr><td>BONNISAN LIQUID 100ML</td><td>1*56</td><td>0.00</td><td>26</td><td>1277.90</td><td>26</td></tr><tr><td>CONFIDO TAB</td><td>100*1*60</td><td>4348.94</td><td>-</td><td>0.00</td><td>-</td></tr><tr><td>CYSTONE FORTE TAB 30&#x27;S</td><td>3*56</td><td>0.00</td><td>56</td><td>5746.21</td><td>-</td></tr><tr><td>CYSTONE SF LIQUID 200 ML</td><td>1X23</td><td>402.69</td><td>-</td><td>0.00</td><td>-</td></tr><tr><td>CYSTONE SYP 200ML</td><td>28*1*200ML</td><td>3233.48</td><td>50</td><td>8744.75</td><td>14</td></tr><tr><td>CYSTONE TAB</td><td>100*1*60</td><td>1630.23</td><td>998</td><td>165112.21</td><td>518</td></tr><tr><td>ENERZAL-ORANGE 75GM</td><td>20*1*50GM</td><td>0.00</td><td>30</td><td>1105.43</td><td>30</td></tr><tr><td>EVECARE FORTE LIQUID 200ML</td><td>28*1*200ML</td><td>0.00</td><td>84</td><td>14238.07</td><td>-</td></tr><tr><td>EVECARE SYP</td><td>28*1*200ML</td><td>3384.76</td><td>-</td><td>0.00</td><td>-</td></tr><tr><td>GALACTOSURE GRANULES ELA FLA</td><td>200GM</td><td>0.00</td><td>12</td><td>3353.24</td><td>-</td></tr><tr><td>GASEX SYP GINER 200 ML</td><td>1X23</td><td>366.16</td><td>-</td><td>0.00</td><td>-</td></tr><tr><td>GASEX TABLETS</td><td>1X100</td><td>6421.76</td><td>250</td><td>26719.28</td><td>250</td></tr><tr><td>GERIFORTE TAB 100&#x27;S</td><td>1*50</td><td>2389.86</td><td>23</td><td>2407.81</td><td>-</td></tr></table>\nHELP Find? [\nAuthorised MARG MASTER PARTNER\nKHAN MEDICINE CENTRE\nMar21911130969600+911166969600",
+      "normalized_text": "STOCK & SALES ANALYSIS (HIMALAYA) 27-03-2026 | 21 | 17:12:54 D/NOTE 01-03-2026-27-03-2026 <table><tr><td>ITEM DESCRIPTION</td><td>E</td><td>CLOSING VALUE</td><td>QTY.</td><td>VALUE</td><td>DUMP QTY.</td></tr><tr><td>HIMALAYA</td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>BONNISAN DROPS 30ML</td><td>50*1*30ML</td><td>0.00</td><td>2</td><td>125.10</td><td>2</td></tr><tr><td>BONNISAN LIQUID 100ML</td><td>1*56</td><td>0.00</td><td>26</td><td>1277.90</td><td>26</td></tr><tr><td>CONFIDO TAB</td><td>100*1*60</td><td>4348.94</td><td>-</td><td>0.00</td><td>-</td></tr><tr><td>CYSTONE FORTE TAB 30&#x27;S</td><td>3*56</td><td>0.00</td><td>56</td><td>5746.21</td><td>-</td></tr><tr><td>CYSTONE SF LIQUID 200 ML</td><td>1X23</td><td>402.69</td><td>-</td><td>0.00</td><td>-</td></tr><tr><td>CYSTONE SYP 200ML</td><td>28*1*200ML</td><td>3233.48</td><td>50</td><td>8744.75</td><td>14</td></tr><tr><td>CYSTONE TAB</td><td>100*1*60</td><td>1630.23</td><td>998</td><td>165112.21</td><td>518</td></tr><tr><td>ENERZAL-ORANGE 75GM</td><td>20*1*50GM</td><td>0.00</td><td>30</td><td>1105.43</td><td>30</td></tr><tr><td>EVECARE FORTE LIQUID 200ML</td><td>28*1*200ML</td><td>0.00</td><td>84</td><td>14238.07</td><td>-</td></tr><tr><td>EVECARE SYP</td><td>28*1*200ML</td><td>3384.76</td><td>-</td><td>0.00</td><td>-</td></tr><tr><td>GALACTOSURE GRANULES ELA FLA</td><td>200GM</td><td>0.00</td><td>12</td><td>3353.24</td><td>-</td></tr><tr><td>GASEX SYP GINER 200 ML</td><td>1X23</td><td>366.16</td><td>-</td><td>0.00</td><td>-</td></tr><tr><td>GASEX TABLETS</td><td>1X100</td><td>6421.76</td><td>250</td><td>26719.28</td><td>250</td></tr><tr><td>GERIFORTE TAB 100&#x27;S</td><td>1*50</td><td>2389.86</td><td>23</td><td>2407.81</td><td>-</td></tr></table> HELP Find? [ Authorised MARG MASTER PARTNER KHAN MEDICINE CENTRE Mar21911130969600+911166969600",
+      "word_count": 57,
+      "line_count": 6,
+      "numeric_tokens": [
+        "21",
+        "17",
+        "12",
+        "54",
+        "50",
+        "1",
+        "0.00",
+        "2",
+        "125.10",
+        "2",
+        "1",
+        "56",
+        "0.00",
+        "26",
+        "1277.90",
+        "26",
+        "100",
+        "1",
+        "60",
+        "4348.94",
+        "0.00",
+        "30",
+        "3",
+        "56",
+        "0.00",
+        "56",
+        "5746.21",
+        "200",
+        "402.69",
+        "0.00",
+        "28",
+        "1",
+        "3233.48",
+        "50",
+        "8744.75",
+        "14",
+        "100",
+        "1",
+        "60",
+        "1630.23",
+        "998",
+        "165112.21",
+        "518",
+        "20",
+        "1",
+        "0.00",
+        "30",
+        "1105.43",
+        "30",
+        "28",
+        "1",
+        "0.00",
+        "84",
+        "14238.07",
+        "28",
+        "1",
+        "3384.76",
+        "0.00",
+        "0.00",
+        "12",
+        "3353.24",
+        "200",
+        "366.16",
+        "0.00",
+        "6421.76",
+        "250",
+        "26719.28",
+        "250",
+        "100",
+        "1",
+        "50",
+        "2389.86",
+        "23",
+        "2407.81",
+        "911166969600"
+      ],
+      "words": [
+        {
+          "text": "STOCK & SALES ANALYSIS (HIMALAYA)\n27-03-2026 | 21 | 17:12:54 D/NOTE",
+          "bbox": [
+            2411.0,
+            0.0,
+            5517.0,
+            209.0
+          ],
+          "confidence": null,
+          "page": 4
+        },
+        {
+          "text": "01-03-2026-27-03-2026",
+          "bbox": [
+            2925.0,
+            133.0,
+            5061.0,
+            355.0
+          ],
+          "confidence": null,
+          "page": 4
+        },
+        {
+          "text": "<table><tr><td>ITEM DESCRIPTION</td><td>E</td><td>CLOSING VALUE</td><td>QTY.</td><td>VALUE</td><td>DUMP QTY.</td></tr><tr><td>HIMALAYA</td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>BONNISAN DROPS 30ML</td><td>50*1*30ML</td><td>0.00</td><td>2</td><td>125.10</td><td>2</td></tr><tr><td>BONNISAN LIQUID 100ML</td><td>1*56</td><td>0.00</td><td>26</td><td>1277.90</td><td>26</td></tr><tr><td>CONFIDO TAB</td><td>100*1*60</td><td>4348.94</td><td>-</td><td>0.00</td><td>-</td></tr><tr><td>CYSTONE FORTE TAB 30&#x27;S</td><td>3*56</td><td>0.00</td><td>56</td><td>5746.21</td><td>-</td></tr><tr><td>CYSTONE SF LIQUID 200 ML</td><td>1X23</td><td>402.69</td><td>-</td><td>0.00</td><td>-</td></tr><tr><td>CYSTONE SYP 200ML</td><td>28*1*200ML</td><td>3233.48</td><td>50</td><td>8744.75</td><td>14</td></tr><tr><td>CYSTONE TAB</td><td>100*1*60</td><td>1630.23</td><td>998</td><td>165112.21</td><td>518</td></tr><tr><td>ENERZAL-ORANGE 75GM</td><td>20*1*50GM</td><td>0.00</td><td>30</td><td>1105.43</td><td>30</td></tr><tr><td>EVECARE FORTE LIQUID 200ML</td><td>28*1*200ML</td><td>0.00</td><td>84</td><td>14238.07</td><td>-</td></tr><tr><td>EVECARE SYP</td><td>28*1*200ML</td><td>3384.76</td><td>-</td><td>0.00</td><td>-</td></tr><tr><td>GALACTOSURE GRANULES ELA FLA</td><td>200GM</td><td>0.00</td><td>12</td><td>3353.24</td><td>-</td></tr><tr><td>GASEX SYP GINER 200 ML</td><td>1X23</td><td>366.16</td><td>-</td><td>0.00</td><td>-</td></tr><tr><td>GASEX TABLETS</td><td>1X100</td><td>6421.76</td><td>250</td><td>26719.28</td><td>250</td></tr><tr><td>GERIFORTE TAB 100&#x27;S</td><td>1*50</td><td>2389.86</td><td>23</td><td>2407.81</td><td>-</td></tr></table>",
+          "bbox": [
+            224.0,
+            369.0,
+            7507.0,
+            3796.0
+          ],
+          "confidence": null,
+          "page": 4
+        },
+        {
+          "text": "HELP Find? [\nAuthorised MARG MASTER PARTNER",
+          "bbox": [
+            237.0,
+            3774.0,
+            1076.0,
+            3899.0
+          ],
+          "confidence": null,
+          "page": 4
+        },
+        {
+          "text": "KHAN MEDICINE CENTRE",
+          "bbox": [
+            4629.0,
+            4088.0,
+            6295.0,
+            4220.0
+          ],
+          "confidence": null,
+          "page": 4
+        },
+        {
+          "text": "Mar21911130969600+911166969600",
+          "bbox": [
+            251.0,
+            4308.0,
+            2118.0,
+            4434.0
+          ],
+          "confidence": null,
+          "page": 4
+        }
+      ],
+      "boxes": [
+        [
+          2411.0,
+          0.0,
+          5517.0,
+          209.0
+        ],
+        [
+          2925.0,
+          133.0,
+          5061.0,
+          355.0
+        ],
+        [
+          224.0,
+          369.0,
+          7507.0,
+          3796.0
+        ],
+        [
+          237.0,
+          3774.0,
+          1076.0,
+          3899.0
+        ],
+        [
+          4629.0,
+          4088.0,
+          6295.0,
+          4220.0
+        ],
+        [
+          251.0,
+          4308.0,
+          2118.0,
+          4434.0
+        ]
+      ],
+      "confidence": {
+        "mean": null,
+        "count": 0,
+        "available": false
+      },
+      "layout": {
+        "regions": [
+          {
+            "index": 0,
+            "label": "text",
+            "text": "STOCK & SALES ANALYSIS (HIMALAYA)\n27-03-2026 | 21 | 17:12:54 D/NOTE",
+            "bbox": [
+              2411.0,
+              0.0,
+              5517.0,
+              209.0
+            ],
+            "order": 0
+          },
+          {
+            "index": 1,
+            "label": "text",
+            "text": "",
+            "bbox": [
+              6184.0,
+              0.0,
+              7891.0,
+              151.0
+            ],
+            "order": 1
+          },
+          {
+            "index": 2,
+            "label": "text",
+            "text": "01-03-2026-27-03-2026",
+            "bbox": [
+              2925.0,
+              133.0,
+              5061.0,
+              355.0
+            ],
+            "order": 2
+          },
+          {
+            "index": 3,
+            "label": "table",
+            "text": "<table><tr><td>ITEM DESCRIPTION</td><td>E</td><td>CLOSING VALUE</td><td>QTY.</td><td>VALUE</td><td>DUMP QTY.</td></tr><tr><td>HIMALAYA</td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>BONNISAN DROPS 30ML</td><td>50*1*30ML</td><td>0.00</td><td>2</td><td>125.10</td><td>2</td></tr><tr><td>BONNISAN LIQUID 100ML</td><td>1*56</td><td>0.00</td><td>26</td><td>1277.90</td><td>26</td></tr><tr><td>CONFIDO TAB</td><td>100*1*60</td><td>4348.94</td><td>-</td><td>0.00</td><td>-</td></tr><tr><td>CYSTONE FORTE TAB 30&#x27;S</td><td>3*56</td><td>0.00</td><td>56</td><td>5746.21</td><td>-</td></tr><tr><td>CYSTONE SF LIQUID 200 ML</td><td>1X23</td><td>402.69</td><td>-</td><td>0.00</td><td>-</td></tr><tr><td>CYSTONE SYP 200ML</td><td>28*1*200ML</td><td>3233.48</td><td>50</td><td>8744.75</td><td>14</td></tr><tr><td>CYSTONE TAB</td><td>100*1*60</td><td>1630.23</td><td>998</td><td>165112.21</td><td>518</td></tr><tr><td>ENERZAL-ORANGE 75GM</td><td>20*1*50GM</td><td>0.00</td><td>30</td><td>1105.43</td><td>30</td></tr><tr><td>EVECARE FORTE LIQUID 200ML</td><td>28*1*200ML</td><td>0.00</td><td>84</td><td>14238.07</td><td>-</td></tr><tr><td>EVECARE SYP</td><td>28*1*200ML</td><td>3384.76</td><td>-</td><td>0.00</td><td>-</td></tr><tr><td>GALACTOSURE GRANULES ELA FLA</td><td>200GM</td><td>0.00</td><td>12</td><td>3353.24</td><td>-</td></tr><tr><td>GASEX SYP GINER 200 ML</td><td>1X23</td><td>366.16</td><td>-</td><td>0.00</td><td>-</td></tr><tr><td>GASEX TABLETS</td><td>1X100</td><td>6421.76</td><td>250</td><td>26719.28</td><td>250</td></tr><tr><td>GERIFORTE TAB 100&#x27;S</td><td>1*50</td><td>2389.86</td><td>23</td><td>2407.81</td><td>-</td></tr></table>",
+            "bbox": [
+              224.0,
+              369.0,
+              7507.0,
+              3796.0
+            ],
+            "order": 3
+          },
+          {
+            "index": 4,
+            "label": "text",
+            "text": "HELP Find? [\nAuthorised MARG MASTER PARTNER",
+            "bbox": [
+              237.0,
+              3774.0,
+              1076.0,
+              3899.0
+            ],
+            "order": 4
+          },
+          {
+            "index": 5,
+            "label": "text",
+            "text": "",
+            "bbox": [
+              239.0,
+              3935.0,
+              1864.0,
+              4060.0
+            ],
+            "order": 5
+          },
+          {
+            "index": 6,
+            "label": "footer",
+            "text": "KHAN MEDICINE CENTRE",
+            "bbox": [
+              4629.0,
+              4088.0,
+              6295.0,
+              4220.0
+            ],
+            "order": 6
+          },
+          {
+            "index": 7,
+            "label": "text",
+            "text": "Mar21911130969600+911166969600",
+            "bbox": [
+              251.0,
+              4308.0,
+              2118.0,
+              4434.0
+            ],
+            "order": 7
+          }
+        ],
+        "available": true
+      },
+      "tables": {
+        "items": [
+          {
+            "index": 3,
+            "label": "table",
+            "text": "<table><tr><td>ITEM DESCRIPTION</td><td>E</td><td>CLOSING VALUE</td><td>QTY.</td><td>VALUE</td><td>DUMP QTY.</td></tr><tr><td>HIMALAYA</td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>BONNISAN DROPS 30ML</td><td>50*1*30ML</td><td>0.00</td><td>2</td><td>125.10</td><td>2</td></tr><tr><td>BONNISAN LIQUID 100ML</td><td>1*56</td><td>0.00</td><td>26</td><td>1277.90</td><td>26</td></tr><tr><td>CONFIDO TAB</td><td>100*1*60</td><td>4348.94</td><td>-</td><td>0.00</td><td>-</td></tr><tr><td>CYSTONE FORTE TAB 30&#x27;S</td><td>3*56</td><td>0.00</td><td>56</td><td>5746.21</td><td>-</td></tr><tr><td>CYSTONE SF LIQUID 200 ML</td><td>1X23</td><td>402.69</td><td>-</td><td>0.00</td><td>-</td></tr><tr><td>CYSTONE SYP 200ML</td><td>28*1*200ML</td><td>3233.48</td><td>50</td><td>8744.75</td><td>14</td></tr><tr><td>CYSTONE TAB</td><td>100*1*60</td><td>1630.23</td><td>998</td><td>165112.21</td><td>518</td></tr><tr><td>ENERZAL-ORANGE 75GM</td><td>20*1*50GM</td><td>0.00</td><td>30</td><td>1105.43</td><td>30</td></tr><tr><td>EVECARE FORTE LIQUID 200ML</td><td>28*1*200ML</td><td>0.00</td><td>84</td><td>14238.07</td><td>-</td></tr><tr><td>EVECARE SYP</td><td>28*1*200ML</td><td>3384.76</td><td>-</td><td>0.00</td><td>-</td></tr><tr><td>GALACTOSURE GRANULES ELA FLA</td><td>200GM</td><td>0.00</td><td>12</td><td>3353.24</td><td>-</td></tr><tr><td>GASEX SYP GINER 200 ML</td><td>1X23</td><td>366.16</td><td>-</td><td>0.00</td><td>-</td></tr><tr><td>GASEX TABLETS</td><td>1X100</td><td>6421.76</td><td>250</td><td>26719.28</td><td>250</td></tr><tr><td>GERIFORTE TAB 100&#x27;S</td><td>1*50</td><td>2389.86</td><td>23</td><td>2407.81</td><td>-</td></tr></table>",
+            "bbox": [
+              224.0,
+              369.0,
+              7507.0,
+              3796.0
+            ],
+            "html": null,
+            "cells": null
+          }
+        ],
+        "available": true,
+        "count": 1
+      },
+      "latency_ms": 116102.65570000002,
+      "image_width": 8000,
+      "image_height": 4854,
+      "device": "gpu:0",
+      "metadata": {
+        "document_id": "0000730089_2026_08_ZL_24_244_05092026160041.pdf",
+        "source_path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000730089_2026_08_ZL_24_244_05092026160041.pdf",
+        "original_width": 4000.0,
+        "original_height": 2427.0,
+        "processed_width": 8000,
+        "processed_height": 4854,
+        "orientation": null,
+        "preprocessing": [
+          "pymupdf_render_zoom_2.0"
+        ],
+        "page_index": 3,
+        "page_count": 4,
+        "engine": "paddleocr-vl-1.6",
+        "model": "PaddleOCR-VL-1.6",
+        "model_version": "v1.6",
+        "pipeline_version": "v1.6",
+        "device": "gpu:0",
+        "init_latency_ms": 13877.782900000057,
+        "model_loaded": true,
+        "init_error": null,
+        "available": true,
+        "status": "success",
+        "latency_ms": 116102.65570000002,
+        "image_width": 8000,
+        "image_height": 4854,
+        "word_count": 57,
+        "block_count": 6,
+        "line_count": 6,
+        "lines": [
+          {
+            "text": "STOCK & SALES ANALYSIS (HIMALAYA)\n27-03-2026 | 21 | 17:12:54 D/NOTE",
+            "bbox": [
+              2411.0,
+              0.0,
+              5517.0,
+              209.0
+            ],
+            "label": "text",
+            "order": 0
+          },
+          {
+            "text": "01-03-2026-27-03-2026",
+            "bbox": [
+              2925.0,
+              133.0,
+              5061.0,
+              355.0
+            ],
+            "label": "text",
+            "order": 2
+          },
+          {
+            "text": "<table><tr><td>ITEM DESCRIPTION</td><td>E</td><td>CLOSING VALUE</td><td>QTY.</td><td>VALUE</td><td>DUMP QTY.</td></tr><tr><td>HIMALAYA</td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>BONNISAN DROPS 30ML</td><td>50*1*30ML</td><td>0.00</td><td>2</td><td>125.10</td><td>2</td></tr><tr><td>BONNISAN LIQUID 100ML</td><td>1*56</td><td>0.00</td><td>26</td><td>1277.90</td><td>26</td></tr><tr><td>CONFIDO TAB</td><td>100*1*60</td><td>4348.94</td><td>-</td><td>0.00</td><td>-</td></tr><tr><td>CYSTONE FORTE TAB 30&#x27;S</td><td>3*56</td><td>0.00</td><td>56</td><td>5746.21</td><td>-</td></tr><tr><td>CYSTONE SF LIQUID 200 ML</td><td>1X23</td><td>402.69</td><td>-</td><td>0.00</td><td>-</td></tr><tr><td>CYSTONE SYP 200ML</td><td>28*1*200ML</td><td>3233.48</td><td>50</td><td>8744.75</td><td>14</td></tr><tr><td>CYSTONE TAB</td><td>100*1*60</td><td>1630.23</td><td>998</td><td>165112.21</td><td>518</td></tr><tr><td>ENERZAL-ORANGE 75GM</td><td>20*1*50GM</td><td>0.00</td><td>30</td><td>1105.43</td><td>30</td></tr><tr><td>EVECARE FORTE LIQUID 200ML</td><td>28*1*200ML</td><td>0.00</td><td>84</td><td>14238.07</td><td>-</td></tr><tr><td>EVECARE SYP</td><td>28*1*200ML</td><td>3384.76</td><td>-</td><td>0.00</td><td>-</td></tr><tr><td>GALACTOSURE GRANULES ELA FLA</td><td>200GM</td><td>0.00</td><td>12</td><td>3353.24</td><td>-</td></tr><tr><td>GASEX SYP GINER 200 ML</td><td>1X23</td><td>366.16</td><td>-</td><td>0.00</td><td>-</td></tr><tr><td>GASEX TABLETS</td><td>1X100</td><td>6421.76</td><td>250</td><td>26719.28</td><td>250</td></tr><tr><td>GERIFORTE TAB 100&#x27;S</td><td>1*50</td><td>2389.86</td><td>23</td><td>2407.81</td><td>-</td></tr></table>",
+            "bbox": [
+              224.0,
+              369.0,
+              7507.0,
+              3796.0
+            ],
+            "label": "table",
+            "order": 3
+          },
+          {
+            "text": "HELP Find? [\nAuthorised MARG MASTER PARTNER",
+            "bbox": [
+              237.0,
+              3774.0,
+              1076.0,
+              3899.0
+            ],
+            "label": "text",
+            "order": 4
+          },
+          {
+            "text": "KHAN MEDICINE CENTRE",
+            "bbox": [
+              4629.0,
+              4088.0,
+              6295.0,
+              4220.0
+            ],
+            "label": "footer",
+            "order": 6
+          },
+          {
+            "text": "Mar21911130969600+911166969600",
+            "bbox": [
+              251.0,
+              4308.0,
+              2118.0,
+              4434.0
+            ],
+            "label": "text",
+            "order": 7
+          }
+        ],
+        "reading_order": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "bbox_stats": {
+          "valid": 6,
+          "invalid": 0,
+          "total": 6
+        }
+      },
+      "error": null,
+      "error_type": null,
+      "page": 4,
+      "native_text": false,
+      "ocr_required": true,
+      "paddle_vl_status": "success",
+      "image_meta": {
+        "original_width": 4000.0,
+        "original_height": 2427.0,
+        "processed_width": 8000,
+        "processed_height": 4854,
+        "orientation": null,
+        "preprocessing": [
+          "pymupdf_render_zoom_2.0"
+        ],
+        "page_index": 3,
+        "page_count": 4
+      },
+      "resources": {
+        "cpu_percent": 1.4,
+        "ram_used_gb": 14.02,
+        "ram_total_gb": 15.31,
+        "gpu": "NVIDIA GeForce RTX 3050 6GB Laptop GPU",
+        "vram_used_gb": 11.084,
+        "vram_total_gb": 6.0
+      }
+    }
+  ],
+  "status": "success",
+  "errors": [],
+  "latency_ms": 458298.1503999999,
+  "finished_at": "2026-10-08T12:36:09.697599+00:00",
+  "resources": {
+    "cpu_percent": 9.5,
+    "ram_used_gb": 14.02,
+    "ram_total_gb": 15.31,
+    "gpu": "NVIDIA GeForce RTX 3050 6GB Laptop GPU",
+    "vram_used_gb": 11.084,
+    "vram_total_gb": 6.0
+  }
+}

@@ -1,0 +1,579 @@
+{
+  "document_id": "0000700406_2026_08_ZL_10_384_05092026140711.jpg",
+  "relative_path": "0000700406_2026_08_ZL_10_384_05092026140711.jpg",
+  "source_path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700406_2026_08_ZL_10_384_05092026140711.jpg",
+  "file_type": "image",
+  "pdf_kind": null,
+  "manifest_ocr_required": true,
+  "engine": "paddleocr-vl-1.6",
+  "model": "PaddleOCR-VL-1.6",
+  "model_version": "v1.6",
+  "started_at": "2026-10-08T12:49:45.326533+00:00",
+  "pages": [
+    {
+      "engine": "paddleocr-vl-1.6",
+      "status": "success",
+      "model": "PaddleOCR-VL-1.6",
+      "model_version": "v1.6",
+      "text": "ADARSH PHARMA BELGAUM\nGROUND FLOOR, DESHPANDE GALLI, BELGAUM - 590002\nPhone: 0831-4200571, 9449088569, 8494939569\nD.L.No.: KA-BGM-20B-809/21B-774\nHIMALAY ZEAL STOCK & SALES STATEMENT 01-08-2026 - 29-08-2026\n<table><tr><td>7</td><td>PRODUCT DESCRIPTION</td><td>OPENING STOCK</td><td>OPENING VALUE</td><td>RECEIVE QUANTITY</td><td>RECEIVE VALUE</td><td>ISSUE QUANTITY</td><td>ISSUE VALUE</td><td>CLOSING STOCK</td><td>CLOSING VALUE</td><td>EXPIRY STOCK</td></tr><tr><td>8</td><td>AACTARIL SOAP 75G 75GM</td><td>40</td><td>3107.2</td><td>0</td><td>0</td><td>3</td><td>256.6</td><td>37</td><td>2874.16</td><td>01-Nov-27</td></tr><tr><td>9</td><td>CLARINA ANTI ACNE CREAM 30GM</td><td>29</td><td>3397.06</td><td>0</td><td>0</td><td>0</td><td>0</td><td>29</td><td>3397.06</td><td>01-Feb-28</td></tr><tr><td>10</td><td>CLARINA ANTI ACNE FACE WASH GE 60ML</td><td>50</td><td>4958</td><td>0</td><td>0</td><td>0</td><td>0</td><td>50</td><td>4958</td><td>01-Dec-27</td></tr><tr><td>11</td><td>CONFIDO TAB 60&#x27;S</td><td>70</td><td>10416.7</td><td>0</td><td>0</td><td>1</td><td>167.86</td><td>69</td><td>10267.89</td><td>01-Dec-27</td></tr><tr><td>12</td><td>DIABECON-DS 60&#x27;S</td><td>43</td><td>8277.07</td><td>0</td><td>0</td><td>0</td><td>0</td><td>43</td><td>8277.07</td><td>01-Dec-27</td></tr><tr><td>13</td><td>HARIDRA TAB 60</td><td>57</td><td>8193.75</td><td>0</td><td>0</td><td>0</td><td>0</td><td>57</td><td>8193.75</td><td>01-Aug-26</td></tr><tr><td>14</td><td>HERBOLAX TAB</td><td>39</td><td>5309.85</td><td>0</td><td>0</td><td>0</td><td>0</td><td>39</td><td>5309.85</td><td>01-Feb-28</td></tr><tr><td>15</td><td>HIMCOLIN GEL 30GM</td><td>43</td><td>8829.19</td><td>0</td><td>0</td><td>1</td><td>231.62</td><td>42</td><td>8623.86</td><td>01-Mar-27</td></tr><tr><td>16</td><td>HIORA D TOOTHPASTE DIABETIC 100GM</td><td>45</td><td>4057.2</td><td>0</td><td>0</td><td>0</td><td>0</td><td>45</td><td>4057.2</td><td>01-Oct-27</td></tr><tr><td>17</td><td>HIORA DIABETICS TOOTHPASTE 100GM</td><td>48</td><td>4164.96</td><td>0</td><td>0</td><td>0</td><td>0</td><td>48</td><td>4164.96</td><td>01-Oct-27</td></tr><tr><td>18</td><td>LIV 52 SYP 100ML</td><td>40</td><td>3782</td><td>70</td><td>6618.5</td><td>28</td><td>2980.88</td><td>82</td><td>7753.1</td><td>01-Apr-29</td></tr><tr><td>19</td><td>LIV 52 SYP 200ML</td><td>48</td><td>7586.4</td><td>0</td><td>0</td><td>6</td><td>1072.8</td><td>42</td><td>6638.1</td><td>01-Apr-27</td></tr><tr><td>20</td><td>LIV 52 TAB 100&#x27;S</td><td>32</td><td>4755.2</td><td>100</td><td>14860</td><td>21</td><td>3520.02</td><td>111</td><td>16494.6</td><td>01-Dec-28</td></tr><tr><td>21</td><td>OPHTHACARE EYE DROPS 10ML</td><td>63</td><td>4382.91</td><td>0</td><td>0</td><td>0</td><td>0</td><td>63</td><td>4382.91</td><td>01-Mar-28</td></tr><tr><td>22</td><td>PILEX FORTE OINTMENT 30GM</td><td>25</td><td>2532.75</td><td>0</td><td>0</td><td>23</td><td>2628.44</td><td>2</td><td>202.62</td><td>01-Mar-28</td></tr><tr><td>23</td><td>PILEX FORTE TABLETS 2X30 S (IN 1</td><td>80</td><td>8321.6</td><td>0</td><td>0</td><td>3</td><td>351.21</td><td>77</td><td>8009.54</td><td>01-Sep-26</td></tr><tr><td>24</td><td>PILEX TAB 60&#x27;S</td><td>40</td><td>7131.2</td><td>0</td><td>0</td><td>7</td><td>1247.96</td><td>33</td><td>5883.24</td><td>01-Feb-28</td></tr><tr><td>25</td><td>PURIM TAB 60&#x27;S</td><td>49</td><td>5429.69</td><td>0</td><td>0</td><td>1</td><td>125</td><td>48</td><td>5318.88</td><td>01-Feb-28</td></tr><tr><td>26</td><td>TENTEX FORTE TABS 10&#x27;S</td><td>245</td><td>21675.15</td><td>0</td><td>0</td><td>6</td><td>598.8</td><td>239</td><td>21144.33</td><td>01-Mar-28</td></tr><tr><td>27</td><td>TOTAL</td><td>1086</td><td>126307.88</td><td>170</td><td>21478.5</td><td>100</td><td>13181.19</td><td>1156</td><td>135951.12</td><td>- -</td></tr></table>",
+      "normalized_text": "ADARSH PHARMA BELGAUM GROUND FLOOR, DESHPANDE GALLI, BELGAUM - 590002 Phone: 0831-4200571, 9449088569, 8494939569 D.L.No.: KA-BGM-20B-809/21B-774 HIMALAY ZEAL STOCK & SALES STATEMENT 01-08-2026 - 29-08-2026 <table><tr><td>7</td><td>PRODUCT DESCRIPTION</td><td>OPENING STOCK</td><td>OPENING VALUE</td><td>RECEIVE QUANTITY</td><td>RECEIVE VALUE</td><td>ISSUE QUANTITY</td><td>ISSUE VALUE</td><td>CLOSING STOCK</td><td>CLOSING VALUE</td><td>EXPIRY STOCK</td></tr><tr><td>8</td><td>AACTARIL SOAP 75G 75GM</td><td>40</td><td>3107.2</td><td>0</td><td>0</td><td>3</td><td>256.6</td><td>37</td><td>2874.16</td><td>01-Nov-27</td></tr><tr><td>9</td><td>CLARINA ANTI ACNE CREAM 30GM</td><td>29</td><td>3397.06</td><td>0</td><td>0</td><td>0</td><td>0</td><td>29</td><td>3397.06</td><td>01-Feb-28</td></tr><tr><td>10</td><td>CLARINA ANTI ACNE FACE WASH GE 60ML</td><td>50</td><td>4958</td><td>0</td><td>0</td><td>0</td><td>0</td><td>50</td><td>4958</td><td>01-Dec-27</td></tr><tr><td>11</td><td>CONFIDO TAB 60&#x27;S</td><td>70</td><td>10416.7</td><td>0</td><td>0</td><td>1</td><td>167.86</td><td>69</td><td>10267.89</td><td>01-Dec-27</td></tr><tr><td>12</td><td>DIABECON-DS 60&#x27;S</td><td>43</td><td>8277.07</td><td>0</td><td>0</td><td>0</td><td>0</td><td>43</td><td>8277.07</td><td>01-Dec-27</td></tr><tr><td>13</td><td>HARIDRA TAB 60</td><td>57</td><td>8193.75</td><td>0</td><td>0</td><td>0</td><td>0</td><td>57</td><td>8193.75</td><td>01-Aug-26</td></tr><tr><td>14</td><td>HERBOLAX TAB</td><td>39</td><td>5309.85</td><td>0</td><td>0</td><td>0</td><td>0</td><td>39</td><td>5309.85</td><td>01-Feb-28</td></tr><tr><td>15</td><td>HIMCOLIN GEL 30GM</td><td>43</td><td>8829.19</td><td>0</td><td>0</td><td>1</td><td>231.62</td><td>42</td><td>8623.86</td><td>01-Mar-27</td></tr><tr><td>16</td><td>HIORA D TOOTHPASTE DIABETIC 100GM</td><td>45</td><td>4057.2</td><td>0</td><td>0</td><td>0</td><td>0</td><td>45</td><td>4057.2</td><td>01-Oct-27</td></tr><tr><td>17</td><td>HIORA DIABETICS TOOTHPASTE 100GM</td><td>48</td><td>4164.96</td><td>0</td><td>0</td><td>0</td><td>0</td><td>48</td><td>4164.96</td><td>01-Oct-27</td></tr><tr><td>18</td><td>LIV 52 SYP 100ML</td><td>40</td><td>3782</td><td>70</td><td>6618.5</td><td>28</td><td>2980.88</td><td>82</td><td>7753.1</td><td>01-Apr-29</td></tr><tr><td>19</td><td>LIV 52 SYP 200ML</td><td>48</td><td>7586.4</td><td>0</td><td>0</td><td>6</td><td>1072.8</td><td>42</td><td>6638.1</td><td>01-Apr-27</td></tr><tr><td>20</td><td>LIV 52 TAB 100&#x27;S</td><td>32</td><td>4755.2</td><td>100</td><td>14860</td><td>21</td><td>3520.02</td><td>111</td><td>16494.6</td><td>01-Dec-28</td></tr><tr><td>21</td><td>OPHTHACARE EYE DROPS 10ML</td><td>63</td><td>4382.91</td><td>0</td><td>0</td><td>0</td><td>0</td><td>63</td><td>4382.91</td><td>01-Mar-28</td></tr><tr><td>22</td><td>PILEX FORTE OINTMENT 30GM</td><td>25</td><td>2532.75</td><td>0</td><td>0</td><td>23</td><td>2628.44</td><td>2</td><td>202.62</td><td>01-Mar-28</td></tr><tr><td>23</td><td>PILEX FORTE TABLETS 2X30 S (IN 1</td><td>80</td><td>8321.6</td><td>0</td><td>0</td><td>3</td><td>351.21</td><td>77</td><td>8009.54</td><td>01-Sep-26</td></tr><tr><td>24</td><td>PILEX TAB 60&#x27;S</td><td>40</td><td>7131.2</td><td>0</td><td>0</td><td>7</td><td>1247.96</td><td>33</td><td>5883.24</td><td>01-Feb-28</td></tr><tr><td>25</td><td>PURIM TAB 60&#x27;S</td><td>49</td><td>5429.69</td><td>0</td><td>0</td><td>1</td><td>125</td><td>48</td><td>5318.88</td><td>01-Feb-28</td></tr><tr><td>26</td><td>TENTEX FORTE TABS 10&#x27;S</td><td>245</td><td>21675.15</td><td>0</td><td>0</td><td>6</td><td>598.8</td><td>239</td><td>21144.33</td><td>01-Mar-28</td></tr><tr><td>27</td><td>TOTAL</td><td>1086</td><td>126307.88</td><td>170</td><td>21478.5</td><td>100</td><td>13181.19</td><td>1156</td><td>135951.12</td><td>- -</td></tr></table>",
+      "word_count": 93,
+      "line_count": 6,
+      "numeric_tokens": [
+        "590002",
+        "9449088569",
+        "8494939569",
+        "7",
+        "8",
+        "40",
+        "3107.2",
+        "0",
+        "0",
+        "3",
+        "256.6",
+        "37",
+        "2874.16",
+        "9",
+        "29",
+        "3397.06",
+        "0",
+        "0",
+        "0",
+        "0",
+        "29",
+        "3397.06",
+        "10",
+        "50",
+        "4958",
+        "0",
+        "0",
+        "0",
+        "0",
+        "50",
+        "4958",
+        "11",
+        "60",
+        "70",
+        "10416.7",
+        "0",
+        "0",
+        "1",
+        "167.86",
+        "69",
+        "10267.89",
+        "12",
+        "60",
+        "43",
+        "8277.07",
+        "0",
+        "0",
+        "0",
+        "0",
+        "43",
+        "8277.07",
+        "13",
+        "60",
+        "57",
+        "8193.75",
+        "0",
+        "0",
+        "0",
+        "0",
+        "57",
+        "8193.75",
+        "14",
+        "39",
+        "5309.85",
+        "0",
+        "0",
+        "0",
+        "0",
+        "39",
+        "5309.85",
+        "15",
+        "43",
+        "8829.19",
+        "0",
+        "0",
+        "1",
+        "231.62",
+        "42",
+        "8623.86",
+        "16",
+        "45",
+        "4057.2",
+        "0",
+        "0",
+        "0",
+        "0",
+        "45",
+        "4057.2",
+        "17",
+        "48",
+        "4164.96",
+        "0",
+        "0",
+        "0",
+        "0",
+        "48",
+        "4164.96",
+        "18",
+        "52",
+        "40",
+        "3782",
+        "70",
+        "6618.5",
+        "28",
+        "2980.88",
+        "82",
+        "7753.1",
+        "19",
+        "52",
+        "48",
+        "7586.4",
+        "0",
+        "0",
+        "6",
+        "1072.8",
+        "42",
+        "6638.1",
+        "20",
+        "52",
+        "100",
+        "32",
+        "4755.2",
+        "100",
+        "14860",
+        "21",
+        "3520.02",
+        "111",
+        "16494.6",
+        "21",
+        "63",
+        "4382.91",
+        "0",
+        "0",
+        "0",
+        "0",
+        "63",
+        "4382.91",
+        "22",
+        "25",
+        "2532.75",
+        "0",
+        "0",
+        "23",
+        "2628.44",
+        "2",
+        "202.62",
+        "23",
+        "1",
+        "80",
+        "8321.6",
+        "0",
+        "0",
+        "3",
+        "351.21",
+        "77",
+        "8009.54",
+        "24",
+        "60",
+        "40",
+        "7131.2",
+        "0",
+        "0",
+        "7",
+        "1247.96",
+        "33",
+        "5883.24",
+        "25",
+        "60",
+        "49",
+        "5429.69",
+        "0",
+        "0",
+        "1",
+        "125",
+        "48",
+        "5318.88",
+        "26",
+        "10",
+        "245",
+        "21675.15",
+        "0",
+        "0",
+        "6",
+        "598.8",
+        "239",
+        "21144.33",
+        "27",
+        "1086",
+        "126307.88",
+        "170",
+        "21478.5",
+        "100",
+        "13181.19",
+        "1156",
+        "135951.12"
+      ],
+      "words": [
+        {
+          "text": "ADARSH PHARMA BELGAUM",
+          "bbox": [
+            432.0,
+            0.0,
+            675.0,
+            20.0
+          ],
+          "confidence": null,
+          "page": 1
+        },
+        {
+          "text": "GROUND FLOOR, DESHPANDE GALLI, BELGAUM - 590002",
+          "bbox": [
+            397.0,
+            22.0,
+            710.0,
+            39.0
+          ],
+          "confidence": null,
+          "page": 1
+        },
+        {
+          "text": "Phone: 0831-4200571, 9449088569, 8494939569",
+          "bbox": [
+            376.0,
+            44.0,
+            730.0,
+            64.0
+          ],
+          "confidence": null,
+          "page": 1
+        },
+        {
+          "text": "D.L.No.: KA-BGM-20B-809/21B-774",
+          "bbox": [
+            424.0,
+            65.0,
+            684.0,
+            84.0
+          ],
+          "confidence": null,
+          "page": 1
+        },
+        {
+          "text": "HIMALAY ZEAL STOCK & SALES STATEMENT 01-08-2026 - 29-08-2026",
+          "bbox": [
+            332.0,
+            85.0,
+            777.0,
+            104.0
+          ],
+          "confidence": null,
+          "page": 1
+        },
+        {
+          "text": "<table><tr><td>7</td><td>PRODUCT DESCRIPTION</td><td>OPENING STOCK</td><td>OPENING VALUE</td><td>RECEIVE QUANTITY</td><td>RECEIVE VALUE</td><td>ISSUE QUANTITY</td><td>ISSUE VALUE</td><td>CLOSING STOCK</td><td>CLOSING VALUE</td><td>EXPIRY STOCK</td></tr><tr><td>8</td><td>AACTARIL SOAP 75G 75GM</td><td>40</td><td>3107.2</td><td>0</td><td>0</td><td>3</td><td>256.6</td><td>37</td><td>2874.16</td><td>01-Nov-27</td></tr><tr><td>9</td><td>CLARINA ANTI ACNE CREAM 30GM</td><td>29</td><td>3397.06</td><td>0</td><td>0</td><td>0</td><td>0</td><td>29</td><td>3397.06</td><td>01-Feb-28</td></tr><tr><td>10</td><td>CLARINA ANTI ACNE FACE WASH GE 60ML</td><td>50</td><td>4958</td><td>0</td><td>0</td><td>0</td><td>0</td><td>50</td><td>4958</td><td>01-Dec-27</td></tr><tr><td>11</td><td>CONFIDO TAB 60&#x27;S</td><td>70</td><td>10416.7</td><td>0</td><td>0</td><td>1</td><td>167.86</td><td>69</td><td>10267.89</td><td>01-Dec-27</td></tr><tr><td>12</td><td>DIABECON-DS 60&#x27;S</td><td>43</td><td>8277.07</td><td>0</td><td>0</td><td>0</td><td>0</td><td>43</td><td>8277.07</td><td>01-Dec-27</td></tr><tr><td>13</td><td>HARIDRA TAB 60</td><td>57</td><td>8193.75</td><td>0</td><td>0</td><td>0</td><td>0</td><td>57</td><td>8193.75</td><td>01-Aug-26</td></tr><tr><td>14</td><td>HERBOLAX TAB</td><td>39</td><td>5309.85</td><td>0</td><td>0</td><td>0</td><td>0</td><td>39</td><td>5309.85</td><td>01-Feb-28</td></tr><tr><td>15</td><td>HIMCOLIN GEL 30GM</td><td>43</td><td>8829.19</td><td>0</td><td>0</td><td>1</td><td>231.62</td><td>42</td><td>8623.86</td><td>01-Mar-27</td></tr><tr><td>16</td><td>HIORA D TOOTHPASTE DIABETIC 100GM</td><td>45</td><td>4057.2</td><td>0</td><td>0</td><td>0</td><td>0</td><td>45</td><td>4057.2</td><td>01-Oct-27</td></tr><tr><td>17</td><td>HIORA DIABETICS TOOTHPASTE 100GM</td><td>48</td><td>4164.96</td><td>0</td><td>0</td><td>0</td><td>0</td><td>48</td><td>4164.96</td><td>01-Oct-27</td></tr><tr><td>18</td><td>LIV 52 SYP 100ML</td><td>40</td><td>3782</td><td>70</td><td>6618.5</td><td>28</td><td>2980.88</td><td>82</td><td>7753.1</td><td>01-Apr-29</td></tr><tr><td>19</td><td>LIV 52 SYP 200ML</td><td>48</td><td>7586.4</td><td>0</td><td>0</td><td>6</td><td>1072.8</td><td>42</td><td>6638.1</td><td>01-Apr-27</td></tr><tr><td>20</td><td>LIV 52 TAB 100&#x27;S</td><td>32</td><td>4755.2</td><td>100</td><td>14860</td><td>21</td><td>3520.02</td><td>111</td><td>16494.6</td><td>01-Dec-28</td></tr><tr><td>21</td><td>OPHTHACARE EYE DROPS 10ML</td><td>63</td><td>4382.91</td><td>0</td><td>0</td><td>0</td><td>0</td><td>63</td><td>4382.91</td><td>01-Mar-28</td></tr><tr><td>22</td><td>PILEX FORTE OINTMENT 30GM</td><td>25</td><td>2532.75</td><td>0</td><td>0</td><td>23</td><td>2628.44</td><td>2</td><td>202.62</td><td>01-Mar-28</td></tr><tr><td>23</td><td>PILEX FORTE TABLETS 2X30 S (IN 1</td><td>80</td><td>8321.6</td><td>0</td><td>0</td><td>3</td><td>351.21</td><td>77</td><td>8009.54</td><td>01-Sep-26</td></tr><tr><td>24</td><td>PILEX TAB 60&#x27;S</td><td>40</td><td>7131.2</td><td>0</td><td>0</td><td>7</td><td>1247.96</td><td>33</td><td>5883.24</td><td>01-Feb-28</td></tr><tr><td>25</td><td>PURIM TAB 60&#x27;S</td><td>49</td><td>5429.69</td><td>0</td><td>0</td><td>1</td><td>125</td><td>48</td><td>5318.88</td><td>01-Feb-28</td></tr><tr><td>26</td><td>TENTEX FORTE TABS 10&#x27;S</td><td>245</td><td>21675.15</td><td>0</td><td>0</td><td>6</td><td>598.8</td><td>239</td><td>21144.33</td><td>01-Mar-28</td></tr><tr><td>27</td><td>TOTAL</td><td>1086</td><td>126307.88</td><td>170</td><td>21478.5</td><td>100</td><td>13181.19</td><td>1156</td><td>135951.12</td><td>- -</td></tr></table>",
+          "bbox": [
+            1.0,
+            125.0,
+            1046.0,
+            573.0
+          ],
+          "confidence": null,
+          "page": 1
+        }
+      ],
+      "boxes": [
+        [
+          432.0,
+          0.0,
+          675.0,
+          20.0
+        ],
+        [
+          397.0,
+          22.0,
+          710.0,
+          39.0
+        ],
+        [
+          376.0,
+          44.0,
+          730.0,
+          64.0
+        ],
+        [
+          424.0,
+          65.0,
+          684.0,
+          84.0
+        ],
+        [
+          332.0,
+          85.0,
+          777.0,
+          104.0
+        ],
+        [
+          1.0,
+          125.0,
+          1046.0,
+          573.0
+        ]
+      ],
+      "confidence": {
+        "mean": null,
+        "count": 0,
+        "available": false
+      },
+      "layout": {
+        "regions": [
+          {
+            "index": 0,
+            "label": "doc_title",
+            "text": "ADARSH PHARMA BELGAUM",
+            "bbox": [
+              432.0,
+              0.0,
+              675.0,
+              20.0
+            ],
+            "order": 0
+          },
+          {
+            "index": 1,
+            "label": "text",
+            "text": "GROUND FLOOR, DESHPANDE GALLI, BELGAUM - 590002",
+            "bbox": [
+              397.0,
+              22.0,
+              710.0,
+              39.0
+            ],
+            "order": 1
+          },
+          {
+            "index": 2,
+            "label": "text",
+            "text": "Phone: 0831-4200571, 9449088569, 8494939569",
+            "bbox": [
+              376.0,
+              44.0,
+              730.0,
+              64.0
+            ],
+            "order": 2
+          },
+          {
+            "index": 3,
+            "label": "text",
+            "text": "D.L.No.: KA-BGM-20B-809/21B-774",
+            "bbox": [
+              424.0,
+              65.0,
+              684.0,
+              84.0
+            ],
+            "order": 3
+          },
+          {
+            "index": 4,
+            "label": "text",
+            "text": "HIMALAY ZEAL STOCK & SALES STATEMENT 01-08-2026 - 29-08-2026",
+            "bbox": [
+              332.0,
+              85.0,
+              777.0,
+              104.0
+            ],
+            "order": 4
+          },
+          {
+            "index": 5,
+            "label": "table",
+            "text": "<table><tr><td>7</td><td>PRODUCT DESCRIPTION</td><td>OPENING STOCK</td><td>OPENING VALUE</td><td>RECEIVE QUANTITY</td><td>RECEIVE VALUE</td><td>ISSUE QUANTITY</td><td>ISSUE VALUE</td><td>CLOSING STOCK</td><td>CLOSING VALUE</td><td>EXPIRY STOCK</td></tr><tr><td>8</td><td>AACTARIL SOAP 75G 75GM</td><td>40</td><td>3107.2</td><td>0</td><td>0</td><td>3</td><td>256.6</td><td>37</td><td>2874.16</td><td>01-Nov-27</td></tr><tr><td>9</td><td>CLARINA ANTI ACNE CREAM 30GM</td><td>29</td><td>3397.06</td><td>0</td><td>0</td><td>0</td><td>0</td><td>29</td><td>3397.06</td><td>01-Feb-28</td></tr><tr><td>10</td><td>CLARINA ANTI ACNE FACE WASH GE 60ML</td><td>50</td><td>4958</td><td>0</td><td>0</td><td>0</td><td>0</td><td>50</td><td>4958</td><td>01-Dec-27</td></tr><tr><td>11</td><td>CONFIDO TAB 60&#x27;S</td><td>70</td><td>10416.7</td><td>0</td><td>0</td><td>1</td><td>167.86</td><td>69</td><td>10267.89</td><td>01-Dec-27</td></tr><tr><td>12</td><td>DIABECON-DS 60&#x27;S</td><td>43</td><td>8277.07</td><td>0</td><td>0</td><td>0</td><td>0</td><td>43</td><td>8277.07</td><td>01-Dec-27</td></tr><tr><td>13</td><td>HARIDRA TAB 60</td><td>57</td><td>8193.75</td><td>0</td><td>0</td><td>0</td><td>0</td><td>57</td><td>8193.75</td><td>01-Aug-26</td></tr><tr><td>14</td><td>HERBOLAX TAB</td><td>39</td><td>5309.85</td><td>0</td><td>0</td><td>0</td><td>0</td><td>39</td><td>5309.85</td><td>01-Feb-28</td></tr><tr><td>15</td><td>HIMCOLIN GEL 30GM</td><td>43</td><td>8829.19</td><td>0</td><td>0</td><td>1</td><td>231.62</td><td>42</td><td>8623.86</td><td>01-Mar-27</td></tr><tr><td>16</td><td>HIORA D TOOTHPASTE DIABETIC 100GM</td><td>45</td><td>4057.2</td><td>0</td><td>0</td><td>0</td><td>0</td><td>45</td><td>4057.2</td><td>01-Oct-27</td></tr><tr><td>17</td><td>HIORA DIABETICS TOOTHPASTE 100GM</td><td>48</td><td>4164.96</td><td>0</td><td>0</td><td>0</td><td>0</td><td>48</td><td>4164.96</td><td>01-Oct-27</td></tr><tr><td>18</td><td>LIV 52 SYP 100ML</td><td>40</td><td>3782</td><td>70</td><td>6618.5</td><td>28</td><td>2980.88</td><td>82</td><td>7753.1</td><td>01-Apr-29</td></tr><tr><td>19</td><td>LIV 52 SYP 200ML</td><td>48</td><td>7586.4</td><td>0</td><td>0</td><td>6</td><td>1072.8</td><td>42</td><td>6638.1</td><td>01-Apr-27</td></tr><tr><td>20</td><td>LIV 52 TAB 100&#x27;S</td><td>32</td><td>4755.2</td><td>100</td><td>14860</td><td>21</td><td>3520.02</td><td>111</td><td>16494.6</td><td>01-Dec-28</td></tr><tr><td>21</td><td>OPHTHACARE EYE DROPS 10ML</td><td>63</td><td>4382.91</td><td>0</td><td>0</td><td>0</td><td>0</td><td>63</td><td>4382.91</td><td>01-Mar-28</td></tr><tr><td>22</td><td>PILEX FORTE OINTMENT 30GM</td><td>25</td><td>2532.75</td><td>0</td><td>0</td><td>23</td><td>2628.44</td><td>2</td><td>202.62</td><td>01-Mar-28</td></tr><tr><td>23</td><td>PILEX FORTE TABLETS 2X30 S (IN 1</td><td>80</td><td>8321.6</td><td>0</td><td>0</td><td>3</td><td>351.21</td><td>77</td><td>8009.54</td><td>01-Sep-26</td></tr><tr><td>24</td><td>PILEX TAB 60&#x27;S</td><td>40</td><td>7131.2</td><td>0</td><td>0</td><td>7</td><td>1247.96</td><td>33</td><td>5883.24</td><td>01-Feb-28</td></tr><tr><td>25</td><td>PURIM TAB 60&#x27;S</td><td>49</td><td>5429.69</td><td>0</td><td>0</td><td>1</td><td>125</td><td>48</td><td>5318.88</td><td>01-Feb-28</td></tr><tr><td>26</td><td>TENTEX FORTE TABS 10&#x27;S</td><td>245</td><td>21675.15</td><td>0</td><td>0</td><td>6</td><td>598.8</td><td>239</td><td>21144.33</td><td>01-Mar-28</td></tr><tr><td>27</td><td>TOTAL</td><td>1086</td><td>126307.88</td><td>170</td><td>21478.5</td><td>100</td><td>13181.19</td><td>1156</td><td>135951.12</td><td>- -</td></tr></table>",
+            "bbox": [
+              1.0,
+              125.0,
+              1046.0,
+              573.0
+            ],
+            "order": 5
+          }
+        ],
+        "available": true
+      },
+      "tables": {
+        "items": [
+          {
+            "index": 5,
+            "label": "table",
+            "text": "<table><tr><td>7</td><td>PRODUCT DESCRIPTION</td><td>OPENING STOCK</td><td>OPENING VALUE</td><td>RECEIVE QUANTITY</td><td>RECEIVE VALUE</td><td>ISSUE QUANTITY</td><td>ISSUE VALUE</td><td>CLOSING STOCK</td><td>CLOSING VALUE</td><td>EXPIRY STOCK</td></tr><tr><td>8</td><td>AACTARIL SOAP 75G 75GM</td><td>40</td><td>3107.2</td><td>0</td><td>0</td><td>3</td><td>256.6</td><td>37</td><td>2874.16</td><td>01-Nov-27</td></tr><tr><td>9</td><td>CLARINA ANTI ACNE CREAM 30GM</td><td>29</td><td>3397.06</td><td>0</td><td>0</td><td>0</td><td>0</td><td>29</td><td>3397.06</td><td>01-Feb-28</td></tr><tr><td>10</td><td>CLARINA ANTI ACNE FACE WASH GE 60ML</td><td>50</td><td>4958</td><td>0</td><td>0</td><td>0</td><td>0</td><td>50</td><td>4958</td><td>01-Dec-27</td></tr><tr><td>11</td><td>CONFIDO TAB 60&#x27;S</td><td>70</td><td>10416.7</td><td>0</td><td>0</td><td>1</td><td>167.86</td><td>69</td><td>10267.89</td><td>01-Dec-27</td></tr><tr><td>12</td><td>DIABECON-DS 60&#x27;S</td><td>43</td><td>8277.07</td><td>0</td><td>0</td><td>0</td><td>0</td><td>43</td><td>8277.07</td><td>01-Dec-27</td></tr><tr><td>13</td><td>HARIDRA TAB 60</td><td>57</td><td>8193.75</td><td>0</td><td>0</td><td>0</td><td>0</td><td>57</td><td>8193.75</td><td>01-Aug-26</td></tr><tr><td>14</td><td>HERBOLAX TAB</td><td>39</td><td>5309.85</td><td>0</td><td>0</td><td>0</td><td>0</td><td>39</td><td>5309.85</td><td>01-Feb-28</td></tr><tr><td>15</td><td>HIMCOLIN GEL 30GM</td><td>43</td><td>8829.19</td><td>0</td><td>0</td><td>1</td><td>231.62</td><td>42</td><td>8623.86</td><td>01-Mar-27</td></tr><tr><td>16</td><td>HIORA D TOOTHPASTE DIABETIC 100GM</td><td>45</td><td>4057.2</td><td>0</td><td>0</td><td>0</td><td>0</td><td>45</td><td>4057.2</td><td>01-Oct-27</td></tr><tr><td>17</td><td>HIORA DIABETICS TOOTHPASTE 100GM</td><td>48</td><td>4164.96</td><td>0</td><td>0</td><td>0</td><td>0</td><td>48</td><td>4164.96</td><td>01-Oct-27</td></tr><tr><td>18</td><td>LIV 52 SYP 100ML</td><td>40</td><td>3782</td><td>70</td><td>6618.5</td><td>28</td><td>2980.88</td><td>82</td><td>7753.1</td><td>01-Apr-29</td></tr><tr><td>19</td><td>LIV 52 SYP 200ML</td><td>48</td><td>7586.4</td><td>0</td><td>0</td><td>6</td><td>1072.8</td><td>42</td><td>6638.1</td><td>01-Apr-27</td></tr><tr><td>20</td><td>LIV 52 TAB 100&#x27;S</td><td>32</td><td>4755.2</td><td>100</td><td>14860</td><td>21</td><td>3520.02</td><td>111</td><td>16494.6</td><td>01-Dec-28</td></tr><tr><td>21</td><td>OPHTHACARE EYE DROPS 10ML</td><td>63</td><td>4382.91</td><td>0</td><td>0</td><td>0</td><td>0</td><td>63</td><td>4382.91</td><td>01-Mar-28</td></tr><tr><td>22</td><td>PILEX FORTE OINTMENT 30GM</td><td>25</td><td>2532.75</td><td>0</td><td>0</td><td>23</td><td>2628.44</td><td>2</td><td>202.62</td><td>01-Mar-28</td></tr><tr><td>23</td><td>PILEX FORTE TABLETS 2X30 S (IN 1</td><td>80</td><td>8321.6</td><td>0</td><td>0</td><td>3</td><td>351.21</td><td>77</td><td>8009.54</td><td>01-Sep-26</td></tr><tr><td>24</td><td>PILEX TAB 60&#x27;S</td><td>40</td><td>7131.2</td><td>0</td><td>0</td><td>7</td><td>1247.96</td><td>33</td><td>5883.24</td><td>01-Feb-28</td></tr><tr><td>25</td><td>PURIM TAB 60&#x27;S</td><td>49</td><td>5429.69</td><td>0</td><td>0</td><td>1</td><td>125</td><td>48</td><td>5318.88</td><td>01-Feb-28</td></tr><tr><td>26</td><td>TENTEX FORTE TABS 10&#x27;S</td><td>245</td><td>21675.15</td><td>0</td><td>0</td><td>6</td><td>598.8</td><td>239</td><td>21144.33</td><td>01-Mar-28</td></tr><tr><td>27</td><td>TOTAL</td><td>1086</td><td>126307.88</td><td>170</td><td>21478.5</td><td>100</td><td>13181.19</td><td>1156</td><td>135951.12</td><td>- -</td></tr></table>",
+            "bbox": [
+              1.0,
+              125.0,
+              1046.0,
+              573.0
+            ],
+            "html": null,
+            "cells": null
+          }
+        ],
+        "available": true,
+        "count": 1
+      },
+      "latency_ms": 95981.22160000002,
+      "image_width": 1046,
+      "image_height": 579,
+      "device": "gpu:0",
+      "metadata": {
+        "document_id": "0000700406_2026_08_ZL_10_384_05092026140711.jpg",
+        "source_path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700406_2026_08_ZL_10_384_05092026140711.jpg",
+        "original_width": 1046,
+        "original_height": 579,
+        "processed_width": 1046,
+        "processed_height": 579,
+        "orientation": 1,
+        "preprocessing": [
+          "exif_transpose",
+          "rgb"
+        ],
+        "engine": "paddleocr-vl-1.6",
+        "model": "PaddleOCR-VL-1.6",
+        "model_version": "v1.6",
+        "pipeline_version": "v1.6",
+        "device": "gpu:0",
+        "init_latency_ms": 19668.461599999773,
+        "model_loaded": true,
+        "init_error": null,
+        "available": true,
+        "status": "success",
+        "latency_ms": 95981.22160000002,
+        "image_width": 1046,
+        "image_height": 579,
+        "word_count": 93,
+        "block_count": 6,
+        "line_count": 6,
+        "lines": [
+          {
+            "text": "ADARSH PHARMA BELGAUM",
+            "bbox": [
+              432.0,
+              0.0,
+              675.0,
+              20.0
+            ],
+            "label": "doc_title",
+            "order": 0
+          },
+          {
+            "text": "GROUND FLOOR, DESHPANDE GALLI, BELGAUM - 590002",
+            "bbox": [
+              397.0,
+              22.0,
+              710.0,
+              39.0
+            ],
+            "label": "text",
+            "order": 1
+          },
+          {
+            "text": "Phone: 0831-4200571, 9449088569, 8494939569",
+            "bbox": [
+              376.0,
+              44.0,
+              730.0,
+              64.0
+            ],
+            "label": "text",
+            "order": 2
+          },
+          {
+            "text": "D.L.No.: KA-BGM-20B-809/21B-774",
+            "bbox": [
+              424.0,
+              65.0,
+              684.0,
+              84.0
+            ],
+            "label": "text",
+            "order": 3
+          },
+          {
+            "text": "HIMALAY ZEAL STOCK & SALES STATEMENT 01-08-2026 - 29-08-2026",
+            "bbox": [
+              332.0,
+              85.0,
+              777.0,
+              104.0
+            ],
+            "label": "text",
+            "order": 4
+          },
+          {
+            "text": "<table><tr><td>7</td><td>PRODUCT DESCRIPTION</td><td>OPENING STOCK</td><td>OPENING VALUE</td><td>RECEIVE QUANTITY</td><td>RECEIVE VALUE</td><td>ISSUE QUANTITY</td><td>ISSUE VALUE</td><td>CLOSING STOCK</td><td>CLOSING VALUE</td><td>EXPIRY STOCK</td></tr><tr><td>8</td><td>AACTARIL SOAP 75G 75GM</td><td>40</td><td>3107.2</td><td>0</td><td>0</td><td>3</td><td>256.6</td><td>37</td><td>2874.16</td><td>01-Nov-27</td></tr><tr><td>9</td><td>CLARINA ANTI ACNE CREAM 30GM</td><td>29</td><td>3397.06</td><td>0</td><td>0</td><td>0</td><td>0</td><td>29</td><td>3397.06</td><td>01-Feb-28</td></tr><tr><td>10</td><td>CLARINA ANTI ACNE FACE WASH GE 60ML</td><td>50</td><td>4958</td><td>0</td><td>0</td><td>0</td><td>0</td><td>50</td><td>4958</td><td>01-Dec-27</td></tr><tr><td>11</td><td>CONFIDO TAB 60&#x27;S</td><td>70</td><td>10416.7</td><td>0</td><td>0</td><td>1</td><td>167.86</td><td>69</td><td>10267.89</td><td>01-Dec-27</td></tr><tr><td>12</td><td>DIABECON-DS 60&#x27;S</td><td>43</td><td>8277.07</td><td>0</td><td>0</td><td>0</td><td>0</td><td>43</td><td>8277.07</td><td>01-Dec-27</td></tr><tr><td>13</td><td>HARIDRA TAB 60</td><td>57</td><td>8193.75</td><td>0</td><td>0</td><td>0</td><td>0</td><td>57</td><td>8193.75</td><td>01-Aug-26</td></tr><tr><td>14</td><td>HERBOLAX TAB</td><td>39</td><td>5309.85</td><td>0</td><td>0</td><td>0</td><td>0</td><td>39</td><td>5309.85</td><td>01-Feb-28</td></tr><tr><td>15</td><td>HIMCOLIN GEL 30GM</td><td>43</td><td>8829.19</td><td>0</td><td>0</td><td>1</td><td>231.62</td><td>42</td><td>8623.86</td><td>01-Mar-27</td></tr><tr><td>16</td><td>HIORA D TOOTHPASTE DIABETIC 100GM</td><td>45</td><td>4057.2</td><td>0</td><td>0</td><td>0</td><td>0</td><td>45</td><td>4057.2</td><td>01-Oct-27</td></tr><tr><td>17</td><td>HIORA DIABETICS TOOTHPASTE 100GM</td><td>48</td><td>4164.96</td><td>0</td><td>0</td><td>0</td><td>0</td><td>48</td><td>4164.96</td><td>01-Oct-27</td></tr><tr><td>18</td><td>LIV 52 SYP 100ML</td><td>40</td><td>3782</td><td>70</td><td>6618.5</td><td>28</td><td>2980.88</td><td>82</td><td>7753.1</td><td>01-Apr-29</td></tr><tr><td>19</td><td>LIV 52 SYP 200ML</td><td>48</td><td>7586.4</td><td>0</td><td>0</td><td>6</td><td>1072.8</td><td>42</td><td>6638.1</td><td>01-Apr-27</td></tr><tr><td>20</td><td>LIV 52 TAB 100&#x27;S</td><td>32</td><td>4755.2</td><td>100</td><td>14860</td><td>21</td><td>3520.02</td><td>111</td><td>16494.6</td><td>01-Dec-28</td></tr><tr><td>21</td><td>OPHTHACARE EYE DROPS 10ML</td><td>63</td><td>4382.91</td><td>0</td><td>0</td><td>0</td><td>0</td><td>63</td><td>4382.91</td><td>01-Mar-28</td></tr><tr><td>22</td><td>PILEX FORTE OINTMENT 30GM</td><td>25</td><td>2532.75</td><td>0</td><td>0</td><td>23</td><td>2628.44</td><td>2</td><td>202.62</td><td>01-Mar-28</td></tr><tr><td>23</td><td>PILEX FORTE TABLETS 2X30 S (IN 1</td><td>80</td><td>8321.6</td><td>0</td><td>0</td><td>3</td><td>351.21</td><td>77</td><td>8009.54</td><td>01-Sep-26</td></tr><tr><td>24</td><td>PILEX TAB 60&#x27;S</td><td>40</td><td>7131.2</td><td>0</td><td>0</td><td>7</td><td>1247.96</td><td>33</td><td>5883.24</td><td>01-Feb-28</td></tr><tr><td>25</td><td>PURIM TAB 60&#x27;S</td><td>49</td><td>5429.69</td><td>0</td><td>0</td><td>1</td><td>125</td><td>48</td><td>5318.88</td><td>01-Feb-28</td></tr><tr><td>26</td><td>TENTEX FORTE TABS 10&#x27;S</td><td>245</td><td>21675.15</td><td>0</td><td>0</td><td>6</td><td>598.8</td><td>239</td><td>21144.33</td><td>01-Mar-28</td></tr><tr><td>27</td><td>TOTAL</td><td>1086</td><td>126307.88</td><td>170</td><td>21478.5</td><td>100</td><td>13181.19</td><td>1156</td><td>135951.12</td><td>- -</td></tr></table>",
+            "bbox": [
+              1.0,
+              125.0,
+              1046.0,
+              573.0
+            ],
+            "label": "table",
+            "order": 5
+          }
+        ],
+        "reading_order": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "bbox_stats": {
+          "valid": 6,
+          "invalid": 0,
+          "total": 6
+        }
+      },
+      "error": null,
+      "error_type": null,
+      "page": 1,
+      "native_text": false,
+      "ocr_required": true,
+      "paddle_vl_status": "success",
+      "image_meta": {
+        "original_width": 1046,
+        "original_height": 579,
+        "processed_width": 1046,
+        "processed_height": 579,
+        "orientation": 1,
+        "preprocessing": [
+          "exif_transpose",
+          "rgb"
+        ]
+      },
+      "resources": {
+        "cpu_percent": 6.6,
+        "ram_used_gb": 11.69,
+        "ram_total_gb": 15.31,
+        "gpu": "NVIDIA GeForce RTX 3050 6GB Laptop GPU",
+        "vram_used_gb": 7.763,
+        "vram_total_gb": 6.0
+      }
+    }
+  ],
+  "status": "success",
+  "errors": [],
+  "latency_ms": 96225.25010000027,
+  "finished_at": "2026-10-08T12:51:21.551216+00:00",
+  "resources": {
+    "cpu_percent": 0.0,
+    "ram_used_gb": 11.69,
+    "ram_total_gb": 15.31,
+    "gpu": "NVIDIA GeForce RTX 3050 6GB Laptop GPU",
+    "vram_used_gb": 7.763,
+    "vram_total_gb": 6.0
+  }
+}

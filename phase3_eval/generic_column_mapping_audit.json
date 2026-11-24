@@ -1,0 +1,381 @@
+{
+  "documents_with_source_headers": [
+    {
+      "document": "0000700017_2026_08_ZL_06_476_02092026121836.pdf",
+      "profile": "generic",
+      "layout": null,
+      "printed_columns": [
+        {
+          "printed_header": "Op.Qty.",
+          "normalized_header": "opqty",
+          "canonical_field": "opening_qty",
+          "mapping_source": "pdf_text_gemini prompt",
+          "mapping_confidence": "high",
+          "parser_output_field": "opening_qty",
+          "final_output_field": "opening_qty",
+          "used_in_identity_equation": true,
+          "status": "CORRECT"
+        },
+        {
+          "printed_header": "Pur.Qty.",
+          "normalized_header": "purqty",
+          "canonical_field": "receipts_qty",
+          "mapping_source": "pdf_text_gemini prompt",
+          "mapping_confidence": "high",
+          "parser_output_field": "receipts_qty",
+          "final_output_field": "receipts_qty",
+          "used_in_identity_equation": true,
+          "status": "CORRECT"
+        },
+        {
+          "printed_header": "ORec.Qty.",
+          "normalized_header": "orecqty",
+          "canonical_field": null,
+          "mapping_source": "none",
+          "mapping_confidence": "high",
+          "parser_output_field": null,
+          "final_output_field": null,
+          "used_in_identity_equation": false,
+          "status": "DROPPED",
+          "semantic_meaning": "other_receipt_quantity"
+        },
+        {
+          "printed_header": "Sale.Qty.",
+          "normalized_header": "saleqty",
+          "canonical_field": "sales_qty",
+          "mapping_source": "pdf_text_gemini prompt",
+          "mapping_confidence": "high",
+          "parser_output_field": "sales_qty",
+          "final_output_field": "sales_qty",
+          "used_in_identity_equation": true,
+          "status": "CORRECT"
+        },
+        {
+          "printed_header": "OIss.Qty.",
+          "normalized_header": "oissqty",
+          "canonical_field": null,
+          "mapping_source": "none",
+          "mapping_confidence": "high",
+          "parser_output_field": null,
+          "final_output_field": null,
+          "used_in_identity_equation": false,
+          "status": "DROPPED",
+          "semantic_meaning": "other_issue_quantity"
+        },
+        {
+          "printed_header": "Cl.Qty.",
+          "normalized_header": "clqty",
+          "canonical_field": "closing_qty",
+          "mapping_source": "pdf_text_gemini prompt",
+          "mapping_confidence": "high",
+          "parser_output_field": "closing_qty",
+          "final_output_field": "closing_qty",
+          "used_in_identity_equation": true,
+          "status": "CORRECT"
+        }
+      ]
+    },
+    {
+      "document": "0000700238_2026_08_ZL_18_377_03092026154026.pdf",
+      "profile": "generic",
+      "layout": null,
+      "printed_columns": [
+        {
+          "printed_header": "Opening",
+          "normalized_header": "opening",
+          "canonical_field": "opening_qty",
+          "mapping_source": "product_wise pdf parser",
+          "mapping_confidence": "high",
+          "parser_output_field": "opening_qty",
+          "final_output_field": "opening_qty",
+          "used_in_identity_equation": true,
+          "status": "CORRECT"
+        },
+        {
+          "printed_header": "Receipt Qty",
+          "normalized_header": "receiptqty",
+          "canonical_field": "receipts_qty",
+          "mapping_source": "product_wise pdf parser",
+          "mapping_confidence": "high",
+          "parser_output_field": "receipts_qty",
+          "final_output_field": "receipts_qty",
+          "used_in_identity_equation": true,
+          "status": "CORRECT"
+        },
+        {
+          "printed_header": "Receipt Free",
+          "normalized_header": "receiptfree",
+          "canonical_field": null,
+          "mapping_source": "parser extra only",
+          "mapping_confidence": "high",
+          "parser_output_field": "extra.receipts_free",
+          "final_output_field": "extra.receipts_free",
+          "used_in_identity_equation": false,
+          "status": "DROPPED",
+          "semantic_meaning": "free_receipt_not_in_canonical_qty"
+        },
+        {
+          "printed_header": "Issues Qty",
+          "normalized_header": "issuesqty",
+          "canonical_field": "sales_qty",
+          "mapping_source": "product_wise pdf parser",
+          "mapping_confidence": "high",
+          "parser_output_field": "sales_qty",
+          "final_output_field": "sales_qty",
+          "used_in_identity_equation": true,
+          "status": "CORRECT"
+        },
+        {
+          "printed_header": "Issues Free",
+          "normalized_header": "issuesfree",
+          "canonical_field": null,
+          "mapping_source": "parser extra only",
+          "mapping_confidence": "high",
+          "parser_output_field": "extra.issues_free_repl",
+          "final_output_field": "extra.issues_free_repl",
+          "used_in_identity_equation": false,
+          "status": "DROPPED",
+          "semantic_meaning": "free_issue_not_in_canonical_qty"
+        },
+        {
+          "printed_header": "Closing",
+          "normalized_header": "closing",
+          "canonical_field": "closing_qty",
+          "mapping_source": "product_wise pdf parser",
+          "mapping_confidence": "high",
+          "parser_output_field": "closing_qty",
+          "final_output_field": "closing_qty",
+          "used_in_identity_equation": true,
+          "status": "CORRECT"
+        },
+        {
+          "printed_header": "Sh.Exp",
+          "normalized_header": "shexp",
+          "canonical_field": null,
+          "mapping_source": "parser extra only",
+          "mapping_confidence": "medium",
+          "parser_output_field": "extra.sh_exp",
+          "final_output_field": "extra.sh_exp",
+          "used_in_identity_equation": false,
+          "status": "DROPPED",
+          "semantic_meaning": "short_expiry_quantity"
+        }
+      ]
+    },
+    {
+      "document": "0000701555_2026_08_ZL_37_390_06092026182510.docx",
+      "profile": "generic",
+      "layout": null,
+      "printed_columns": [
+        {
+          "printed_header": "O.Stk",
+          "normalized_header": "ostk",
+          "canonical_field": "opening_qty",
+          "mapping_source": "profitmaker_ostk_docx when header is on table row 0",
+          "mapping_confidence": "high",
+          "parser_output_field": "opening_qty",
+          "final_output_field": "opening_qty",
+          "used_in_identity_equation": true,
+          "status": "MIS_MAPPED",
+          "semantic_meaning": "opening_stock"
+        },
+        {
+          "printed_header": "Purc",
+          "normalized_header": "purc",
+          "canonical_field": "receipts_qty",
+          "mapping_source": "profitmaker_ostk_docx when header is on table row 0",
+          "mapping_confidence": "high",
+          "parser_output_field": "receipts_qty",
+          "final_output_field": "receipts_qty",
+          "used_in_identity_equation": true,
+          "status": "MIS_MAPPED"
+        },
+        {
+          "printed_header": "Tot",
+          "normalized_header": "tot",
+          "canonical_field": null,
+          "mapping_source": "profitmaker extra total_stock",
+          "mapping_confidence": "high",
+          "parser_output_field": null,
+          "final_output_field": null,
+          "used_in_identity_equation": false,
+          "status": "DROPPED",
+          "semantic_meaning": "opening_plus_purchase_subtotal"
+        },
+        {
+          "printed_header": "Sale",
+          "normalized_header": "sale",
+          "canonical_field": "sales_qty",
+          "mapping_source": "fallback",
+          "mapping_confidence": "medium",
+          "parser_output_field": "sales_qty",
+          "final_output_field": "sales_qty",
+          "used_in_identity_equation": true,
+          "status": "MIS_MAPPED"
+        },
+        {
+          "printed_header": "Qoh",
+          "normalized_header": "qoh",
+          "canonical_field": "closing_qty",
+          "mapping_source": "profitmaker_ostk_docx when header is on table row 0",
+          "mapping_confidence": "high",
+          "parser_output_field": "closing_qty",
+          "final_output_field": "closing_qty",
+          "used_in_identity_equation": true,
+          "status": "DROPPED"
+        },
+        {
+          "printed_header": "Value",
+          "normalized_header": "value",
+          "canonical_field": "closing_value",
+          "mapping_source": "fallback put the amount in sales_scheme",
+          "mapping_confidence": "high",
+          "parser_output_field": "extra.sales_scheme",
+          "final_output_field": "extra.sales_scheme",
+          "used_in_identity_equation": true,
+          "status": "MIS_MAPPED",
+          "semantic_meaning": "rupee_value_not_a_quantity"
+        }
+      ]
+    },
+    {
+      "document": "0000728682_2026_08_ZL _10_380_04092026092536.xlsx",
+      "profile": "generic",
+      "layout": null,
+      "printed_columns": [
+        {
+          "printed_header": "Opening_Qty",
+          "normalized_header": "openingqty",
+          "canonical_field": "opening_qty",
+          "mapping_source": "_XLS_HEADER_ALIASES",
+          "mapping_confidence": "high",
+          "parser_output_field": "opening_qty",
+          "final_output_field": "opening_qty",
+          "used_in_identity_equation": true,
+          "status": "CORRECT"
+        },
+        {
+          "printed_header": "Purchase_Qty",
+          "normalized_header": "purchaseqty",
+          "canonical_field": "receipts_qty",
+          "mapping_source": "_XLS_HEADER_ALIASES",
+          "mapping_confidence": "high",
+          "parser_output_field": "receipts_qty",
+          "final_output_field": "receipts_qty",
+          "used_in_identity_equation": true,
+          "status": "CORRECT"
+        },
+        {
+          "printed_header": "Sale_Qty",
+          "normalized_header": "saleqty",
+          "canonical_field": "sales_qty",
+          "mapping_source": "_XLS_HEADER_ALIASES",
+          "mapping_confidence": "high",
+          "parser_output_field": "sales_qty",
+          "final_output_field": "sales_qty",
+          "used_in_identity_equation": true,
+          "status": "CORRECT"
+        },
+        {
+          "printed_header": "Sale_Ret_Qty",
+          "normalized_header": "saleretqty",
+          "canonical_field": null,
+          "mapping_source": "none in _XLS_HEADER_ALIASES",
+          "mapping_confidence": "high",
+          "parser_output_field": null,
+          "final_output_field": null,
+          "used_in_identity_equation": false,
+          "status": "DROPPED",
+          "semantic_meaning": "sale_return_quantity"
+        },
+        {
+          "printed_header": "Other_Qty",
+          "normalized_header": "otherqty",
+          "canonical_field": null,
+          "mapping_source": "none; alias others does not match otherqty",
+          "mapping_confidence": "high",
+          "parser_output_field": null,
+          "final_output_field": null,
+          "used_in_identity_equation": false,
+          "status": "DROPPED",
+          "semantic_meaning": "signed_other_adjustment"
+        },
+        {
+          "printed_header": "Closing_Qty",
+          "normalized_header": "closingqty",
+          "canonical_field": "closing_qty",
+          "mapping_source": "_XLS_HEADER_ALIASES",
+          "mapping_confidence": "high",
+          "parser_output_field": "closing_qty",
+          "final_output_field": "closing_qty",
+          "used_in_identity_equation": true,
+          "status": "CORRECT"
+        }
+      ]
+    },
+    {
+      "document": "0000734248_2026_08_ZL_12_554_07092026051856.XLS",
+      "profile": "generic",
+      "layout": null,
+      "printed_columns": [
+        {
+          "printed_header": "OPENING STOCK",
+          "normalized_header": "openingstock",
+          "canonical_field": "opening_qty",
+          "mapping_source": "_find_marg_erp_xls_header",
+          "mapping_confidence": "high",
+          "parser_output_field": "opening_qty",
+          "final_output_field": "opening_qty",
+          "used_in_identity_equation": true,
+          "status": "CORRECT"
+        },
+        {
+          "printed_header": "RECEIVE QUANTITY",
+          "normalized_header": "receivequantity",
+          "canonical_field": "receipts_qty",
+          "mapping_source": "_find_marg_erp_xls_header",
+          "mapping_confidence": "high",
+          "parser_output_field": "receipts_qty",
+          "final_output_field": "receipts_qty",
+          "used_in_identity_equation": true,
+          "status": "CORRECT"
+        },
+        {
+          "printed_header": "ISSUE QUANTITY",
+          "normalized_header": "issuequantity",
+          "canonical_field": "sales_qty",
+          "mapping_source": "_find_marg_erp_xls_header",
+          "mapping_confidence": "high",
+          "parser_output_field": "sales_qty",
+          "final_output_field": "sales_qty",
+          "used_in_identity_equation": true,
+          "status": "CORRECT"
+        },
+        {
+          "printed_header": "CLOSING STOCK",
+          "normalized_header": "closingstock",
+          "canonical_field": "closing_qty",
+          "mapping_source": "_find_marg_erp_xls_header",
+          "mapping_confidence": "high",
+          "parser_output_field": "closing_qty",
+          "final_output_field": "closing_qty",
+          "used_in_identity_equation": true,
+          "status": "CORRECT"
+        },
+        {
+          "printed_header": "PURCHASE DETAIL / INVOICE NO.",
+          "normalized_header": "invoiceno",
+          "canonical_field": null,
+          "mapping_source": "stock column index reused after TOTAL",
+          "mapping_confidence": "high",
+          "parser_output_field": "opening_qty",
+          "final_output_field": "opening_qty",
+          "used_in_identity_equation": true,
+          "status": "MIS_MAPPED",
+          "semantic_meaning": "supplier_invoice_number_not_a_quantity"
+        }
+      ]
+    }
+  ],
+  "not_inspected_count": 26
+}

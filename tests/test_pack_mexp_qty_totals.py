@@ -4,7 +4,9 @@ A bare pack stays packing. Quantity totals are the sum of product rows.
 The printed TOTAL row is not used.
 """
 
+import os
 import unittest
+from unittest.mock import patch
 
 import fitz
 
@@ -124,7 +126,11 @@ class TestTentexColumnPosition(unittest.TestCase):
             page.insert_text((x, 70), text, fontsize=8)
         data = doc.tobytes()
         doc.close()
-        result = extract_sales_statement(data, "tentex-positioned.pdf")
+        with patch.dict(os.environ, {"PHASE2_RECOVERY_ENABLED": "true"}), patch(
+            "services.recovery_runner._live_gemini_caller",
+            side_effect=AssertionError("blank recovery must not call Gemini"),
+        ):
+            result = extract_sales_statement(data, "tentex-positioned.pdf")
         self.assertEqual(
             result["totals"]["extra"].get("extraction_method"),
             "pack_opening_receipt_issue_mexp",
@@ -133,8 +139,8 @@ class TestTentexColumnPosition(unittest.TestCase):
         self.assertEqual(item.get("product_name"), "TENTEX ROYAL TAB")
         self.assertEqual(item.get("packing"), "10")
         self.assertEqual(item.get("opening_qty"), 5)
-        self.assertEqual(item.get("receipts_qty"), 0)
-        self.assertEqual(item.get("sales_qty"), 0)
+        self.assertIsNone(item.get("receipts_qty"))
+        self.assertIsNone(item.get("sales_qty"))
         self.assertEqual(item.get("closing_qty"), 5)
 
     def test_missing_dash_glyphs_keep_opening_out_of_sales(self):
@@ -162,12 +168,16 @@ class TestTentexColumnPosition(unittest.TestCase):
             page.insert_text((x, 70), text, fontsize=8)
         data = doc.tobytes()
         doc.close()
-        result = extract_sales_statement(data, "tentex-no-dash.pdf")
+        with patch.dict(os.environ, {"PHASE2_RECOVERY_ENABLED": "true"}), patch(
+            "services.recovery_runner._live_gemini_caller",
+            side_effect=AssertionError("blank recovery must not call Gemini"),
+        ):
+            result = extract_sales_statement(data, "tentex-no-dash.pdf")
         item = result["line_items"][0]
         self.assertEqual(item.get("packing"), "10")
         self.assertEqual(item.get("opening_qty"), 5)
-        self.assertEqual(item.get("receipts_qty"), 0)
-        self.assertEqual(item.get("sales_qty"), 0)
+        self.assertIsNone(item.get("receipts_qty"))
+        self.assertIsNone(item.get("sales_qty"))
         self.assertEqual(item.get("closing_qty"), 5)
 
 

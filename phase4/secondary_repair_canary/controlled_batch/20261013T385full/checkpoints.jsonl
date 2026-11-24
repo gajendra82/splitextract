@@ -1,0 +1,4 @@
+{"document_id": "0000700026_2026_08_ZA_06_333_04092026081643.png", "status": "error", "error": "primary OCR timeout 0000700026_2026_08_ZA_06_333_04092026081643.png after 240s", "ts": "2026-10-13T05:11:59.793754+00:00"}
+{"document_id": "0000700026_2026_08_ZA_06_333_04092026081643.png", "status": "error", "error": "primary OCR timeout 0000700026_2026_08_ZA_06_333_04092026081643.png after 240s", "ts": "2026-10-13T05:12:00.862646+00:00"}
+{"document_id": "0000700026_2026_08_ZA_06_333_04092026081643.png", "status": "complete", "cohort": "ordinary", "deltas": 0, "overlay": false, "ts": "2026-10-13T05:18:19.523581+00:00"}
+{"document_id": "0000700060_2026_08_ZA_06_617_04092026082801.png", "status": "error", "error": "primary OCR timeout 0000700060_2026_08_ZA_06_617_04092026082801.png after 600s", "ts": "2026-10-13T05:37:20.318093+00:00"}

@@ -1,0 +1,15 @@
+{
+  "input": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\premier sept.pdf",
+  "elapsed_s": 24.233,
+  "summary": {
+    "extraction_method": "smart_routed_gemini_ocr",
+    "ocr_source": "gemini_as_ocr",
+    "decision": null,
+    "stockist_name": "PREMIER DISTRIBUTORS",
+    "company_name": "HIMALAYA DRUG CO.(ZANDRA)",
+    "line_item_count": 21,
+    "first_product_name": "BONNISAN DROPS 30ML",
+    "first_sales_qty": 7,
+    "gemini_calls_made": 1
+  }
+}

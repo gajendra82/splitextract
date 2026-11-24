@@ -1,0 +1,409 @@
+{
+  "filename": "0000700848_2026_08_ZA_30_578_05092026144147.XLS",
+  "bytes": 5516,
+  "elapsed_s": 0.1789,
+  "method": null,
+  "stockist_name": null,
+  "company_name": null,
+  "period_from": null,
+  "period_to": null,
+  "row_count": 20,
+  "line_items": [
+    {
+      "product_name": "BONNISAN DROP 30ML",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 6.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 0.0,
+      "opening_value": 385.06,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": 6.0
+      }
+    },
+    {
+      "product_name": "BONNISAN SYP 100ml",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 5.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 0.0,
+      "opening_value": 297.52,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": 5.0
+      }
+    },
+    {
+      "product_name": "BRESOL SYP 200ML 200ML",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 2.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 0.0,
+      "opening_value": 284.56,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": 2.0
+      }
+    },
+    {
+      "product_name": "CYSTONE SYP 200ML 200ML",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 28.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 0.0,
+      "opening_value": 5125.06,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": 28.0
+      }
+    },
+    {
+      "product_name": "CYSTONE TAB 60 s",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 40.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 0.0,
+      "opening_value": 6432.34,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": 40.0
+      }
+    },
+    {
+      "product_name": "EVECARE CAP 30 S",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 5.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 0.0,
+      "opening_value": 728.91,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": 5.0
+      }
+    },
+    {
+      "product_name": "EVECARE FORTE SYP 200ML",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 4.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 0.0,
+      "opening_value": 549.72,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": 4.0
+      }
+    },
+    {
+      "product_name": "EVECARE SYP 200ML",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 3.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 0.0,
+      "opening_value": 426.84,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": 3.0
+      }
+    },
+    {
+      "product_name": "GERIFORTE TAB 100 s",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 3.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 0.0,
+      "opening_value": 325.6,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": 3.0
+      }
+    },
+    {
+      "product_name": "HIMPLASIA TAB 30 S",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 5.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 0.0,
+      "opening_value": 732.86,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": 5.0
+      }
+    },
+    {
+      "product_name": "LIV.52 DROP 100ML 100ml",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 2.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 0.0,
+      "opening_value": 241.96,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": 2.0
+      }
+    },
+    {
+      "product_name": "LIV.52 DROP 60ML 60ml",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 0.0,
+      "opening_value": 0.0,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": true,
+        "expected_closing": 0.0
+      }
+    },
+    {
+      "product_name": "LIV.52 DS 100ML SYP 100 ML",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 71.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 0.0,
+      "opening_value": 10789.03,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": 71.0
+      }
+    },
+    {
+      "product_name": "LIV.52 DS SYP 200ML 200ML",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 35.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 0.0,
+      "opening_value": 8297.54,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": 35.0
+      }
+    },
+    {
+      "product_name": "LIV.52 DS TAB 60 S",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 51.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 0.0,
+      "opening_value": 9580.99,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": 51.0
+      }
+    },
+    {
+      "product_name": "LUKOL TAB 60 S",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 50.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 0.0,
+      "opening_value": 8543.9,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": 50.0
+      }
+    },
+    {
+      "product_name": "MENTAT SYP 200ml",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 2.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 0.0,
+      "opening_value": 340.25,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": 2.0
+      }
+    },
+    {
+      "product_name": "SEPTILIN SYP 200ml",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 3.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 0.0,
+      "opening_value": 446.7,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": 3.0
+      }
+    },
+    {
+      "product_name": "SEPTILIN TAB 60 s",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 8.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 0.0,
+      "opening_value": 1360.66,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": 8.0
+      }
+    },
+    {
+      "product_name": "SPEMAN TAB 60 S",
+      "product_code": null,
+      "packing": null,
+      "opening_qty": 6.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 0.0,
+      "opening_value": 1052.22,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": 6.0
+      }
+    }
+  ],
+  "totals": {
+    "opening_qty": null,
+    "receipts_qty": null,
+    "sales_qty": null,
+    "closing_qty": null,
+    "opening_value": null,
+    "receipts_value": null,
+    "sales_value": null,
+    "closing_value": null
+  },
+  "validation_status": "unresolved",
+  "validation_accepted": false,
+  "source_agreement": true,
+  "source_evidence": true,
+  "business_status": "inconsistent",
+  "failure_reasons": [
+    "stock_identity_failure"
+  ],
+  "decision_status": "UNRESOLVED",
+  "verified": false,
+  "decision_reason": "stock_identity_failure",
+  "phase2": {
+    "status": null,
+    "attempts": null,
+    "failure": null
+  },
+  "grounding": {
+    "status": "insufficient_source_evidence",
+    "reader": ".xls",
+    "compared_rows": 0,
+    "discrepancy_count": 0,
+    "blank_read_as_zero": 0,
+    "explicit_zero": null,
+    "unreadable": null,
+    "missing_rows": null,
+    "duplicate_rows": null,
+    "low_name_match": null,
+    "blocks_verification": false,
+    "ocr_invoked": false,
+    "discrepancies": [],
+    "sheets": [],
+    "pages": [],
+    "truncated": false,
+    "evidence": {
+      "sufficient": false,
+      "reason": "no_source_table",
+      "blocks_verification": false,
+      "coordinates_available": false,
+      "text_retained": "cells",
+      "script": "unspecified",
+      "language": "unspecified"
+    }
+  },
+  "ocr_calls": [],
+  "gemini_calls": [],
+  "error": null
+}

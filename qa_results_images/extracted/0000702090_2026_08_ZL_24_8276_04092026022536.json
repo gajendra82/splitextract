@@ -1,0 +1,744 @@
+{
+  "source_file": "0000702090_2026_08_ZL_24_8276_04092026022536.jpg",
+  "source_format": "jpg",
+  "stockist_name": null,
+  "stockist_address": null,
+  "company_name": "A.B. & SONS (AGENCIES)",
+  "period_from": "2026-07-01",
+  "period_to": "2026-07-31",
+  "report_title": "STOCK & SALES ANALYSIS",
+  "line_items": [
+    {
+      "product_code": null,
+      "product_name": "ALAYA DRUG COMPANY",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ALCID SYP 200 ML",
+      "packing": "200 ML",
+      "opening_qty": 22.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 22.0,
+      "closing_value": 2018.17,
+      "extra": {
+        "expected_total": 22.0,
+        "expected_closing": 22.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "DS SF SYP",
+      "packing": "200ML",
+      "opening_qty": 27.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 25.0,
+      "closing_value": 6411.02,
+      "extra": {
+        "expected_total": 27.0,
+        "expected_closing": 27.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ORAL RENSE 100 ML",
+      "packing": "100 ML",
+      "opening_qty": 47.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 44.0,
+      "closing_value": 5242.33,
+      "extra": {
+        "expected_total": 47.0,
+        "expected_closing": 47.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ARNAVA TAR",
+      "packing": "1'60",
+      "opening_qty": 19.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 19.0,
+      "closing_value": 11668.04,
+      "extra": {
+        "expected_total": 19.0,
+        "expected_closing": 19.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ALAYA OTH",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ALAYA BLATCH SYP",
+      "packing": "200 ML",
+      "opening_qty": 10.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 7.0,
+      "closing_value": 741.63,
+      "extra": {
+        "expected_total": 10.0,
+        "expected_closing": 10.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ALAYA GINGER LEMON SYP",
+      "packing": "200 ML",
+      "opening_qty": 1.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 1.0,
+      "closing_value": 95.74,
+      "extra": {
+        "expected_total": 1.0,
+        "expected_closing": 1.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ALAYA TAB",
+      "packing": "NEO TABS",
+      "opening_qty": 245.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 214.0,
+      "closing_value": 33444.53,
+      "extra": {
+        "expected_total": 245.0,
+        "expected_closing": 245.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ALAYA OCTD SUSP (SPL)",
+      "packing": "200ML",
+      "opening_qty": 71.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 13.0,
+      "closing_value": 1716.56,
+      "extra": {
+        "expected_total": 71.0,
+        "expected_closing": 71.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ALAYA SUSP (SPL) FLV",
+      "packing": "200ML",
+      "opening_qty": 1.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 1.0,
+      "closing_value": 102.44,
+      "extra": {
+        "expected_total": 1.0,
+        "expected_closing": 1.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ALAYA AL TAB (G)",
+      "packing": "1'G",
+      "opening_qty": 126.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 119.0,
+      "closing_value": 7159.14,
+      "extra": {
+        "expected_total": 126.0,
+        "expected_closing": 126.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ALAYA LT SP LINCTUS",
+      "packing": "100ML",
+      "opening_qty": 7.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 757.87,
+      "extra": {
+        "expected_total": 7.0,
+        "expected_closing": 7.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ALAYA LT SP LINCTUS",
+      "packing": "100ML",
+      "opening_qty": 37.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 11.0,
+      "closing_value": 7411.84,
+      "extra": {
+        "expected_total": 37.0,
+        "expected_closing": 37.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ALAYA IST-EX LINCTUS 100ML",
+      "packing": "100ML",
+      "opening_qty": 78.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 75.0,
+      "closing_value": 3617.89,
+      "extra": {
+        "expected_total": 78.0,
+        "expected_closing": 78.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ALAYA IST-EX LINCTUS 100ML",
+      "packing": "PC",
+      "opening_qty": 40.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 19.0,
+      "closing_value": 1134.2,
+      "extra": {
+        "expected_total": 40.0,
+        "expected_closing": 40.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ALAYA FORTE TAR",
+      "packing": "2/430 TA",
+      "opening_qty": 99.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 68.0,
+      "closing_value": 10271.06,
+      "extra": {
+        "expected_total": 99.0,
+        "expected_closing": 99.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ALAYA GEL 300M",
+      "packing": "1",
+      "opening_qty": 110.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 105.0,
+      "closing_value": 9382.72,
+      "extra": {
+        "expected_total": 110.0,
+        "expected_closing": 110.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ALAYA LISINENT 50ML",
+      "packing": "1'50ML",
+      "opening_qty": 39.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 18.0,
+      "closing_value": 1994.46,
+      "extra": {
+        "expected_total": 39.0,
+        "expected_closing": 39.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ALAYA TABLETS",
+      "packing": "100 TABS",
+      "opening_qty": 70.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 70.0,
+      "closing_value": 9730.67,
+      "extra": {
+        "expected_total": 70.0,
+        "expected_closing": 70.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ALAYA TEX ROYAL CAP",
+      "packing": "1",
+      "opening_qty": 79.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 69.0,
+      "closing_value": 11758.42,
+      "extra": {
+        "expected_total": 79.0,
+        "expected_closing": 79.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ALAYA ZANDRA",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ALAYA TAB",
+      "packing": "30 TAB",
+      "opening_qty": 81.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 77.0,
+      "closing_value": 12014.11,
+      "extra": {
+        "expected_total": 81.0,
+        "expected_closing": 81.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ALAYA CONE SE SP",
+      "packing": "200ML",
+      "opening_qty": 13.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 15.0,
+      "closing_value": 1916.04,
+      "extra": {
+        "expected_total": 13.0,
+        "expected_closing": 13.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ALAYA ECON DS TAR",
+      "packing": "1-60",
+      "opening_qty": 30.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 17.0,
+      "closing_value": 6914.76,
+      "extra": {
+        "expected_total": 30.0,
+        "expected_closing": 30.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ALAYA ECON TAR",
+      "packing": "GO TAB",
+      "opening_qty": 69.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 66.0,
+      "closing_value": 7658.65,
+      "extra": {
+        "expected_total": 69.0,
+        "expected_closing": 69.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ALAYA CARE CAP",
+      "packing": "10-1",
+      "opening_qty": 98.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 67.0,
+      "closing_value": 13546.47,
+      "extra": {
+        "expected_total": 98.0,
+        "expected_closing": 98.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ALAYA CARE SYP 800ML",
+      "packing": "1x400ML",
+      "opening_qty": 1.0,
+      "opening_value": null,
+      "receipts_qty": 24.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 5316.96,
+      "closing_qty": 22.0,
+      "closing_value": 4758.34,
+      "extra": {
+        "expected_total": 25.0,
+        "expected_closing": 25.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ALAYA CARE SYP",
+      "packing": "700ml",
+      "opening_qty": 24.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 141.8,
+      "extra": {
+        "expected_total": 24.0,
+        "expected_closing": 24.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ALAYA CARE FORTE LIQ",
+      "packing": "200",
+      "opening_qty": 44.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 21.0,
+      "closing_value": 4237.12,
+      "extra": {
+        "expected_total": 44.0,
+        "expected_closing": 44.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ALAYA CARE FORTE TAR",
+      "packing": "3-10",
+      "opening_qty": 14.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 18.0,
+      "closing_value": 1178.69,
+      "extra": {
+        "expected_total": 14.0,
+        "expected_closing": 14.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ALAYA FORTE",
+      "packing": "100 TABS",
+      "opening_qty": 48.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 41.0,
+      "closing_value": 4709.08,
+      "extra": {
+        "expected_total": 48.0,
+        "expected_closing": 48.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ALAYA FORTE SYP",
+      "packing": "200 ML",
+      "opening_qty": 12.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 12.0,
+      "closing_value": 2548.17,
+      "extra": {
+        "expected_total": 12.0,
+        "expected_closing": 12.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ALAYA DIABETICS TOOTH",
+      "packing": "100 GM",
+      "opening_qty": 86.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 83.0,
+      "closing_value": 7629.16,
+      "extra": {
+        "expected_total": 86.0,
+        "expected_closing": 86.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ALAYA DS SYP 100 ML",
+      "packing": "1",
+      "opening_qty": 76.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 68.0,
+      "closing_value": 10124.44,
+      "extra": {
+        "expected_total": 76.0,
+        "expected_closing": 76.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ALAYA DS SYP 200 ML",
+      "packing": "200ML",
+      "opening_qty": 151.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 100.0,
+      "closing_value": 24145.38,
+      "extra": {
+        "expected_total": 151.0,
+        "expected_closing": 151.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ALAYA DS TAB",
+      "packing": "100/X 60",
+      "opening_qty": 97.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 97.0,
+        "expected_closing": 97.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ALAYA 652 HP CAPSULES",
+      "packing": "3/1-10",
+      "opening_qty": 92.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 36.0,
+      "closing_value": 6935.25,
+      "extra": {
+        "expected_total": 92.0,
+        "expected_closing": 92.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ALAYA STP",
+      "packing": "200ML",
+      "opening_qty": 37.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 19.0,
+      "closing_value": 6019.09,
+      "extra": {
+        "expected_total": 37.0,
+        "expected_closing": 37.0,
+        "stock_identity_ok": false
+      }
+    }
+  ],
+  "totals": {
+    "sales_value": null,
+    "closing_value": 238539.83,
+    "extra": {
+      "extraction_method": "gemini_extraction_fallback",
+      "line_sales_value_sum": 5316.96,
+      "line_closing_value_sum": 239135.28,
+      "sales_qty": 0.0,
+      "closing_qty": 1562.0,
+      "stock_identity_kind": "opening_receipts_sales_closing",
+      "stock_identity_formula": "closing=opening+receipts-sales",
+      "stock_identity_fail_count": 30,
+      "stock_validation": {
+        "opening_plus_purchase": 2125.0,
+        "expected_total": 2125.0,
+        "calculated_closing": 2125.0,
+        "extracted_closing": 1562.0,
+        "is_valid": false
+      },
+      "extraction_quality": {
+        "quality": "poor",
+        "score": 75,
+        "reasons": [
+          "stock_identity_failure"
+        ],
+        "threshold": 75.0
+      },
+      "gemini_fallback": "validation_failed"
+    }
+  }
+}

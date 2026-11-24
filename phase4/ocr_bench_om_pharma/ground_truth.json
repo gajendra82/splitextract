@@ -1,0 +1,97 @@
+{
+  "stockist": "OM PHARMA",
+  "company": "HIMALAYA WELLNESS COMPANY",
+  "period": "01/10/2026 to 31/10/2026",
+  "rows": [
+    {
+      "name": "GASEX TABLETS",
+      "pack": "100TAB",
+      "LstSL": 70,
+      "Open": 30,
+      "Recd": 100,
+      "Sales": 26,
+      "Close": 104
+    },
+    {
+      "name": "HIMCOCID-SF(MINT FLAVOUR)",
+      "pack": "200 ML",
+      "LstSL": 2,
+      "Open": 5,
+      "Recd": null,
+      "Sales": 4,
+      "Close": 1
+    },
+    {
+      "name": "HIMCOCID-SF(SAUNF FLAVOUR",
+      "pack": "200 ML",
+      "LstSL": 3,
+      "Open": 6,
+      "Recd": null,
+      "Sales": 6,
+      "Close": 0
+    },
+    {
+      "name": "KOFLET LOZENGES(160+40)",
+      "pack": "1 TAB",
+      "LstSL": 4,
+      "Open": null,
+      "Recd": null,
+      "Sales": null,
+      "Close": 0
+    },
+    {
+      "name": "KOFLET SYRUP",
+      "pack": "100 ML",
+      "LstSL": 20,
+      "Open": 29,
+      "Recd": 56,
+      "Sales": 14,
+      "Close": 71
+    },
+    {
+      "name": "KOFLET-H GINGER",
+      "pack": "6 TAB",
+      "LstSL": 75,
+      "Open": 98,
+      "Recd": 160,
+      "Sales": 108,
+      "Close": 150
+    },
+    {
+      "name": "KOFLET-H ORANGE",
+      "pack": "6 TAB",
+      "LstSL": 110,
+      "Open": 31,
+      "Recd": 160,
+      "Sales": 41,
+      "Close": 150
+    },
+    {
+      "name": "RUMALAYA FORTE TABLETS",
+      "pack": "30 TAB",
+      "LstSL": null,
+      "Open": 24,
+      "Recd": null,
+      "Sales": 24,
+      "Close": 0
+    },
+    {
+      "name": "RUMALAYA LINIMENT",
+      "pack": "60 ML",
+      "LstSL": 30,
+      "Open": 4,
+      "Recd": 50,
+      "Sales": 17,
+      "Close": 37
+    },
+    {
+      "name": "TENTEX ROYAL CAPSULES",
+      "pack": "10 CAP",
+      "LstSL": 10,
+      "Open": 3,
+      "Recd": null,
+      "Sales": 1,
+      "Close": 2
+    }
+  ]
+}

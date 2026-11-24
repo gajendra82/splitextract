@@ -1,0 +1,27 @@
+{
+  "document_id": "0000702913_2026_08_ZL_22_413A_04092026075910",
+  "relative_path": "0000702913_2026_08_ZL_22_413A_04092026075910",
+  "source_path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000702913_2026_08_ZL_22_413A_04092026075910",
+  "file_type": "pdf",
+  "pdf_kind": "scanned",
+  "manifest_ocr_required": true,
+  "engine": "paddleocr-vl-1.6",
+  "model": "PaddleOCR-VL-1.6",
+  "model_version": "v1.6",
+  "started_at": "2026-10-08T12:36:09.824229+00:00",
+  "pages": [
+    {
+      "page": 1,
+      "status": "skipped_native_text",
+      "paddle_vl_status": "skipped_native_text",
+      "native_text": false,
+      "ocr_required": false,
+      "reason": "not_visual_document",
+      "engine": "paddleocr-vl-1.6"
+    }
+  ],
+  "status": "skipped_native_text",
+  "errors": [],
+  "latency_ms": 103.32569999991392,
+  "finished_at": "2026-10-08T12:36:09.928326+00:00"
+}

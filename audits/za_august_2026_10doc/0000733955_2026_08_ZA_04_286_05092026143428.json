@@ -1,0 +1,1582 @@
+{
+  "filename": "0000733955_2026_08_ZA_04_286_05092026143428.jpeg",
+  "bytes": 33531,
+  "elapsed_s": 44.6515,
+  "method": null,
+  "stockist_name": "HIMALATA ZANDRA",
+  "company_name": "HIMALAYA DRUGS (ZEAL)",
+  "period_from": "2026-08-01",
+  "period_to": "2026-08-31",
+  "row_count": 26,
+  "line_items": [
+    {
+      "product_name": "CISTON SYRUP",
+      "product_code": null,
+      "packing": "100ML.",
+      "opening_qty": 125.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 67.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": 87.0
+      }
+    },
+    {
+      "product_name": "CISTON TAB",
+      "product_code": null,
+      "packing": "100'S.",
+      "opening_qty": 349.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 195.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": 235.0
+      }
+    },
+    {
+      "product_name": "CYSTINE FORTE TAB.",
+      "product_code": null,
+      "packing": "20TAB.",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 27.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": -33.0
+      }
+    },
+    {
+      "product_name": "CISTONE SYRUP",
+      "product_code": null,
+      "packing": "100ML.",
+      "opening_qty": 1.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 1.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": true,
+        "expected_closing": 1.0
+      }
+    },
+    {
+      "product_name": "CYSTINE SYRUP (L)",
+      "product_code": null,
+      "packing": "200ML.",
+      "opening_qty": 64.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 42.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": 46.0
+      }
+    },
+    {
+      "product_name": "EYELANE FORTE SYRUP",
+      "product_code": null,
+      "packing": "200ML.",
+      "opening_qty": 23.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 18.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": 20.0
+      }
+    },
+    {
+      "product_name": "EYELANE SYRUP 40ML.",
+      "product_code": null,
+      "packing": "40ML.",
+      "opening_qty": 64.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 18.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": 59.0
+      }
+    },
+    {
+      "product_name": "EYELANE SYRUP.200ML.",
+      "product_code": null,
+      "packing": "200ML.",
+      "opening_qty": 116.0,
+      "receipts_qty": 112.0,
+      "sales_qty": 0.0,
+      "closing_qty": 145.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": 106.0
+      }
+    },
+    {
+      "product_name": "KIRPLASIA TAB",
+      "product_code": null,
+      "packing": "25TAB",
+      "opening_qty": 34.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 34.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": true,
+        "expected_closing": 34.0
+      }
+    },
+    {
+      "product_name": "MIDRA GA DEL 100M",
+      "product_code": null,
+      "packing": "100ML",
+      "opening_qty": 30.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 30.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": true,
+        "expected_closing": 30.0
+      }
+    },
+    {
+      "product_name": "MIDRA K MOUTH WASH",
+      "product_code": null,
+      "packing": "150ML.",
+      "opening_qty": 29.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 29.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": 26.0
+      }
+    },
+    {
+      "product_name": "MIDRA K TOOTH PASTE",
+      "product_code": null,
+      "packing": "100GM.",
+      "opening_qty": 1.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 1.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": true,
+        "expected_closing": 1.0
+      }
+    },
+    {
+      "product_name": "LIV 52 DROP (S)",
+      "product_code": null,
+      "packing": "5ML.",
+      "opening_qty": 121.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 49.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": 88.0
+      }
+    },
+    {
+      "product_name": "LIV 52 DROPS(S)",
+      "product_code": null,
+      "packing": "12ML.",
+      "opening_qty": 2.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 2.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": true,
+        "expected_closing": 2.0
+      }
+    },
+    {
+      "product_name": "LIV 52 DS SYP (S)",
+      "product_code": null,
+      "packing": "100ML.",
+      "opening_qty": 145.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 53.0,
+      "closing_qty": 92.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": 39.0
+      }
+    },
+    {
+      "product_name": "LIV 52 DS SYP (S)",
+      "product_code": null,
+      "packing": "200ML.",
+      "opening_qty": 3.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 2.0,
+      "closing_qty": 1.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": -1.0
+      }
+    },
+    {
+      "product_name": "LIV 52 DS TAB.",
+      "product_code": null,
+      "packing": "100'S",
+      "opening_qty": 3.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 31.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": -69.0
+      }
+    },
+    {
+      "product_name": "LIV-52 DS IN",
+      "product_code": null,
+      "packing": "200ML.",
+      "opening_qty": 8.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 3.0,
+      "closing_qty": 5.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": 2.0
+      }
+    },
+    {
+      "product_name": "CUMIL STRUP",
+      "product_code": null,
+      "packing": "100ML.",
+      "opening_qty": 34.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 34.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": true,
+        "expected_closing": 34.0
+      }
+    },
+    {
+      "product_name": "LUKIA TAB.",
+      "product_code": null,
+      "packing": "100TAB.",
+      "opening_qty": 357.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 10.0,
+      "closing_qty": 347.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": 337.0
+      }
+    },
+    {
+      "product_name": "MENTAT SYRUP",
+      "product_code": null,
+      "packing": "200ML.",
+      "opening_qty": 16.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 42.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": -12.0
+      }
+    },
+    {
+      "product_name": "MENTAL TABLT",
+      "product_code": null,
+      "packing": "100",
+      "opening_qty": 24.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 1.0,
+      "closing_qty": 23.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": 22.0
+      }
+    },
+    {
+      "product_name": "PLATENZA SYRUP",
+      "product_code": null,
+      "packing": "100ML.",
+      "opening_qty": 43.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 21.0,
+      "closing_qty": 22.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": 1.0
+      }
+    },
+    {
+      "product_name": "PLATENZA TABLI",
+      "product_code": null,
+      "packing": "100'S.",
+      "opening_qty": 32.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 10.0,
+      "closing_qty": 22.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": 12.0
+      }
+    },
+    {
+      "product_name": "SEPTILIN SYRUP (X)",
+      "product_code": null,
+      "packing": "200ML.",
+      "opening_qty": 28.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 22.0,
+      "closing_qty": 6.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": -16.0
+      }
+    },
+    {
+      "product_name": "SEPTILIN TAB.",
+      "product_code": null,
+      "packing": "60TAB.",
+      "opening_qty": 67.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 6.0,
+      "closing_qty": 61.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "stock_identity_ok": false,
+        "expected_closing": 55.0
+      }
+    }
+  ],
+  "totals": {
+    "opening_qty": null,
+    "receipts_qty": null,
+    "sales_qty": null,
+    "closing_qty": null,
+    "opening_value": null,
+    "receipts_value": null,
+    "sales_value": null,
+    "closing_value": null
+  },
+  "validation_status": "unresolved",
+  "validation_accepted": false,
+  "source_agreement": true,
+  "source_evidence": false,
+  "business_status": "inconsistent",
+  "failure_reasons": [
+    "stock_identity_failure",
+    "unverified_ocr_fallback",
+    "cell_validation_failure"
+  ],
+  "decision_status": "UNRESOLVED",
+  "verified": false,
+  "decision_reason": "stock_identity_failure",
+  "phase2": {
+    "status": null,
+    "attempts": null,
+    "failure": null
+  },
+  "grounding": {
+    "status": "insufficient_source_evidence",
+    "reader": "ocr_text",
+    "compared_rows": 0,
+    "discrepancy_count": 0,
+    "blank_read_as_zero": 0,
+    "explicit_zero": null,
+    "unreadable": null,
+    "missing_rows": null,
+    "duplicate_rows": null,
+    "low_name_match": null,
+    "blocks_verification": true,
+    "ocr_invoked": false,
+    "discrepancies": [],
+    "sheets": [],
+    "pages": [],
+    "truncated": false,
+    "evidence": {
+      "sufficient": false,
+      "reason": "no_source_table",
+      "blocks_verification": true,
+      "coordinates_available": false,
+      "text_retained": "cells",
+      "script": "unspecified",
+      "language": "unspecified"
+    }
+  },
+  "ocr_calls": [
+    {
+      "ok": true,
+      "elapsed_s": 15.7866,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6",
+        "gemini"
+      ],
+      "primary_engine": "gemini",
+      "primary_status": "success",
+      "primary_chars": 12650,
+      "secondary_engine": "paddleocr-vl-1.6",
+      "fallback": true,
+      "unverified_fallback": true,
+      "kind": "ocr",
+      "t": 1136813.2106682
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0835,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136813.3876373
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.075,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136813.7249238
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0776,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136813.8656718
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.073,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136813.9930346
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0965,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136814.1416166
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0964,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136814.3461757
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0868,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136814.5098948
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0992,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136814.6860956
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0887,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136814.8580173
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.07,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136814.9905559
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0851,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136815.1441784
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0566,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136815.2557476
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0645,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136815.3741698
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0781,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136815.5311846
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0791,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136815.6886605
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0774,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136815.8384738
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0762,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136815.9931113
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0875,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136816.3284504
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0793,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136816.4732469
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0708,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136816.5969565
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0758,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136816.7332265
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.1107,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136817.0106439
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.1027,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136817.2036492
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0911,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136817.3819229
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0986,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136817.5739304
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0772,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136817.7163948
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.083,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136817.8640868
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0643,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136817.9803924
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0646,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136818.099025
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0898,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136818.2743669
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.102,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136818.464109
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0912,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136818.6420952
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0927,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136818.8304182
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0767,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136819.1425202
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0785,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136819.2831076
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0701,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136819.4054042
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0716,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136819.5293395
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0904,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136819.6988626
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0928,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136819.872364
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0952,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136820.0435766
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0891,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136820.2236927
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0774,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136820.3637615
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0767,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136820.5023304
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0657,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136820.6187146
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0672,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136820.7394459
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0889,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136820.9100134
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0926,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136821.0809063
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0969,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136821.2488553
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0868,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136821.4096695
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0624,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136821.6938719
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0679,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136821.8277303
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0586,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136821.9300557
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.055,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136822.0289401
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0846,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136822.1928705
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.1183,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136822.4185977
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0929,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136822.604459
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0882,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136822.7785798
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0601,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136822.8967137
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.062,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136823.0135007
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0527,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136823.1100394
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.053,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136823.2077833
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0839,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136823.3682153
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0766,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136823.5232091
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0776,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136823.6924643
+    },
+    {
+      "ok": true,
+      "elapsed_s": 0.0838,
+      "page": 1,
+      "engines": [
+        "paddleocr-vl-1.6"
+      ],
+      "primary_engine": "paddleocr-vl-1.6",
+      "primary_status": "error",
+      "primary_chars": 0,
+      "secondary_engine": null,
+      "fallback": false,
+      "unverified_fallback": false,
+      "kind": "ocr",
+      "t": 1136823.8682817
+    }
+  ],
+  "gemini_calls": [
+    {
+      "ok": true,
+      "elapsed_s": 7.7594,
+      "model": "gemini-2.5-flash-lite",
+      "request_type": "vision",
+      "prompt_tokens": null,
+      "output_tokens": null,
+      "kind": "gemini",
+      "t": 1136832.2892849
+    }
+  ],
+  "error": null
+}

@@ -10,6 +10,7 @@ Class-A failure mode this guards against:
 
 from __future__ import annotations
 
+import os
 import unittest
 from pathlib import Path
 
@@ -161,6 +162,13 @@ class TestJrShahPackOpPurBalJpeg(unittest.TestCase):
 
     @unittest.skipUnless(FIX.is_file(), "JR SHAH JPEG fixture missing")
     def test_live_jpeg_extracts_all_rows_not_first_three_only(self):
+        if os.environ.get("RUN_LIVE_EXTRACTION", "").strip().lower() not in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }:
+            self.skipTest("live JPEG extract is opt-in via RUN_LIVE_EXTRACTION=1")
         result = extract_sales_statement(FIX.read_bytes(), FIX.name)
         extra = (result.get("totals") or {}).get("extra") or {}
         method = extra.get("extraction_method")

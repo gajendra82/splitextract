@@ -1,0 +1,143 @@
+{
+  "file": "0000734246_2026_08_ZA_13_249_06092026162117.html",
+  "error": null,
+  "seconds": 0.2168,
+  "rows": 44,
+  "method": "medivision_op_wsale_html",
+  "decision": {
+    "status": "UNRESOLVED",
+    "reason": "stock_identity_failure",
+    "verified": false
+  },
+  "phase2": {
+    "status": "unresolved",
+    "failure_type": "STOCK_IDENTITY_FAILURE",
+    "strategy": "targeted_stock_extraction",
+    "attempts": 0,
+    "applied": false,
+    "accepted": false,
+    "recovery_log": [],
+    "original_values": [],
+    "manual_review": "UNRESOLVED"
+  },
+  "validation_status": "unresolved",
+  "source_evidence": true,
+  "source_agreement": true,
+  "stock_identity_fail_count": 3,
+  "grounding": {
+    "status": "checked",
+    "reader": "html_table",
+    "compared_rows": 44,
+    "discrepancy_count": 0,
+    "blank_read_as_zero": 0,
+    "blocks_verification": false,
+    "discrepancies": []
+  },
+  "ocr_calls": 0,
+  "watched_rows": [
+    {
+      "product_name": "BONNISAN DROPS 30ML",
+      "packing": "30ML",
+      "opening_qty": 55.0,
+      "receipts_qty": null,
+      "sales_qty": 10.0,
+      "closing_qty": 45.0,
+      "sales_value": 747.0,
+      "closing_value": 2830.0,
+      "qty_cell_state": null,
+      "total_stock": null,
+      "scheme_out_qty": null
+    },
+    {
+      "product_name": "BONNISAN LIQ 100ML",
+      "packing": "100ML",
+      "opening_qty": 59.0,
+      "receipts_qty": null,
+      "sales_qty": 52.0,
+      "closing_qty": 7.0,
+      "sales_value": 3390.0,
+      "closing_value": 400.0,
+      "qty_cell_state": null,
+      "total_stock": null,
+      "scheme_out_qty": null
+    },
+    {
+      "product_name": "BONNISAN LIQ 200ML",
+      "packing": "200ML",
+      "opening_qty": 13.0,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": 13.0,
+      "sales_value": null,
+      "closing_value": 1185.0,
+      "qty_cell_state": null,
+      "total_stock": null,
+      "scheme_out_qty": null
+    },
+    {
+      "product_name": "CYSTONE FORTE RAB 30S",
+      "packing": "30 TAB",
+      "opening_qty": 28.0,
+      "receipts_qty": null,
+      "sales_qty": 24.0,
+      "closing_qty": 4.0,
+      "sales_value": 2665.0,
+      "closing_value": 391.0,
+      "qty_cell_state": null,
+      "total_stock": null,
+      "scheme_out_qty": null
+    },
+    {
+      "product_name": "CYSTONE SYRUP 200ML",
+      "packing": "200 ML",
+      "opening_qty": 19.0,
+      "receipts_qty": null,
+      "sales_qty": 2.0,
+      "closing_qty": 17.0,
+      "sales_value": 413.0,
+      "closing_value": 2894.0,
+      "qty_cell_state": null,
+      "total_stock": null,
+      "scheme_out_qty": null
+    },
+    {
+      "product_name": "CYSTONE TAB 60S",
+      "packing": "60 TAB",
+      "opening_qty": 74.0,
+      "receipts_qty": null,
+      "sales_qty": 18.0,
+      "closing_qty": 56.0,
+      "sales_value": 3333.0,
+      "closing_value": 8916.0,
+      "qty_cell_state": null,
+      "total_stock": null,
+      "scheme_out_qty": null
+    },
+    {
+      "product_name": "EVECARE CAP 30'S",
+      "packing": "30'S",
+      "opening_qty": 81.0,
+      "receipts_qty": null,
+      "sales_qty": 21.0,
+      "closing_qty": 60.0,
+      "sales_value": 3183.0,
+      "closing_value": 8036.0,
+      "qty_cell_state": null,
+      "total_stock": null,
+      "scheme_out_qty": null
+    },
+    {
+      "product_name": "EVECARE FORTE LIQ 200ML",
+      "packing": "200ML",
+      "opening_qty": 18.0,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "sales_value": null,
+      "closing_value": null,
+      "qty_cell_state": null,
+      "total_stock": null,
+      "scheme_out_qty": null
+    }
+  ]
+}

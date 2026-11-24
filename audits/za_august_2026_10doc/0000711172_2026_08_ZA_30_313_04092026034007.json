@@ -1,0 +1,537 @@
+{
+  "filename": "0000711172_2026_08_ZA_30_313_04092026034007.xlsx",
+  "bytes": 15142,
+  "elapsed_s": 0.7408,
+  "method": null,
+  "stockist_name": "SHIVAM MEDICOS PVT. LTD.",
+  "company_name": "HIMALAYA WELLNESS COMPANY",
+  "period_from": "2026-08-01",
+  "period_to": "2026-08-31",
+  "row_count": 16,
+  "line_items": [
+    {
+      "product_name": "CYSTONE TABLETS",
+      "product_code": "24541",
+      "packing": "1X60",
+      "opening_qty": 700.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 700.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "sales_return_qty": 0.0,
+        "stock_identity_ok": true,
+        "expected_closing": 700.0
+      }
+    },
+    {
+      "product_name": "EVECARE SYRUP 200 ML",
+      "product_code": "24996",
+      "packing": "200 ML",
+      "opening_qty": 196.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 196.0,
+      "closing_qty": 0.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "source_discrepancy": true,
+        "source_validation_error": "source: closing_qty extracted 0.0 but source spreadsheet_cells has              - (blank_read_as_zero)",
+        "validation_error": "source: closing_qty extracted 0.0 but source spreadsheet_cells has              - (blank_read_as_zero)",
+        "source_columns": {
+          "opening_qty": "OPENING",
+          "closing_qty": "CLOSING"
+        },
+        "sales_return_qty": 0.0,
+        "stock_identity_ok": true,
+        "expected_closing": 0.0
+      }
+    },
+    {
+      "product_name": "LIV 52 DROP 100ML",
+      "product_code": "25446",
+      "packing": "100ML",
+      "opening_qty": 336.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 336.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "sales_return_qty": 0.0,
+        "stock_identity_ok": true,
+        "expected_closing": 336.0
+      }
+    },
+    {
+      "product_name": "LIV. 52 DROPS 60ML",
+      "product_code": "24110",
+      "packing": "1*60ML",
+      "opening_qty": 2700.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 1800.0,
+      "closing_qty": 900.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "sales_return_qty": 0.0,
+        "stock_identity_ok": true,
+        "expected_closing": 900.0
+      }
+    },
+    {
+      "product_name": "LIV.52 DS SYRUP 200ML",
+      "product_code": "24550",
+      "packing": "200 ML",
+      "opening_qty": 8715.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 1610.0,
+      "closing_qty": 7105.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "sales_return_qty": 0.0,
+        "stock_identity_ok": true,
+        "expected_closing": 7105.0
+      }
+    },
+    {
+      "product_name": "LIV.52 DS TABLETS",
+      "product_code": "24551",
+      "packing": "1X60",
+      "opening_qty": 0.0,
+      "receipts_qty": 11100.0,
+      "sales_qty": 8400.0,
+      "closing_qty": 2700.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "source_discrepancy": true,
+        "source_validation_error": "source: opening_qty extracted 0.0 but source spreadsheet_cells has              - (blank_read_as_zero)",
+        "validation_error": "source: opening_qty extracted 0.0 but source spreadsheet_cells has              - (blank_read_as_zero)",
+        "source_columns": {
+          "opening_qty": "OPENING",
+          "closing_qty": "CLOSING"
+        },
+        "sales_return_qty": 0.0,
+        "stock_identity_ok": true,
+        "expected_closing": 2700.0
+      }
+    },
+    {
+      "product_name": "LIV.52 SYRUP 100 ML",
+      "product_code": "24553",
+      "packing": "100 ML",
+      "opening_qty": 630.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 630.0,
+      "closing_qty": 0.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "source_discrepancy": true,
+        "source_validation_error": "source: closing_qty extracted 0.0 but source spreadsheet_cells has              - (blank_read_as_zero)",
+        "validation_error": "source: closing_qty extracted 0.0 but source spreadsheet_cells has              - (blank_read_as_zero)",
+        "source_columns": {
+          "opening_qty": "OPENING",
+          "closing_qty": "CLOSING"
+        },
+        "sales_return_qty": 0.0,
+        "stock_identity_ok": true,
+        "expected_closing": 0.0
+      }
+    },
+    {
+      "product_name": "LIV.52 TABS(FC) 100 S",
+      "product_code": "27032",
+      "packing": "100 TAB",
+      "opening_qty": 4000.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 3300.0,
+      "closing_qty": 700.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "sales_return_qty": 0.0,
+        "stock_identity_ok": true,
+        "expected_closing": 700.0
+      }
+    },
+    {
+      "product_name": "LUKOL TABLETS",
+      "product_code": "24556",
+      "packing": "1X60",
+      "opening_qty": 400.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 400.0,
+      "closing_qty": 0.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "source_discrepancy": true,
+        "source_validation_error": "source: closing_qty extracted 0.0 but source spreadsheet_cells has              - (blank_read_as_zero)",
+        "validation_error": "source: closing_qty extracted 0.0 but source spreadsheet_cells has              - (blank_read_as_zero)",
+        "source_columns": {
+          "opening_qty": "OPENING",
+          "closing_qty": "CLOSING"
+        },
+        "sales_return_qty": 0.0,
+        "stock_identity_ok": true,
+        "expected_closing": 0.0
+      }
+    },
+    {
+      "product_name": "OPHTHACARE EYE DROP",
+      "product_code": "25447",
+      "packing": "10ML",
+      "opening_qty": 48.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 48.0,
+      "closing_qty": 0.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "source_discrepancy": true,
+        "source_validation_error": "source: closing_qty extracted 0.0 but source spreadsheet_cells has              - (blank_read_as_zero)",
+        "validation_error": "source: closing_qty extracted 0.0 but source spreadsheet_cells has              - (blank_read_as_zero)",
+        "source_columns": {
+          "opening_qty": "OPENING",
+          "closing_qty": "CLOSING"
+        },
+        "sales_return_qty": 0.0,
+        "stock_identity_ok": true,
+        "expected_closing": 0.0
+      }
+    },
+    {
+      "product_name": "PILEX FORTE OINT.30G",
+      "product_code": "25768",
+      "packing": "30GM",
+      "opening_qty": 100.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 100.0,
+      "closing_qty": 0.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "source_discrepancy": true,
+        "source_validation_error": "source: closing_qty extracted 0.0 but source spreadsheet_cells has              - (blank_read_as_zero)",
+        "validation_error": "source: closing_qty extracted 0.0 but source spreadsheet_cells has              - (blank_read_as_zero)",
+        "source_columns": {
+          "opening_qty": "OPENING",
+          "closing_qty": "CLOSING"
+        },
+        "sales_return_qty": 0.0,
+        "stock_identity_ok": true,
+        "expected_closing": 0.0
+      }
+    },
+    {
+      "product_name": "PILEX FORTE TAB",
+      "product_code": "25875",
+      "packing": "2X30 TAB",
+      "opening_qty": 56.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 0.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "source_discrepancy": true,
+        "source_validation_error": "source: closing_qty extracted 0.0 but source spreadsheet_cells has              - (blank_read_as_zero)",
+        "validation_error": "source: closing_qty extracted 0.0 but source spreadsheet_cells has              - (blank_read_as_zero)",
+        "source_columns": {
+          "opening_qty": "OPENING",
+          "closing_qty": "CLOSING"
+        },
+        "sales_return_qty": 0.0,
+        "stock_identity_ok": true,
+        "expected_closing": 0.0
+      }
+    },
+    {
+      "product_name": "PILEX TABLETS",
+      "product_code": "24560",
+      "packing": "1X60",
+      "opening_qty": 900.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 600.0,
+      "closing_qty": 300.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "sales_return_qty": 0.0,
+        "stock_identity_ok": true,
+        "expected_closing": 300.0
+      }
+    },
+    {
+      "product_name": "SEPTILIN TABLETS",
+      "product_code": "24567",
+      "packing": "1X60",
+      "opening_qty": 400.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 100.0,
+      "closing_qty": 300.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "sales_return_qty": 0.0,
+        "stock_identity_ok": true,
+        "expected_closing": 300.0
+      }
+    },
+    {
+      "product_name": "SPEMAN TABLETS",
+      "product_code": "24568",
+      "packing": "1X60",
+      "opening_qty": 0.0,
+      "receipts_qty": 250.0,
+      "sales_qty": 100.0,
+      "closing_qty": 150.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "source_discrepancy": true,
+        "source_validation_error": "source: opening_qty extracted 0.0 but source spreadsheet_cells has              - (blank_read_as_zero)",
+        "validation_error": "source: opening_qty extracted 0.0 but source spreadsheet_cells has              - (blank_read_as_zero)",
+        "source_columns": {
+          "opening_qty": "OPENING",
+          "closing_qty": "CLOSING"
+        },
+        "sales_return_qty": 0.0,
+        "stock_identity_ok": true,
+        "expected_closing": 150.0
+      }
+    },
+    {
+      "product_name": "TENTEX FORTE TABLETS",
+      "product_code": "24570",
+      "packing": "10X10",
+      "opening_qty": 245.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 183.0,
+      "closing_qty": 62.0,
+      "opening_value": null,
+      "receipts_value": null,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "sales_return_qty": 0.0,
+        "stock_identity_ok": true,
+        "expected_closing": 62.0
+      }
+    }
+  ],
+  "totals": {
+    "opening_qty": null,
+    "receipts_qty": null,
+    "sales_qty": null,
+    "closing_qty": null,
+    "opening_value": null,
+    "receipts_value": null,
+    "sales_value": null,
+    "closing_value": null
+  },
+  "validation_status": "unresolved",
+  "validation_accepted": false,
+  "source_agreement": false,
+  "source_evidence": true,
+  "business_status": "consistent",
+  "failure_reasons": [
+    "source_discrepancy",
+    "cell_validation_failure"
+  ],
+  "decision_status": "UNRESOLVED",
+  "verified": false,
+  "decision_reason": "validation_not_accepted",
+  "phase2": {
+    "status": null,
+    "attempts": null,
+    "failure": null
+  },
+  "grounding": {
+    "status": "checked",
+    "reader": "spreadsheet_cells",
+    "compared_rows": 16,
+    "discrepancy_count": 9,
+    "blank_read_as_zero": 8,
+    "explicit_zero": 0,
+    "unreadable": 0,
+    "missing_rows": 1,
+    "duplicate_rows": 0,
+    "low_name_match": 0,
+    "blocks_verification": false,
+    "ocr_invoked": false,
+    "discrepancies": [
+      {
+        "product_name": "EVECARE SYRUP 200 ML",
+        "field": "closing_qty",
+        "extracted": 0.0,
+        "source": "             -",
+        "code": "blank_read_as_zero",
+        "page": null,
+        "sheet": "Stock_And_Sales_Report",
+        "source_columns": {
+          "opening_qty": "OPENING",
+          "closing_qty": "CLOSING"
+        },
+        "index": 1
+      },
+      {
+        "product_name": "LIV.52 DS TABLETS",
+        "field": "opening_qty",
+        "extracted": 0.0,
+        "source": "             -",
+        "code": "blank_read_as_zero",
+        "page": null,
+        "sheet": "Stock_And_Sales_Report",
+        "source_columns": {
+          "opening_qty": "OPENING",
+          "closing_qty": "CLOSING"
+        },
+        "index": 5
+      },
+      {
+        "product_name": "LIV.52 SYRUP 100 ML",
+        "field": "closing_qty",
+        "extracted": 0.0,
+        "source": "             -",
+        "code": "blank_read_as_zero",
+        "page": null,
+        "sheet": "Stock_And_Sales_Report",
+        "source_columns": {
+          "opening_qty": "OPENING",
+          "closing_qty": "CLOSING"
+        },
+        "index": 6
+      },
+      {
+        "product_name": "LUKOL TABLETS",
+        "field": "closing_qty",
+        "extracted": 0.0,
+        "source": "             -",
+        "code": "blank_read_as_zero",
+        "page": null,
+        "sheet": "Stock_And_Sales_Report",
+        "source_columns": {
+          "opening_qty": "OPENING",
+          "closing_qty": "CLOSING"
+        },
+        "index": 8
+      },
+      {
+        "product_name": "OPHTHACARE EYE DROP",
+        "field": "closing_qty",
+        "extracted": 0.0,
+        "source": "             -",
+        "code": "blank_read_as_zero",
+        "page": null,
+        "sheet": "Stock_And_Sales_Report",
+        "source_columns": {
+          "opening_qty": "OPENING",
+          "closing_qty": "CLOSING"
+        },
+        "index": 9
+      },
+      {
+        "product_name": "PILEX FORTE OINT.30G",
+        "field": "closing_qty",
+        "extracted": 0.0,
+        "source": "             -",
+        "code": "blank_read_as_zero",
+        "page": null,
+        "sheet": "Stock_And_Sales_Report",
+        "source_columns": {
+          "opening_qty": "OPENING",
+          "closing_qty": "CLOSING"
+        },
+        "index": 10
+      },
+      {
+        "product_name": "PILEX FORTE TAB",
+        "field": "closing_qty",
+        "extracted": 0.0,
+        "source": "             -",
+        "code": "blank_read_as_zero",
+        "page": null,
+        "sheet": "Stock_And_Sales_Report",
+        "source_columns": {
+          "opening_qty": "OPENING",
+          "closing_qty": "CLOSING"
+        },
+        "index": 11
+      },
+      {
+        "product_name": "SPEMAN TABLETS",
+        "field": "opening_qty",
+        "extracted": 0.0,
+        "source": "             -",
+        "code": "blank_read_as_zero",
+        "page": null,
+        "sheet": "Stock_And_Sales_Report",
+        "source_columns": {
+          "opening_qty": "OPENING",
+          "closing_qty": "CLOSING"
+        },
+        "index": 14
+      },
+      {
+        "product_name": "Division : 00",
+        "field": "line_items",
+        "extracted": null,
+        "source": "Division : 00",
+        "code": "missing_row",
+        "page": null
+      }
+    ],
+    "sheets": [
+      "Stock_And_Sales_Report"
+    ],
+    "pages": [],
+    "truncated": false,
+    "evidence": {
+      "sufficient": true,
+      "reason": null,
+      "blocks_verification": false,
+      "coordinates_available": false,
+      "text_retained": "cells",
+      "script": "unspecified",
+      "language": "unspecified"
+    }
+  },
+  "ocr_calls": [],
+  "gemini_calls": [],
+  "error": null
+}

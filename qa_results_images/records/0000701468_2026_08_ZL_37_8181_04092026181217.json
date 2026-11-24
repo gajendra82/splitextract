@@ -1,0 +1,288 @@
+{
+  "file": "0000701468_2026_08_ZL_37_8181_04092026181217.jpg",
+  "path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000701468_2026_08_ZL_37_8181_04092026181217.jpg",
+  "format": "gemini_extraction_fallback",
+  "api_method": "gemini_extraction_fallback",
+  "status": "FAIL",
+  "expected_rows": 33,
+  "extracted_rows": 0,
+  "matched_rows": 0,
+  "missing_rows": [
+    {
+      "product": "TAB",
+      "opening_qty": 23,
+      "receipts_qty": 0,
+      "sales_qty": null,
+      "closing_qty": 1067.42,
+      "kind": "missing_product"
+    },
+    {
+      "product": "‘CONFIDO",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": null,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "DIAREX SYP TAB",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": null,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "DIAREX",
+      "opening_qty": null,
+      "receipts_qty": 0,
+      "sales_qty": null,
+      "closing_qty": 2131.72,
+      "kind": "missing_product"
+    },
+    {
+      "product": "GASEX SYP",
+      "opening_qty": null,
+      "receipts_qty": 0,
+      "sales_qty": null,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "HIMALAYA (ZEAL)",
+      "opening_qty": 0,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "HIMCOCID SUEPEN",
+      "opening_qty": null,
+      "receipts_qty": 0,
+      "sales_qty": null,
+      "closing_qty": 7740.9,
+      "kind": "missing_product"
+    },
+    {
+      "product": "HIMCOLIN GEL",
+      "opening_qty": null,
+      "receipts_qty": 70,
+      "sales_qty": null,
+      "closing_qty": 18144.8,
+      "kind": "missing_product"
+    },
+    {
+      "product": "L1V-52 SYP (100ML)",
+      "opening_qty": 261,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "Liv-52 SYP (200ML)",
+      "opening_qty": null,
+      "receipts_qty": 0,
+      "sales_qty": null,
+      "closing_qty": 2678.7,
+      "kind": "missing_product"
+    },
+    {
+      "product": "UV-52 TAB",
+      "opening_qty": null,
+      "receipts_qty": 0,
+      "sales_qty": null,
+      "closing_qty": 1819.9,
+      "kind": "missing_product"
+    },
+    {
+      "product": "OPTHACARE EYE DROPS",
+      "opening_qty": 40,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "ORO-T ORAL RINSE",
+      "opening_qty": null,
+      "receipts_qty": 0,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "‘OXITARD CAP",
+      "opening_qty": null,
+      "receipts_qty": 0,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "FORTE TAB",
+      "opening_qty": 16,
+      "receipts_qty": 0,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "PILEX",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": 818,
+      "kind": "missing_product"
+    },
+    {
+      "product": "PILEX FORTE OINTMENT",
+      "opening_qty": null,
+      "receipts_qty": 0,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "PILEX TAB",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "PURE HANDS (ORANGE)",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "PURE HANDS (STRAWBERRY)",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "PURE",
+      "opening_qty": null,
+      "receipts_qty": 0,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "HANDS",
+      "opening_qty": null,
+      "receipts_qty": 0,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "URE OOML(LITCHI) URE",
+      "opening_qty": null,
+      "receipts_qty": 0,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "HANDS-200 ML",
+      "opening_qty": null,
+      "receipts_qty": 0,
+      "sales_qty": null,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "HANDS-200ML",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "=\" HANDS-5OOML",
+      "opening_qty": null,
+      "receipts_qty": 0,
+      "sales_qty": null,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "S-5S00ML",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "(LEMON)",
+      "opening_qty": null,
+      "receipts_qty": 0,
+      "sales_qty": null,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "5S00ML",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "ORANGE",
+      "opening_qty": 0,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "TUBE",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "(TAB",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "Sarl",
+      "opening_qty": null,
+      "receipts_qty": 0,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    }
+  ],
+  "extra_rows": [],
+  "duplicates": [],
+  "mismatches": [],
+  "ocr_review": [],
+  "accounting": [],
+  "confidence": "medium",
+  "notes": [
+    "OCR used tesseract psm 6."
+  ],
+  "result_key": "0000701468_2026_08_ZL_37_8181_04092026181217",
+  "unavailable_fields": {},
+  "formula_checked": "none"
+}

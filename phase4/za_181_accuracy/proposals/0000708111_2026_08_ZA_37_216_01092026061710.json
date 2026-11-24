@@ -1,0 +1,5409 @@
+{
+  "document_id": "0000708111_2026_08_ZA_37_216_01092026061710.png",
+  "source_file": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000708111_2026_08_ZA_37_216_01092026061710.png",
+  "source_file_exists": true,
+  "verification_status": "unverified",
+  "annotation_origin": "AI_PROPOSED",
+  "ai_generated": true,
+  "human_verified": false,
+  "rows": [
+    {
+      "row_id": "r01",
+      "row_index": 1,
+      "product_name": {
+        "raw": "BONNISAN DROPS 30ML",
+        "normalized": "BONNISAN DROPS 30ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": "42",
+        "normalized": 42.0,
+        "status": "ai_proposed"
+      },
+      "receipt_qty": {
+        "raw": "-1",
+        "normalized": -1.0,
+        "status": "ai_proposed"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": "40",
+        "normalized": 40.0,
+        "status": "ai_proposed"
+      },
+      "closing_qty": {
+        "raw": "1",
+        "normalized": 1.0,
+        "status": "ai_proposed"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENING STOCK",
+          "semantic": "opening_qty",
+          "raw": "42",
+          "normalized": 42.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENING VALUE",
+          "semantic": "not_quantity",
+          "raw": "2526.72",
+          "normalized": 2526.72,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTITY",
+          "semantic": "receipt_qty",
+          "raw": "-1",
+          "normalized": -1.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIVE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTITY",
+          "semantic": "stock_out_qty",
+          "raw": "40",
+          "normalized": 40.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "2714.4",
+          "normalized": 2714.4,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSING STOCK",
+          "semantic": "closing_qty",
+          "raw": "1",
+          "normalized": 1.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSING VALUE",
+          "semantic": "not_quantity",
+          "raw": "60.16",
+          "normalized": 60.16,
+          "status": "ai_proposed"
+        }
+      ]
+    },
+    {
+      "row_id": "r02",
+      "row_index": 2,
+      "product_name": {
+        "raw": "BONNISAN LIQUID 100ML 100ML",
+        "normalized": "BONNISAN LIQUID 100ML 100ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": "34",
+        "normalized": 34.0,
+        "status": "ai_proposed"
+      },
+      "receipt_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": "2",
+        "normalized": 2.0,
+        "status": "ai_proposed"
+      },
+      "closing_qty": {
+        "raw": "32",
+        "normalized": 32.0,
+        "status": "ai_proposed"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENING STOCK",
+          "semantic": "opening_qty",
+          "raw": "34",
+          "normalized": 34.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENING VALUE",
+          "semantic": "not_quantity",
+          "raw": "1492.05",
+          "normalized": 1492.05,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTITY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIVE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTITY",
+          "semantic": "stock_out_qty",
+          "raw": "2",
+          "normalized": 2.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "110",
+          "normalized": 110.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSING STOCK",
+          "semantic": "closing_qty",
+          "raw": "32",
+          "normalized": 32.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSING VALUE",
+          "semantic": "not_quantity",
+          "raw": "1404.28",
+          "normalized": 1404.28,
+          "status": "ai_proposed"
+        }
+      ]
+    },
+    {
+      "row_id": "r03",
+      "row_index": 3,
+      "product_name": {
+        "raw": "BONNISAN LIQUID 200ML 200ML",
+        "normalized": "BONNISAN LIQUID 200ML 200ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "receipt_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "closing_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENING STOCK",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENING VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTITY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIVE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTITY",
+          "semantic": "stock_out_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSING STOCK",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSING VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        }
+      ]
+    },
+    {
+      "row_id": "r04",
+      "row_index": 4,
+      "product_name": {
+        "raw": "BONNISPAZ DROPS 15ML",
+        "normalized": "BONNISPAZ DROPS 15ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": "90",
+        "normalized": 90.0,
+        "status": "ai_proposed"
+      },
+      "receipt_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": "53",
+        "normalized": 53.0,
+        "status": "ai_proposed"
+      },
+      "closing_qty": {
+        "raw": "37",
+        "normalized": 37.0,
+        "status": "ai_proposed"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENING STOCK",
+          "semantic": "opening_qty",
+          "raw": "90",
+          "normalized": 90.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENING VALUE",
+          "semantic": "not_quantity",
+          "raw": "3839.4",
+          "normalized": 3839.4,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTITY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIVE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTITY",
+          "semantic": "stock_out_qty",
+          "raw": "53",
+          "normalized": 53.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "2550.36",
+          "normalized": 2550.36,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSING STOCK",
+          "semantic": "closing_qty",
+          "raw": "37",
+          "normalized": 37.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSING VALUE",
+          "semantic": "not_quantity",
+          "raw": "1578.42",
+          "normalized": 1578.42,
+          "status": "ai_proposed"
+        }
+      ]
+    },
+    {
+      "row_id": "r05",
+      "row_index": 5,
+      "product_name": {
+        "raw": "BRESOL SYP 100ML",
+        "normalized": "BRESOL SYP 100ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "receipt_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "closing_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENING STOCK",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENING VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTITY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIVE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTITY",
+          "semantic": "stock_out_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSING STOCK",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSING VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        }
+      ]
+    },
+    {
+      "row_id": "r06",
+      "row_index": 6,
+      "product_name": {
+        "raw": "BRESOL SYP 200ML 200ML",
+        "normalized": "BRESOL SYP 200ML 200ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": "25",
+        "normalized": 25.0,
+        "status": "ai_proposed"
+      },
+      "receipt_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": "2",
+        "normalized": 2.0,
+        "status": "ai_proposed"
+      },
+      "closing_qty": {
+        "raw": "23",
+        "normalized": 23.0,
+        "status": "ai_proposed"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENING STOCK",
+          "semantic": "opening_qty",
+          "raw": "25",
+          "normalized": 25.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENING VALUE",
+          "semantic": "not_quantity",
+          "raw": "3008",
+          "normalized": 3008.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTITY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIVE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTITY",
+          "semantic": "stock_out_qty",
+          "raw": "2",
+          "normalized": 2.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "271.44",
+          "normalized": 271.44,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSING STOCK",
+          "semantic": "closing_qty",
+          "raw": "23",
+          "normalized": 23.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSING VALUE",
+          "semantic": "not_quantity",
+          "raw": "2767.36",
+          "normalized": 2767.36,
+          "status": "ai_proposed"
+        }
+      ]
+    },
+    {
+      "row_id": "r07",
+      "row_index": 7,
+      "product_name": {
+        "raw": "BRESOL TAB 60S",
+        "normalized": "BRESOL TAB 60S",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "receipt_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "closing_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENING STOCK",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENING VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTITY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIVE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTITY",
+          "semantic": "stock_out_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSING STOCK",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSING VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        }
+      ]
+    },
+    {
+      "row_id": "r08",
+      "row_index": 8,
+      "product_name": {
+        "raw": "BRESOL-NS NASAL SOLUTION 10ML",
+        "normalized": "BRESOL-NS NASAL SOLUTION 10ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "receipt_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "closing_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENING STOCK",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENING VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTITY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIVE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTITY",
+          "semantic": "stock_out_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSING STOCK",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSING VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        }
+      ]
+    },
+    {
+      "row_id": "r09",
+      "row_index": 9,
+      "product_name": {
+        "raw": "CYSTONE FORTE TAB 30S",
+        "normalized": "CYSTONE FORTE TAB 30S",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": "23",
+        "normalized": 23.0,
+        "status": "ai_proposed"
+      },
+      "receipt_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": "14",
+        "normalized": 14.0,
+        "status": "ai_proposed"
+      },
+      "closing_qty": {
+        "raw": "9",
+        "normalized": 9.0,
+        "status": "ai_proposed"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENING STOCK",
+          "semantic": "opening_qty",
+          "raw": "23",
+          "normalized": 23.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENING VALUE",
+          "semantic": "not_quantity",
+          "raw": "1766.12",
+          "normalized": 1766.12,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTITY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIVE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTITY",
+          "semantic": "stock_out_qty",
+          "raw": "14",
+          "normalized": 14.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "1347.36",
+          "normalized": 1347.36,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSING STOCK",
+          "semantic": "closing_qty",
+          "raw": "9",
+          "normalized": 9.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSING VALUE",
+          "semantic": "not_quantity",
+          "raw": "691.09",
+          "normalized": 691.09,
+          "status": "ai_proposed"
+        }
+      ]
+    },
+    {
+      "row_id": "r10",
+      "row_index": 10,
+      "product_name": {
+        "raw": "CYSTONE SYP 100ML 100ML",
+        "normalized": "CYSTONE SYP 100ML 100ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "receipt_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "closing_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENING STOCK",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENING VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTITY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIVE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTITY",
+          "semantic": "stock_out_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSING STOCK",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSING VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        }
+      ]
+    },
+    {
+      "row_id": "r11",
+      "row_index": 11,
+      "product_name": {
+        "raw": "CYSTONE SYP 200ML 200ML",
+        "normalized": "CYSTONE SYP 200ML 200ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": "30",
+        "normalized": 30.0,
+        "status": "ai_proposed"
+      },
+      "receipt_qty": {
+        "raw": "-1",
+        "normalized": -1.0,
+        "status": "ai_proposed"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": "9",
+        "normalized": 9.0,
+        "status": "ai_proposed"
+      },
+      "closing_qty": {
+        "raw": "20",
+        "normalized": 20.0,
+        "status": "ai_proposed"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENING STOCK",
+          "semantic": "opening_qty",
+          "raw": "30",
+          "normalized": 30.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENING VALUE",
+          "semantic": "not_quantity",
+          "raw": "5034",
+          "normalized": 5034.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTITY",
+          "semantic": "receipt_qty",
+          "raw": "-1",
+          "normalized": -1.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIVE VALUE",
+          "semantic": "not_quantity",
+          "raw": "-124.1",
+          "normalized": -124.1,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTITY",
+          "semantic": "stock_out_qty",
+          "raw": "9",
+          "normalized": 9.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "1703.52",
+          "normalized": 1703.52,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSING STOCK",
+          "semantic": "closing_qty",
+          "raw": "20",
+          "normalized": 20.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSING VALUE",
+          "semantic": "not_quantity",
+          "raw": "3356",
+          "normalized": 3356.0,
+          "status": "ai_proposed"
+        }
+      ]
+    },
+    {
+      "row_id": "r12",
+      "row_index": 12,
+      "product_name": {
+        "raw": "CYSTONE TAB 60S",
+        "normalized": "CYSTONE TAB 60S",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": "62",
+        "normalized": 62.0,
+        "status": "ai_proposed"
+      },
+      "receipt_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": "60",
+        "normalized": 60.0,
+        "status": "ai_proposed"
+      },
+      "closing_qty": {
+        "raw": "2",
+        "normalized": 2.0,
+        "status": "ai_proposed"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENING STOCK",
+          "semantic": "opening_qty",
+          "raw": "62",
+          "normalized": 62.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENING VALUE",
+          "semantic": "not_quantity",
+          "raw": "9226.22",
+          "normalized": 9226.22,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTITY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIVE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTITY",
+          "semantic": "stock_out_qty",
+          "raw": "60",
+          "normalized": 60.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "10066.55",
+          "normalized": 10066.55,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSING STOCK",
+          "semantic": "closing_qty",
+          "raw": "2",
+          "normalized": 2.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSING VALUE",
+          "semantic": "not_quantity",
+          "raw": "297.62",
+          "normalized": 297.62,
+          "status": "ai_proposed"
+        }
+      ]
+    },
+    {
+      "row_id": "r13",
+      "row_index": 13,
+      "product_name": {
+        "raw": "CYSTONE-SF SYP 200ML",
+        "normalized": "CYSTONE-SF SYP 200ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "receipt_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "closing_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENING STOCK",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENING VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTITY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIVE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTITY",
+          "semantic": "stock_out_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSING STOCK",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSING VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        }
+      ]
+    },
+    {
+      "row_id": "r14",
+      "row_index": 14,
+      "product_name": {
+        "raw": "DIAREX SYP 100 ML",
+        "normalized": "DIAREX SYP 100 ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "receipt_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "closing_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENING STOCK",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENING VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTITY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIVE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTITY",
+          "semantic": "stock_out_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSING STOCK",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSING VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        }
+      ]
+    },
+    {
+      "row_id": "r15",
+      "row_index": 15,
+      "product_name": {
+        "raw": "EVECARE CAP 30S",
+        "normalized": "EVECARE CAP 30S",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": "89",
+        "normalized": 89.0,
+        "status": "ai_proposed"
+      },
+      "receipt_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "closing_qty": {
+        "raw": "89",
+        "normalized": 89.0,
+        "status": "ai_proposed"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENING STOCK",
+          "semantic": "opening_qty",
+          "raw": "89",
+          "normalized": 89.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENING VALUE",
+          "semantic": "not_quantity",
+          "raw": "11118.77",
+          "normalized": 11118.77,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTITY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIVE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTITY",
+          "semantic": "stock_out_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSING STOCK",
+          "semantic": "closing_qty",
+          "raw": "89",
+          "normalized": 89.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSING VALUE",
+          "semantic": "not_quantity",
+          "raw": "11118.77",
+          "normalized": 11118.77,
+          "status": "ai_proposed"
+        }
+      ]
+    },
+    {
+      "row_id": "r16",
+      "row_index": 16,
+      "product_name": {
+        "raw": "EVECARE FORTE SYP 200ML 200ML",
+        "normalized": "EVECARE FORTE SYP 200ML 200ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": "1",
+        "normalized": 1.0,
+        "status": "ai_proposed"
+      },
+      "receipt_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "closing_qty": {
+        "raw": "1",
+        "normalized": 1.0,
+        "status": "ai_proposed"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENING STOCK",
+          "semantic": "opening_qty",
+          "raw": "1",
+          "normalized": 1.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENING VALUE",
+          "semantic": "not_quantity",
+          "raw": "131.03",
+          "normalized": 131.03,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTITY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIVE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTITY",
+          "semantic": "stock_out_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSING STOCK",
+          "semantic": "closing_qty",
+          "raw": "1",
+          "normalized": 1.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSING VALUE",
+          "semantic": "not_quantity",
+          "raw": "131.03",
+          "normalized": 131.03,
+          "status": "ai_proposed"
+        }
+      ]
+    },
+    {
+      "row_id": "r17",
+      "row_index": 17,
+      "product_name": {
+        "raw": "EVECARE SYP 200ML 200ML",
+        "normalized": "EVECARE SYP 200ML 200ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": "28",
+        "normalized": 28.0,
+        "status": "ai_proposed"
+      },
+      "receipt_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": "11",
+        "normalized": 11.0,
+        "status": "ai_proposed"
+      },
+      "closing_qty": {
+        "raw": "17",
+        "normalized": 17.0,
+        "status": "ai_proposed"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENING STOCK",
+          "semantic": "opening_qty",
+          "raw": "28",
+          "normalized": 28.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENING VALUE",
+          "semantic": "not_quantity",
+          "raw": "3350.84",
+          "normalized": 3350.84,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTITY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIVE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTITY",
+          "semantic": "stock_out_qty",
+          "raw": "11",
+          "normalized": 11.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "1650",
+          "normalized": 1650.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSING STOCK",
+          "semantic": "closing_qty",
+          "raw": "17",
+          "normalized": 17.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSING VALUE",
+          "semantic": "not_quantity",
+          "raw": "2034.44",
+          "normalized": 2034.44,
+          "status": "ai_proposed"
+        }
+      ]
+    },
+    {
+      "row_id": "r18",
+      "row_index": 18,
+      "product_name": {
+        "raw": "GERIFORTE SYP 200ML",
+        "normalized": "GERIFORTE SYP 200ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": "2",
+        "normalized": 2.0,
+        "status": "ai_proposed"
+      },
+      "receipt_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "closing_qty": {
+        "raw": "2",
+        "normalized": 2.0,
+        "status": "ai_proposed"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENING STOCK",
+          "semantic": "opening_qty",
+          "raw": "2",
+          "normalized": 2.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENING VALUE",
+          "semantic": "not_quantity",
+          "raw": "170.05",
+          "normalized": 170.05,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTITY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIVE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTITY",
+          "semantic": "stock_out_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSING STOCK",
+          "semantic": "closing_qty",
+          "raw": "2",
+          "normalized": 2.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSING VALUE",
+          "semantic": "not_quantity",
+          "raw": "170.05",
+          "normalized": 170.05,
+          "status": "ai_proposed"
+        }
+      ]
+    },
+    {
+      "row_id": "r19",
+      "row_index": 19,
+      "product_name": {
+        "raw": "GERIFORTE TAB 100S",
+        "normalized": "GERIFORTE TAB 100S",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": "17",
+        "normalized": 17.0,
+        "status": "ai_proposed"
+      },
+      "receipt_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "closing_qty": {
+        "raw": "17",
+        "normalized": 17.0,
+        "status": "ai_proposed"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENING STOCK",
+          "semantic": "opening_qty",
+          "raw": "17",
+          "normalized": 17.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENING VALUE",
+          "semantic": "not_quantity",
+          "raw": "2123.81",
+          "normalized": 2123.81,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTITY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIVE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTITY",
+          "semantic": "stock_out_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSING STOCK",
+          "semantic": "closing_qty",
+          "raw": "17",
+          "normalized": 17.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSING VALUE",
+          "semantic": "not_quantity",
+          "raw": "2123.81",
+          "normalized": 2123.81,
+          "status": "ai_proposed"
+        }
+      ]
+    },
+    {
+      "row_id": "r20",
+      "row_index": 20,
+      "product_name": {
+        "raw": "HIMCOSPAZ CAP 10S 10S",
+        "normalized": "HIMCOSPAZ CAP 10S 10S",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "receipt_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "closing_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENING STOCK",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENING VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTITY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIVE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTITY",
+          "semantic": "stock_out_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSING STOCK",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSING VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        }
+      ]
+    },
+    {
+      "row_id": "r21",
+      "row_index": 21,
+      "product_name": {
+        "raw": "HIMPLASIA TAB 30S",
+        "normalized": "HIMPLASIA TAB 30S",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": "33",
+        "normalized": 33.0,
+        "status": "ai_proposed"
+      },
+      "receipt_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": "4",
+        "normalized": 4.0,
+        "status": "ai_proposed"
+      },
+      "closing_qty": {
+        "raw": "29",
+        "normalized": 29.0,
+        "status": "ai_proposed"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENING STOCK",
+          "semantic": "opening_qty",
+          "raw": "33",
+          "normalized": 33.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENING VALUE",
+          "semantic": "not_quantity",
+          "raw": "4625.61",
+          "normalized": 4625.61,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTITY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIVE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTITY",
+          "semantic": "stock_out_qty",
+          "raw": "4",
+          "normalized": 4.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "632.48",
+          "normalized": 632.48,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSING STOCK",
+          "semantic": "closing_qty",
+          "raw": "29",
+          "normalized": 29.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSING VALUE",
+          "semantic": "not_quantity",
+          "raw": "4064.93",
+          "normalized": 4064.93,
+          "status": "ai_proposed"
+        }
+      ]
+    },
+    {
+      "row_id": "r22",
+      "row_index": 22,
+      "product_name": {
+        "raw": "HIORA GA GEL 15ML 15ML",
+        "normalized": "HIORA GA GEL 15ML 15ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": "40",
+        "normalized": 40.0,
+        "status": "ai_proposed"
+      },
+      "receipt_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": "1",
+        "normalized": 1.0,
+        "status": "ai_proposed"
+      },
+      "closing_qty": {
+        "raw": "39",
+        "normalized": 39.0,
+        "status": "ai_proposed"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENING STOCK",
+          "semantic": "opening_qty",
+          "raw": "40",
+          "normalized": 40.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENING VALUE",
+          "semantic": "not_quantity",
+          "raw": "2194.4",
+          "normalized": 2194.4,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTITY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIVE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTITY",
+          "semantic": "stock_out_qty",
+          "raw": "1",
+          "normalized": 1.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "61.88",
+          "normalized": 61.88,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSING STOCK",
+          "semantic": "closing_qty",
+          "raw": "39",
+          "normalized": 39.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSING VALUE",
+          "semantic": "not_quantity",
+          "raw": "2139.54",
+          "normalized": 2139.54,
+          "status": "ai_proposed"
+        }
+      ]
+    },
+    {
+      "row_id": "r23",
+      "row_index": 23,
+      "product_name": {
+        "raw": "HIORA K MOUTH WASH 150ML 150ML",
+        "normalized": "HIORA K MOUTH WASH 150ML 150ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": "34",
+        "normalized": 34.0,
+        "status": "ai_proposed"
+      },
+      "receipt_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "closing_qty": {
+        "raw": "34",
+        "normalized": 34.0,
+        "status": "ai_proposed"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENING STOCK",
+          "semantic": "opening_qty",
+          "raw": "34",
+          "normalized": 34.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENING VALUE",
+          "semantic": "not_quantity",
+          "raw": "2262.02",
+          "normalized": 2262.02,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTITY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIVE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTITY",
+          "semantic": "stock_out_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSING STOCK",
+          "semantic": "closing_qty",
+          "raw": "34",
+          "normalized": 34.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSING VALUE",
+          "semantic": "not_quantity",
+          "raw": "2262.02",
+          "normalized": 2262.02,
+          "status": "ai_proposed"
+        }
+      ]
+    },
+    {
+      "row_id": "r24",
+      "row_index": 24,
+      "product_name": {
+        "raw": "HIORA K TOOTH PASTE 100GRM 100GRM",
+        "normalized": "HIORA K TOOTH PASTE 100GRM 100GRM",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "receipt_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "closing_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENING STOCK",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENING VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTITY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIVE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTITY",
+          "semantic": "stock_out_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSING STOCK",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSING VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        }
+      ]
+    },
+    {
+      "row_id": "r25",
+      "row_index": 25,
+      "product_name": {
+        "raw": "HIORA K TOOTH PASTE 50G 50GM",
+        "normalized": "HIORA K TOOTH PASTE 50G 50GM",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": "21",
+        "normalized": 21.0,
+        "status": "ai_proposed"
+      },
+      "receipt_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": "12",
+        "normalized": 12.0,
+        "status": "ai_proposed"
+      },
+      "closing_qty": {
+        "raw": "9",
+        "normalized": 9.0,
+        "status": "ai_proposed"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENING STOCK",
+          "semantic": "opening_qty",
+          "raw": "21",
+          "normalized": 21.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENING VALUE",
+          "semantic": "not_quantity",
+          "raw": "1336.23",
+          "normalized": 1336.23,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTITY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIVE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTITY",
+          "semantic": "stock_out_qty",
+          "raw": "12",
+          "normalized": 12.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "861.36",
+          "normalized": 861.36,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSING STOCK",
+          "semantic": "closing_qty",
+          "raw": "9",
+          "normalized": 9.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSING VALUE",
+          "semantic": "not_quantity",
+          "raw": "572.67",
+          "normalized": 572.67,
+          "status": "ai_proposed"
+        }
+      ]
+    },
+    {
+      "row_id": "r26",
+      "row_index": 26,
+      "product_name": {
+        "raw": "HIORA MOUTH WASH REGULAR 150ML 150ML",
+        "normalized": "HIORA MOUTH WASH REGULAR 150ML 150ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": "24",
+        "normalized": 24.0,
+        "status": "ai_proposed"
+      },
+      "receipt_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": "1",
+        "normalized": 1.0,
+        "status": "ai_proposed"
+      },
+      "closing_qty": {
+        "raw": "23",
+        "normalized": 23.0,
+        "status": "ai_proposed"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENING STOCK",
+          "semantic": "opening_qty",
+          "raw": "24",
+          "normalized": 24.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENING VALUE",
+          "semantic": "not_quantity",
+          "raw": "1527.12",
+          "normalized": 1527.12,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTITY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIVE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTITY",
+          "semantic": "stock_out_qty",
+          "raw": "1",
+          "normalized": 1.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "71.78",
+          "normalized": 71.78,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSING STOCK",
+          "semantic": "closing_qty",
+          "raw": "23",
+          "normalized": 23.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSING VALUE",
+          "semantic": "not_quantity",
+          "raw": "1463.49",
+          "normalized": 1463.49,
+          "status": "ai_proposed"
+        }
+      ]
+    },
+    {
+      "row_id": "r27",
+      "row_index": 27,
+      "product_name": {
+        "raw": "HIORA SG GEL 10GRM 10GRM",
+        "normalized": "HIORA SG GEL 10GRM 10GRM",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": "31",
+        "normalized": 31.0,
+        "status": "ai_proposed"
+      },
+      "receipt_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": "2",
+        "normalized": 2.0,
+        "status": "ai_proposed"
+      },
+      "closing_qty": {
+        "raw": "29",
+        "normalized": 29.0,
+        "status": "ai_proposed"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENING STOCK",
+          "semantic": "opening_qty",
+          "raw": "31",
+          "normalized": 31.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENING VALUE",
+          "semantic": "not_quantity",
+          "raw": "1794.9",
+          "normalized": 1794.9,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTITY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIVE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTITY",
+          "semantic": "stock_out_qty",
+          "raw": "2",
+          "normalized": 2.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "130.62",
+          "normalized": 130.62,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSING STOCK",
+          "semantic": "closing_qty",
+          "raw": "29",
+          "normalized": 29.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSING VALUE",
+          "semantic": "not_quantity",
+          "raw": "1679.1",
+          "normalized": 1679.1,
+          "status": "ai_proposed"
+        }
+      ]
+    },
+    {
+      "row_id": "r28",
+      "row_index": 28,
+      "product_name": {
+        "raw": "HIORA TOOTH PASTE 100GRM 100GRM",
+        "normalized": "HIORA TOOTH PASTE 100GRM 100GRM",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "receipt_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "closing_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENING STOCK",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENING VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTITY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIVE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTITY",
+          "semantic": "stock_out_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSING STOCK",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSING VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        }
+      ]
+    },
+    {
+      "row_id": "r29",
+      "row_index": 29,
+      "product_name": {
+        "raw": "HIORA-D TOOTHPASTE FOR DIABETI 100GM",
+        "normalized": "HIORA-D TOOTHPASTE FOR DIABETI 100GM",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": "50",
+        "normalized": 50.0,
+        "status": "ai_proposed"
+      },
+      "receipt_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": "3",
+        "normalized": 3.0,
+        "status": "ai_proposed"
+      },
+      "closing_qty": {
+        "raw": "47",
+        "normalized": 47.0,
+        "status": "ai_proposed"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENING STOCK",
+          "semantic": "opening_qty",
+          "raw": "50",
+          "normalized": 50.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENING VALUE",
+          "semantic": "not_quantity",
+          "raw": "4508",
+          "normalized": 4508.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTITY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIVE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTITY",
+          "semantic": "stock_out_qty",
+          "raw": "3",
+          "normalized": 3.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "305.1",
+          "normalized": 305.1,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSING STOCK",
+          "semantic": "closing_qty",
+          "raw": "47",
+          "normalized": 47.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSING VALUE",
+          "semantic": "not_quantity",
+          "raw": "4237.52",
+          "normalized": 4237.52,
+          "status": "ai_proposed"
+        }
+      ]
+    },
+    {
+      "row_id": "r30",
+      "row_index": 30,
+      "product_name": {
+        "raw": "LIV 52 DROPS 100ML 100ML",
+        "normalized": "LIV 52 DROPS 100ML 100ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "receipt_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "closing_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENING STOCK",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENING VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTITY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIVE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTITY",
+          "semantic": "stock_out_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSING STOCK",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSING VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        }
+      ]
+    },
+    {
+      "row_id": "r31",
+      "row_index": 31,
+      "product_name": {
+        "raw": "LIV 52 DROPS 60ML 60ML",
+        "normalized": "LIV 52 DROPS 60ML 60ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": "1",
+        "normalized": 1.0,
+        "status": "ai_proposed"
+      },
+      "receipt_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": "1",
+        "normalized": 1.0,
+        "status": "ai_proposed"
+      },
+      "closing_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENING STOCK",
+          "semantic": "opening_qty",
+          "raw": "1",
+          "normalized": 1.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENING VALUE",
+          "semantic": "not_quantity",
+          "raw": "81.05",
+          "normalized": 81.05,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTITY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIVE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTITY",
+          "semantic": "stock_out_qty",
+          "raw": "1",
+          "normalized": 1.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "96.24",
+          "normalized": 96.24,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSING STOCK",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSING VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        }
+      ]
+    },
+    {
+      "row_id": "r32",
+      "row_index": 32,
+      "product_name": {
+        "raw": "LIV 52 DS SYP 100ML",
+        "normalized": "LIV 52 DS SYP 100ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": "58",
+        "normalized": 58.0,
+        "status": "ai_proposed"
+      },
+      "receipt_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": "4",
+        "normalized": 4.0,
+        "status": "ai_proposed"
+      },
+      "closing_qty": {
+        "raw": "54",
+        "normalized": 54.0,
+        "status": "ai_proposed"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENING STOCK",
+          "semantic": "opening_qty",
+          "raw": "58",
+          "normalized": 58.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENING VALUE",
+          "semantic": "not_quantity",
+          "raw": "8079.4",
+          "normalized": 8079.4,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTITY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIVE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTITY",
+          "semantic": "stock_out_qty",
+          "raw": "4",
+          "normalized": 4.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "628.56",
+          "normalized": 628.56,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSING STOCK",
+          "semantic": "closing_qty",
+          "raw": "54",
+          "normalized": 54.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSING VALUE",
+          "semantic": "not_quantity",
+          "raw": "7522.2",
+          "normalized": 7522.2,
+          "status": "ai_proposed"
+        }
+      ]
+    },
+    {
+      "row_id": "r33",
+      "row_index": 33,
+      "product_name": {
+        "raw": "LIV 52 DS SYP 200ML 200ML",
+        "normalized": "LIV 52 DS SYP 200ML 200ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": "32",
+        "normalized": 32.0,
+        "status": "ai_proposed"
+      },
+      "receipt_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": "8",
+        "normalized": 8.0,
+        "status": "ai_proposed"
+      },
+      "closing_qty": {
+        "raw": "24",
+        "normalized": 24.0,
+        "status": "ai_proposed"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENING STOCK",
+          "semantic": "opening_qty",
+          "raw": "32",
+          "normalized": 32.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENING VALUE",
+          "semantic": "not_quantity",
+          "raw": "6338.24",
+          "normalized": 6338.24,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTITY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIVE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTITY",
+          "semantic": "stock_out_qty",
+          "raw": "8",
+          "normalized": 8.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "1787.44",
+          "normalized": 1787.44,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSING STOCK",
+          "semantic": "closing_qty",
+          "raw": "24",
+          "normalized": 24.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSING VALUE",
+          "semantic": "not_quantity",
+          "raw": "4753.68",
+          "normalized": 4753.68,
+          "status": "ai_proposed"
+        }
+      ]
+    },
+    {
+      "row_id": "r34",
+      "row_index": 34,
+      "product_name": {
+        "raw": "LIV 52 DS TAB 60S",
+        "normalized": "LIV 52 DS TAB 60S",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": "27",
+        "normalized": 27.0,
+        "status": "ai_proposed"
+      },
+      "receipt_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": "12",
+        "normalized": 12.0,
+        "status": "ai_proposed"
+      },
+      "closing_qty": {
+        "raw": "15",
+        "normalized": 15.0,
+        "status": "ai_proposed"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENING STOCK",
+          "semantic": "opening_qty",
+          "raw": "27",
+          "normalized": 27.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENING VALUE",
+          "semantic": "not_quantity",
+          "raw": "4031.37",
+          "normalized": 4031.37,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTITY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIVE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTITY",
+          "semantic": "stock_out_qty",
+          "raw": "12",
+          "normalized": 12.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "2021.16",
+          "normalized": 2021.16,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSING STOCK",
+          "semantic": "closing_qty",
+          "raw": "15",
+          "normalized": 15.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSING VALUE",
+          "semantic": "not_quantity",
+          "raw": "2239.65",
+          "normalized": 2239.65,
+          "status": "ai_proposed"
+        }
+      ]
+    },
+    {
+      "row_id": "r35",
+      "row_index": 35,
+      "product_name": {
+        "raw": "LUKOL TAB 60S",
+        "normalized": "LUKOL TAB 60S",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": "44",
+        "normalized": 44.0,
+        "status": "ai_proposed"
+      },
+      "receipt_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": "2",
+        "normalized": 2.0,
+        "status": "ai_proposed"
+      },
+      "closing_qty": {
+        "raw": "42",
+        "normalized": 42.0,
+        "status": "ai_proposed"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENING STOCK",
+          "semantic": "opening_qty",
+          "raw": "44",
+          "normalized": 44.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENING VALUE",
+          "semantic": "not_quantity",
+          "raw": "6129.2",
+          "normalized": 6129.2,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTITY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIVE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTITY",
+          "semantic": "stock_out_qty",
+          "raw": "2",
+          "normalized": 2.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "314.28",
+          "normalized": 314.28,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSING STOCK",
+          "semantic": "closing_qty",
+          "raw": "42",
+          "normalized": 42.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSING VALUE",
+          "semantic": "not_quantity",
+          "raw": "5850.6",
+          "normalized": 5850.6,
+          "status": "ai_proposed"
+        }
+      ]
+    },
+    {
+      "row_id": "r36",
+      "row_index": 36,
+      "product_name": {
+        "raw": "LUKOL SYP 200ML 200ML",
+        "normalized": "LUKOL SYP 200ML 200ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "receipt_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "closing_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENING STOCK",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENING VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTITY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIVE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTITY",
+          "semantic": "stock_out_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSING STOCK",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSING VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        }
+      ]
+    },
+    {
+      "row_id": "r37",
+      "row_index": 37,
+      "product_name": {
+        "raw": "MENOSAN TAB 30S 30S",
+        "normalized": "MENOSAN TAB 30S 30S",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": "3",
+        "normalized": 3.0,
+        "status": "ai_proposed"
+      },
+      "receipt_qty": {
+        "raw": "-3",
+        "normalized": -3.0,
+        "status": "ai_proposed"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "closing_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENING STOCK",
+          "semantic": "opening_qty",
+          "raw": "3",
+          "normalized": 3.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENING VALUE",
+          "semantic": "not_quantity",
+          "raw": "301.68",
+          "normalized": 301.68,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTITY",
+          "semantic": "receipt_qty",
+          "raw": "-3",
+          "normalized": -3.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIVE VALUE",
+          "semantic": "not_quantity",
+          "raw": "-351.03",
+          "normalized": -351.03,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTITY",
+          "semantic": "stock_out_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSING STOCK",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSING VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        }
+      ]
+    },
+    {
+      "row_id": "r38",
+      "row_index": 38,
+      "product_name": {
+        "raw": "MENTAT SYP 200ML 200ML",
+        "normalized": "MENTAT SYP 200ML 200ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": "11",
+        "normalized": 11.0,
+        "status": "ai_proposed"
+      },
+      "receipt_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": "3",
+        "normalized": 3.0,
+        "status": "ai_proposed"
+      },
+      "closing_qty": {
+        "raw": "8",
+        "normalized": 8.0,
+        "status": "ai_proposed"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENING STOCK",
+          "semantic": "opening_qty",
+          "raw": "11",
+          "normalized": 11.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENING VALUE",
+          "semantic": "not_quantity",
+          "raw": "1508.43",
+          "normalized": 1508.43,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTITY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIVE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTITY",
+          "semantic": "stock_out_qty",
+          "raw": "3",
+          "normalized": 3.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "464.07",
+          "normalized": 464.07,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSING STOCK",
+          "semantic": "closing_qty",
+          "raw": "8",
+          "normalized": 8.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSING VALUE",
+          "semantic": "not_quantity",
+          "raw": "1097.04",
+          "normalized": 1097.04,
+          "status": "ai_proposed"
+        }
+      ]
+    },
+    {
+      "row_id": "r39",
+      "row_index": 39,
+      "product_name": {
+        "raw": "MENTAT TAB 60S",
+        "normalized": "MENTAT TAB 60S",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": "81",
+        "normalized": 81.0,
+        "status": "ai_proposed"
+      },
+      "receipt_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "closing_qty": {
+        "raw": "81",
+        "normalized": 81.0,
+        "status": "ai_proposed"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENING STOCK",
+          "semantic": "opening_qty",
+          "raw": "81",
+          "normalized": 81.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENING VALUE",
+          "semantic": "not_quantity",
+          "raw": "7652.07",
+          "normalized": 7652.07,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTITY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIVE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTITY",
+          "semantic": "stock_out_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSING STOCK",
+          "semantic": "closing_qty",
+          "raw": "81",
+          "normalized": 81.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSING VALUE",
+          "semantic": "not_quantity",
+          "raw": "7652.07",
+          "normalized": 7652.07,
+          "status": "ai_proposed"
+        }
+      ]
+    },
+    {
+      "row_id": "r40",
+      "row_index": 40,
+      "product_name": {
+        "raw": "PLATENZA SYP 100ML",
+        "normalized": "PLATENZA SYP 100ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": "1",
+        "normalized": 1.0,
+        "status": "ai_proposed"
+      },
+      "receipt_qty": {
+        "raw": "-1",
+        "normalized": -1.0,
+        "status": "ai_proposed"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "closing_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENING STOCK",
+          "semantic": "opening_qty",
+          "raw": "1",
+          "normalized": 1.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENING VALUE",
+          "semantic": "not_quantity",
+          "raw": "109.7",
+          "normalized": 109.7,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTITY",
+          "semantic": "receipt_qty",
+          "raw": "-1",
+          "normalized": -1.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIVE VALUE",
+          "semantic": "not_quantity",
+          "raw": "-127.65",
+          "normalized": -127.65,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTITY",
+          "semantic": "stock_out_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSING STOCK",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSING VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        }
+      ]
+    },
+    {
+      "row_id": "r41",
+      "row_index": 41,
+      "product_name": {
+        "raw": "PLATENZA TAB 20S 20S",
+        "normalized": "PLATENZA TAB 20S 20S",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": "3",
+        "normalized": 3.0,
+        "status": "ai_proposed"
+      },
+      "receipt_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": "1",
+        "normalized": 1.0,
+        "status": "ai_proposed"
+      },
+      "closing_qty": {
+        "raw": "2",
+        "normalized": 2.0,
+        "status": "ai_proposed"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENING STOCK",
+          "semantic": "opening_qty",
+          "raw": "3",
+          "normalized": 3.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENING VALUE",
+          "semantic": "not_quantity",
+          "raw": "197.48",
+          "normalized": 197.48,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTITY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIVE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTITY",
+          "semantic": "stock_out_qty",
+          "raw": "1",
+          "normalized": 1.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "82.5",
+          "normalized": 82.5,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSING STOCK",
+          "semantic": "closing_qty",
+          "raw": "2",
+          "normalized": 2.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSING VALUE",
+          "semantic": "not_quantity",
+          "raw": "131.65",
+          "normalized": 131.65,
+          "status": "ai_proposed"
+        }
+      ]
+    },
+    {
+      "row_id": "r42",
+      "row_index": 42,
+      "product_name": {
+        "raw": "QUISTA KIDZ (CHOCOLATE FLAVOUR 200GRM",
+        "normalized": "QUISTA KIDZ (CHOCOLATE FLAVOUR 200GRM",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "receipt_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "closing_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENING STOCK",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENING VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTITY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIVE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTITY",
+          "semantic": "stock_out_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSING STOCK",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSING VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        }
+      ]
+    },
+    {
+      "row_id": "r43",
+      "row_index": 43,
+      "product_name": {
+        "raw": "QUISTA KIDZ (VANILLA FLAVOUR) 200GRM",
+        "normalized": "QUISTA KIDZ (VANILLA FLAVOUR) 200GRM",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "receipt_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "closing_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENING STOCK",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENING VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTITY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIVE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTITY",
+          "semantic": "stock_out_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSING STOCK",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSING VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        }
+      ]
+    },
+    {
+      "row_id": "r44",
+      "row_index": 44,
+      "product_name": {
+        "raw": "REOSTO TAB 30S 30S",
+        "normalized": "REOSTO TAB 30S 30S",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "receipt_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "closing_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENING STOCK",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENING VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTITY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIVE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTITY",
+          "semantic": "stock_out_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSING STOCK",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSING VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        }
+      ]
+    },
+    {
+      "row_id": "r45",
+      "row_index": 45,
+      "product_name": {
+        "raw": "SEPTILIN SYP 200ML",
+        "normalized": "SEPTILIN SYP 200ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": "9",
+        "normalized": 9.0,
+        "status": "ai_proposed"
+      },
+      "receipt_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": "7",
+        "normalized": 7.0,
+        "status": "ai_proposed"
+      },
+      "closing_qty": {
+        "raw": "2",
+        "normalized": 2.0,
+        "status": "ai_proposed"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENING STOCK",
+          "semantic": "opening_qty",
+          "raw": "9",
+          "normalized": 9.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENING VALUE",
+          "semantic": "not_quantity",
+          "raw": "1253.7",
+          "normalized": 1253.7,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTITY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIVE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTITY",
+          "semantic": "stock_out_qty",
+          "raw": "7",
+          "normalized": 7.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "1099.98",
+          "normalized": 1099.98,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSING STOCK",
+          "semantic": "closing_qty",
+          "raw": "2",
+          "normalized": 2.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSING VALUE",
+          "semantic": "not_quantity",
+          "raw": "278.6",
+          "normalized": 278.6,
+          "status": "ai_proposed"
+        }
+      ]
+    },
+    {
+      "row_id": "r46",
+      "row_index": 46,
+      "product_name": {
+        "raw": "SEPTILIN TAB 60S",
+        "normalized": "SEPTILIN TAB 60S",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": "13",
+        "normalized": 13.0,
+        "status": "ai_proposed"
+      },
+      "receipt_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": "5",
+        "normalized": 5.0,
+        "status": "ai_proposed"
+      },
+      "closing_qty": {
+        "raw": "8",
+        "normalized": 8.0,
+        "status": "ai_proposed"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENING STOCK",
+          "semantic": "opening_qty",
+          "raw": "13",
+          "normalized": 13.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENING VALUE",
+          "semantic": "not_quantity",
+          "raw": "1580.68",
+          "normalized": 1580.68,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTITY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIVE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTITY",
+          "semantic": "stock_out_qty",
+          "raw": "5",
+          "normalized": 5.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "721.9",
+          "normalized": 721.9,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSING STOCK",
+          "semantic": "closing_qty",
+          "raw": "8",
+          "normalized": 8.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSING VALUE",
+          "semantic": "not_quantity",
+          "raw": "972.72",
+          "normalized": 972.72,
+          "status": "ai_proposed"
+        }
+      ]
+    },
+    {
+      "row_id": "r47",
+      "row_index": 47,
+      "product_name": {
+        "raw": "SEPTILIN DROPS 60ML 60ML",
+        "normalized": "SEPTILIN DROPS 60ML 60ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "receipt_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "closing_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENING STOCK",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENING VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTITY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIVE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTITY",
+          "semantic": "stock_out_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSING STOCK",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSING VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        }
+      ]
+    },
+    {
+      "row_id": "r48",
+      "row_index": 48,
+      "product_name": {
+        "raw": "SPEMAN TAB 60S",
+        "normalized": "SPEMAN TAB 60S",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": "27",
+        "normalized": 27.0,
+        "status": "ai_proposed"
+      },
+      "receipt_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": "1",
+        "normalized": 1.0,
+        "status": "ai_proposed"
+      },
+      "closing_qty": {
+        "raw": "26",
+        "normalized": 26.0,
+        "status": "ai_proposed"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENING STOCK",
+          "semantic": "opening_qty",
+          "raw": "27",
+          "normalized": 27.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENING VALUE",
+          "semantic": "not_quantity",
+          "raw": "3257.9",
+          "normalized": 3257.9,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTITY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIVE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTITY",
+          "semantic": "stock_out_qty",
+          "raw": "1",
+          "normalized": 1.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "151.24",
+          "normalized": 151.24,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSING STOCK",
+          "semantic": "closing_qty",
+          "raw": "26",
+          "normalized": 26.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSING VALUE",
+          "semantic": "not_quantity",
+          "raw": "3137.24",
+          "normalized": 3137.24,
+          "status": "ai_proposed"
+        }
+      ]
+    },
+    {
+      "row_id": "r49",
+      "row_index": 49,
+      "product_name": {
+        "raw": "V GEL 30GRM 30GRM",
+        "normalized": "V GEL 30GRM 30GRM",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "receipt_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "closing_qty": {
+        "raw": "0",
+        "normalized": 0.0,
+        "status": "ai_proposed"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "OPENING STOCK",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 2,
+          "printed_header": "OPENING VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 3,
+          "printed_header": "RECEIVE QUANTITY",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 4,
+          "printed_header": "RECEIVE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 5,
+          "printed_header": "ISSUE QUANTITY",
+          "semantic": "stock_out_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 6,
+          "printed_header": "ISSUE VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 7,
+          "printed_header": "CLOSING STOCK",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        },
+        {
+          "position": 8,
+          "printed_header": "CLOSING VALUE",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "ai_proposed"
+        }
+      ]
+    }
+  ],
+  "headers": [],
+  "notes": [
+    "AI_PROPOSED from the original image only. Not verified. Named quantities are set only when a printed header was copied. Blank cells were not stored as zero."
+  ],
+  "failure": null,
+  "vision_model": "gemini-2.5-flash",
+  "vision_input": "original",
+  "ocr_used_as_label": false
+}

@@ -1,0 +1,168 @@
+{
+  "file": "0000701864_2026_08_ZL_20_5015_03092026091037.jpg",
+  "path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000701864_2026_08_ZL_20_5015_03092026091037.jpg",
+  "format": "Sales & Stock Statement",
+  "api_method": "gemini_extraction_fallback",
+  "status": "FAIL",
+  "expected_rows": 20,
+  "extracted_rows": 18,
+  "matched_rows": 18,
+  "missing_rows": [
+    {
+      "product": "ee cons GRANDTOTAL —",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 895971,
+      "closing_qty": 101577,
+      "kind": "missing_product"
+    },
+    {
+      "product": "Powered By SwilERP GH",
+      "opening_qty": 4,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    }
+  ],
+  "extra_rows": [],
+  "duplicates": [],
+  "mismatches": [
+    {
+      "product": "DIABECON-DS TAB",
+      "field": "opening_qty",
+      "expected": 4,
+      "actual": 44,
+      "kind": "wrong_opening_qty"
+    },
+    {
+      "product": "ABANA",
+      "field": "sales_qty",
+      "expected": 1,
+      "actual": 11,
+      "kind": "wrong_sales_qty"
+    },
+    {
+      "product": "18 rows",
+      "field": "sales_value",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 18,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    },
+    {
+      "product": "18 rows",
+      "field": "closing_value",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 18,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    }
+  ],
+  "ocr_review": [
+    {
+      "product": "LIV-52 SYRUP",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 70,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "CLARINA-CREAM",
+      "field": "closing_qty",
+      "expected": null,
+      "actual": 11,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "LIV-52 HB CAP",
+      "field": "closing_qty",
+      "expected": null,
+      "actual": 21,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "QUISTA -DN 4006M",
+      "field": "closing_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "TENTEX FORTE",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "TENTEX FORTE",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 76,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "LIV-52 SYP.",
+      "field": "opening_qty",
+      "expected": null,
+      "actual": 25,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "LIV-52 SYP.",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 140,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "CONFIDO TAB",
+      "field": "opening_qty",
+      "expected": null,
+      "actual": 3,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "CONFIDO TAB",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 100,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "LIV-52 TAB",
+      "field": "opening_qty",
+      "expected": null,
+      "actual": 104,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "LIV-52 TAB",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 100,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "LIV-52 TAB",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 104,
+      "note": "Ground truth did not read this cell confidently."
+    }
+  ],
+  "accounting": [],
+  "confidence": "medium",
+  "notes": [
+    "OCR used tesseract psm 6."
+  ],
+  "result_key": "0000701864_2026_08_ZL_20_5015_03092026091037",
+  "unavailable_fields": {
+    "sales_value": 18,
+    "closing_value": 18
+  },
+  "formula_checked": "simple"
+}

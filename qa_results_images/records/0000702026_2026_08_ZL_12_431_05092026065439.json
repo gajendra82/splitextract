@@ -1,0 +1,705 @@
+{
+  "file": "0000702026_2026_08_ZL_12_431_05092026065439.jpg",
+  "path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000702026_2026_08_ZL_12_431_05092026065439.jpg",
+  "format": "STOCK & SALES ANALYSIS",
+  "api_method": "gemini_extraction_fallback",
+  "status": "FAIL",
+  "expected_rows": 58,
+  "extracted_rows": 46,
+  "matched_rows": 20,
+  "missing_rows": [
+    {
+      "product": "60'S 1x60'S 62 ABANA TAB.",
+      "opening_qty": 0,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "ALTHEA LOTION LOOML 2LOOML",
+      "opening_qty": 5207.4,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "30ML 30ML 30 MINOR ANTI BLEM,CREAM oe ee",
+      "opening_qty": 7268.56,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "306M 306M 59",
+      "opening_qty": 0,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "ANTI ACNE CREAM",
+      "opening_qty": 5409.5,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "GOML * GOML 35",
+      "opening_qty": 3786.65,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "CLEARVITAL GEL 1x60'S 80",
+      "opening_qty": 13130.4,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "DS TAB.60'S 1x60'S sabes 49",
+      "opening_qty": 4886.72,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "DIAREX SYRUP 1OOML",
+      "opening_qty": 3361.86,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "30'S 1x30'S",
+      "opening_qty": 38,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "DIAREX TAB. 1x60'S 68",
+      "opening_qty": 15002.84,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "caP.60'S oad 60ML * 60ML.",
+      "opening_qty": 21,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "ZONE SOLUTION ork",
+      "opening_qty": 6683.97,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "GEL RON",
+      "opening_qty": 0,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "CAP. 60'S 1x60'S ‘",
+      "opening_qty": 0,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "KAPIKACHHU FREE]",
+      "opening_qty": 12,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "LIV 52 LOOML[SUGAR 1*1LOOML",
+      "opening_qty": 14806.17,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "IV",
+      "opening_qty": 8107.07,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "Je",
+      "opening_qty": 13331.55,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "52 1LOOML 1OOML. 141 Iv syruP",
+      "opening_qty": 19163.56,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "200ML 200ML 125 GP SYRUP",
+      "opening_qty": 95,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "LIV 52 TAB.100'S 1x100's",
+      "opening_qty": 0,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "CAP.60'S 1x60'S",
+      "opening_qty": 0,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "MANJISHTHA",
+      "opening_qty": 5420.87,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "DROPS 1OML 1LOML",
+      "opening_qty": 85,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "OPHTHACARE EYE",
+      "opening_qty": 52,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "ORQ-T-ORAL RINSE LIQUID 100ML 1OOML ee",
+      "opening_qty": 27,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "CcAP.10'S 1x10'S",
+      "opening_qty": 37,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "X FORTE OINT. 1*30GM as 1*30TAB",
+      "opening_qty": 56,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "FORTE TAB1*30",
+      "opening_qty": 0,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "PURIM ACTIVE 200GM 1*200GM",
+      "opening_qty": 13,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "QUISTA",
+      "opening_qty": 250.31,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "200G(MILK MASALA) 200GM. QUISTA DN",
+      "opening_qty": 1637.73,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "QUISTA",
+      "opening_qty": 696.22,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "QUISTA",
+      "opening_qty": 4085.1,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "SYRUP 1OOML LOOML",
+      "opening_qty": 54,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "RENALKA :",
+      "opening_qty": 27,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "OY : a4 \\< a 7 gorse a le dior",
+      "opening_qty": 0,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    }
+  ],
+  "extra_rows": [
+    {
+      "product": "ABANA TAB. 60's",
+      "opening_qty": 62,
+      "sales_qty": 10,
+      "closing_qty": 152,
+      "kind": "extra_product"
+    },
+    {
+      "product": "ALTHEA LOTION 100ML",
+      "opening_qty": 1,
+      "sales_qty": 0,
+      "closing_qty": 1,
+      "kind": "extra_product"
+    },
+    {
+      "product": "LEMINOR ANTI BLEM.CREAM 30ML",
+      "opening_qty": 30,
+      "sales_qty": 11,
+      "closing_qty": 19,
+      "kind": "extra_product"
+    },
+    {
+      "product": "CLARINA ANTI ACNE CREAM 30GM",
+      "opening_qty": 59,
+      "sales_qty": 9,
+      "closing_qty": 50,
+      "kind": "extra_product"
+    },
+    {
+      "product": "CLEARVITAL GEL 30ML",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "DIABECON DS TAB. 60'S",
+      "opening_qty": 20,
+      "sales_qty": 8,
+      "closing_qty": 12,
+      "kind": "extra_product"
+    },
+    {
+      "product": "DIAREX SYRUP 100ML",
+      "opening_qty": 50,
+      "sales_qty": 0,
+      "closing_qty": 50,
+      "kind": "extra_product"
+    },
+    {
+      "product": "DIAREX TAB. 30'S",
+      "opening_qty": 38,
+      "sales_qty": 4,
+      "closing_qty": 34,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HADJOD CAP. 60'S",
+      "opening_qty": 68,
+      "sales_qty": 21,
+      "closing_qty": 47,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HAIR ZONE SOLUTION 60ML*",
+      "opening_qty": 21,
+      "sales_qty": 7,
+      "closing_qty": 14,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HIMCOLIN GEL 30GM",
+      "opening_qty": 11,
+      "sales_qty": 16,
+      "closing_qty": -5,
+      "kind": "extra_product"
+    },
+    {
+      "product": "KAPIKACHHU CAP.60'S",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "LIV 52 100ML [SUGAR FREE]",
+      "opening_qty": 12,
+      "sales_qty": 0,
+      "closing_qty": 12,
+      "kind": "extra_product"
+    },
+    {
+      "product": "LIV 52 SYRUP 100ML",
+      "opening_qty": 141,
+      "sales_qty": 152,
+      "closing_qty": 129,
+      "kind": "extra_product"
+    },
+    {
+      "product": "LIV 52 SYRUP 200ML",
+      "opening_qty": 125,
+      "sales_qty": 948,
+      "closing_qty": 192,
+      "kind": "extra_product"
+    },
+    {
+      "product": "LIV 52 TAB. 100'5",
+      "opening_qty": 95,
+      "sales_qty": 93,
+      "closing_qty": 102,
+      "kind": "extra_product"
+    },
+    {
+      "product": "MANJISHTHA CAP.60'S",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "OPHTHACARE EYE DROPS 10ML",
+      "opening_qty": 85,
+      "sales_qty": 15,
+      "closing_qty": 70,
+      "kind": "extra_product"
+    },
+    {
+      "product": "ORO-T-ORAL RINSE LIQUID 100ML",
+      "opening_qty": 52,
+      "sales_qty": 2,
+      "closing_qty": 50,
+      "kind": "extra_product"
+    },
+    {
+      "product": "EXITARD CAP. 10'S",
+      "opening_qty": 27,
+      "sales_qty": 28,
+      "closing_qty": -1,
+      "kind": "extra_product"
+    },
+    {
+      "product": "PILEX FORTE OINT.",
+      "opening_qty": 37,
+      "sales_qty": 41,
+      "closing_qty": -4,
+      "kind": "extra_product"
+    },
+    {
+      "product": "PILEX FORTE TAB1*30",
+      "opening_qty": 56,
+      "sales_qty": 2,
+      "closing_qty": 54,
+      "kind": "extra_product"
+    },
+    {
+      "product": "PURIM TAB. 60's",
+      "opening_qty": 19,
+      "sales_qty": 1,
+      "closing_qty": 18,
+      "kind": "extra_product"
+    },
+    {
+      "product": "QUISTA ACTIVE 200GM",
+      "opening_qty": 13,
+      "sales_qty": 0,
+      "closing_qty": 13,
+      "kind": "extra_product"
+    },
+    {
+      "product": "QUISTA DN 200G (MILK MASALA)",
+      "opening_qty": 1,
+      "sales_qty": 0,
+      "closing_qty": 1,
+      "kind": "extra_product"
+    },
+    {
+      "product": "RENALKA SYRUP 100ML",
+      "opening_qty": 54,
+      "sales_qty": 3,
+      "closing_qty": 51,
+      "kind": "extra_product"
+    }
+  ],
+  "duplicates": [
+    {
+      "side": "ground_truth",
+      "product": "CAP. 60'S 1x60'S ‘",
+      "count": 2
+    },
+    {
+      "side": "ground_truth",
+      "product": "QUISTA",
+      "count": 3
+    }
+  ],
+  "mismatches": [
+    {
+      "product": "TRIPHALA CAP.60'S",
+      "field": "opening_qty",
+      "expected": 2071,
+      "actual": 45,
+      "kind": "wrong_opening_qty"
+    },
+    {
+      "product": "CLARINA ANTI FACE WASH 30ML *",
+      "field": "opening_qty",
+      "expected": 0,
+      "actual": 35,
+      "kind": "wrong_opening_qty"
+    },
+    {
+      "product": "AACTARIL SOAP 7SGM",
+      "field": "opening_qty",
+      "expected": 8752.54,
+      "actual": 81,
+      "kind": "wrong_opening_qty"
+    },
+    {
+      "product": "TENTEX FORTE TAB.10'S 1x10's 1x60'S",
+      "field": "opening_qty",
+      "expected": 45,
+      "actual": 159,
+      "kind": "wrong_opening_qty"
+    },
+    {
+      "product": "TALEKT TAB.60'S 1x60'S",
+      "field": "opening_qty",
+      "expected": 159,
+      "actual": 38,
+      "kind": "wrong_opening_qty"
+    },
+    {
+      "product": "TALEKT SYRUP",
+      "field": "opening_qty",
+      "expected": 38,
+      "actual": 0,
+      "kind": "wrong_opening_qty"
+    },
+    {
+      "product": "TAGARA CAP. 60'S 1x60'S",
+      "field": "opening_qty",
+      "expected": 0,
+      "actual": 45,
+      "kind": "wrong_opening_qty"
+    },
+    {
+      "product": "SHIGRU CAP.60'S 1x60'S",
+      "field": "opening_qty",
+      "expected": 45,
+      "actual": 31,
+      "kind": "wrong_opening_qty"
+    },
+    {
+      "product": "SHALLAKI CAP.60'S 1x60's",
+      "field": "opening_qty",
+      "expected": 31,
+      "actual": 51,
+      "kind": "wrong_opening_qty"
+    },
+    {
+      "product": "RENALKA SYRUP",
+      "field": "opening_qty",
+      "expected": 51,
+      "actual": 27,
+      "kind": "wrong_opening_qty"
+    },
+    {
+      "product": "PILEX TAB.60'S 1x60'S",
+      "field": "opening_qty",
+      "expected": 19,
+      "actual": 35,
+      "kind": "wrong_opening_qty"
+    },
+    {
+      "product": "PILEX OINTMENT 30GM 306M TAB.60'S 1x60's",
+      "field": "opening_qty",
+      "expected": 35,
+      "actual": 0,
+      "kind": "wrong_opening_qty"
+    },
+    {
+      "product": "HERBOLAX TAB.100'S 1x100's",
+      "field": "opening_qty",
+      "expected": 11,
+      "actual": 35,
+      "kind": "wrong_opening_qty"
+    },
+    {
+      "product": "HERBOLAX CAP.10'S 1x10'S 124",
+      "field": "opening_qty",
+      "expected": 35,
+      "actual": 124,
+      "kind": "wrong_opening_qty"
+    },
+    {
+      "product": "DIABECON TAB. 60'S 1x60'S 50",
+      "field": "opening_qty",
+      "expected": 4087,
+      "actual": 49,
+      "kind": "wrong_opening_qty"
+    },
+    {
+      "product": "CONFIDO TAB.60'S 20",
+      "field": "opening_qty",
+      "expected": 3580.31,
+      "actual": 80,
+      "kind": "wrong_opening_qty"
+    },
+    {
+      "product": "20 rows",
+      "field": "sales_value",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 20,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    },
+    {
+      "product": "20 rows",
+      "field": "closing_value",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 20,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    },
+    {
+      "product": "20 rows",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 20,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    },
+    {
+      "product": "20 rows",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 20,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    },
+    {
+      "product": "20 rows",
+      "field": "closing_qty",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 20,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    }
+  ],
+  "ocr_review": [
+    {
+      "product": "DN 400G(MILK MASALA F",
+      "api_product": "QUISTA DN 400G(MILK MASALA F",
+      "similarity": 0.857,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "DN 400G(VANILLA FLAV.)",
+      "api_product": "QUISTA DN 400G (VANILLA FLAV.)",
+      "similarity": 0.851,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "52 200ML[SUGAR FREE] 1*200ML.",
+      "api_product": "LIV 52 200ML [SUGAR FREE]",
+      "similarity": 0.76,
+      "note": "Product names differ but the row quantities correspond."
+    }
+  ],
+  "accounting": [],
+  "confidence": "medium",
+  "notes": [
+    "OCR used tesseract psm 6."
+  ],
+  "result_key": "0000702026_2026_08_ZL_12_431_05092026065439",
+  "unavailable_fields": {
+    "sales_value": 20,
+    "closing_value": 20,
+    "receipts_qty": 20,
+    "sales_qty": 20,
+    "closing_qty": 20
+  },
+  "formula_checked": "none"
+}

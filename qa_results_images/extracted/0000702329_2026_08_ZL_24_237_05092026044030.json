@@ -1,0 +1,29 @@
+{
+  "source_file": "0000702329_2026_08_ZL_24_237_05092026044030.jpg",
+  "source_format": "jpg",
+  "stockist_name": null,
+  "stockist_address": null,
+  "company_name": null,
+  "period_from": null,
+  "period_to": null,
+  "report_title": null,
+  "line_items": [],
+  "totals": {
+    "sales_value": null,
+    "closing_value": null,
+    "extra": {
+      "extraction_failed": true,
+      "extraction_method": "gemini_extraction_fallback",
+      "extraction_quality": {
+        "quality": "poor",
+        "score": 0,
+        "reasons": [
+          "empty_line_items",
+          "low_ocr_quality_score"
+        ],
+        "threshold": 75.0
+      },
+      "gemini_fallback": "unavailable"
+    }
+  }
+}

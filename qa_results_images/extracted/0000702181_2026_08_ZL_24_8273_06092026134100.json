@@ -1,0 +1,582 @@
+{
+  "source_file": "0000702181_2026_08_ZL_24_8273_06092026134100.jpg",
+  "source_format": "jpg",
+  "stockist_name": null,
+  "stockist_address": "48,126 INDRA MARKET\nBARABANKI",
+  "company_name": "DEEPAK AGENCEIS",
+  "period_from": "2026-08-01",
+  "period_to": "2026-08-31",
+  "report_title": "Saleable Stock Report",
+  "line_items": [
+    {
+      "product_code": null,
+      "product_name": "AACTARIL SOAP",
+      "packing": "75GM.",
+      "opening_qty": 50.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 50.0,
+      "closing_value": 3670.5,
+      "extra": {
+        "expected_total": 50.0,
+        "expected_closing": 50.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ABANA TAB",
+      "packing": "60TAB",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 64.0,
+      "closing_value": 9486.72,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ARJUNA CAP",
+      "packing": "1X60",
+      "opening_qty": 27.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 19.0,
+      "closing_value": 4401.54,
+      "extra": {
+        "expected_total": 27.0,
+        "expected_closing": 27.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "BONISAN DROP",
+      "packing": "30ML",
+      "opening_qty": 30.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 20.0,
+      "closing_value": 1390.02,
+      "extra": {
+        "expected_total": 30.0,
+        "expected_closing": 30.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "BONISAN SYRUP",
+      "packing": "200ML",
+      "opening_qty": 36.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 34.0,
+      "closing_value": 3435.7,
+      "extra": {
+        "expected_total": 36.0,
+        "expected_closing": 36.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "BONISON SYP",
+      "packing": "120ML",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 56.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 24.0,
+      "closing_value": 1514.66,
+      "extra": {
+        "expected_total": 56.0,
+        "expected_closing": 56.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "BONNISPAZ DROP",
+      "packing": "15ML",
+      "opening_qty": 72.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 72.0,
+      "closing_value": 4289.76,
+      "extra": {
+        "expected_total": 72.0,
+        "expected_closing": 72.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "BRESOL SYRUP",
+      "packing": "200ML",
+      "opening_qty": 19.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 2.0,
+      "closing_value": 289.7,
+      "extra": {
+        "expected_total": 19.0,
+        "expected_closing": 19.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "BRESOL TAB",
+      "packing": "1X60",
+      "opening_qty": 19.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 8.0,
+      "closing_value": 1407.12,
+      "extra": {
+        "expected_total": 19.0,
+        "expected_closing": 19.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "CLARINA OINT",
+      "packing": "30GM",
+      "opening_qty": 30.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 30.0,
+      "closing_value": 3880.8,
+      "extra": {
+        "expected_total": 30.0,
+        "expected_closing": 30.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "CONFIDO TAB",
+      "packing": "1*60",
+      "opening_qty": 24.0,
+      "opening_value": null,
+      "receipts_qty": 400.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 71.0,
+      "closing_value": 12173.63,
+      "extra": {
+        "expected_total": 424.0,
+        "expected_closing": 424.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "CROMTON INSTASERVE",
+      "packing": "1",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 1.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "CYSTONE FORTE",
+      "packing": "1X30",
+      "opening_qty": 64.0,
+      "opening_value": null,
+      "receipts_qty": 56.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 16.0,
+      "closing_value": 1619.89,
+      "extra": {
+        "expected_total": 120.0,
+        "expected_closing": 120.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "CYSTONE SYRUP",
+      "packing": "200M",
+      "opening_qty": 61.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 23.0,
+      "closing_value": 3564.55,
+      "extra": {
+        "expected_total": 61.0,
+        "expected_closing": 61.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "CYSTONE TAB",
+      "packing": "60TAB",
+      "opening_qty": 62.0,
+      "opening_value": null,
+      "receipts_qty": 200.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 48.0,
+      "closing_value": 8267.24,
+      "extra": {
+        "expected_total": 262.0,
+        "expected_closing": 262.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "DIABECON DS TAB",
+      "packing": "1X60",
+      "opening_qty": 29.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 16.0,
+      "closing_value": 3007.53,
+      "extra": {
+        "expected_total": 29.0,
+        "expected_closing": 29.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "DIABECON TAB",
+      "packing": "1X60",
+      "opening_qty": 41.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 41.0,
+      "closing_value": 5525.16,
+      "extra": {
+        "expected_total": 41.0,
+        "expected_closing": 41.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "DIAREX SYRUP",
+      "packing": "100ML",
+      "opening_qty": 9.0,
+      "opening_value": null,
+      "receipts_qty": 56.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 9.0,
+      "closing_value": 4565.68,
+      "extra": {
+        "expected_total": 65.0,
+        "expected_closing": 65.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "DIAREX TAB",
+      "packing": "30TAB",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 50.0,
+      "closing_value": 50.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "EVECARE CAP",
+      "packing": "1*30",
+      "opening_qty": 81.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 9.0,
+      "closing_value": 1442.47,
+      "extra": {
+        "expected_total": 81.0,
+        "expected_closing": 81.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "EVECARE FORT TAB",
+      "packing": "10TAB",
+      "opening_qty": 135.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 69.0,
+      "closing_value": 4357.97,
+      "extra": {
+        "expected_total": 135.0,
+        "expected_closing": 135.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "EVECARE FORTE SYP",
+      "packing": "200ML",
+      "opening_qty": 48.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 21.0,
+      "closing_value": 3408.04,
+      "extra": {
+        "expected_total": 48.0,
+        "expected_closing": 48.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "EVECARE SYP",
+      "packing": "200ML",
+      "opening_qty": 35.0,
+      "opening_value": null,
+      "receipts_qty": 224.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 33.0,
+      "closing_value": 4780.09,
+      "extra": {
+        "expected_total": 259.0,
+        "expected_closing": 259.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "EVECARE SYR.",
+      "packing": "400ML",
+      "opening_qty": 11.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 1.0,
+      "closing_value": 216.37,
+      "extra": {
+        "expected_total": 11.0,
+        "expected_closing": 11.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "GALACTOSURE GRANULES",
+      "packing": "200GM",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 12.0,
+      "closing_value": 3353.28,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "GASEX SYRUP",
+      "packing": "200ML",
+      "opening_qty": 30.0,
+      "opening_value": null,
+      "receipts_qty": 28.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 25.0,
+      "closing_value": 2434.1,
+      "extra": {
+        "expected_total": 58.0,
+        "expected_closing": 58.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "GASEX TAB",
+      "packing": "100TAB",
+      "opening_qty": 109.0,
+      "opening_value": null,
+      "receipts_qty": 200.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 159.0,
+      "closing_value": 21859.38,
+      "extra": {
+        "expected_total": 309.0,
+        "expected_closing": 309.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "GERIFORT SYP",
+      "packing": "200ML",
+      "opening_qty": 3.0,
+      "opening_value": null,
+      "receipts_qty": 28.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 29.0,
+      "closing_value": 4141.12,
+      "extra": {
+        "expected_total": 31.0,
+        "expected_closing": 31.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "GERIFORT TAB",
+      "packing": "100TAB",
+      "opening_qty": 17.0,
+      "opening_value": null,
+      "receipts_qty": 50.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 27.0,
+      "closing_value": 3024.24,
+      "extra": {
+        "expected_total": 67.0,
+        "expected_closing": 67.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "HADJOD TAB",
+      "packing": "1X60",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 120.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 25.0,
+      "closing_value": 5502.0,
+      "extra": {
+        "expected_total": 120.0,
+        "expected_closing": 120.0,
+        "stock_identity_ok": false
+      }
+    }
+  ],
+  "totals": {
+    "sales_value": null,
+    "closing_value": null,
+    "extra": {
+      "extraction_method": "gemini_extraction_fallback",
+      "line_sales_value_sum": 0.0,
+      "line_closing_value_sum": 127059.26,
+      "sales_qty": 0.0,
+      "closing_qty": 1008.0,
+      "stock_identity_kind": "opening_receipts_sales_closing",
+      "stock_identity_formula": "closing=opening+receipts-sales",
+      "stock_identity_fail_count": 26,
+      "stock_validation": {
+        "opening_plus_purchase": 2460.0,
+        "expected_total": 2460.0,
+        "calculated_closing": 2460.0,
+        "extracted_closing": 1008.0,
+        "is_valid": false
+      },
+      "extraction_quality": {
+        "quality": "poor",
+        "score": 75,
+        "reasons": [
+          "stock_identity_failure"
+        ],
+        "threshold": 75.0
+      },
+      "gemini_fallback": "validation_failed"
+    }
+  }
+}

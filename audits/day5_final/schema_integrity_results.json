@@ -1,0 +1,54 @@
+{
+  "cases": {
+    "predefined": {
+      "schema_class": "predefined",
+      "verified": false,
+      "verification_status": "UNRESOLVED",
+      "schema_errors": [],
+      "document_equal": true,
+      "fixed_is_none": false
+    },
+    "hybrid": {
+      "schema_class": "hybrid",
+      "verified": false,
+      "verification_status": "UNRESOLVED",
+      "schema_errors": [
+        "line_items[0].sales_qty: invalid numeric value for sales_qty: 'not-a-number'"
+      ],
+      "document_equal": true,
+      "fixed_is_none": false
+    },
+    "fully_dynamic": {
+      "schema_class": "fully_dynamic",
+      "verified": false,
+      "verification_status": "UNRESOLVED",
+      "schema_errors": [],
+      "document_equal": true,
+      "fixed_is_none": true
+    },
+    "rejects_unknown_fixed": true,
+    "rejects_nan": true
+  },
+  "api": {
+    "predefined": {
+      "has_invoices": true,
+      "verified_false": false,
+      "dynamic_preserved": true,
+      "response_bytes": 3016
+    },
+    "hybrid": {
+      "has_invoices": true,
+      "verified_false": false,
+      "dynamic_preserved": true,
+      "response_bytes": 3282
+    },
+    "fully_dynamic": {
+      "has_invoices": false,
+      "verified_false": true,
+      "dynamic_preserved": true,
+      "response_bytes": 795
+    }
+  },
+  "errors": [],
+  "passed": true
+}

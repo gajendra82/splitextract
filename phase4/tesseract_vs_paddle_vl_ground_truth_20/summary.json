@@ -1,0 +1,380 @@
+{
+  "scope": {
+    "benchmark_pool_documents": 50,
+    "source_verified_documents": 20,
+    "verified_fields_total": 388,
+    "shared_overlapping_fields": 388,
+    "vl_only_fields": 0,
+    "tesseract_only_fields": 0,
+    "ground_truth": "SOURCE_VERIFIED human/visual inspection of original documents",
+    "not_used_as_truth": [
+      "parser output",
+      "Phase 3 PASS/FAIL",
+      "qa_results*_ground_truth",
+      "either OCR engine"
+    ]
+  },
+  "tesseract_inventory": {
+    "existing_cache_hits": 0,
+    "fresh_runs": 20,
+    "missing_prior_repo_dumps": true,
+    "notes": [
+      "No page-level Tesseract OCR text dumps were found under qa_results/, qa_results_images/, or phase3_eval/ for these 20 documents.",
+      "qa_results*_ground_truth is MODEL_DERIVED structured GT (Tesseract-backed for some files) and is NOT used as OCR evidence or as scoring truth.",
+      "Fresh TesseractEngine runs are stored only under this comparison folder."
+    ],
+    "documents": {
+      "0000700084_2026_08_ZL_06_8236_03092026155136.pdf": {
+        "page": 1,
+        "status": "success",
+        "source": "fresh_tesseract_run",
+        "text_length": 3521
+      },
+      "0000700124_2026_08_ZL_06_521_02092026204703.pdf": {
+        "page": 1,
+        "status": "success",
+        "source": "fresh_tesseract_run",
+        "text_length": 2354
+      },
+      "0000700209_2026_08_ZL_18_374_04092026060313.pdf": {
+        "page": 1,
+        "status": "success",
+        "source": "fresh_tesseract_run",
+        "text_length": 656
+      },
+      "0000700275_2026_08_ZL_18_374_04092026171615.pdf": {
+        "page": 1,
+        "status": "success",
+        "source": "fresh_tesseract_run",
+        "text_length": 1663
+      },
+      "0000700308_2026_08_ZL_18_8175_03092026072320.jpg": {
+        "page": 1,
+        "status": "success",
+        "source": "fresh_tesseract_run",
+        "text_length": 1117
+      },
+      "0000700317_2026_08_ZL_18_374_02092026171443.pdf": {
+        "page": 1,
+        "status": "error",
+        "source": "fresh_tesseract_run",
+        "text_length": 0
+      },
+      "0000700346_2026_08_ZL_18_8189_05092026025159.pdf": {
+        "page": 1,
+        "status": "success",
+        "source": "fresh_tesseract_run",
+        "text_length": 2882
+      },
+      "0000700358_2026_08_ZL_18_8173_05092026185826.pdf": {
+        "page": 1,
+        "status": "success",
+        "source": "fresh_tesseract_run",
+        "text_length": 1146
+      },
+      "0000700364_2026_08_ZL_18_8173_05092026190156.pdf": {
+        "page": 1,
+        "status": "success",
+        "source": "fresh_tesseract_run",
+        "text_length": 1484
+      },
+      "0000700406_2026_08_ZL_10_384_05092026140711.jpg": {
+        "page": 1,
+        "status": "success",
+        "source": "fresh_tesseract_run",
+        "text_length": 1707
+      },
+      "0000700434_2026_08_ZL_10_386_05092026034503.jpg": {
+        "page": 1,
+        "status": "success",
+        "source": "fresh_tesseract_run",
+        "text_length": 2899
+      },
+      "0000700835_2026_08_ZL_25_447_03092026105819.jpeg": {
+        "page": 1,
+        "status": "success",
+        "source": "fresh_tesseract_run",
+        "text_length": 1125
+      },
+      "0000701012_2026_08_ZL_11_423_03092026183736.jpg": {
+        "page": 1,
+        "status": "success",
+        "source": "fresh_tesseract_run",
+        "text_length": 2227
+      },
+      "0000701078_2026_08_ZL_03_362_05092026080346.jpeg": {
+        "page": 1,
+        "status": "success",
+        "source": "fresh_tesseract_run",
+        "text_length": 3088
+      },
+      "0000701151_2026_08_ZL_14_361_03092026025650.jpg": {
+        "page": 1,
+        "status": "success",
+        "source": "fresh_tesseract_run",
+        "text_length": 2026
+      },
+      "0000701275_2026_08_ZL_03_360_02092026152716.jpg": {
+        "page": 1,
+        "status": "success",
+        "source": "fresh_tesseract_run",
+        "text_length": 1971
+      },
+      "0000701851_2026_08_ZL_20_302_03092026134940.jpg": {
+        "page": 1,
+        "status": "success",
+        "source": "fresh_tesseract_run",
+        "text_length": 1635
+      },
+      "0000701864_2026_08_ZL_20_5015_03092026091037.jpg": {
+        "page": 1,
+        "status": "success",
+        "source": "fresh_tesseract_run",
+        "text_length": 1337
+      },
+      "0000701904_2026_08_ZL_20_8227_05092026154848.jpg": {
+        "page": 1,
+        "status": "success",
+        "source": "fresh_tesseract_run",
+        "text_length": 4070
+      },
+      "0000704337_2026_08_ZL_24_259_03092026042213.pdf": {
+        "page": 1,
+        "status": "success",
+        "source": "fresh_tesseract_run",
+        "text_length": 349
+      }
+    },
+    "prior_repo_search": {
+      "prior_tesseract_page_dumps_found": false,
+      "searched": [
+        "qa_results/",
+        "qa_results_images/",
+        "phase3_eval/",
+        "phase4/ (except this comparison folder)"
+      ],
+      "incompatible_artifacts": [
+        {
+          "path_glob": "qa_results*/ground_truth/*.json",
+          "reason": "MODEL_DERIVED structured extraction; not page OCR evidence; not SOURCE_VERIFIED truth"
+        },
+        {
+          "path_glob": "qa_results*/extracted/*.json",
+          "reason": "Parser/API extract; not raw OCR text"
+        },
+        {
+          "path_glob": "phase3_eval/records/*.json",
+          "reason": "Phase 3 telemetry/outcomes; no raw OCR text"
+        }
+      ]
+    }
+  },
+  "paddleocr_vl": {
+    "engine": "paddleocr-vl-1.6",
+    "evidence_source": "phase4/paddle_vl_benchmark/per_document (reused, not rerun)",
+    "metrics_all_fields": {
+      "verified_fields": 388,
+      "correct_fields": 340,
+      "field_accuracy": 0.8762886597938144,
+      "numeric_accuracy": 0.8557692307692307,
+      "quantity_accuracy": 0.8506944444444444,
+      "price_accuracy": 1.0,
+      "date_accuracy": 0.3333333333333333,
+      "batch_accuracy": null,
+      "header_accuracy": 0.9473684210526315,
+      "table_column_accuracy": 0.86084142394822,
+      "text_accuracy": 0.9605263157894737,
+      "precision": 0.8900523560209425,
+      "recall": 0.8762886597938144,
+      "f1": 0.8831168831168832,
+      "silent_wrong_rate": 0.10824742268041238,
+      "critical_error_rate": 0.11597938144329897,
+      "by_type_prf": {
+        "numeric": {
+          "precision": 0.8640776699029126,
+          "recall": 0.8557692307692307,
+          "f1": 0.8599033816425121,
+          "n": 312
+        },
+        "text": {
+          "precision": 1.0,
+          "recall": 0.9605263157894737,
+          "f1": 0.9798657718120806,
+          "n": 76
+        },
+        "table": {
+          "precision": 0.8664495114006515,
+          "recall": 0.86084142394822,
+          "f1": 0.8636363636363636,
+          "n": 309
+        }
+      },
+      "error_type_counts": {
+        "MISSING": 6,
+        "COLUMN_CONFUSION": 42
+      }
+    },
+    "metrics_shared_fields": {
+      "verified_fields": 388,
+      "correct_fields": 340,
+      "field_accuracy": 0.8762886597938144,
+      "numeric_accuracy": 0.8557692307692307,
+      "quantity_accuracy": 0.8506944444444444,
+      "price_accuracy": 1.0,
+      "date_accuracy": 0.3333333333333333,
+      "batch_accuracy": null,
+      "header_accuracy": 0.9473684210526315,
+      "table_column_accuracy": 0.86084142394822,
+      "text_accuracy": 0.9605263157894737,
+      "precision": 0.8900523560209425,
+      "recall": 0.8762886597938144,
+      "f1": 0.8831168831168832,
+      "silent_wrong_rate": 0.10824742268041238,
+      "critical_error_rate": 0.11597938144329897,
+      "by_type_prf": {
+        "numeric": {
+          "precision": 0.8640776699029126,
+          "recall": 0.8557692307692307,
+          "f1": 0.8599033816425121,
+          "n": 312
+        },
+        "text": {
+          "precision": 1.0,
+          "recall": 0.9605263157894737,
+          "f1": 0.9798657718120806,
+          "n": 76
+        },
+        "table": {
+          "precision": 0.8664495114006515,
+          "recall": 0.86084142394822,
+          "f1": 0.8636363636363636,
+          "n": 309
+        }
+      },
+      "error_type_counts": {
+        "MISSING": 6,
+        "COLUMN_CONFUSION": 42
+      }
+    },
+    "document_status_counts": {
+      "PARTIALLY_CORRECT": 10,
+      "FULLY_CORRECT": 10
+    },
+    "fully_correct_documents": 10
+  },
+  "tesseract": {
+    "engine": "tesseract",
+    "evidence_source": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\phase4\\tesseract_vs_paddle_vl_ground_truth_20\\tesseract_per_document",
+    "metrics_all_fields": {
+      "verified_fields": 388,
+      "correct_fields": 266,
+      "field_accuracy": 0.6855670103092784,
+      "numeric_accuracy": 0.7339743589743589,
+      "quantity_accuracy": 0.7638888888888888,
+      "price_accuracy": 0.42857142857142855,
+      "date_accuracy": 0.0,
+      "batch_accuracy": null,
+      "header_accuracy": 0.40350877192982454,
+      "table_column_accuracy": 0.7411003236245954,
+      "text_accuracy": 0.4868421052631579,
+      "precision": 1.0,
+      "recall": 0.6855670103092784,
+      "f1": 0.8134556574923547,
+      "silent_wrong_rate": 0.0,
+      "critical_error_rate": 0.22422680412371135,
+      "by_type_prf": {
+        "numeric": {
+          "precision": 1.0,
+          "recall": 0.7339743589743589,
+          "f1": 0.8465804066543438,
+          "n": 312
+        },
+        "text": {
+          "precision": 1.0,
+          "recall": 0.4868421052631579,
+          "f1": 0.6548672566371682,
+          "n": 76
+        },
+        "table": {
+          "precision": 1.0,
+          "recall": 0.7411003236245954,
+          "f1": 0.8513011152416357,
+          "n": 309
+        }
+      },
+      "error_type_counts": {
+        "MISSING": 122
+      }
+    },
+    "metrics_shared_fields": {
+      "verified_fields": 388,
+      "correct_fields": 266,
+      "field_accuracy": 0.6855670103092784,
+      "numeric_accuracy": 0.7339743589743589,
+      "quantity_accuracy": 0.7638888888888888,
+      "price_accuracy": 0.42857142857142855,
+      "date_accuracy": 0.0,
+      "batch_accuracy": null,
+      "header_accuracy": 0.40350877192982454,
+      "table_column_accuracy": 0.7411003236245954,
+      "text_accuracy": 0.4868421052631579,
+      "precision": 1.0,
+      "recall": 0.6855670103092784,
+      "f1": 0.8134556574923547,
+      "silent_wrong_rate": 0.0,
+      "critical_error_rate": 0.22422680412371135,
+      "by_type_prf": {
+        "numeric": {
+          "precision": 1.0,
+          "recall": 0.7339743589743589,
+          "f1": 0.8465804066543438,
+          "n": 312
+        },
+        "text": {
+          "precision": 1.0,
+          "recall": 0.4868421052631579,
+          "f1": 0.6548672566371682,
+          "n": 76
+        },
+        "table": {
+          "precision": 1.0,
+          "recall": 0.7411003236245954,
+          "f1": 0.8513011152416357,
+          "n": 309
+        }
+      },
+      "error_type_counts": {
+        "MISSING": 122
+      }
+    },
+    "document_status_counts": {
+      "PARTIALLY_CORRECT": 17,
+      "FULLY_CORRECT": 2,
+      "OCR_UNAVAILABLE": 1
+    },
+    "fully_correct_documents": 2
+  },
+  "deltas_shared_fields_vl_minus_tesseract": {
+    "numeric_accuracy": 0.1217948717948718,
+    "quantity_accuracy": 0.08680555555555558,
+    "price_accuracy": 0.5714285714285714,
+    "date_accuracy": 0.3333333333333333,
+    "text_accuracy": 0.47368421052631576,
+    "table_column_accuracy": 0.11974110032362462,
+    "silent_wrong_rate": 0.10824742268041238,
+    "critical_error_rate": -0.10824742268041238,
+    "field_accuracy": 0.19072164948453607
+  },
+  "pairwise_shared_fields": {
+    "both_correct": 237,
+    "vl_only_correct": 103,
+    "tesseract_only_correct": 29,
+    "both_wrong": 19
+  },
+  "limitations": [
+    "Prior page-level Tesseract OCR dumps were not available; Tesseract evidence was collected for this comparison using the existing TesseractEngine adapter.",
+    "PaddleOCR-VL often emits HTML tables enabling column-aware matching; Tesseract plain text usually does not \u2014 table/column gaps partly reflect evidence structure.",
+    "Accuracy is verified-field accuracy on the 20 SOURCE_VERIFIED documents, not 50-document dataset accuracy.",
+    "No bbox IoU comparison (insufficient verified bbox GT)."
+  ]
+}

@@ -1,0 +1,939 @@
+[
+  {
+    "file": "0000701478_2026_08_ZA_01_224_08092026054726.jpg",
+    "seconds": 314.281,
+    "rows": 2,
+    "method": "gemini_extraction_fallback",
+    "layout": null,
+    "decision": "UNRESOLVED",
+    "reason": "insufficient_source_evidence",
+    "verified": false,
+    "fail_count": 0,
+    "stock_identity_ok": null,
+    "grounding": {
+      "status": "insufficient_source_evidence",
+      "reader": "ocr_text",
+      "compared_rows": 0,
+      "discrepancy_count": 0,
+      "blank_read_as_zero": 0,
+      "blocks_verification": true
+    },
+    "ocr": [
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 290,
+        "needles": [
+          "SPEMAN",
+          "ZANDRA",
+          "15.00"
+        ],
+        "excerpt": "MOHANANANDA SAI MEDICAL AGENCIES 2/15/56/4 1ST FLOOR, NARASARA OPET\n<table><tr><td>HIM ZANDRA SPEMAN Tab</td><td>60s</td><td>15.00</td><td>0.00</td><td>0.00</td><td>15.00</td></tr><tr><td colspan=\"2\">GroupTotal :</td><td>2,150.06</td><td>0.00</td><td>0.00</td><td>2,150.06</td></tr></table>"
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 290,
+        "needles": [
+          "SPEMAN",
+          "ZANDRA",
+          "15.00"
+        ],
+        "excerpt": "MOHANANANDA SAI MEDICAL AGENCIES 2/15/56/4 1ST FLOOR, NARASARA OPET\n<table><tr><td>HIM ZANDRA SPEMAN Tab</td><td>60s</td><td>15.00</td><td>0.00</td><td>0.00</td><td>15.00</td></tr><tr><td colspan=\"2\">GroupTotal :</td><td>2,150.06</td><td>0.00</td><td>0.00</td><td>2,150.06</td></tr></table>"
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 221,
+        "needles": [
+          "SPEMAN",
+          "ZANDRA",
+          "15.00"
+        ],
+        "excerpt": "<table><tr><td>HIM ZANDRA SPEMAN Tab</td><td>60s</td><td>15.00</td><td>0.00</td><td>0.00</td><td>15.00</td></tr><tr><td>GroupTotal:</td><td colspan=\"2\">2,150.06</td><td>0.00</td><td>0.00</td><td>2,150.06</td></tr></table>"
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 221,
+        "needles": [
+          "SPEMAN",
+          "ZANDRA",
+          "15.00"
+        ],
+        "excerpt": "<table><tr><td>HIM ZANDRA SPEMAN Tab</td><td>60s</td><td>15.00</td><td>0.00</td><td>0.00</td><td>15.00</td></tr><tr><td>GroupTotal:</td><td colspan=\"2\">2,150.06</td><td>0.00</td><td>0.00</td><td>2,150.06</td></tr></table>"
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 105,
+        "needles": [],
+        "excerpt": "<table><tr><td>GroupTotal :</td><td>2,150.06</td><td>0.00</td><td>0.00</td><td>2,150.06</td></tr></table>"
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 105,
+        "needles": [],
+        "excerpt": "<table><tr><td>GroupTotal :</td><td>2,150.06</td><td>0.00</td><td>0.00</td><td>2,150.06</td></tr></table>"
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 221,
+        "needles": [
+          "SPEMAN",
+          "ZANDRA",
+          "15.00"
+        ],
+        "excerpt": "<table><tr><td>HIM ZANDRA SPEMAN Tab</td><td>60s</td><td>15.00</td><td>0.00</td><td>0.00</td><td>15.00</td></tr><tr><td>GroupTotal:</td><td colspan=\"2\">2,150.06</td><td>0.00</td><td>0.00</td><td>2,150.06</td></tr></table>"
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 221,
+        "needles": [
+          "SPEMAN",
+          "ZANDRA",
+          "15.00"
+        ],
+        "excerpt": "<table><tr><td>HIM ZANDRA SPEMAN Tab</td><td>60s</td><td>15.00</td><td>0.00</td><td>0.00</td><td>15.00</td></tr><tr><td>GroupTotal:</td><td colspan=\"2\">2,150.06</td><td>0.00</td><td>0.00</td><td>2,150.06</td></tr></table>"
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 288,
+        "needles": [
+          "SPEMAN",
+          "ZANDRA",
+          "15.00"
+        ],
+        "excerpt": "MOHANANANDA SAI MEDICAL AGENCIES\n2/15/56/4 1ST FLOOR, NARASARAOPET\n<table><tr><td>HIM ZANDRA SPEMAN Tab</td><td>60s</td><td>15.00</td><td>0.00</td><td>0.00</td><td>15.00</td></tr><tr><td>GroupTotal:</td><td colspan=\"2\">2,150.06</td><td>0.00</td><td>0.00</td><td>2,150.06</td></tr></table>"
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 288,
+        "needles": [
+          "SPEMAN",
+          "ZANDRA",
+          "15.00"
+        ],
+        "excerpt": "MOHANANANDA SAI MEDICAL AGENCIES\n2/15/56/4 1ST FLOOR, NARASARAOPET\n<table><tr><td>HIM ZANDRA SPEMAN Tab</td><td>60s</td><td>15.00</td><td>0.00</td><td>0.00</td><td>15.00</td></tr><tr><td>GroupTotal:</td><td colspan=\"2\">2,150.06</td><td>0.00</td><td>0.00</td><td>2,150.06</td></tr></table>"
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 221,
+        "needles": [
+          "SPEMAN",
+          "ZANDRA",
+          "15.00"
+        ],
+        "excerpt": "<table><tr><td>HIM ZANDRA SPEMAN Tab</td><td>60s</td><td>15.00</td><td>0.00</td><td>0.00</td><td>15.00</td></tr><tr><td>GroupTotal:</td><td colspan=\"2\">2,150.06</td><td>0.00</td><td>0.00</td><td>2,150.06</td></tr></table>"
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 221,
+        "needles": [
+          "SPEMAN",
+          "ZANDRA",
+          "15.00"
+        ],
+        "excerpt": "<table><tr><td>HIM ZANDRA SPEMAN Tab</td><td>60s</td><td>15.00</td><td>0.00</td><td>0.00</td><td>15.00</td></tr><tr><td>GroupTotal:</td><td colspan=\"2\">2,150.06</td><td>0.00</td><td>0.00</td><td>2,150.06</td></tr></table>"
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 105,
+        "needles": [],
+        "excerpt": "<table><tr><td>GroupTotal :</td><td>2,150.06</td><td>0.00</td><td>0.00</td><td>2,150.06</td></tr></table>"
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 105,
+        "needles": [],
+        "excerpt": "<table><tr><td>GroupTotal :</td><td>2,150.06</td><td>0.00</td><td>0.00</td><td>2,150.06</td></tr></table>"
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 221,
+        "needles": [
+          "SPEMAN",
+          "ZANDRA",
+          "15.00"
+        ],
+        "excerpt": "<table><tr><td>HIM ZANDRA SPEMAN Tab</td><td>60s</td><td>15.00</td><td>0.00</td><td>0.00</td><td>15.00</td></tr><tr><td>GroupTotal:</td><td colspan=\"2\">2,150.06</td><td>0.00</td><td>0.00</td><td>2,150.06</td></tr></table>"
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 221,
+        "needles": [
+          "SPEMAN",
+          "ZANDRA",
+          "15.00"
+        ],
+        "excerpt": "<table><tr><td>HIM ZANDRA SPEMAN Tab</td><td>60s</td><td>15.00</td><td>0.00</td><td>0.00</td><td>15.00</td></tr><tr><td>GroupTotal:</td><td colspan=\"2\">2,150.06</td><td>0.00</td><td>0.00</td><td>2,150.06</td></tr></table>"
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 288,
+        "needles": [
+          "SPEMAN",
+          "ZANDRA",
+          "15.00"
+        ],
+        "excerpt": "MOHANANANDA SAI MEDICAL AGENCIES\n2/15/56/4 1ST FLOOR, NARASARAOPET\n<table><tr><td>HIM ZANDRA SPEMAN Tab</td><td>60s</td><td>15.00</td><td>0.00</td><td>0.00</td><td>15.00</td></tr><tr><td>GroupTotal:</td><td colspan=\"2\">2,150.06</td><td>0.00</td><td>0.00</td><td>2,150.06</td></tr></table>"
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 288,
+        "needles": [
+          "SPEMAN",
+          "ZANDRA",
+          "15.00"
+        ],
+        "excerpt": "MOHANANANDA SAI MEDICAL AGENCIES\n2/15/56/4 1ST FLOOR, NARASARAOPET\n<table><tr><td>HIM ZANDRA SPEMAN Tab</td><td>60s</td><td>15.00</td><td>0.00</td><td>0.00</td><td>15.00</td></tr><tr><td>GroupTotal:</td><td colspan=\"2\">2,150.06</td><td>0.00</td><td>0.00</td><td>2,150.06</td></tr></table>"
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 0,
+        "needles": [],
+        "excerpt": ""
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 0,
+        "needles": [],
+        "excerpt": ""
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 0,
+        "needles": [],
+        "excerpt": ""
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 0,
+        "needles": [],
+        "excerpt": ""
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 147,
+        "needles": [
+          "15.00"
+        ],
+        "excerpt": "<table><tr><td>NDRA Tab</td><td>60s</td><td>15.00</td><td></td></tr><tr><td colspan=\"2\">Group Total:</td><td colspan=\"2\">2,150.06</td></tr></table>"
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 147,
+        "needles": [
+          "15.00"
+        ],
+        "excerpt": "<table><tr><td>NDRA Tab</td><td>60s</td><td>15.00</td><td></td></tr><tr><td colspan=\"2\">Group Total:</td><td colspan=\"2\">2,150.06</td></tr></table>"
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 0,
+        "needles": [],
+        "excerpt": ""
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 0,
+        "needles": [],
+        "excerpt": ""
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 0,
+        "needles": [],
+        "excerpt": ""
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 0,
+        "needles": [],
+        "excerpt": ""
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 0,
+        "needles": [],
+        "excerpt": ""
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 0,
+        "needles": [],
+        "excerpt": ""
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 307,
+        "needles": [
+          "15.00"
+        ],
+        "excerpt": "<table><tr><td colspan=\"4\">MOHANANANDA SAI MEDICAL</td></tr><tr><td colspan=\"4\">2/15/56/4 1ST FLOOR, NARASARA</td></tr><tr><td colspan=\"2\">NDRA</td><td></td><td></td></tr><tr><td>Tab</td><td>60s</td><td>15.00</td><td></td></tr><tr><td colspan=\"2\">Group Total :</td><td colspan=\"2\">2,150.06</td></tr></table>"
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 307,
+        "needles": [
+          "15.00"
+        ],
+        "excerpt": "<table><tr><td colspan=\"4\">MOHANANANDA SAI MEDICAL</td></tr><tr><td colspan=\"4\">2/15/56/4 1ST FLOOR, NARASARA</td></tr><tr><td colspan=\"2\">NDRA</td><td></td><td></td></tr><tr><td>Tab</td><td>60s</td><td>15.00</td><td></td></tr><tr><td colspan=\"2\">Group Total :</td><td colspan=\"2\">2,150.06</td></tr></table>"
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 0,
+        "needles": [],
+        "excerpt": ""
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 0,
+        "needles": [],
+        "excerpt": ""
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 0,
+        "needles": [],
+        "excerpt": ""
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 0,
+        "needles": [],
+        "excerpt": ""
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 0,
+        "needles": [],
+        "excerpt": ""
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 0,
+        "needles": [],
+        "excerpt": ""
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 90,
+        "needles": [
+          "15.00"
+        ],
+        "excerpt": "<table><tr><td>0.00</td><td>15.00</td></tr><tr><td>0.00</td><td>2,150.06</td></tr></table>"
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 90,
+        "needles": [
+          "15.00"
+        ],
+        "excerpt": "<table><tr><td>0.00</td><td>15.00</td></tr><tr><td>0.00</td><td>2,150.06</td></tr></table>"
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 0,
+        "needles": [],
+        "excerpt": ""
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 0,
+        "needles": [],
+        "excerpt": ""
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 0,
+        "needles": [],
+        "excerpt": ""
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 0,
+        "needles": [],
+        "excerpt": ""
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 0,
+        "needles": [],
+        "excerpt": ""
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 0,
+        "needles": [],
+        "excerpt": ""
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 90,
+        "needles": [
+          "15.00"
+        ],
+        "excerpt": "<table><tr><td>0.00</td><td>15.00</td></tr><tr><td>0.00</td><td>2,150.06</td></tr></table>"
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 90,
+        "needles": [
+          "15.00"
+        ],
+        "excerpt": "<table><tr><td>0.00</td><td>15.00</td></tr><tr><td>0.00</td><td>2,150.06</td></tr></table>"
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 0,
+        "needles": [],
+        "excerpt": ""
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 0,
+        "needles": [],
+        "excerpt": ""
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 0,
+        "needles": [],
+        "excerpt": ""
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 0,
+        "needles": [],
+        "excerpt": ""
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 0,
+        "needles": [],
+        "excerpt": ""
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 0,
+        "needles": [],
+        "excerpt": ""
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 0,
+        "needles": [],
+        "excerpt": ""
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 0,
+        "needles": [],
+        "excerpt": ""
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 0,
+        "needles": [],
+        "excerpt": ""
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 0,
+        "needles": [],
+        "excerpt": ""
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 0,
+        "needles": [],
+        "excerpt": ""
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 0,
+        "needles": [],
+        "excerpt": ""
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 0,
+        "needles": [],
+        "excerpt": ""
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 0,
+        "needles": [],
+        "excerpt": ""
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 0,
+        "needles": [],
+        "excerpt": ""
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 0,
+        "needles": [],
+        "excerpt": ""
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 0,
+        "needles": [],
+        "excerpt": ""
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 0,
+        "needles": [],
+        "excerpt": ""
+      }
+    ],
+    "line_items": [
+      {
+        "product": "HIM ZANDRA",
+        "packing": null,
+        "opening_qty": 0.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 0.0,
+        "closing_qty": 0.0,
+        "total_stock": null
+      },
+      {
+        "product": "SPEMAN Tab",
+        "packing": "60s",
+        "opening_qty": 0.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 0.0,
+        "closing_qty": 0.0,
+        "total_stock": null
+      }
+    ],
+    "phase2_env": "true",
+    "ocr_engine_env": null
+  },
+  {
+    "file": "0000727190_2026_08_ZA_06_333_04092026081416.png",
+    "seconds": 305.987,
+    "rows": 23,
+    "method": "product_stock_report",
+    "layout": null,
+    "decision": "UNRESOLVED",
+    "reason": "validation_not_accepted",
+    "verified": false,
+    "fail_count": 0,
+    "stock_identity_ok": null,
+    "grounding": {
+      "status": "checked",
+      "reader": "ocr_text",
+      "compared_rows": 23,
+      "discrepancy_count": 1,
+      "blank_read_as_zero": 0,
+      "blocks_verification": false
+    },
+    "ocr": [
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 3484,
+        "needles": [
+          "HIORA",
+          "LASUNA",
+          "SPEMAN",
+          "ClosStock",
+          "Opening",
+          "54.00",
+          "55.00"
+        ],
+        "excerpt": "Done\n<table><tr><td>Product Name</td><td>Opening</td><td>Purchase</td><td>Total</td><td>Sale</td><td>SaleRet</td><td>Exp/Dmg</td><td>ClosStock</td></tr><tr><td>HIORA SG GEL</td><td>5.00</td><td>50.00</td><td>55.00</td><td>1.00</td><td>3.00</td><td>3.00</td><td>54.00</td></tr><tr><td>LASUNA TAB 60&#x27;S</td><td>13.00</td><td>0.00</td><td>13.00</td><td>0.00</td><td>0.00</td><td>0.00</td><td>13.00</td></tr><tr><td>LIV 52 DROPS [100ML]</td><td>54.00</td><td>0.00</td><td>54.00</td><td>0.00</td><td>0.00</td><td>0.00</td><td>54.00</td></tr><tr><td>LIV 52 DROPS [60 ML]</td><td>64.00</td><td>0.00</td><td>64.00</td><td>6.00</td><td>0.00</td><td>0.00</td><td>58.00</td></tr><tr><td>LIV 52 DS SYRUP [100 ML]</td><td>40.00</td><td>0.00</td><td>40.00</td><td>32.00</td><td>2.00</td><td>2.00</td><td>8.00</td></tr><tr><td>LIV 52 DS SYRUP [200 ML]</td><td>70.00</td><td>0.00</td><td>70.00</td><td>37.00</td><td>0.00</td><td>0.00</td><td>33.00</td></tr><tr><td>LIV 52 DS TABS</td><td>81.00</td><td>100.00</td><td>181.00</td><td>75.00</td><td>1.00</td><td>1.00</td><td>106.00</td></tr><tr><td>LUKOL SYRUP</td><td>21.00</td><td>0.00</td><td>21.00</td><td>11.00</td><td>0.00</td><td>0.00</td><td>10.00</td></tr>"
+      },
+      {
+        "engine": "paddleocr-vl-1.6",
+        "status": "success",
+        "error": null,
+        "chars": 3484,
+        "needles": [
+          "HIORA",
+          "LASUNA",
+          "SPEMAN",
+          "ClosStock",
+          "Opening",
+          "54.00",
+          "55.00"
+        ],
+        "excerpt": "Done\n<table><tr><td>Product Name</td><td>Opening</td><td>Purchase</td><td>Total</td><td>Sale</td><td>SaleRet</td><td>Exp/Dmg</td><td>ClosStock</td></tr><tr><td>HIORA SG GEL</td><td>5.00</td><td>50.00</td><td>55.00</td><td>1.00</td><td>3.00</td><td>3.00</td><td>54.00</td></tr><tr><td>LASUNA TAB 60&#x27;S</td><td>13.00</td><td>0.00</td><td>13.00</td><td>0.00</td><td>0.00</td><td>0.00</td><td>13.00</td></tr><tr><td>LIV 52 DROPS [100ML]</td><td>54.00</td><td>0.00</td><td>54.00</td><td>0.00</td><td>0.00</td><td>0.00</td><td>54.00</td></tr><tr><td>LIV 52 DROPS [60 ML]</td><td>64.00</td><td>0.00</td><td>64.00</td><td>6.00</td><td>0.00</td><td>0.00</td><td>58.00</td></tr><tr><td>LIV 52 DS SYRUP [100 ML]</td><td>40.00</td><td>0.00</td><td>40.00</td><td>32.00</td><td>2.00</td><td>2.00</td><td>8.00</td></tr><tr><td>LIV 52 DS SYRUP [200 ML]</td><td>70.00</td><td>0.00</td><td>70.00</td><td>37.00</td><td>0.00</td><td>0.00</td><td>33.00</td></tr><tr><td>LIV 52 DS TABS</td><td>81.00</td><td>100.00</td><td>181.00</td><td>75.00</td><td>1.00</td><td>1.00</td><td>106.00</td></tr><tr><td>LUKOL SYRUP</td><td>21.00</td><td>0.00</td><td>21.00</td><td>11.00</td><td>0.00</td><td>0.00</td><td>10.00</td></tr>"
+      }
+    ],
+    "line_items": [
+      {
+        "product": "HIORA SG GEL",
+        "packing": null,
+        "opening_qty": 5.0,
+        "receipts_qty": 50.0,
+        "sales_qty": 1.0,
+        "closing_qty": 54.0,
+        "total_stock": 55.0
+      },
+      {
+        "product": "LASUNA TAB 60'S",
+        "packing": null,
+        "opening_qty": 13.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 0.0,
+        "closing_qty": 13.0,
+        "total_stock": 13.0
+      },
+      {
+        "product": "LIV 52 DROPS [100ML]",
+        "packing": null,
+        "opening_qty": 54.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 0.0,
+        "closing_qty": 54.0,
+        "total_stock": 54.0
+      },
+      {
+        "product": "LIV 52 DROPS [60 ML]",
+        "packing": null,
+        "opening_qty": 64.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 6.0,
+        "closing_qty": 58.0,
+        "total_stock": 64.0
+      },
+      {
+        "product": "LIV 52 DS SYRUP [100 ML]",
+        "packing": null,
+        "opening_qty": 40.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 32.0,
+        "closing_qty": 8.0,
+        "total_stock": 40.0
+      },
+      {
+        "product": "LIV 52 DS SYRUP [200 ML]",
+        "packing": null,
+        "opening_qty": 70.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 37.0,
+        "closing_qty": 33.0,
+        "total_stock": 70.0
+      },
+      {
+        "product": "LIV 52 DS TABS",
+        "packing": null,
+        "opening_qty": 81.0,
+        "receipts_qty": 100.0,
+        "sales_qty": 75.0,
+        "closing_qty": 106.0,
+        "total_stock": 181.0
+      },
+      {
+        "product": "LUKOL SYRUP",
+        "packing": null,
+        "opening_qty": 21.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 11.0,
+        "closing_qty": 10.0,
+        "total_stock": 21.0
+      },
+      {
+        "product": "LUKOL TABS",
+        "packing": null,
+        "opening_qty": 13.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 13.0,
+        "closing_qty": 0.0,
+        "total_stock": 13.0
+      },
+      {
+        "product": "MENOSAN TABS",
+        "packing": null,
+        "opening_qty": 20.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 4.0,
+        "closing_qty": 16.0,
+        "total_stock": 20.0
+      },
+      {
+        "product": "MENTAT DS SYRUP [SUGARFREE]",
+        "packing": null,
+        "opening_qty": 54.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 0.0,
+        "closing_qty": 54.0,
+        "total_stock": 54.0
+      },
+      {
+        "product": "MENTAT SYRUP",
+        "packing": null,
+        "opening_qty": 26.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 6.0,
+        "closing_qty": 20.0,
+        "total_stock": 26.0
+      },
+      {
+        "product": "MENTAT TABS",
+        "packing": null,
+        "opening_qty": 43.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 3.0,
+        "closing_qty": 40.0,
+        "total_stock": 43.0
+      },
+      {
+        "product": "PLATENZA SYRUP [100 ML]",
+        "packing": null,
+        "opening_qty": 114.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 22.0,
+        "closing_qty": 92.0,
+        "total_stock": 114.0
+      },
+      {
+        "product": "PLATENZA TABS",
+        "packing": null,
+        "opening_qty": 81.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 77.0,
+        "closing_qty": 4.0,
+        "total_stock": 81.0
+      },
+      {
+        "product": "REOSTO TABS",
+        "packing": null,
+        "opening_qty": 37.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 0.0,
+        "closing_qty": 37.0,
+        "total_stock": 37.0
+      },
+      {
+        "product": "SEPTILIN SYRUP",
+        "packing": null,
+        "opening_qty": 17.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 16.0,
+        "closing_qty": 1.0,
+        "total_stock": 17.0
+      },
+      {
+        "product": "SEPTILIN TABS",
+        "packing": null,
+        "opening_qty": 34.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 28.0,
+        "closing_qty": 6.0,
+        "total_stock": 34.0
+      },
+      {
+        "product": "SHATAVARI TAB 60'S",
+        "packing": null,
+        "opening_qty": 18.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 8.0,
+        "closing_qty": 10.0,
+        "total_stock": 18.0
+      },
+      {
+        "product": "SHUDDHA GUGGULU TAB 60'S",
+        "packing": null,
+        "opening_qty": 53.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 0.0,
+        "closing_qty": 53.0,
+        "total_stock": 53.0
+      },
+      {
+        "product": "SPEMAN TABS",
+        "packing": null,
+        "opening_qty": 0.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 0.0,
+        "closing_qty": 0.0,
+        "total_stock": 0.0
+      },
+      {
+        "product": "STYPLON TABS",
+        "packing": null,
+        "opening_qty": 40.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 1.0,
+        "closing_qty": 39.0,
+        "total_stock": 40.0
+      },
+      {
+        "product": "V GEL",
+        "packing": null,
+        "opening_qty": 28.0,
+        "receipts_qty": 0.0,
+        "sales_qty": 7.0,
+        "closing_qty": 21.0,
+        "total_stock": 28.0
+      }
+    ],
+    "phase2_env": "true",
+    "ocr_engine_env": null
+  },
+  {
+    "file": "0000733955_2026_08_ZA_04_286_05092026143428.jpeg",
+    "decision": "UNRESOLVED",
+    "reason": "unsuitable_source_for_ocr",
+    "verified": false,
+    "reran_paddleocr_vl": false,
+    "image": {
+      "format": "JPEG",
+      "mode": "RGB",
+      "size": [
+        720,
+        1280
+      ],
+      "bytes": 33531,
+      "exif_orientation": null
+    },
+    "tesseract_psm6": {
+      "original_chars": 0,
+      "autocontrast_chars": 5,
+      "contrast_1_8_chars": 0,
+      "up2x_chars": 31,
+      "rot90_chars": 1,
+      "rot180_chars": 1,
+      "rot270_chars": 2,
+      "header_hits": []
+    },
+    "note": "Phone photo of a stock sheet. No EXIF rotation. Contrast, 2x, and 90/180/270 rotations do not produce OPENING/RECEIPT/ISSUE/CLOSING or product tokens. Prior PaddleOCR-VL read was 468.7s and unusable (Greek and zeros). Not re-run."
+  }
+]

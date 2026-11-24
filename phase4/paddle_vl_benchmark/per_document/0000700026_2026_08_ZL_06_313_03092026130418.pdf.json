@@ -1,0 +1,50 @@
+{
+  "document_id": "0000700026_2026_08_ZL_06_313_03092026130418.pdf",
+  "relative_path": "0000700026_2026_08_ZL_06_313_03092026130418.pdf",
+  "source_path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700026_2026_08_ZL_06_313_03092026130418.pdf",
+  "file_type": "pdf",
+  "pdf_kind": "digital",
+  "manifest_ocr_required": false,
+  "engine": "paddleocr-vl-1.6",
+  "model": "PaddleOCR-VL-1.6",
+  "model_version": "v1.6",
+  "started_at": "2026-10-08T12:02:02.910273+00:00",
+  "pages": [
+    {
+      "page": 1,
+      "status": "skipped_native_text",
+      "paddle_vl_status": "skipped_native_text",
+      "native_text": true,
+      "ocr_required": false,
+      "engine": "paddleocr-vl-1.6",
+      "latency_ms": 27.693199999930584,
+      "embedded_text_chars": 1386,
+      "reason": "native_text",
+      "page_count": 2
+    },
+    {
+      "page": 2,
+      "status": "skipped_native_text",
+      "paddle_vl_status": "skipped_native_text",
+      "native_text": true,
+      "ocr_required": false,
+      "engine": "paddleocr-vl-1.6",
+      "latency_ms": 12.463100000104532,
+      "embedded_text_chars": 353,
+      "reason": "native_text",
+      "page_count": 2
+    }
+  ],
+  "status": "success",
+  "errors": [],
+  "latency_ms": 59.9369999999908,
+  "finished_at": "2026-10-08T12:02:02.970197+00:00",
+  "resources": {
+    "cpu_percent": 27.1,
+    "ram_used_gb": 11.08,
+    "ram_total_gb": 15.31,
+    "gpu": "NVIDIA GeForce RTX 3050 6GB Laptop GPU",
+    "vram_used_gb": 7.095,
+    "vram_total_gb": 6.0
+  }
+}

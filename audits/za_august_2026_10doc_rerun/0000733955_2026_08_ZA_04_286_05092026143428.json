@@ -1,0 +1,131 @@
+{
+  "file": "0000733955_2026_08_ZA_04_286_05092026143428.jpeg",
+  "error": null,
+  "seconds": 11.7732,
+  "rows": 28,
+  "method": "gemini_extraction_fallback",
+  "decision": {
+    "status": "UNRESOLVED",
+    "reason": "insufficient_source_evidence",
+    "verified": false
+  },
+  "phase2": {
+    "status": "unresolved",
+    "attempts": 0,
+    "reason": null
+  },
+  "validation_status": "unresolved",
+  "business": {
+    "status": "inconsistent",
+    "reason": "stock_identity_failure"
+  },
+  "source_evidence": false,
+  "source_agreement": null,
+  "grounding": {
+    "status": "insufficient_source_evidence",
+    "reader": "ocr_text",
+    "compared_rows": 0,
+    "discrepancy_count": 0,
+    "blank_read_as_zero": 0,
+    "blocks_verification": true
+  },
+  "ocr_calls": 1,
+  "gemini_calls": [
+    {
+      "kind": "ocr",
+      "seconds": 3.4397
+    }
+  ],
+  "watched_rows": [
+    {
+      "product_name": "CYSTONE FORTE TAB.",
+      "packing": "TAB.",
+      "opening_qty": 82.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 33.0,
+      "closing_qty": 47.0,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "june_sale_qty": null,
+      "july_sale_qty": null,
+      "wholesale_qty": null,
+      "product_age": null,
+      "total_stock": null
+    },
+    {
+      "product_name": "CYSTONE SYRUP",
+      "packing": "SYRUP.",
+      "opening_qty": 1.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 33.0,
+      "closing_qty": 27.0,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "june_sale_qty": null,
+      "july_sale_qty": null,
+      "wholesale_qty": null,
+      "product_age": null,
+      "total_stock": null
+    },
+    {
+      "product_name": "CYSTONE SYRUP (L)",
+      "packing": "SYRUP.",
+      "opening_qty": 44.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 18.0,
+      "closing_qty": 42.0,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "june_sale_qty": null,
+      "july_sale_qty": null,
+      "wholesale_qty": null,
+      "product_age": null,
+      "total_stock": null
+    },
+    {
+      "product_name": "CYSTONE FORTE SYRUP",
+      "packing": "SYRUP.",
+      "opening_qty": 1.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 1.0,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "june_sale_qty": null,
+      "july_sale_qty": null,
+      "wholesale_qty": null,
+      "product_age": null,
+      "total_stock": null
+    },
+    {
+      "product_name": "CYSTONE SYRUP",
+      "packing": "SYRUP.",
+      "opening_qty": 64.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 64.0,
+      "closing_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "june_sale_qty": null,
+      "july_sale_qty": null,
+      "wholesale_qty": null,
+      "product_age": null,
+      "total_stock": null
+    },
+    {
+      "product_name": "CYSTONE SYRUP ELI",
+      "packing": "SYRUP.",
+      "opening_qty": 116.0,
+      "receipts_qty": 112.0,
+      "sales_qty": 122.0,
+      "closing_qty": 105.0,
+      "sales_value": 0.0,
+      "closing_value": 0.0,
+      "june_sale_qty": null,
+      "july_sale_qty": null,
+      "wholesale_qty": null,
+      "product_age": null,
+      "total_stock": null
+    }
+  ]
+}

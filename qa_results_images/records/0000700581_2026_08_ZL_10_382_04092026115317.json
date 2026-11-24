@@ -1,0 +1,28 @@
+{
+  "file": "0000700581_2026_08_ZL_10_382_04092026115317.jpg",
+  "path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700581_2026_08_ZL_10_382_04092026115317.jpg",
+  "format": "Stock & Sales Statement",
+  "api_method": "main_stock_sales_statement",
+  "status": "REVIEW",
+  "expected_rows": 0,
+  "extracted_rows": 31,
+  "matched_rows": 0,
+  "missing_rows": [],
+  "extra_rows": [],
+  "duplicates": [],
+  "mismatches": [],
+  "ocr_review": [
+    {
+      "note": "The independent read was not confident, so unmatched rows were not scored (0 read, 31 extracted)."
+    }
+  ],
+  "accounting": [],
+  "confidence": "low",
+  "notes": [
+    "OCR used tesseract psm 6.",
+    "No stock-grid header with product rows was found in this PDF."
+  ],
+  "result_key": "0000700581_2026_08_ZL_10_382_04092026115317",
+  "unavailable_fields": {},
+  "formula_checked": "none"
+}

@@ -5,7 +5,9 @@ from __future__ import annotations
 import io
 import json
 import os
+import subprocess
 import tempfile
+import time
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -200,6 +202,120 @@ class PageRoutingTests(unittest.TestCase):
             self.assertTrue(meta["ocr_required"])
         finally:
             path.unlink(missing_ok=True)
+
+
+class CudnnBundleTests(unittest.TestCase):
+    def test_nvidia_cudnn_matches_torch_bundle(self):
+        """Torch 2.8 and Paddle must load the same cuDNN build.
+
+        Paddle's wheel metadata asks for cuDNN 9.5.1.17. Beside Torch's
+        bundled 9.10.2.21 that mismatch raises WinError 127 while loading
+        ``cudnn_engines_precompiled64_9.dll``.
+        """
+        root = (
+            Path(__file__).resolve().parents[1]
+            / ".venvs"
+            / "paddleocr_vl"
+            / "Lib"
+            / "site-packages"
+        )
+        nvidia = root / "nvidia" / "cudnn" / "bin"
+        torch_lib = root / "torch" / "lib"
+        if not nvidia.is_dir() or not torch_lib.is_dir():
+            self.skipTest("isolated paddleocr_vl venv is not present")
+        names = (
+            "cudnn64_9.dll",
+            "cudnn_adv64_9.dll",
+            "cudnn_cnn64_9.dll",
+            "cudnn_engines_precompiled64_9.dll",
+            "cudnn_engines_runtime_compiled64_9.dll",
+            "cudnn_graph64_9.dll",
+            "cudnn_heuristic64_9.dll",
+            "cudnn_ops64_9.dll",
+        )
+        for name in names:
+            paddle_dll = nvidia / name
+            torch_dll = torch_lib / name
+            self.assertTrue(paddle_dll.is_file(), name)
+            self.assertTrue(torch_dll.is_file(), name)
+            self.assertEqual(
+                paddle_dll.stat().st_size,
+                torch_dll.stat().st_size,
+                name,
+            )
+
+
+class ServeDeadlineTests(unittest.TestCase):
+    def test_blocked_stdout_raises_timeout_expired(self):
+        from contextlib import nullcontext
+
+        from services.ocr import paddle_vl_engine as vl
+
+        class _Proc:
+            def __init__(self):
+                self.stdin = mock.Mock()
+                self.returncode = None
+
+                class _Out:
+                    def readline(self_inner):
+                        time.sleep(5)
+                        return ""
+
+                self.stdout = _Out()
+
+            def poll(self):
+                return None
+
+        with mock.patch.object(vl, "_serve_lock", return_value=nullcontext()):
+            with mock.patch.object(vl, "_ensure_serve_proc", return_value=_Proc()):
+                with mock.patch.object(vl, "_kill_serve_proc") as killed:
+                    started = time.perf_counter()
+                    with self.assertRaises(subprocess.TimeoutExpired):
+                        vl._serve_request(
+                            "python",
+                            b"x",
+                            page=1,
+                            device=None,
+                            timeout_s=0.4,
+                        )
+                    elapsed = time.perf_counter() - started
+        killed.assert_called()
+        self.assertLess(elapsed, 2.0)
+
+
+class PrimaryImageOcrCacheTests(unittest.TestCase):
+    def test_same_image_does_not_rerun_paddle_vl(self):
+        import io
+
+        from PIL import Image
+
+        import services.sales_statement_extractor as sse
+
+        buf = io.BytesIO()
+        Image.new("RGB", (8, 8), "white").save(buf, format="PNG")
+        payload = buf.getvalue()
+        calls = []
+
+        def _fake(_image, use_fallback=False):
+            calls.append(use_fallback)
+            return "HIORA SG GEL 5.00 50.00 54.00", {
+                "engine": "paddleocr-vl-1.6",
+                "status": "success",
+                "unverified_fallback": False,
+            }
+
+        sse._PRIMARY_IMAGE_OCR_CACHE.clear()
+        with mock.patch(
+            "services.ocr.runtime.primary_is_paddle_vl", return_value=True
+        ):
+            with mock.patch(
+                "services.ocr.runtime.ocr_pil_image_text", side_effect=_fake
+            ):
+                first = sse._ocr_image_to_text(payload, psm=6, enhance=False)
+                second = sse._ocr_image_to_text(payload, psm=4, enhance=False)
+        self.assertEqual(first, second)
+        self.assertIn("HIORA", first)
+        self.assertEqual(calls, [False])
 
 
 if __name__ == "__main__":

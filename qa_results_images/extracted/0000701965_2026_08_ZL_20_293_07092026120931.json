@@ -1,0 +1,400 @@
+{
+  "source_file": "0000701965_2026_08_ZL_20_293_07092026120931.jpg",
+  "source_format": "jpg",
+  "stockist_name": "HIMALAYA ZEAL",
+  "stockist_address": null,
+  "company_name": "SHARAD AGENCIES",
+  "period_from": "2026-08-01",
+  "period_to": "2026-08-31",
+  "report_title": "STOCK & SALES ANALYSIS",
+  "line_items": [
+    {
+      "product_code": "1331",
+      "product_name": "ABANA TAB",
+      "packing": "60,S",
+      "opening_qty": 41.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 2.0,
+      "sales_value": 272.3,
+      "closing_qty": 39.0,
+      "closing_value": 5309.85,
+      "extra": {
+        "expected_total": 41.0,
+        "expected_closing": 39.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "1411",
+      "product_name": "BLEMINOR ANTI B",
+      "packing": "1X30",
+      "opening_qty": 20.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 3.0,
+      "sales_value": 520.74,
+      "closing_qty": 17.0,
+      "closing_value": 2950.86,
+      "extra": {
+        "expected_total": 20.0,
+        "expected_closing": 17.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "1383",
+      "product_name": "CLARINA ANTI AC",
+      "packing": "30GM",
+      "opening_qty": 42.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 2.0,
+      "sales_value": 259.36,
+      "closing_qty": 40.0,
+      "closing_value": 5187.2,
+      "extra": {
+        "expected_total": 42.0,
+        "expected_closing": 40.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "1409",
+      "product_name": "CLARINA ANTI AC",
+      "packing": "1X60",
+      "opening_qty": 27.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 4.0,
+      "sales_value": 432.76,
+      "closing_qty": 23.0,
+      "closing_value": 2488.37,
+      "extra": {
+        "expected_total": 27.0,
+        "expected_closing": 23.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "1334",
+      "product_name": "CONFIDO TAB",
+      "packing": "60'S",
+      "opening_qty": 21.0,
+      "opening_value": null,
+      "receipts_qty": 100.0,
+      "receipts_value": null,
+      "sales_qty": 20.0,
+      "sales_value": 3118.47,
+      "closing_qty": 101.0,
+      "closing_value": 16577.13,
+      "extra": {
+        "expected_total": 121.0,
+        "expected_closing": 101.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "1391",
+      "product_name": "DIABECON DS TAB",
+      "packing": "1X60",
+      "opening_qty": 18.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 2.0,
+      "sales_value": 384.98,
+      "closing_qty": 16.0,
+      "closing_value": 3079.84,
+      "extra": {
+        "expected_total": 18.0,
+        "expected_closing": 16.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "1342",
+      "product_name": "DIABECON TAB",
+      "packing": "60'S",
+      "opening_qty": 93.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 4.0,
+      "sales_value": 481.28,
+      "closing_qty": 89.0,
+      "closing_value": 10708.48,
+      "extra": {
+        "expected_total": 93.0,
+        "expected_closing": 89.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "1412",
+      "product_name": "HAIRZONE SOLUTI",
+      "packing": "1 X6",
+      "opening_qty": 28.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 2.0,
+      "sales_value": 528.88,
+      "closing_qty": 26.0,
+      "closing_value": 6875.44,
+      "extra": {
+        "expected_total": 28.0,
+        "expected_closing": 26.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "1350",
+      "product_name": "HERBOLAX TAB",
+      "packing": "100'",
+      "opening_qty": 33.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 5.0,
+      "sales_value": 743.0,
+      "closing_qty": 28.0,
+      "closing_value": 4160.8,
+      "extra": {
+        "expected_total": 33.0,
+        "expected_closing": 28.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "1382",
+      "product_name": "HIMCOLIN GEL",
+      "packing": "30GM",
+      "opening_qty": 13.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 2.0,
+      "sales_value": 410.66,
+      "closing_qty": 11.0,
+      "closing_value": 2258.63,
+      "extra": {
+        "expected_total": 13.0,
+        "expected_closing": 11.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "1362",
+      "product_name": "LIV 52 SYP 200M 200M",
+      "packing": null,
+      "opening_qty": 46.0,
+      "opening_value": null,
+      "receipts_qty": 105.0,
+      "receipts_value": null,
+      "sales_qty": 102.0,
+      "sales_value": 16121.1,
+      "closing_qty": 49.0,
+      "closing_value": 7744.45,
+      "extra": {
+        "expected_total": 151.0,
+        "expected_closing": 49.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "4725",
+      "product_name": "LIV 52 SYRUP",
+      "packing": "10 1x10",
+      "opening_qty": 64.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 20.0,
+      "sales_value": 1891.0,
+      "closing_qty": 44.0,
+      "closing_value": 4160.2,
+      "extra": {
+        "expected_total": 64.0,
+        "expected_closing": 44.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "1354",
+      "product_name": "LIV 52 TAB",
+      "packing": "100'",
+      "opening_qty": 63.0,
+      "opening_value": null,
+      "receipts_qty": 100.0,
+      "receipts_value": null,
+      "sales_qty": 77.0,
+      "sales_value": 11442.2,
+      "closing_qty": 86.0,
+      "closing_value": 12779.6,
+      "extra": {
+        "expected_total": 163.0,
+        "expected_closing": 86.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "4809",
+      "product_name": "LIV.52 SUGAR FR",
+      "packing": "1X20",
+      "opening_qty": 24.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 1.0,
+      "sales_value": 158.45,
+      "closing_qty": 23.0,
+      "closing_value": 3644.35,
+      "extra": {
+        "expected_total": 24.0,
+        "expected_closing": 23.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "1341",
+      "product_name": "OPHTHA CARE EYE",
+      "packing": "10ML",
+      "opening_qty": 69.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 9.0,
+      "sales_value": 626.13,
+      "closing_qty": 60.0,
+      "closing_value": 4174.2,
+      "extra": {
+        "expected_total": 69.0,
+        "expected_closing": 60.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "1440",
+      "product_name": "ORO-T ORAL RINS",
+      "packing": "1 X1",
+      "opening_qty": 13.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 9.0,
+      "sales_value": 1025.91,
+      "closing_qty": 4.0,
+      "closing_value": 455.96,
+      "extra": {
+        "expected_total": 13.0,
+        "expected_closing": 4.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "1367",
+      "product_name": "PILEX FORTE OIN",
+      "packing": "30GM",
+      "opening_qty": 71.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 14.0,
+      "sales_value": 1418.34,
+      "closing_qty": 57.0,
+      "closing_value": 5774.67,
+      "extra": {
+        "expected_total": 71.0,
+        "expected_closing": 57.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "1366",
+      "product_name": "PILEX TAB,",
+      "packing": "60'S",
+      "opening_qty": 99.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 29.0,
+      "sales_value": 4583.45,
+      "closing_qty": 70.0,
+      "closing_value": 11063.5,
+      "extra": {
+        "expected_total": 99.0,
+        "expected_closing": 70.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "1399",
+      "product_name": "RUMALAYA GEL",
+      "packing": "1X30",
+      "opening_qty": 91.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 91.0,
+      "closing_value": 8067.15,
+      "extra": {
+        "expected_total": 91.0,
+        "expected_closing": 91.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "1373",
+      "product_name": "TENTEX FORTE",
+      "packing": "10'S",
+      "opening_qty": 115.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 38.0,
+      "sales_value": 3261.98,
+      "closing_qty": 77.0,
+      "closing_value": 7280.35,
+      "extra": {
+        "expected_total": 115.0,
+        "expected_closing": 77.0,
+        "stock_identity_ok": true
+      }
+    }
+  ],
+  "totals": {
+    "sales_value": 47868.25,
+    "closing_value": 124741.03,
+    "extra": {
+      "extraction_method": "gemini_extraction_fallback",
+      "line_sales_value_sum": 47680.99,
+      "line_closing_value_sum": 124741.03,
+      "sales_qty": 345.0,
+      "closing_qty": 951.0,
+      "stock_identity_kind": "opening_receipts_sales_closing",
+      "stock_identity_formula": "closing=opening+receipts-sales",
+      "stock_identity_fail_count": 0,
+      "stock_validation": {
+        "opening_plus_purchase": 1296.0,
+        "expected_total": 1296.0,
+        "calculated_closing": 951.0,
+        "extracted_closing": 951.0,
+        "is_valid": true
+      },
+      "extraction_quality": {
+        "quality": "good",
+        "score": 100,
+        "reasons": [],
+        "threshold": 75.0
+      },
+      "gemini_fallback": "not_called"
+    }
+  }
+}

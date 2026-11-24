@@ -1,0 +1,853 @@
+{
+  "source_file": "0000701715_2026_08_ZL_01_396_03092026110153.png",
+  "source_format": "png",
+  "stockist_name": "SRI VENKATESWARA MEDICAL ENTER",
+  "stockist_address": null,
+  "company_name": null,
+  "period_from": null,
+  "period_to": null,
+  "report_title": "Untitled spre...",
+  "line_items": [
+    {
+      "product_code": null,
+      "product_name": "LIV.52 SYRUP",
+      "packing": "140",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 94.55,
+      "receipts_value": null,
+      "sales_qty": 11.0,
+      "sales_value": 0.0,
+      "closing_qty": 6.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 94.55,
+        "expected_closing": 83.55,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV.52 SYRUP",
+      "packing": "234",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 158.05,
+      "receipts_value": null,
+      "sales_qty": 2.0,
+      "sales_value": 0.0,
+      "closing_qty": 2.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 158.05,
+        "expected_closing": 156.05,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV.52 TABS (F",
+      "packing": "220",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 148.6,
+      "receipts_value": null,
+      "sales_qty": 26.0,
+      "sales_value": 0.0,
+      "closing_qty": 22.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 148.6,
+        "expected_closing": 122.6,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PILEX FORTE",
+      "packing": "160",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 108.06,
+      "receipts_value": null,
+      "sales_qty": 12.0,
+      "sales_value": 0.0,
+      "closing_qty": 11.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 108.06,
+        "expected_closing": 96.06,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "AACTARIL SO",
+      "packing": "115",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 77.68,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 77.68,
+        "expected_closing": 77.68,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ABANA TABS",
+      "packing": "220",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 148.6,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 148.6,
+        "expected_closing": 148.6,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ALTHEA CREA",
+      "packing": "95",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 64.16,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 64.16,
+        "expected_closing": 64.16,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ALTHEA LOTIC",
+      "packing": "243",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 164.13,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 164.13,
+        "expected_closing": 164.13,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "AMALAKI TABİ",
+      "packing": "325",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 220.63,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 220.63,
+        "expected_closing": 220.63,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ANTI HAIR LO",
+      "packing": "375",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 225.38,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 225.38,
+        "expected_closing": 225.38,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ANTI HAIR LO",
+      "packing": "225",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 135.23,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 135.23,
+        "expected_closing": 135.23,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "BAEL TABLET",
+      "packing": "235",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 159.52,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 159.52,
+        "expected_closing": 159.52,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "BLEMINOR AN",
+      "packing": "257",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 173.58,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 173.58,
+        "expected_closing": 173.58,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "CHIROPEX CF",
+      "packing": "79",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 53.37,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 53.37,
+        "expected_closing": 53.37,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "CLARINA ANT",
+      "packing": "192",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 129.68,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 129.68,
+        "expected_closing": 129.68,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "CLARINA ANT",
+      "packing": "120",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 72.13,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 72.13,
+        "expected_closing": 72.13,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "CLARINA ANT",
+      "packing": "180",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 108.19,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 108.19,
+        "expected_closing": 108.19,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "CLARINA ΑΝΤ",
+      "packing": "255",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 153.26,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 153.26,
+        "expected_closing": 153.26,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "CLEARVITAL (",
+      "packing": "130",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 78.14,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 78.14,
+        "expected_closing": 78.14,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "CONFIDO TAB",
+      "packing": "255",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 172.23,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 172.23,
+        "expected_closing": 172.23,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "DIABECOΝ ΤΑ",
+      "packing": "285",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 192.49,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 192.49,
+        "expected_closing": 192.49,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "DIABECOΝ ΤΑ",
+      "packing": "196",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 132.39,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 132.39,
+        "expected_closing": 132.39,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "DIAREX SYRU",
+      "packing": "121",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 81.74,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 81.74,
+        "expected_closing": 81.74,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "DIAREX TABS",
+      "packing": "131",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 88.47,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 88.47,
+        "expected_closing": 88.47,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "HADJOD TABL",
+      "packing": "325",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 220.63,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 220.63,
+        "expected_closing": 220.63,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "HAIR ZONE S(",
+      "packing": "440",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 264.44,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 264.44,
+        "expected_closing": 264.44,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "HEAL LIP 10G",
+      "packing": "70",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 42.07,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 42.07,
+        "expected_closing": 42.07,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "HERBOLAX C/",
+      "packing": "84",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 56.74,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 56.74,
+        "expected_closing": 56.74,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "HERBOLAX TA",
+      "packing": "220",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 148.6,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 148.6,
+        "expected_closing": 148.6,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "HIMCOLIN GE",
+      "packing": "304",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 205.33,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 205.33,
+        "expected_closing": 205.33,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "HIOWNA VANI",
+      "packing": "250",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 168.86,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 168.86,
+        "expected_closing": 168.86,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "KAPIKACHHU",
+      "packing": "300",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 203.66,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 203.66,
+        "expected_closing": 203.66,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV. 52 HB CAF",
+      "packing": "225",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 151.96,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 151.96,
+        "expected_closing": 151.96,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV.52 SUGAR",
+      "packing": "243",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 164.13,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 164.13,
+        "expected_closing": 164.13,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV.52 SYRUP",
+      "packing": "168",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 113.47,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 113.47,
+        "expected_closing": 113.47,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV.52 TABS (S",
+      "packing": "220",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 148.6,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 148.6,
+        "expected_closing": 148.6,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "MANJISHTHA",
+      "packing": "300",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 203.66,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 203.66,
+        "expected_closing": 203.66,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "OPHTHACARE",
+      "packing": "103",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 69.57,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 69.57,
+        "expected_closing": 69.57,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ORO-T ORAL |",
+      "packing": "168",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 113.47,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 113.47,
+        "expected_closing": 113.47,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ORO-T ORAL |",
+      "packing": "164",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 110.78,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 110.78,
+        "expected_closing": 110.78,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ORO-T ORAL",
+      "packing": "200",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 135.08,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 135.08,
+        "expected_closing": 135.08,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "OXITARD CAP",
+      "packing": "126",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 85.1,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 85.1,
+        "expected_closing": 85.1,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PILEX FORTE",
+      "packing": "165",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 111.45,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 111.45,
+        "expected_closing": 111.45,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PILEX OINTME",
+      "packing": "98",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 66.19,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 66.19,
+        "expected_closing": 66.19,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PILEX TABS (F",
+      "packing": "245",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 165.47,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 165.47,
+        "expected_closing": 165.47,
+        "stock_identity_ok": false
+      }
+    }
+  ],
+  "totals": {
+    "sales_value": null,
+    "closing_value": null,
+    "extra": {
+      "extraction_method": "gemini_extraction_fallback",
+      "line_sales_value_sum": 0.0,
+      "line_closing_value_sum": 0.0,
+      "sales_qty": 51.0,
+      "closing_qty": 41.0,
+      "stock_identity_kind": "opening_receipts_sales_closing",
+      "stock_identity_formula": "closing=opening+receipts-sales",
+      "stock_identity_fail_count": 45,
+      "stock_validation": {
+        "opening_plus_purchase": 6089.5199999999995,
+        "expected_total": 6089.5199999999995,
+        "calculated_closing": 6038.5199999999995,
+        "extracted_closing": 41.0,
+        "is_valid": false
+      },
+      "extraction_quality": {
+        "quality": "poor",
+        "score": 75,
+        "reasons": [
+          "stock_identity_failure"
+        ],
+        "threshold": 75.0
+      },
+      "gemini_fallback": "validation_failed",
+      "early_vision_reason": "missing_stock_headers,low_ocr_quality_score"
+    }
+  }
+}

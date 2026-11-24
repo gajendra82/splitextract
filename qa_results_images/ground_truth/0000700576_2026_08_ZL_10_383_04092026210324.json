@@ -1,0 +1,26 @@
+{
+  "source_file": "0000700576_2026_08_ZL_10_383_04092026210324.jpg",
+  "format": "Unknown layout",
+  "confidence": "low",
+  "source": "ocr",
+  "formula": "none",
+  "present_fields": [],
+  "absent_fields": [
+    "product_code",
+    "opening_qty",
+    "opening_value",
+    "receipts_qty",
+    "receipts_value",
+    "sales_qty",
+    "sales_value",
+    "closing_qty",
+    "closing_value"
+  ],
+  "columns": [],
+  "line_items": [],
+  "notes": [
+    "OCR used tesseract psm 6.",
+    "No stock-grid header with product rows was found in this PDF."
+  ],
+  "partial": false
+}

@@ -89,8 +89,10 @@ class TestItemPackSreturnOthers(unittest.TestCase):
         self.assertEqual(arjuna["opening_qty"], 40)
         self.assertEqual(arjuna["sales_qty"], 10)
         self.assertEqual(arjuna["closing_qty"], 30)
-        self.assertEqual(arjuna["receipts_qty"], 0)
-        self.assertEqual(arjuna["others_out_qty"], 0)
+        self.assertIsNone(arjuna["receipts_qty"])
+        self.assertEqual(arjuna["extra"]["qty_cell_state"]["receipts_qty"], "dash")
+        self.assertIsNone(arjuna["others_out_qty"])
+        self.assertEqual(arjuna["extra"]["qty_cell_state"]["others_out_qty"], "dash")
 
         drops = rows[("BONNISAN DROPS", "30ML")]
         for field in (
@@ -104,7 +106,8 @@ class TestItemPackSreturnOthers(unittest.TestCase):
             "others_out_qty",
             "closing_qty",
         ):
-            self.assertEqual(drops[field], 0, field)
+            self.assertIsNone(drops[field], field)
+            self.assertEqual(drops["extra"]["qty_cell_state"][field], "dash", field)
         self.assertTrue(drops["extra"]["qty_reconcile_ok"])
 
         ds_tab = rows[("LIV 52 DS TAB", "60 TAB")]
@@ -125,7 +128,8 @@ class TestItemPackSreturnOthers(unittest.TestCase):
         syp_200 = rows[("LIV 52 SYP", "200 ML")]
         self.assertEqual(syp_100["opening_qty"], 1)
         self.assertEqual(syp_100["closing_qty"], 1)
-        self.assertEqual(syp_200["opening_qty"], 0)
+        self.assertIsNone(syp_200["opening_qty"])
+        self.assertEqual(syp_200["extra"]["qty_cell_state"]["opening_qty"], "dash")
         self.assertEqual(syp_200["purchase_qty"], 360)
         self.assertEqual(syp_200["sales_qty"], 296)
         self.assertEqual(syp_200["others_out_qty"], 10)

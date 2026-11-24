@@ -1,0 +1,2962 @@
+{
+  "document_id": "0000700835_2026_08_ZL_25_447_03092026105819.jpeg",
+  "source_file": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700835_2026_08_ZL_25_447_03092026105819.jpeg",
+  "pages": [
+    {
+      "page": 1,
+      "engine": "tesseract",
+      "status": "success",
+      "text": "SWASTIK SALES CORPORATION.\nRASHTALA * BANKURA\n\nPage No.1 Sales & Stock Statement(From 01/08/2026 Upto 31/08/2026) Aug 31,2026\nHIMALAYA DRUG (ZEAL) DIV\nPRODUCT NAME Shelf PACKING OpBal. Receipt Total ~\u2014sssue\u2014 Closing\n\n1D Qy. Qy. Qy. Qty. Balance\n\u2018AACTARIL SOAP 75G 86 0 86 43 43\nABANA 60'S 45 0 45 0 45\n\u2018ALTHEA LOTION 100ML. 50 0 50 0 50\nCLARINA ANTI ACNE FA 6oML 100 0 100 a B\nCLARINA CREAM 30GM 49 0 49 2 47\nCONFIDO TAB eos 307 0 307 35 252\nDIABECON DS TAB os 37 0 37 0 37\nDIAREX SYRUP 100 ML 100ML 26 0 26 26 0\nDIAREX TAB 30 64 0 64 5 59\nHAIR ZONE SOLUTION 60 ML 10 0 10 10 0\nHERBOLAX CAP. 10s 104 0 104 9 95\nHIMCOLIN GEL. 30GM 119 0 19 15 104\nLIV 52 SYP SUGAR FRE IPH 4 0 4 6 8\nLIV.52 HB CAP 10S 96 0 96 3 8B\nLIV.52 SYRUP 100ML 87 1 88 87 1\nLIV.52 SYRUP. 200ML 136 700 836 567 269\nLIV.52 TAB loos S51 2 553 200 383\nOPHTHACARE/DROP 1OML 34 0 4 10 m4\nPILEX FORTE OINT 30GM 11 0 11 o7 1a\nPILEX FORTE TAB 30'S 1s 0 18 2 96\nPILEX TAB os 201 0 201 4 147\nPURIM TAB o's 8 0 8 0 8\nRENALKA SYP 100ML 36 0 36 15 4\nRENALKA SYP (200ML) 200ML. 79 0 79 30 49\n\u2018TENTEX FORTE TAB 10 579 0 579 47 532\nTOTAL 402259 107708 509967203965 330707\n",
+      "normalized_text": "SWASTIK SALES CORPORATION. RASHTALA * BANKURA Page No.1 Sales & Stock Statement(From 01/08/2026 Upto 31/08/2026) Aug 31,2026 HIMALAYA DRUG (ZEAL) DIV PRODUCT NAME Shelf PACKING OpBal. Receipt Total ~\u2014sssue\u2014 Closing 1D Qy. Qy. Qy. Qty. Balance \u2018AACTARIL SOAP 75G 86 0 86 43 43 ABANA 60'S 45 0 45 0 45 \u2018ALTHEA LOTION 100ML. 50 0 50 0 50 CLARINA ANTI ACNE FA 6oML 100 0 100 a B CLARINA CREAM 30GM 49 0 49 2 47 CONFIDO TAB eos 307 0 307 35 252 DIABECON DS TAB os 37 0 37 0 37 DIAREX SYRUP 100 ML 100ML 26 0 26 26 0 DIAREX TAB 30 64 0 64 5 59 HAIR ZONE SOLUTION 60 ML 10 0 10 10 0 HERBOLAX CAP. 10s 104 0 104 9 95 HIMCOLIN GEL. 30GM 119 0 19 15 104 LIV 52 SYP SUGAR FRE IPH 4 0 4 6 8 LIV.52 HB CAP 10S 96 0 96 3 8B LIV.52 SYRUP 100ML 87 1 88 87 1 LIV.52 SYRUP. 200ML 136 700 836 567 269 LIV.52 TAB loos S51 2 553 200 383 OPHTHACARE/DROP 1OML 34 0 4 10 m4 PILEX FORTE OINT 30GM 11 0 11 o7 1a PILEX FORTE TAB 30'S 1s 0 18 2 96 PILEX TAB os 201 0 201 4 147 PURIM TAB o's 8 0 8 0 8 RENALKA SYP 100ML 36 0 36 15 4 RENALKA SYP (200ML) 200ML. 79 0 79 30 49 \u2018TENTEX FORTE TAB 10 579 0 579 47 532 TOTAL 402259 107708 509967203965 330707",
+      "numeric_tokens": [
+        "31",
+        "2026",
+        "86",
+        "0",
+        "86",
+        "43",
+        "43",
+        "60",
+        "45",
+        "0",
+        "45",
+        "0",
+        "45",
+        "50",
+        "0",
+        "50",
+        "0",
+        "50",
+        "100",
+        "0",
+        "100",
+        "49",
+        "0",
+        "49",
+        "2",
+        "47",
+        "307",
+        "0",
+        "307",
+        "35",
+        "252",
+        "37",
+        "0",
+        "37",
+        "0",
+        "37",
+        "100",
+        "26",
+        "0",
+        "26",
+        "26",
+        "0",
+        "30",
+        "64",
+        "0",
+        "64",
+        "5",
+        "59",
+        "60",
+        "10",
+        "0",
+        "10",
+        "10",
+        "0",
+        "104",
+        "0",
+        "104",
+        "9",
+        "95",
+        "119",
+        "0",
+        "19",
+        "15",
+        "104",
+        "52",
+        "4",
+        "0",
+        "4",
+        "6",
+        "8",
+        "96",
+        "0",
+        "96",
+        "3",
+        "87",
+        "1",
+        "88",
+        "87",
+        "1",
+        "136",
+        "700",
+        "836",
+        "567",
+        "269",
+        "2",
+        "553",
+        "200",
+        "383",
+        "34",
+        "0",
+        "4",
+        "10",
+        "11",
+        "0",
+        "11",
+        "30",
+        "0",
+        "18",
+        "2",
+        "96",
+        "201",
+        "0",
+        "201",
+        "4",
+        "147",
+        "8",
+        "0",
+        "8",
+        "0",
+        "8",
+        "36",
+        "0",
+        "36",
+        "15",
+        "4",
+        "79",
+        "0",
+        "79",
+        "30",
+        "49",
+        "10",
+        "579",
+        "0",
+        "579",
+        "47",
+        "532",
+        "402259",
+        "107708",
+        "509967203965",
+        "330707"
+      ],
+      "word_count": 254,
+      "confidence": 0.7903543307086615,
+      "words": [
+        {
+          "text": "SWASTIK",
+          "bbox": [
+            288.0,
+            65.0,
+            426.0,
+            87.0
+          ],
+          "confidence": 0.92,
+          "page": 1
+        },
+        {
+          "text": "SALES",
+          "bbox": [
+            434.0,
+            65.0,
+            526.0,
+            87.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "CORPORATION.",
+          "bbox": [
+            536.0,
+            65.0,
+            767.0,
+            87.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "RASHTALA",
+          "bbox": [
+            413.0,
+            95.0,
+            521.0,
+            109.0
+          ],
+          "confidence": 0.9,
+          "page": 1
+        },
+        {
+          "text": "*",
+          "bbox": [
+            528.0,
+            95.0,
+            536.0,
+            104.0
+          ],
+          "confidence": 0.9,
+          "page": 1
+        },
+        {
+          "text": "BANKURA",
+          "bbox": [
+            543.0,
+            95.0,
+            643.0,
+            109.0
+          ],
+          "confidence": 0.9,
+          "page": 1
+        },
+        {
+          "text": "Page",
+          "bbox": [
+            37.0,
+            142.0,
+            75.0,
+            161.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "No.1",
+          "bbox": [
+            82.0,
+            142.0,
+            119.0,
+            156.0
+          ],
+          "confidence": 0.93,
+          "page": 1
+        },
+        {
+          "text": "Sales",
+          "bbox": [
+            282.0,
+            142.0,
+            324.0,
+            156.0
+          ],
+          "confidence": 0.93,
+          "page": 1
+        },
+        {
+          "text": "&",
+          "bbox": [
+            330.0,
+            142.0,
+            345.0,
+            156.0
+          ],
+          "confidence": 0.93,
+          "page": 1
+        },
+        {
+          "text": "Stock",
+          "bbox": [
+            351.0,
+            142.0,
+            397.0,
+            156.0
+          ],
+          "confidence": 0.93,
+          "page": 1
+        },
+        {
+          "text": "Statement(From",
+          "bbox": [
+            403.0,
+            142.0,
+            536.0,
+            158.0
+          ],
+          "confidence": 0.92,
+          "page": 1
+        },
+        {
+          "text": "01/08/2026",
+          "bbox": [
+            542.0,
+            142.0,
+            635.0,
+            156.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "Upto",
+          "bbox": [
+            640.0,
+            142.0,
+            681.0,
+            164.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "31/08/2026)",
+          "bbox": [
+            687.0,
+            142.0,
+            786.0,
+            159.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "Aug",
+          "bbox": [
+            923.0,
+            142.0,
+            957.0,
+            161.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "31,2026",
+          "bbox": [
+            964.0,
+            142.0,
+            1030.0,
+            158.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "HIMALAYA",
+          "bbox": [
+            36.0,
+            192.0,
+            204.0,
+            213.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "DRUG",
+          "bbox": [
+            212.0,
+            192.0,
+            298.0,
+            214.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "(ZEAL)",
+          "bbox": [
+            308.0,
+            193.0,
+            406.0,
+            218.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "DIV",
+          "bbox": [
+            414.0,
+            193.0,
+            465.0,
+            213.0
+          ],
+          "confidence": 0.95,
+          "page": 1
+        },
+        {
+          "text": "PRODUCT",
+          "bbox": [
+            37.0,
+            243.0,
+            100.0,
+            252.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "NAME",
+          "bbox": [
+            104.0,
+            243.0,
+            143.0,
+            252.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "Shelf",
+          "bbox": [
+            192.0,
+            243.0,
+            221.0,
+            252.0
+          ],
+          "confidence": 0.8,
+          "page": 1
+        },
+        {
+          "text": "PACKING",
+          "bbox": [
+            310.0,
+            232.0,
+            370.0,
+            262.0
+          ],
+          "confidence": 0.95,
+          "page": 1
+        },
+        {
+          "text": "OpBal.",
+          "bbox": [
+            414.0,
+            243.0,
+            452.0,
+            255.0
+          ],
+          "confidence": 0.56,
+          "page": 1
+        },
+        {
+          "text": "Receipt",
+          "bbox": [
+            481.0,
+            243.0,
+            522.0,
+            255.0
+          ],
+          "confidence": 0.75,
+          "page": 1
+        },
+        {
+          "text": "Total",
+          "bbox": [
+            559.0,
+            243.0,
+            587.0,
+            252.0
+          ],
+          "confidence": 0.52,
+          "page": 1
+        },
+        {
+          "text": "~\u2014sssue\u2014",
+          "bbox": [
+            626.0,
+            243.0,
+            653.0,
+            252.0
+          ],
+          "confidence": 0.0,
+          "page": 1
+        },
+        {
+          "text": "Closing",
+          "bbox": [
+            678.0,
+            243.0,
+            720.0,
+            255.0
+          ],
+          "confidence": 0.16,
+          "page": 1
+        },
+        {
+          "text": "1D",
+          "bbox": [
+            192.0,
+            259.0,
+            206.0,
+            268.0
+          ],
+          "confidence": 0.85,
+          "page": 1
+        },
+        {
+          "text": "Qy.",
+          "bbox": [
+            431.0,
+            259.0,
+            451.0,
+            271.0
+          ],
+          "confidence": 0.67,
+          "page": 1
+        },
+        {
+          "text": "Qy.",
+          "bbox": [
+            497.0,
+            251.0,
+            516.0,
+            280.0
+          ],
+          "confidence": 0.77,
+          "page": 1
+        },
+        {
+          "text": "Qy.",
+          "bbox": [
+            563.0,
+            259.0,
+            582.0,
+            271.0
+          ],
+          "confidence": 0.62,
+          "page": 1
+        },
+        {
+          "text": "Qty.",
+          "bbox": [
+            629.0,
+            259.0,
+            649.0,
+            271.0
+          ],
+          "confidence": 0.61,
+          "page": 1
+        },
+        {
+          "text": "Balance",
+          "bbox": [
+            678.0,
+            259.0,
+            721.0,
+            268.0
+          ],
+          "confidence": 0.63,
+          "page": 1
+        },
+        {
+          "text": "\u2018AACTARIL",
+          "bbox": [
+            36.0,
+            298.0,
+            105.0,
+            307.0
+          ],
+          "confidence": 0.16,
+          "page": 1
+        },
+        {
+          "text": "SOAP",
+          "bbox": [
+            109.0,
+            298.0,
+            144.0,
+            307.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "75G",
+          "bbox": [
+            306.0,
+            287.0,
+            332.0,
+            317.0
+          ],
+          "confidence": 0.74,
+          "page": 1
+        },
+        {
+          "text": "86",
+          "bbox": [
+            442.0,
+            298.0,
+            455.0,
+            307.0
+          ],
+          "confidence": 0.95,
+          "page": 1
+        },
+        {
+          "text": "0",
+          "bbox": [
+            514.0,
+            298.0,
+            520.0,
+            307.0
+          ],
+          "confidence": 0.75,
+          "page": 1
+        },
+        {
+          "text": "86",
+          "bbox": [
+            570.0,
+            287.0,
+            586.0,
+            317.0
+          ],
+          "confidence": 0.94,
+          "page": 1
+        },
+        {
+          "text": "43",
+          "bbox": [
+            639.0,
+            298.0,
+            652.0,
+            307.0
+          ],
+          "confidence": 0.91,
+          "page": 1
+        },
+        {
+          "text": "43",
+          "bbox": [
+            705.0,
+            298.0,
+            718.0,
+            307.0
+          ],
+          "confidence": 0.79,
+          "page": 1
+        },
+        {
+          "text": "ABANA",
+          "bbox": [
+            36.0,
+            303.0,
+            85.0,
+            333.0
+          ],
+          "confidence": 0.34,
+          "page": 1
+        },
+        {
+          "text": "60'S",
+          "bbox": [
+            310.0,
+            314.0,
+            336.0,
+            323.0
+          ],
+          "confidence": 0.87,
+          "page": 1
+        },
+        {
+          "text": "45",
+          "bbox": [
+            441.0,
+            314.0,
+            454.0,
+            323.0
+          ],
+          "confidence": 0.95,
+          "page": 1
+        },
+        {
+          "text": "0",
+          "bbox": [
+            514.0,
+            314.0,
+            520.0,
+            323.0
+          ],
+          "confidence": 0.84,
+          "page": 1
+        },
+        {
+          "text": "45",
+          "bbox": [
+            573.0,
+            314.0,
+            586.0,
+            323.0
+          ],
+          "confidence": 0.95,
+          "page": 1
+        },
+        {
+          "text": "0",
+          "bbox": [
+            646.0,
+            314.0,
+            652.0,
+            323.0
+          ],
+          "confidence": 0.82,
+          "page": 1
+        },
+        {
+          "text": "45",
+          "bbox": [
+            705.0,
+            314.0,
+            718.0,
+            323.0
+          ],
+          "confidence": 0.95,
+          "page": 1
+        },
+        {
+          "text": "\u2018ALTHEA",
+          "bbox": [
+            36.0,
+            329.0,
+            91.0,
+            338.0
+          ],
+          "confidence": 0.26,
+          "page": 1
+        },
+        {
+          "text": "LOTION",
+          "bbox": [
+            95.0,
+            329.0,
+            144.0,
+            338.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "100ML.",
+          "bbox": [
+            312.0,
+            318.0,
+            353.0,
+            348.0
+          ],
+          "confidence": 0.45,
+          "page": 1
+        },
+        {
+          "text": "50",
+          "bbox": [
+            441.0,
+            329.0,
+            455.0,
+            338.0
+          ],
+          "confidence": 0.7,
+          "page": 1
+        },
+        {
+          "text": "0",
+          "bbox": [
+            514.0,
+            329.0,
+            520.0,
+            338.0
+          ],
+          "confidence": 0.77,
+          "page": 1
+        },
+        {
+          "text": "50",
+          "bbox": [
+            573.0,
+            329.0,
+            586.0,
+            338.0
+          ],
+          "confidence": 0.76,
+          "page": 1
+        },
+        {
+          "text": "0",
+          "bbox": [
+            646.0,
+            329.0,
+            652.0,
+            338.0
+          ],
+          "confidence": 0.77,
+          "page": 1
+        },
+        {
+          "text": "50",
+          "bbox": [
+            705.0,
+            329.0,
+            718.0,
+            338.0
+          ],
+          "confidence": 0.77,
+          "page": 1
+        },
+        {
+          "text": "CLARINA",
+          "bbox": [
+            36.0,
+            345.0,
+            96.0,
+            354.0
+          ],
+          "confidence": 0.56,
+          "page": 1
+        },
+        {
+          "text": "ANTI",
+          "bbox": [
+            101.0,
+            345.0,
+            132.0,
+            354.0
+          ],
+          "confidence": 0.51,
+          "page": 1
+        },
+        {
+          "text": "ACNE",
+          "bbox": [
+            137.0,
+            345.0,
+            173.0,
+            354.0
+          ],
+          "confidence": 0.51,
+          "page": 1
+        },
+        {
+          "text": "FA",
+          "bbox": [
+            178.0,
+            345.0,
+            195.0,
+            354.0
+          ],
+          "confidence": 0.92,
+          "page": 1
+        },
+        {
+          "text": "6oML",
+          "bbox": [
+            310.0,
+            345.0,
+            343.0,
+            354.0
+          ],
+          "confidence": 0.55,
+          "page": 1
+        },
+        {
+          "text": "100",
+          "bbox": [
+            437.0,
+            334.0,
+            455.0,
+            364.0
+          ],
+          "confidence": 0.86,
+          "page": 1
+        },
+        {
+          "text": "0",
+          "bbox": [
+            514.0,
+            345.0,
+            520.0,
+            354.0
+          ],
+          "confidence": 0.86,
+          "page": 1
+        },
+        {
+          "text": "100",
+          "bbox": [
+            568.0,
+            345.0,
+            587.0,
+            354.0
+          ],
+          "confidence": 0.84,
+          "page": 1
+        },
+        {
+          "text": "a",
+          "bbox": [
+            640.0,
+            345.0,
+            652.0,
+            354.0
+          ],
+          "confidence": 0.55,
+          "page": 1
+        },
+        {
+          "text": "B",
+          "bbox": [
+            705.0,
+            345.0,
+            718.0,
+            354.0
+          ],
+          "confidence": 0.81,
+          "page": 1
+        },
+        {
+          "text": "CLARINA",
+          "bbox": [
+            36.0,
+            360.0,
+            96.0,
+            369.0
+          ],
+          "confidence": 0.65,
+          "page": 1
+        },
+        {
+          "text": "CREAM",
+          "bbox": [
+            101.0,
+            360.0,
+            149.0,
+            369.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "30GM",
+          "bbox": [
+            310.0,
+            360.0,
+            344.0,
+            369.0
+          ],
+          "confidence": 0.91,
+          "page": 1
+        },
+        {
+          "text": "49",
+          "bbox": [
+            441.0,
+            360.0,
+            454.0,
+            369.0
+          ],
+          "confidence": 0.95,
+          "page": 1
+        },
+        {
+          "text": "0",
+          "bbox": [
+            514.0,
+            360.0,
+            520.0,
+            369.0
+          ],
+          "confidence": 0.72,
+          "page": 1
+        },
+        {
+          "text": "49",
+          "bbox": [
+            573.0,
+            360.0,
+            586.0,
+            369.0
+          ],
+          "confidence": 0.94,
+          "page": 1
+        },
+        {
+          "text": "2",
+          "bbox": [
+            646.0,
+            360.0,
+            652.0,
+            369.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "47",
+          "bbox": [
+            705.0,
+            360.0,
+            718.0,
+            369.0
+          ],
+          "confidence": 0.93,
+          "page": 1
+        },
+        {
+          "text": "CONFIDO",
+          "bbox": [
+            36.0,
+            376.0,
+            97.0,
+            385.0
+          ],
+          "confidence": 0.37,
+          "page": 1
+        },
+        {
+          "text": "TAB",
+          "bbox": [
+            100.0,
+            376.0,
+            127.0,
+            385.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "eos",
+          "bbox": [
+            310.0,
+            376.0,
+            332.0,
+            385.0
+          ],
+          "confidence": 0.36,
+          "page": 1
+        },
+        {
+          "text": "307",
+          "bbox": [
+            435.0,
+            376.0,
+            454.0,
+            385.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "0",
+          "bbox": [
+            514.0,
+            376.0,
+            520.0,
+            385.0
+          ],
+          "confidence": 0.83,
+          "page": 1
+        },
+        {
+          "text": "307",
+          "bbox": [
+            567.0,
+            376.0,
+            586.0,
+            385.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "35",
+          "bbox": [
+            639.0,
+            376.0,
+            652.0,
+            385.0
+          ],
+          "confidence": 0.7,
+          "page": 1
+        },
+        {
+          "text": "252",
+          "bbox": [
+            699.0,
+            376.0,
+            718.0,
+            385.0
+          ],
+          "confidence": 0.85,
+          "page": 1
+        },
+        {
+          "text": "DIABECON",
+          "bbox": [
+            37.0,
+            392.0,
+            106.0,
+            401.0
+          ],
+          "confidence": 0.92,
+          "page": 1
+        },
+        {
+          "text": "DS",
+          "bbox": [
+            111.0,
+            392.0,
+            127.0,
+            401.0
+          ],
+          "confidence": 0.94,
+          "page": 1
+        },
+        {
+          "text": "TAB",
+          "bbox": [
+            131.0,
+            392.0,
+            158.0,
+            401.0
+          ],
+          "confidence": 0.94,
+          "page": 1
+        },
+        {
+          "text": "os",
+          "bbox": [
+            310.0,
+            392.0,
+            332.0,
+            401.0
+          ],
+          "confidence": 0.36,
+          "page": 1
+        },
+        {
+          "text": "37",
+          "bbox": [
+            441.0,
+            392.0,
+            454.0,
+            401.0
+          ],
+          "confidence": 0.95,
+          "page": 1
+        },
+        {
+          "text": "0",
+          "bbox": [
+            514.0,
+            392.0,
+            520.0,
+            401.0
+          ],
+          "confidence": 0.85,
+          "page": 1
+        },
+        {
+          "text": "37",
+          "bbox": [
+            573.0,
+            392.0,
+            586.0,
+            401.0
+          ],
+          "confidence": 0.93,
+          "page": 1
+        },
+        {
+          "text": "0",
+          "bbox": [
+            646.0,
+            392.0,
+            652.0,
+            401.0
+          ],
+          "confidence": 0.76,
+          "page": 1
+        },
+        {
+          "text": "37",
+          "bbox": [
+            705.0,
+            392.0,
+            718.0,
+            401.0
+          ],
+          "confidence": 0.93,
+          "page": 1
+        },
+        {
+          "text": "DIAREX",
+          "bbox": [
+            37.0,
+            407.0,
+            87.0,
+            416.0
+          ],
+          "confidence": 0.9,
+          "page": 1
+        },
+        {
+          "text": "SYRUP",
+          "bbox": [
+            92.0,
+            407.0,
+            135.0,
+            416.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "100",
+          "bbox": [
+            141.0,
+            407.0,
+            159.0,
+            416.0
+          ],
+          "confidence": 0.93,
+          "page": 1
+        },
+        {
+          "text": "ML",
+          "bbox": [
+            163.0,
+            407.0,
+            183.0,
+            416.0
+          ],
+          "confidence": 0.93,
+          "page": 1
+        },
+        {
+          "text": "100ML",
+          "bbox": [
+            312.0,
+            396.0,
+            350.0,
+            426.0
+          ],
+          "confidence": 0.59,
+          "page": 1
+        },
+        {
+          "text": "26",
+          "bbox": [
+            441.0,
+            407.0,
+            455.0,
+            416.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "0",
+          "bbox": [
+            514.0,
+            407.0,
+            520.0,
+            416.0
+          ],
+          "confidence": 0.82,
+          "page": 1
+        },
+        {
+          "text": "26",
+          "bbox": [
+            574.0,
+            407.0,
+            586.0,
+            416.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "26",
+          "bbox": [
+            640.0,
+            407.0,
+            652.0,
+            416.0
+          ],
+          "confidence": 0.94,
+          "page": 1
+        },
+        {
+          "text": "0",
+          "bbox": [
+            712.0,
+            407.0,
+            718.0,
+            416.0
+          ],
+          "confidence": 0.79,
+          "page": 1
+        },
+        {
+          "text": "DIAREX",
+          "bbox": [
+            37.0,
+            423.0,
+            87.0,
+            432.0
+          ],
+          "confidence": 0.92,
+          "page": 1
+        },
+        {
+          "text": "TAB",
+          "bbox": [
+            91.0,
+            423.0,
+            118.0,
+            432.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "30",
+          "bbox": [
+            310.0,
+            423.0,
+            332.0,
+            432.0
+          ],
+          "confidence": 0.7,
+          "page": 1
+        },
+        {
+          "text": "64",
+          "bbox": [
+            437.0,
+            412.0,
+            455.0,
+            442.0
+          ],
+          "confidence": 0.48,
+          "page": 1
+        },
+        {
+          "text": "0",
+          "bbox": [
+            514.0,
+            423.0,
+            520.0,
+            432.0
+          ],
+          "confidence": 0.85,
+          "page": 1
+        },
+        {
+          "text": "64",
+          "bbox": [
+            569.0,
+            412.0,
+            586.0,
+            442.0
+          ],
+          "confidence": 0.41,
+          "page": 1
+        },
+        {
+          "text": "5",
+          "bbox": [
+            646.0,
+            423.0,
+            652.0,
+            432.0
+          ],
+          "confidence": 0.8,
+          "page": 1
+        },
+        {
+          "text": "59",
+          "bbox": [
+            705.0,
+            423.0,
+            718.0,
+            432.0
+          ],
+          "confidence": 0.78,
+          "page": 1
+        },
+        {
+          "text": "HAIR",
+          "bbox": [
+            37.0,
+            438.0,
+            69.0,
+            447.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "ZONE",
+          "bbox": [
+            73.0,
+            438.0,
+            109.0,
+            447.0
+          ],
+          "confidence": 0.95,
+          "page": 1
+        },
+        {
+          "text": "SOLUTION",
+          "bbox": [
+            113.0,
+            438.0,
+            181.0,
+            447.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "60",
+          "bbox": [
+            310.0,
+            438.0,
+            323.0,
+            447.0
+          ],
+          "confidence": 0.94,
+          "page": 1
+        },
+        {
+          "text": "ML",
+          "bbox": [
+            327.0,
+            438.0,
+            346.0,
+            447.0
+          ],
+          "confidence": 0.91,
+          "page": 1
+        },
+        {
+          "text": "10",
+          "bbox": [
+            443.0,
+            438.0,
+            455.0,
+            447.0
+          ],
+          "confidence": 0.87,
+          "page": 1
+        },
+        {
+          "text": "0",
+          "bbox": [
+            514.0,
+            438.0,
+            520.0,
+            447.0
+          ],
+          "confidence": 0.74,
+          "page": 1
+        },
+        {
+          "text": "10",
+          "bbox": [
+            575.0,
+            438.0,
+            586.0,
+            447.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "10",
+          "bbox": [
+            641.0,
+            438.0,
+            652.0,
+            447.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "0",
+          "bbox": [
+            712.0,
+            438.0,
+            718.0,
+            447.0
+          ],
+          "confidence": 0.84,
+          "page": 1
+        },
+        {
+          "text": "HERBOLAX",
+          "bbox": [
+            37.0,
+            454.0,
+            110.0,
+            463.0
+          ],
+          "confidence": 0.81,
+          "page": 1
+        },
+        {
+          "text": "CAP.",
+          "bbox": [
+            114.0,
+            454.0,
+            141.0,
+            463.0
+          ],
+          "confidence": 0.94,
+          "page": 1
+        },
+        {
+          "text": "10s",
+          "bbox": [
+            312.0,
+            454.0,
+            332.0,
+            463.0
+          ],
+          "confidence": 0.73,
+          "page": 1
+        },
+        {
+          "text": "104",
+          "bbox": [
+            437.0,
+            454.0,
+            455.0,
+            463.0
+          ],
+          "confidence": 0.48,
+          "page": 1
+        },
+        {
+          "text": "0",
+          "bbox": [
+            514.0,
+            454.0,
+            520.0,
+            463.0
+          ],
+          "confidence": 0.74,
+          "page": 1
+        },
+        {
+          "text": "104",
+          "bbox": [
+            568.0,
+            443.0,
+            587.0,
+            473.0
+          ],
+          "confidence": 0.94,
+          "page": 1
+        },
+        {
+          "text": "9",
+          "bbox": [
+            646.0,
+            454.0,
+            652.0,
+            463.0
+          ],
+          "confidence": 0.93,
+          "page": 1
+        },
+        {
+          "text": "95",
+          "bbox": [
+            705.0,
+            454.0,
+            718.0,
+            463.0
+          ],
+          "confidence": 0.94,
+          "page": 1
+        },
+        {
+          "text": "HIMCOLIN",
+          "bbox": [
+            37.0,
+            469.0,
+            104.0,
+            478.0
+          ],
+          "confidence": 0.92,
+          "page": 1
+        },
+        {
+          "text": "GEL.",
+          "bbox": [
+            108.0,
+            469.0,
+            134.0,
+            478.0
+          ],
+          "confidence": 0.74,
+          "page": 1
+        },
+        {
+          "text": "30GM",
+          "bbox": [
+            310.0,
+            469.0,
+            344.0,
+            478.0
+          ],
+          "confidence": 0.9,
+          "page": 1
+        },
+        {
+          "text": "119",
+          "bbox": [
+            436.0,
+            469.0,
+            454.0,
+            478.0
+          ],
+          "confidence": 0.62,
+          "page": 1
+        },
+        {
+          "text": "0",
+          "bbox": [
+            514.0,
+            469.0,
+            520.0,
+            478.0
+          ],
+          "confidence": 0.76,
+          "page": 1
+        },
+        {
+          "text": "19",
+          "bbox": [
+            568.0,
+            469.0,
+            587.0,
+            478.0
+          ],
+          "confidence": 0.72,
+          "page": 1
+        },
+        {
+          "text": "15",
+          "bbox": [
+            641.0,
+            469.0,
+            652.0,
+            478.0
+          ],
+          "confidence": 0.83,
+          "page": 1
+        },
+        {
+          "text": "104",
+          "bbox": [
+            700.0,
+            469.0,
+            719.0,
+            478.0
+          ],
+          "confidence": 0.92,
+          "page": 1
+        },
+        {
+          "text": "LIV",
+          "bbox": [
+            37.0,
+            485.0,
+            58.0,
+            494.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "52",
+          "bbox": [
+            63.0,
+            485.0,
+            76.0,
+            494.0
+          ],
+          "confidence": 0.93,
+          "page": 1
+        },
+        {
+          "text": "SYP",
+          "bbox": [
+            83.0,
+            485.0,
+            103.0,
+            494.0
+          ],
+          "confidence": 0.95,
+          "page": 1
+        },
+        {
+          "text": "SUGAR",
+          "bbox": [
+            110.0,
+            474.0,
+            151.0,
+            504.0
+          ],
+          "confidence": 0.95,
+          "page": 1
+        },
+        {
+          "text": "FRE",
+          "bbox": [
+            159.0,
+            485.0,
+            183.0,
+            494.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "IPH",
+          "bbox": [
+            312.0,
+            485.0,
+            333.0,
+            494.0
+          ],
+          "confidence": 0.69,
+          "page": 1
+        },
+        {
+          "text": "4",
+          "bbox": [
+            443.0,
+            485.0,
+            455.0,
+            494.0
+          ],
+          "confidence": 0.76,
+          "page": 1
+        },
+        {
+          "text": "0",
+          "bbox": [
+            514.0,
+            485.0,
+            520.0,
+            494.0
+          ],
+          "confidence": 0.8,
+          "page": 1
+        },
+        {
+          "text": "4",
+          "bbox": [
+            575.0,
+            485.0,
+            586.0,
+            494.0
+          ],
+          "confidence": 0.78,
+          "page": 1
+        },
+        {
+          "text": "6",
+          "bbox": [
+            646.0,
+            485.0,
+            652.0,
+            494.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "8",
+          "bbox": [
+            712.0,
+            485.0,
+            718.0,
+            494.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "LIV.52",
+          "bbox": [
+            37.0,
+            489.0,
+            76.0,
+            519.0
+          ],
+          "confidence": 0.66,
+          "page": 1
+        },
+        {
+          "text": "HB",
+          "bbox": [
+            83.0,
+            489.0,
+            98.0,
+            519.0
+          ],
+          "confidence": 0.95,
+          "page": 1
+        },
+        {
+          "text": "CAP",
+          "bbox": [
+            105.0,
+            500.0,
+            129.0,
+            509.0
+          ],
+          "confidence": 0.74,
+          "page": 1
+        },
+        {
+          "text": "10S",
+          "bbox": [
+            312.0,
+            500.0,
+            332.0,
+            509.0
+          ],
+          "confidence": 0.88,
+          "page": 1
+        },
+        {
+          "text": "96",
+          "bbox": [
+            441.0,
+            500.0,
+            455.0,
+            509.0
+          ],
+          "confidence": 0.88,
+          "page": 1
+        },
+        {
+          "text": "0",
+          "bbox": [
+            514.0,
+            500.0,
+            520.0,
+            509.0
+          ],
+          "confidence": 0.88,
+          "page": 1
+        },
+        {
+          "text": "96",
+          "bbox": [
+            573.0,
+            500.0,
+            586.0,
+            509.0
+          ],
+          "confidence": 0.92,
+          "page": 1
+        },
+        {
+          "text": "3",
+          "bbox": [
+            646.0,
+            500.0,
+            652.0,
+            509.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "8B",
+          "bbox": [
+            705.0,
+            500.0,
+            718.0,
+            509.0
+          ],
+          "confidence": 0.48,
+          "page": 1
+        },
+        {
+          "text": "LIV.52",
+          "bbox": [
+            37.0,
+            516.0,
+            76.0,
+            525.0
+          ],
+          "confidence": 0.72,
+          "page": 1
+        },
+        {
+          "text": "SYRUP",
+          "bbox": [
+            80.0,
+            516.0,
+            124.0,
+            525.0
+          ],
+          "confidence": 0.83,
+          "page": 1
+        },
+        {
+          "text": "100ML",
+          "bbox": [
+            312.0,
+            516.0,
+            350.0,
+            525.0
+          ],
+          "confidence": 0.46,
+          "page": 1
+        },
+        {
+          "text": "87",
+          "bbox": [
+            442.0,
+            516.0,
+            454.0,
+            525.0
+          ],
+          "confidence": 0.94,
+          "page": 1
+        },
+        {
+          "text": "1",
+          "bbox": [
+            516.0,
+            516.0,
+            518.0,
+            525.0
+          ],
+          "confidence": 0.94,
+          "page": 1
+        },
+        {
+          "text": "88",
+          "bbox": [
+            574.0,
+            516.0,
+            586.0,
+            525.0
+          ],
+          "confidence": 0.91,
+          "page": 1
+        },
+        {
+          "text": "87",
+          "bbox": [
+            640.0,
+            516.0,
+            652.0,
+            525.0
+          ],
+          "confidence": 0.92,
+          "page": 1
+        },
+        {
+          "text": "1",
+          "bbox": [
+            714.0,
+            516.0,
+            716.0,
+            525.0
+          ],
+          "confidence": 0.94,
+          "page": 1
+        },
+        {
+          "text": "LIV.52",
+          "bbox": [
+            36.0,
+            531.0,
+            76.0,
+            540.0
+          ],
+          "confidence": 0.77,
+          "page": 1
+        },
+        {
+          "text": "SYRUP.",
+          "bbox": [
+            80.0,
+            531.0,
+            124.0,
+            540.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "200ML",
+          "bbox": [
+            310.0,
+            531.0,
+            350.0,
+            540.0
+          ],
+          "confidence": 0.51,
+          "page": 1
+        },
+        {
+          "text": "136",
+          "bbox": [
+            437.0,
+            531.0,
+            455.0,
+            540.0
+          ],
+          "confidence": 0.94,
+          "page": 1
+        },
+        {
+          "text": "700",
+          "bbox": [
+            501.0,
+            520.0,
+            521.0,
+            550.0
+          ],
+          "confidence": 0.75,
+          "page": 1
+        },
+        {
+          "text": "836",
+          "bbox": [
+            567.0,
+            531.0,
+            587.0,
+            540.0
+          ],
+          "confidence": 0.85,
+          "page": 1
+        },
+        {
+          "text": "567",
+          "bbox": [
+            632.0,
+            531.0,
+            652.0,
+            540.0
+          ],
+          "confidence": 0.7,
+          "page": 1
+        },
+        {
+          "text": "269",
+          "bbox": [
+            699.0,
+            531.0,
+            718.0,
+            540.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "LIV.52",
+          "bbox": [
+            37.0,
+            547.0,
+            76.0,
+            556.0
+          ],
+          "confidence": 0.7,
+          "page": 1
+        },
+        {
+          "text": "TAB",
+          "bbox": [
+            80.0,
+            547.0,
+            106.0,
+            556.0
+          ],
+          "confidence": 0.88,
+          "page": 1
+        },
+        {
+          "text": "loos",
+          "bbox": [
+            312.0,
+            536.0,
+            339.0,
+            566.0
+          ],
+          "confidence": 0.71,
+          "page": 1
+        },
+        {
+          "text": "S51",
+          "bbox": [
+            434.0,
+            547.0,
+            453.0,
+            556.0
+          ],
+          "confidence": 0.31,
+          "page": 1
+        },
+        {
+          "text": "2",
+          "bbox": [
+            514.0,
+            547.0,
+            520.0,
+            556.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "553",
+          "bbox": [
+            567.0,
+            547.0,
+            586.0,
+            556.0
+          ],
+          "confidence": 0.81,
+          "page": 1
+        },
+        {
+          "text": "200",
+          "bbox": [
+            633.0,
+            536.0,
+            653.0,
+            566.0
+          ],
+          "confidence": 0.93,
+          "page": 1
+        },
+        {
+          "text": "383",
+          "bbox": [
+            699.0,
+            547.0,
+            718.0,
+            556.0
+          ],
+          "confidence": 0.69,
+          "page": 1
+        },
+        {
+          "text": "OPHTHACARE/DROP",
+          "bbox": [
+            36.0,
+            551.0,
+            169.0,
+            581.0
+          ],
+          "confidence": 0.74,
+          "page": 1
+        },
+        {
+          "text": "1OML",
+          "bbox": [
+            312.0,
+            562.0,
+            343.0,
+            571.0
+          ],
+          "confidence": 0.33,
+          "page": 1
+        },
+        {
+          "text": "34",
+          "bbox": [
+            442.0,
+            562.0,
+            455.0,
+            571.0
+          ],
+          "confidence": 0.92,
+          "page": 1
+        },
+        {
+          "text": "0",
+          "bbox": [
+            514.0,
+            562.0,
+            520.0,
+            571.0
+          ],
+          "confidence": 0.85,
+          "page": 1
+        },
+        {
+          "text": "4",
+          "bbox": [
+            573.0,
+            562.0,
+            586.0,
+            571.0
+          ],
+          "confidence": 0.48,
+          "page": 1
+        },
+        {
+          "text": "10",
+          "bbox": [
+            641.0,
+            562.0,
+            652.0,
+            571.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "m4",
+          "bbox": [
+            705.0,
+            562.0,
+            718.0,
+            571.0
+          ],
+          "confidence": 0.33,
+          "page": 1
+        },
+        {
+          "text": "PILEX",
+          "bbox": [
+            37.0,
+            578.0,
+            74.0,
+            587.0
+          ],
+          "confidence": 0.93,
+          "page": 1
+        },
+        {
+          "text": "FORTE",
+          "bbox": [
+            79.0,
+            578.0,
+            121.0,
+            587.0
+          ],
+          "confidence": 0.93,
+          "page": 1
+        },
+        {
+          "text": "OINT",
+          "bbox": [
+            125.0,
+            578.0,
+            158.0,
+            587.0
+          ],
+          "confidence": 0.72,
+          "page": 1
+        },
+        {
+          "text": "30GM",
+          "bbox": [
+            310.0,
+            578.0,
+            348.0,
+            587.0
+          ],
+          "confidence": 0.92,
+          "page": 1
+        },
+        {
+          "text": "11",
+          "bbox": [
+            436.0,
+            578.0,
+            453.0,
+            587.0
+          ],
+          "confidence": 0.74,
+          "page": 1
+        },
+        {
+          "text": "0",
+          "bbox": [
+            514.0,
+            578.0,
+            520.0,
+            587.0
+          ],
+          "confidence": 0.82,
+          "page": 1
+        },
+        {
+          "text": "11",
+          "bbox": [
+            568.0,
+            578.0,
+            585.0,
+            587.0
+          ],
+          "confidence": 0.54,
+          "page": 1
+        },
+        {
+          "text": "o7",
+          "bbox": [
+            639.0,
+            578.0,
+            652.0,
+            587.0
+          ],
+          "confidence": 0.72,
+          "page": 1
+        },
+        {
+          "text": "1a",
+          "bbox": [
+            701.0,
+            578.0,
+            719.0,
+            587.0
+          ],
+          "confidence": 0.46,
+          "page": 1
+        },
+        {
+          "text": "PILEX",
+          "bbox": [
+            37.0,
+            593.0,
+            74.0,
+            602.0
+          ],
+          "confidence": 0.93,
+          "page": 1
+        },
+        {
+          "text": "FORTE",
+          "bbox": [
+            79.0,
+            593.0,
+            121.0,
+            602.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "TAB",
+          "bbox": [
+            125.0,
+            593.0,
+            152.0,
+            602.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "30'S",
+          "bbox": [
+            310.0,
+            593.0,
+            336.0,
+            602.0
+          ],
+          "confidence": 0.88,
+          "page": 1
+        },
+        {
+          "text": "1s",
+          "bbox": [
+            437.0,
+            593.0,
+            454.0,
+            602.0
+          ],
+          "confidence": 0.45,
+          "page": 1
+        },
+        {
+          "text": "0",
+          "bbox": [
+            514.0,
+            593.0,
+            520.0,
+            602.0
+          ],
+          "confidence": 0.77,
+          "page": 1
+        },
+        {
+          "text": "18",
+          "bbox": [
+            568.0,
+            593.0,
+            587.0,
+            602.0
+          ],
+          "confidence": 0.77,
+          "page": 1
+        },
+        {
+          "text": "2",
+          "bbox": [
+            640.0,
+            593.0,
+            652.0,
+            602.0
+          ],
+          "confidence": 0.53,
+          "page": 1
+        },
+        {
+          "text": "96",
+          "bbox": [
+            705.0,
+            593.0,
+            718.0,
+            602.0
+          ],
+          "confidence": 0.81,
+          "page": 1
+        },
+        {
+          "text": "PILEX",
+          "bbox": [
+            37.0,
+            609.0,
+            74.0,
+            618.0
+          ],
+          "confidence": 0.93,
+          "page": 1
+        },
+        {
+          "text": "TAB",
+          "bbox": [
+            78.0,
+            609.0,
+            105.0,
+            618.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "os",
+          "bbox": [
+            310.0,
+            609.0,
+            332.0,
+            618.0
+          ],
+          "confidence": 0.44,
+          "page": 1
+        },
+        {
+          "text": "201",
+          "bbox": [
+            435.0,
+            609.0,
+            453.0,
+            618.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "0",
+          "bbox": [
+            514.0,
+            609.0,
+            520.0,
+            618.0
+          ],
+          "confidence": 0.86,
+          "page": 1
+        },
+        {
+          "text": "201",
+          "bbox": [
+            567.0,
+            609.0,
+            585.0,
+            618.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "4",
+          "bbox": [
+            639.0,
+            609.0,
+            652.0,
+            618.0
+          ],
+          "confidence": 0.35,
+          "page": 1
+        },
+        {
+          "text": "147",
+          "bbox": [
+            701.0,
+            609.0,
+            718.0,
+            618.0
+          ],
+          "confidence": 0.56,
+          "page": 1
+        },
+        {
+          "text": "PURIM",
+          "bbox": [
+            36.0,
+            624.0,
+            79.0,
+            633.0
+          ],
+          "confidence": 0.91,
+          "page": 1
+        },
+        {
+          "text": "TAB",
+          "bbox": [
+            83.0,
+            624.0,
+            110.0,
+            633.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "o's",
+          "bbox": [
+            310.0,
+            624.0,
+            332.0,
+            633.0
+          ],
+          "confidence": 0.31,
+          "page": 1
+        },
+        {
+          "text": "8",
+          "bbox": [
+            448.0,
+            624.0,
+            454.0,
+            633.0
+          ],
+          "confidence": 0.95,
+          "page": 1
+        },
+        {
+          "text": "0",
+          "bbox": [
+            514.0,
+            624.0,
+            520.0,
+            633.0
+          ],
+          "confidence": 0.72,
+          "page": 1
+        },
+        {
+          "text": "8",
+          "bbox": [
+            580.0,
+            624.0,
+            586.0,
+            633.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "0",
+          "bbox": [
+            646.0,
+            624.0,
+            652.0,
+            633.0
+          ],
+          "confidence": 0.82,
+          "page": 1
+        },
+        {
+          "text": "8",
+          "bbox": [
+            712.0,
+            624.0,
+            718.0,
+            633.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "RENALKA",
+          "bbox": [
+            37.0,
+            640.0,
+            101.0,
+            649.0
+          ],
+          "confidence": 0.91,
+          "page": 1
+        },
+        {
+          "text": "SYP",
+          "bbox": [
+            105.0,
+            640.0,
+            130.0,
+            649.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "100ML",
+          "bbox": [
+            312.0,
+            629.0,
+            350.0,
+            659.0
+          ],
+          "confidence": 0.69,
+          "page": 1
+        },
+        {
+          "text": "36",
+          "bbox": [
+            441.0,
+            640.0,
+            455.0,
+            649.0
+          ],
+          "confidence": 0.77,
+          "page": 1
+        },
+        {
+          "text": "0",
+          "bbox": [
+            514.0,
+            640.0,
+            520.0,
+            649.0
+          ],
+          "confidence": 0.83,
+          "page": 1
+        },
+        {
+          "text": "36",
+          "bbox": [
+            573.0,
+            640.0,
+            586.0,
+            649.0
+          ],
+          "confidence": 0.68,
+          "page": 1
+        },
+        {
+          "text": "15",
+          "bbox": [
+            641.0,
+            640.0,
+            652.0,
+            649.0
+          ],
+          "confidence": 0.84,
+          "page": 1
+        },
+        {
+          "text": "4",
+          "bbox": [
+            705.0,
+            640.0,
+            717.0,
+            649.0
+          ],
+          "confidence": 0.06,
+          "page": 1
+        },
+        {
+          "text": "RENALKA",
+          "bbox": [
+            37.0,
+            656.0,
+            101.0,
+            665.0
+          ],
+          "confidence": 0.91,
+          "page": 1
+        },
+        {
+          "text": "SYP",
+          "bbox": [
+            105.0,
+            656.0,
+            130.0,
+            665.0
+          ],
+          "confidence": 0.86,
+          "page": 1
+        },
+        {
+          "text": "(200ML)",
+          "bbox": [
+            137.0,
+            656.0,
+            187.0,
+            667.0
+          ],
+          "confidence": 0.86,
+          "page": 1
+        },
+        {
+          "text": "200ML.",
+          "bbox": [
+            310.0,
+            646.0,
+            355.0,
+            675.0
+          ],
+          "confidence": 0.05,
+          "page": 1
+        },
+        {
+          "text": "79",
+          "bbox": [
+            441.0,
+            656.0,
+            454.0,
+            665.0
+          ],
+          "confidence": 0.65,
+          "page": 1
+        },
+        {
+          "text": "0",
+          "bbox": [
+            514.0,
+            656.0,
+            520.0,
+            665.0
+          ],
+          "confidence": 0.86,
+          "page": 1
+        },
+        {
+          "text": "79",
+          "bbox": [
+            574.0,
+            656.0,
+            586.0,
+            665.0
+          ],
+          "confidence": 0.92,
+          "page": 1
+        },
+        {
+          "text": "30",
+          "bbox": [
+            640.0,
+            656.0,
+            652.0,
+            665.0
+          ],
+          "confidence": 0.93,
+          "page": 1
+        },
+        {
+          "text": "49",
+          "bbox": [
+            705.0,
+            656.0,
+            718.0,
+            665.0
+          ],
+          "confidence": 0.95,
+          "page": 1
+        },
+        {
+          "text": "\u2018TENTEX",
+          "bbox": [
+            36.0,
+            671.0,
+            89.0,
+            680.0
+          ],
+          "confidence": 0.32,
+          "page": 1
+        },
+        {
+          "text": "FORTE",
+          "bbox": [
+            93.0,
+            671.0,
+            136.0,
+            680.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "TAB",
+          "bbox": [
+            140.0,
+            671.0,
+            166.0,
+            680.0
+          ],
+          "confidence": 0.96,
+          "page": 1
+        },
+        {
+          "text": "10",
+          "bbox": [
+            311.0,
+            671.0,
+            332.0,
+            680.0
+          ],
+          "confidence": 0.6,
+          "page": 1
+        },
+        {
+          "text": "579",
+          "bbox": [
+            435.0,
+            660.0,
+            454.0,
+            690.0
+          ],
+          "confidence": 0.72,
+          "page": 1
+        },
+        {
+          "text": "0",
+          "bbox": [
+            514.0,
+            671.0,
+            520.0,
+            680.0
+          ],
+          "confidence": 0.84,
+          "page": 1
+        },
+        {
+          "text": "579",
+          "bbox": [
+            567.0,
+            671.0,
+            586.0,
+            680.0
+          ],
+          "confidence": 0.78,
+          "page": 1
+        },
+        {
+          "text": "47",
+          "bbox": [
+            639.0,
+            671.0,
+            652.0,
+            680.0
+          ],
+          "confidence": 0.93,
+          "page": 1
+        },
+        {
+          "text": "532",
+          "bbox": [
+            699.0,
+            671.0,
+            718.0,
+            680.0
+          ],
+          "confidence": 0.87,
+          "page": 1
+        },
+        {
+          "text": "TOTAL",
+          "bbox": [
+            36.0,
+            700.0,
+            81.0,
+            730.0
+          ],
+          "confidence": 0.9,
+          "page": 1
+        },
+        {
+          "text": "402259",
+          "bbox": [
+            415.0,
+            711.0,
+            456.0,
+            720.0
+          ],
+          "confidence": 0.52,
+          "page": 1
+        },
+        {
+          "text": "107708",
+          "bbox": [
+            483.0,
+            711.0,
+            522.0,
+            720.0
+          ],
+          "confidence": 0.52,
+          "page": 1
+        },
+        {
+          "text": "509967203965",
+          "bbox": [
+            547.0,
+            711.0,
+            653.0,
+            720.0
+          ],
+          "confidence": 0.28,
+          "page": 1
+        },
+        {
+          "text": "330707",
+          "bbox": [
+            680.0,
+            711.0,
+            720.0,
+            720.0
+          ],
+          "confidence": 0.43,
+          "page": 1
+        }
+      ],
+      "latency_ms": 1912.0450999998866,
+      "image_meta": {
+        "original_width": 1080,
+        "original_height": 769,
+        "processed_width": 1080,
+        "processed_height": 769,
+        "orientation": null,
+        "preprocessing": [
+          "exif_transpose",
+          "rgb"
+        ]
+      },
+      "native_meta": {
+        "native_text": false,
+        "ocr_required": true,
+        "reason": "image"
+      },
+      "source": "fresh_tesseract_run",
+      "error": null
+    }
+  ]
+}

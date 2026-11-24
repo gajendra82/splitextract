@@ -35,8 +35,42 @@ def decide_final_status(
         }
 
     validation = validation or {}
+    # Unread source evidence blocks both VERIFIED and RECOVERED_AND_VERIFIED
+    # before schema or stock-identity results are considered.
+    if validation.get("source_evidence") is False:
+        return {
+            "status": UNRESOLVED,
+            "reason": "insufficient_source_evidence",
+            "verified": False,
+        }
+    business = validation.get("business_validation")
+    business = business if isinstance(business, dict) else {}
+    business_status = str(business.get("status") or "")
+    if business_status == "inconsistent":
+        return {
+            "status": UNRESOLVED,
+            "reason": business.get("reason") or "stock_identity_failure",
+            "verified": False,
+        }
+    if business_status == "unknown":
+        return {
+            "status": UNRESOLVED,
+            "reason": "identity_profile_unknown",
+            "verified": False,
+        }
     verification = verification or {}
     recovery = recovery or {}
+    reasons = {str(reason) for reason in (validation.get("reasons") or [])}
+    issues = {str(issue) for issue in (verification.get("issues") or [])}
+    if (
+        "gemini_vision_without_source_evidence" in reasons
+        or "gemini_vision_without_source_evidence" in issues
+    ):
+        return {
+            "status": UNRESOLVED,
+            "reason": "gemini_vision_without_source_evidence",
+            "verified": False,
+        }
 
     accepted = bool(validation.get("accepted"))
     verify_ok = bool(verification.get("passed"))

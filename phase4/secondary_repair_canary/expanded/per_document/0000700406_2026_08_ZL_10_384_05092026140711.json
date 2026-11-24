@@ -1,0 +1,604 @@
+{
+  "document_id": "0000700406_2026_08_ZL_10_384_05092026140711.jpg",
+  "role": "ordinary",
+  "source_path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700406_2026_08_ZL_10_384_05092026140711.jpg",
+  "off": {
+    "correct_count": 35,
+    "field_count": 35,
+    "silent_wrong_count": 0,
+    "missing_count": 0,
+    "secondary_ocr_ms": 4.2,
+    "pipeline_helper_ms": 3.7,
+    "text_sha": "17ee6ae0852c3203",
+    "repair_report": {
+      "document_id": "0000700406_2026_08_ZL_10_384_05092026140711.jpg",
+      "repairs": [],
+      "unresolved": [
+        {
+          "reason": "secondary_repair_disabled"
+        }
+      ]
+    }
+  },
+  "on": {
+    "correct_count": 35,
+    "field_count": 35,
+    "silent_wrong_count": 0,
+    "missing_count": 0,
+    "secondary_ocr_ms": 1339.4,
+    "pipeline_helper_ms": 1322.3,
+    "text_sha": "17ee6ae0852c3203",
+    "repair_report": {
+      "document_id": "0000700406_2026_08_ZL_10_384_05092026140711.jpg",
+      "repairs": [],
+      "unresolved": []
+    },
+    "pipeline_text_matches": true
+  },
+  "deltas": [],
+  "repair_types_on": [],
+  "matches_off": [
+    {
+      "field_id": "vendor",
+      "expected_raw": "ADARSH PHARMA BELGAUM",
+      "predicted_raw": "ADARSH PHARMA BELGAUM",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_opening_stock",
+      "expected_raw": "OPENING STOCK",
+      "predicted_raw": "OPENING STOCK",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_issue_qty",
+      "expected_raw": "ISSUE QUANTITY",
+      "predicted_raw": "ISSUE QUANTITY",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_closing_stock",
+      "expected_raw": "CLOSING STOCK",
+      "predicted_raw": "CLOSING STOCK",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "r8_open",
+      "expected_raw": "40",
+      "predicted_raw": "40",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "r8_open_val",
+      "expected_raw": "3107.2",
+      "predicted_raw": "3107.2",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "r8_recv",
+      "expected_raw": "0",
+      "predicted_raw": "0",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "r8_issue",
+      "expected_raw": "3",
+      "predicted_raw": "3",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "r8_issue_val",
+      "expected_raw": "256.6",
+      "predicted_raw": "256.6",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "r8_close",
+      "expected_raw": "37",
+      "predicted_raw": "37",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "r8_close_val",
+      "expected_raw": "2874.16",
+      "predicted_raw": "2874.16",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "r8_exp",
+      "expected_raw": "01-Nov-27",
+      "predicted_raw": "01-Nov-27",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "r11_open",
+      "expected_raw": "70",
+      "predicted_raw": "70",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "r11_issue",
+      "expected_raw": "1",
+      "predicted_raw": "1",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "r11_close",
+      "expected_raw": "69",
+      "predicted_raw": "69",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "r18_open",
+      "expected_raw": "40",
+      "predicted_raw": "40",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "r18_recv",
+      "expected_raw": "70",
+      "predicted_raw": "70",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "r18_issue",
+      "expected_raw": "28",
+      "predicted_raw": "28",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "r18_close",
+      "expected_raw": "82",
+      "predicted_raw": "82",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "r20_recv",
+      "expected_raw": "100",
+      "predicted_raw": "100",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "r20_issue",
+      "expected_raw": "21",
+      "predicted_raw": "21",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "r20_close",
+      "expected_raw": "111",
+      "predicted_raw": "111",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "r22_issue",
+      "expected_raw": "23",
+      "predicted_raw": "23",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "r22_close",
+      "expected_raw": "2",
+      "predicted_raw": "2",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "r26_open",
+      "expected_raw": "245",
+      "predicted_raw": "245",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "r26_issue",
+      "expected_raw": "6",
+      "predicted_raw": "6",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "r26_close",
+      "expected_raw": "239",
+      "predicted_raw": "239",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tot_open",
+      "expected_raw": "1086",
+      "predicted_raw": "1086",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tot_open_val",
+      "expected_raw": "126307.88",
+      "predicted_raw": "126307.88",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tot_recv",
+      "expected_raw": "170",
+      "predicted_raw": "170",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tot_recv_val",
+      "expected_raw": "21478.5",
+      "predicted_raw": "21478.5",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tot_issue",
+      "expected_raw": "100",
+      "predicted_raw": "100",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tot_issue_val",
+      "expected_raw": "13181.19",
+      "predicted_raw": "13181.19",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tot_close",
+      "expected_raw": "1156",
+      "predicted_raw": "1156",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tot_close_val",
+      "expected_raw": "135951.12",
+      "predicted_raw": "135951.12",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    }
+  ],
+  "matches_on": [
+    {
+      "field_id": "vendor",
+      "expected_raw": "ADARSH PHARMA BELGAUM",
+      "predicted_raw": "ADARSH PHARMA BELGAUM",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_opening_stock",
+      "expected_raw": "OPENING STOCK",
+      "predicted_raw": "OPENING STOCK",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_issue_qty",
+      "expected_raw": "ISSUE QUANTITY",
+      "predicted_raw": "ISSUE QUANTITY",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_closing_stock",
+      "expected_raw": "CLOSING STOCK",
+      "predicted_raw": "CLOSING STOCK",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "r8_open",
+      "expected_raw": "40",
+      "predicted_raw": "40",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "r8_open_val",
+      "expected_raw": "3107.2",
+      "predicted_raw": "3107.2",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "r8_recv",
+      "expected_raw": "0",
+      "predicted_raw": "0",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "r8_issue",
+      "expected_raw": "3",
+      "predicted_raw": "3",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "r8_issue_val",
+      "expected_raw": "256.6",
+      "predicted_raw": "256.6",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "r8_close",
+      "expected_raw": "37",
+      "predicted_raw": "37",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "r8_close_val",
+      "expected_raw": "2874.16",
+      "predicted_raw": "2874.16",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "r8_exp",
+      "expected_raw": "01-Nov-27",
+      "predicted_raw": "01-Nov-27",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "r11_open",
+      "expected_raw": "70",
+      "predicted_raw": "70",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "r11_issue",
+      "expected_raw": "1",
+      "predicted_raw": "1",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "r11_close",
+      "expected_raw": "69",
+      "predicted_raw": "69",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "r18_open",
+      "expected_raw": "40",
+      "predicted_raw": "40",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "r18_recv",
+      "expected_raw": "70",
+      "predicted_raw": "70",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "r18_issue",
+      "expected_raw": "28",
+      "predicted_raw": "28",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "r18_close",
+      "expected_raw": "82",
+      "predicted_raw": "82",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "r20_recv",
+      "expected_raw": "100",
+      "predicted_raw": "100",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "r20_issue",
+      "expected_raw": "21",
+      "predicted_raw": "21",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "r20_close",
+      "expected_raw": "111",
+      "predicted_raw": "111",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "r22_issue",
+      "expected_raw": "23",
+      "predicted_raw": "23",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "r22_close",
+      "expected_raw": "2",
+      "predicted_raw": "2",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "r26_open",
+      "expected_raw": "245",
+      "predicted_raw": "245",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "r26_issue",
+      "expected_raw": "6",
+      "predicted_raw": "6",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "r26_close",
+      "expected_raw": "239",
+      "predicted_raw": "239",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tot_open",
+      "expected_raw": "1086",
+      "predicted_raw": "1086",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tot_open_val",
+      "expected_raw": "126307.88",
+      "predicted_raw": "126307.88",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tot_recv",
+      "expected_raw": "170",
+      "predicted_raw": "170",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tot_recv_val",
+      "expected_raw": "21478.5",
+      "predicted_raw": "21478.5",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tot_issue",
+      "expected_raw": "100",
+      "predicted_raw": "100",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tot_issue_val",
+      "expected_raw": "13181.19",
+      "predicted_raw": "13181.19",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tot_close",
+      "expected_raw": "1156",
+      "predicted_raw": "1156",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tot_close_val",
+      "expected_raw": "135951.12",
+      "predicted_raw": "135951.12",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    }
+  ]
+}

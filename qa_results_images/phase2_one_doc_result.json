@@ -1,0 +1,11 @@
+{
+  "http_status": 422,
+  "extraction_method": null,
+  "stock_identity_fail_count": null,
+  "stock_validation": null,
+  "extraction_failed": null,
+  "phase1_validation": null,
+  "phase2": null,
+  "row_count": 0,
+  "named_rows": []
+}

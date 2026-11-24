@@ -1,0 +1,312 @@
+{
+  "source_file": "0000700624_2026_08_ZL_10_383_05092026055419.jpg",
+  "source_format": "jpg",
+  "stockist_name": "saa .* lM",
+  "stockist_address": null,
+  "company_name": null,
+  "period_from": null,
+  "period_to": null,
+  "report_title": null,
+  "line_items": [
+    {
+      "product_code": null,
+      "product_name": "| & AACTARIL SOAP",
+      "packing": null,
+      "opening_qty": 75.0,
+      "opening_value": null,
+      "receipts_qty": 31.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 3.0,
+      "closing_qty": 2.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 106.0,
+        "expected_closing": 106.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "pe EAA TAB US",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "| is GONAIDO TAB",
+      "packing": null,
+      "opening_qty": 60.0,
+      "opening_value": null,
+      "receipts_qty": 108.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 108.0,
+      "closing_qty": 5.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 168.0,
+        "expected_closing": 168.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "- t4_ DIABECON DS TAB",
+      "packing": null,
+      "opening_qty": 4.0,
+      "opening_value": null,
+      "receipts_qty": 60.0,
+      "receipts_value": null,
+      "sales_qty": 9.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 64.0,
+        "expected_closing": 55.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "Pes SyeuP ELAICHIF = /OUR",
+      "packing": null,
+      "opening_qty": 200.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 200.0,
+        "expected_closing": 200.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "SYRUP GINGER MON",
+      "packing": null,
+      "opening_qty": 200.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 200.0,
+        "expected_closing": 200.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "A AB OOS",
+      "packing": null,
+      "opening_qty": 26.0,
+      "opening_value": null,
+      "receipts_qty": 25.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 51.0,
+      "closing_qty": 26.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 51.0,
+        "expected_closing": 51.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "Dos Hi = SOLAXCAF JS",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 0.0,
+        "expected_closing": 0.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "fee",
+      "packing": null,
+      "opening_qty": 22.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 22.0,
+        "expected_closing": 22.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "E26 LIV52 He estos : )",
+      "packing": null,
+      "opening_qty": 26.0,
+      "opening_value": null,
+      "receipts_qty": 52.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 78.0,
+        "expected_closing": 78.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "P27 vse",
+      "packing": null,
+      "opening_qty": 27.0,
+      "opening_value": null,
+      "receipts_qty": 200.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 227.0,
+        "expected_closing": 227.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "oS ivr .ABIO0S",
+      "packing": null,
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 100.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 100.0,
+      "closing_value": 66.0,
+      "extra": {
+        "expected_total": 100.0,
+        "expected_closing": 100.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "[30 OF .AGAREEYEDRPS",
+      "packing": null,
+      "opening_qty": 30.0,
+      "opening_value": null,
+      "receipts_qty": 10.0,
+      "receipts_value": null,
+      "sales_qty": 105.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 40.0,
+        "expected_closing": -65.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "a =",
+      "packing": null,
+      "opening_qty": 256.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 3.0,
+      "sales_value": 259.0,
+      "closing_qty": 34.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 256.0,
+        "expected_closing": 253.0,
+        "stock_identity_ok": false
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "f= TENTEXEORIENUS :",
+      "packing": null,
+      "opening_qty": 5.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 19884.0,
+      "extra": {
+        "expected_total": 5.0,
+        "expected_closing": 5.0,
+        "stock_identity_ok": false
+      }
+    }
+  ],
+  "totals": {
+    "sales_value": null,
+    "closing_value": null,
+    "extra": {
+      "extraction_method": "tesseract_heuristic",
+      "line_sales_value_sum": 421.0,
+      "line_closing_value_sum": 19950.0,
+      "sales_qty": 117.0,
+      "closing_qty": 167.0,
+      "stock_identity_kind": "opening_receipts_sales_closing",
+      "stock_identity_formula": "closing=opening+receipts-sales",
+      "stock_identity_fail_count": 12,
+      "stock_validation": {
+        "opening_plus_purchase": 1517.0,
+        "expected_total": 1517.0,
+        "calculated_closing": 1400.0,
+        "extracted_closing": 167.0,
+        "is_valid": false
+      },
+      "extraction_quality": {
+        "quality": "poor",
+        "score": 75,
+        "reasons": [
+          "stock_identity_failure"
+        ],
+        "threshold": 75.0
+      },
+      "gemini_fallback": "validation_failed"
+    }
+  }
+}

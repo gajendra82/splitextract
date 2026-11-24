@@ -7,6 +7,7 @@ import logging
 import threading
 from typing import Any, Dict, Optional, Tuple
 
+from services.ocr.base import OCRResult
 from services.ocr.contract import OCRDocumentEvidence, page_evidence_from_result
 from services.ocr.orchestrator import OCRBundle, OCROrchestrator, ocr_settings
 
@@ -40,6 +41,28 @@ def recognize_image(
     metadata: Optional[Dict[str, Any]] = None,
     use_fallback: bool = True,
 ) -> OCRBundle:
+    from services.ocr.paddle_vl_engine import paddle_init_blocked
+
+    if paddle_init_blocked() and primary_is_paddle_vl() and not use_fallback:
+        blocked = paddle_init_blocked() or "paddle_init_failed"
+        primary = OCRResult(
+            text="",
+            words=[],
+            confidence=None,
+            page=page,
+            engine="paddleocr-vl",
+            metadata={
+                "status": "error",
+                "error": blocked,
+                "available": False,
+                "persistent_init_failure": True,
+            },
+        )
+        return OCRBundle(
+            primary=primary,
+            engines_used=[primary.engine],
+            metadata={"status": "ocr_error", "error": blocked, "persistent_init_failure": True},
+        )
     return get_orchestrator().recognize(
         image_bytes, page=page, metadata=metadata, use_fallback=use_fallback
     )
@@ -85,6 +108,15 @@ def ocr_pil_image_text(
     buffer = io.BytesIO()
     image.save(buffer, format="PNG")
     return ocr_image_text(buffer.getvalue(), page=page, use_fallback=use_fallback)
+
+
+def primary_is_classic_paddle() -> bool:
+    name = (ocr_settings().primary_engine or "").strip().lower()
+    return name in {"paddle", "paddleocr"}
+
+
+def primary_is_paddle() -> bool:
+    return primary_is_classic_paddle() or primary_is_paddle_vl()
 
 
 def primary_is_paddle_vl() -> bool:

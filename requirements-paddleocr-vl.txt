@@ -1,0 +1,32 @@
+# Isolated environment for PaddleOCR-VL 1.6 benchmarks only.
+# Do NOT install into the production SplitExtract environment.
+#
+# Create:
+#   python -m venv .venvs/paddleocr_vl
+#   .venvs/paddleocr_vl/Scripts/python.exe -m pip install -U pip
+#   .venvs/paddleocr_vl/Scripts/python.exe -m pip install -r requirements-paddleocr-vl.txt
+#
+# Verified on Windows + RTX 3050 (CUDA) with:
+#   PaddlePaddle 3.2.1
+#   PaddleOCR 3.7.0
+#   PaddleX 3.7.2
+#   pipeline_version=v1.6 → PaddleOCR-VL-1.6 / PaddleOCR-VL-1.6-0.9B
+
+paddlepaddle-gpu==3.2.1; platform_system != "Windows"
+# On Windows, install the matching paddlewheel from the Paddle index, e.g.:
+#   pip install paddlepaddle-gpu==3.2.1 -i https://www.paddlepaddle.org.cn/packages/stable/cu126/
+paddleocr==3.7.0
+paddlex==3.7.2
+# paddlepaddle-gpu 3.2.1 metadata pins nvidia-cudnn-cu12==9.5.1.17. That pin
+# does not match this venv: Torch 2.8.0+cu126 ships cuDNN 9.10.2.21. Loading
+# 9.5 or 9.9 beside Torch raises WinError 127 on cudnn_*64_9.dll. After the
+# requirements above are installed, force the matching wheel (pip will warn
+# about the paddle pin; the file versions must still match):
+#   python -m pip install nvidia-cudnn-cu12==9.10.2.21
+# PaddleX imports torch on the PaddleOCR-VL path. paddlex 3.7.2 pins torch==2.8.0
+# for its genai extras. Install the CUDA 12.6 wheel into this venv only:
+#   .venvs/paddleocr_vl/Scripts/python.exe -m pip install torch==2.8.0 --index-url https://download.pytorch.org/whl/cu126
+pillow>=10.0.0
+numpy>=1.24.0
+PyMuPDF>=1.23.0
+psutil>=5.9.0

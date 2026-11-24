@@ -1,0 +1,34 @@
+{
+  "source_file": "0000700413_2026_08_ZL_10_385_06092026161709.jpg",
+  "format": "Unknown layout",
+  "confidence": "low",
+  "source": "ocr",
+  "formula": "none",
+  "present_fields": [
+    "receipts_qty",
+    "sales_qty",
+    "sales_value",
+    "closing_qty",
+    "other_issue_qty"
+  ],
+  "absent_fields": [
+    "product_code",
+    "opening_qty",
+    "opening_value",
+    "receipts_value",
+    "closing_value"
+  ],
+  "columns": [
+    "sales_qty",
+    "receipts_qty",
+    "other_issue_qty",
+    "sales_value",
+    "closing_qty"
+  ],
+  "line_items": [],
+  "notes": [
+    "OCR used tesseract psm 6.",
+    "No stock-grid header with product rows was found in this PDF."
+  ],
+  "partial": false
+}

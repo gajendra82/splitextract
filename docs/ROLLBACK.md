@@ -44,7 +44,7 @@ sudo cp /backup/.env /var/www/html/.env
 
 ```bash
 cd /var/www/html/split-extract
-bash start-tmux.sh
+bash deploy/start-tmux.sh
 # split-pdf: start manually or restore previous process manager
 ```
 
@@ -65,7 +65,7 @@ sudo systemctl stop split-extract split-pdf
 sudo systemctl disable split-extract split-pdf
 
 cd /var/www/html/split-extract
-bash start-tmux.sh
+bash deploy/start-tmux.sh
 
 # split-pdf: restore previous uvicorn/tmux session if applicable
 ```

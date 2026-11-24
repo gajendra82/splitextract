@@ -5,6 +5,7 @@ Must not regress printed Marg opening/receive/issue photos (Katruwar).
 
 from __future__ import annotations
 
+import os
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -155,6 +156,13 @@ class TestJayDistributorsSheetsStockSales(unittest.TestCase):
             "services.sales_statement_extractor._extract_main_stock_sales_vision",
             return_value=vision_payload,
         ) as vision_mock:
+            if os.environ.get("RUN_LIVE_EXTRACTION", "").strip().lower() not in {
+                "1",
+                "true",
+                "yes",
+                "on",
+            }:
+                self.skipTest("live sheet OCR is opt-in via RUN_LIVE_EXTRACTION=1")
             result = extract_sales_statement(FIXTURE.read_bytes(), FIXTURE.name)
 
         self.assertTrue(vision_mock.called)

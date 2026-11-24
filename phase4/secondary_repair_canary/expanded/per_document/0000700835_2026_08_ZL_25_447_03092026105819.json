@@ -1,0 +1,508 @@
+{
+  "document_id": "0000700835_2026_08_ZL_25_447_03092026105819.jpeg",
+  "role": "compatible_himalaya_qty",
+  "source_path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700835_2026_08_ZL_25_447_03092026105819.jpeg",
+  "off": {
+    "correct_count": 29,
+    "field_count": 29,
+    "silent_wrong_count": 0,
+    "missing_count": 0,
+    "secondary_ocr_ms": 3.8,
+    "pipeline_helper_ms": 3.5,
+    "text_sha": "63608ed3362754e6",
+    "repair_report": {
+      "document_id": "0000700835_2026_08_ZL_25_447_03092026105819.jpeg",
+      "repairs": [],
+      "unresolved": [
+        {
+          "reason": "secondary_repair_disabled"
+        }
+      ]
+    }
+  },
+  "on": {
+    "correct_count": 29,
+    "field_count": 29,
+    "silent_wrong_count": 0,
+    "missing_count": 0,
+    "secondary_ocr_ms": 943.5,
+    "pipeline_helper_ms": 979.4,
+    "text_sha": "63608ed3362754e6",
+    "repair_report": {
+      "document_id": "0000700835_2026_08_ZL_25_447_03092026105819.jpeg",
+      "repairs": [],
+      "unresolved": []
+    },
+    "pipeline_text_matches": true
+  },
+  "deltas": [],
+  "repair_types_on": [],
+  "matches_off": [
+    {
+      "field_id": "vendor",
+      "expected_raw": "SWASTIK SALES CORPORATION",
+      "predicted_raw": "SWASTIK SALES CORPORATION",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_op",
+      "expected_raw": "Op.Bal. Qty.",
+      "predicted_raw": "Op.Bal. Qty.",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_receipt",
+      "expected_raw": "Receipt Qty.",
+      "predicted_raw": "Receipt Qty.",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_issue",
+      "expected_raw": "Issue Qty.",
+      "predicted_raw": "Issue Qty.",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_close",
+      "expected_raw": "Closing Balance",
+      "predicted_raw": "Closing Balance",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "aact_op",
+      "expected_raw": "86",
+      "predicted_raw": "86",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "aact_rec",
+      "expected_raw": "0",
+      "predicted_raw": "0",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "aact_tot",
+      "expected_raw": "86",
+      "predicted_raw": "86",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "aact_iss",
+      "expected_raw": "43",
+      "predicted_raw": "43",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "aact_cl",
+      "expected_raw": "43",
+      "predicted_raw": "43",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "conf_op",
+      "expected_raw": "307",
+      "predicted_raw": "307",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "conf_iss",
+      "expected_raw": "55",
+      "predicted_raw": "55",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "conf_cl",
+      "expected_raw": "252",
+      "predicted_raw": "252",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "diab_op",
+      "expected_raw": "37",
+      "predicted_raw": "37",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "diab_cl",
+      "expected_raw": "37",
+      "predicted_raw": "37",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv200_op",
+      "expected_raw": "136",
+      "predicted_raw": "136",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv200_rec",
+      "expected_raw": "700",
+      "predicted_raw": "700",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv200_tot",
+      "expected_raw": "836",
+      "predicted_raw": "836",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv200_iss",
+      "expected_raw": "567",
+      "predicted_raw": "567",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv200_cl",
+      "expected_raw": "269",
+      "predicted_raw": "269",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "livtab_op",
+      "expected_raw": "551",
+      "predicted_raw": "551",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "livtab_iss",
+      "expected_raw": "200",
+      "predicted_raw": "200",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "livtab_cl",
+      "expected_raw": "353",
+      "predicted_raw": "353",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "pilex_op",
+      "expected_raw": "201",
+      "predicted_raw": "201",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "pilex_iss",
+      "expected_raw": "54",
+      "predicted_raw": "54",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "pilex_cl",
+      "expected_raw": "147",
+      "predicted_raw": "147",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tent_op",
+      "expected_raw": "579",
+      "predicted_raw": "579",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tent_iss",
+      "expected_raw": "47",
+      "predicted_raw": "47",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tent_cl",
+      "expected_raw": "532",
+      "predicted_raw": "532",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    }
+  ],
+  "matches_on": [
+    {
+      "field_id": "vendor",
+      "expected_raw": "SWASTIK SALES CORPORATION",
+      "predicted_raw": "SWASTIK SALES CORPORATION",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_op",
+      "expected_raw": "Op.Bal. Qty.",
+      "predicted_raw": "Op.Bal. Qty.",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_receipt",
+      "expected_raw": "Receipt Qty.",
+      "predicted_raw": "Receipt Qty.",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_issue",
+      "expected_raw": "Issue Qty.",
+      "predicted_raw": "Issue Qty.",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "h_close",
+      "expected_raw": "Closing Balance",
+      "predicted_raw": "Closing Balance",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "aact_op",
+      "expected_raw": "86",
+      "predicted_raw": "86",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "aact_rec",
+      "expected_raw": "0",
+      "predicted_raw": "0",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "aact_tot",
+      "expected_raw": "86",
+      "predicted_raw": "86",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "aact_iss",
+      "expected_raw": "43",
+      "predicted_raw": "43",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "aact_cl",
+      "expected_raw": "43",
+      "predicted_raw": "43",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "conf_op",
+      "expected_raw": "307",
+      "predicted_raw": "307",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "conf_iss",
+      "expected_raw": "55",
+      "predicted_raw": "55",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "conf_cl",
+      "expected_raw": "252",
+      "predicted_raw": "252",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "diab_op",
+      "expected_raw": "37",
+      "predicted_raw": "37",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "diab_cl",
+      "expected_raw": "37",
+      "predicted_raw": "37",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv200_op",
+      "expected_raw": "136",
+      "predicted_raw": "136",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv200_rec",
+      "expected_raw": "700",
+      "predicted_raw": "700",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv200_tot",
+      "expected_raw": "836",
+      "predicted_raw": "836",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv200_iss",
+      "expected_raw": "567",
+      "predicted_raw": "567",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "liv200_cl",
+      "expected_raw": "269",
+      "predicted_raw": "269",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "livtab_op",
+      "expected_raw": "551",
+      "predicted_raw": "551",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "livtab_iss",
+      "expected_raw": "200",
+      "predicted_raw": "200",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "livtab_cl",
+      "expected_raw": "353",
+      "predicted_raw": "353",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "pilex_op",
+      "expected_raw": "201",
+      "predicted_raw": "201",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "pilex_iss",
+      "expected_raw": "54",
+      "predicted_raw": "54",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "pilex_cl",
+      "expected_raw": "147",
+      "predicted_raw": "147",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tent_op",
+      "expected_raw": "579",
+      "predicted_raw": "579",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tent_iss",
+      "expected_raw": "47",
+      "predicted_raw": "47",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    },
+    {
+      "field_id": "tent_cl",
+      "expected_raw": "532",
+      "predicted_raw": "532",
+      "correct": true,
+      "error_type": null,
+      "silent_wrong": false
+    }
+  ]
+}

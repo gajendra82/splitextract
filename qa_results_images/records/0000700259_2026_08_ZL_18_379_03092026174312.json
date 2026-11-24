@@ -1,0 +1,218 @@
+{
+  "file": "0000700259_2026_08_ZL_18_379_03092026174312.jpg",
+  "path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700259_2026_08_ZL_18_379_03092026174312.jpg",
+  "format": "Product wise stock statement",
+  "api_method": "product_wise_stock_statement_image",
+  "status": "FAIL",
+  "expected_rows": 17,
+  "extracted_rows": 17,
+  "matched_rows": 17,
+  "missing_rows": [],
+  "extra_rows": [],
+  "duplicates": [],
+  "mismatches": [
+    {
+      "product": "HIMCOLIN CREAM",
+      "field": "closing_qty",
+      "expected": 7,
+      "actual": 17,
+      "kind": "wrong_closing_qty"
+    },
+    {
+      "product": "DIABECON TAB",
+      "field": "opening_qty",
+      "expected": 3,
+      "actual": 31,
+      "kind": "wrong_opening_qty"
+    },
+    {
+      "product": "BLEMINOR CR",
+      "field": "opening_qty",
+      "expected": 7,
+      "actual": 17,
+      "kind": "wrong_opening_qty"
+    },
+    {
+      "product": "BLEMINOR CR",
+      "field": "closing_qty",
+      "expected": 7,
+      "actual": 17,
+      "kind": "wrong_closing_qty"
+    },
+    {
+      "product": "17 rows",
+      "field": "closing_value",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 17,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    },
+    {
+      "product": "17 rows",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 17,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    }
+  ],
+  "ocr_review": [
+    {
+      "product": "TENTAX FORTE",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 50,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "RENALKA SYP",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "RENALKA",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "PILEX FORTE OINT",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 46,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "ORO-T ORAL RINSE",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 6,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "OPTHACARE EYE DROP",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "HAIR ZONE SOLU",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 6,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "DIABECON DS.",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 3,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "CLARINA ANTI ACNE FACE WA",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 3,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "CLARINA ANTIACNE CREAM",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 8,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "PILEX TAB",
+      "field": "opening_qty",
+      "expected": null,
+      "actual": 29,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "PILEX TAB",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 3337,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "LIV 52 TAB",
+      "api_product": "LIV TAB",
+      "similarity": 0.824,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "LIV 52 TAB",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 16,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "LIV 52 SYP",
+      "api_product": "LIV SYP",
+      "similarity": 0.824,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "LIV 52 SYP",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 3752,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "LIV 52 SYP",
+      "api_product": "LIV SYP",
+      "similarity": 0.824,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "LIV 52 SYP",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 77,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "HIMCOLIN CREAM",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 18,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "DIABECON TAB",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 6,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "BLEMINOR CR",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    }
+  ],
+  "accounting": [],
+  "confidence": "medium",
+  "notes": [
+    "OCR used tesseract psm 6."
+  ],
+  "result_key": "0000700259_2026_08_ZL_18_379_03092026174312",
+  "unavailable_fields": {
+    "closing_value": 17,
+    "receipts_qty": 17
+  },
+  "formula_checked": "none"
+}

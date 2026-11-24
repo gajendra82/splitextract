@@ -1,0 +1,310 @@
+{
+  "file": "0000702858_2026_08_ZL_22_411_02092026053751.jpeg",
+  "path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000702858_2026_08_ZL_22_411_02092026053751.jpeg",
+  "format": "Stock & Sales Statement",
+  "api_method": "gemini_extraction_fallback",
+  "status": "FAIL",
+  "expected_rows": 35,
+  "extracted_rows": 0,
+  "matched_rows": 0,
+  "missing_rows": [
+    {
+      "product": "AACTARIL SOAP",
+      "opening_qty": 0,
+      "receipts_qty": null,
+      "sales_qty": 0,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "ABANA TAB",
+      "opening_qty": 0,
+      "receipts_qty": 100,
+      "sales_qty": null,
+      "closing_qty": 100,
+      "kind": "missing_product"
+    },
+    {
+      "product": "AMALAKI TAB CHIROPEX CREAM",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "CLARINA ANTI ACNE",
+      "opening_qty": 0,
+      "receipts_qty": null,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "CONFIDO",
+      "opening_qty": null,
+      "receipts_qty": 0,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "DIABECON DS TAB",
+      "opening_qty": 32,
+      "receipts_qty": 0,
+      "sales_qty": 6,
+      "closing_qty": 26,
+      "kind": "missing_product"
+    },
+    {
+      "product": "DIABECON TAB",
+      "opening_qty": 101,
+      "receipts_qty": null,
+      "sales_qty": 40,
+      "closing_qty": 60,
+      "kind": "missing_product"
+    },
+    {
+      "product": "DIAREX",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "HADJOD TAB",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "HAIR ZONE SOLUTION HERBOLAX CAPS",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "HIMCOLIN GEL",
+      "opening_qty": 50,
+      "receipts_qty": 0,
+      "sales_qty": 18,
+      "closing_qty": 32,
+      "kind": "missing_product"
+    },
+    {
+      "product": "KAPIKACHHU TABS",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "LIV 52 SUGER FREE",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": null,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "LIV 52 SYRUP",
+      "opening_qty": 140,
+      "receipts_qty": null,
+      "sales_qty": 116,
+      "closing_qty": 24,
+      "kind": "missing_product"
+    },
+    {
+      "product": "LIV 52 SYRUP",
+      "opening_qty": 150,
+      "receipts_qty": 70,
+      "sales_qty": 65,
+      "closing_qty": 155,
+      "kind": "missing_product"
+    },
+    {
+      "product": "LIV 52 TAB",
+      "opening_qty": 255,
+      "receipts_qty": 200,
+      "sales_qty": 118,
+      "closing_qty": 336,
+      "kind": "missing_product"
+    },
+    {
+      "product": "LIV-52 HB CAPSULES OPHTHACARE EYE",
+      "opening_qty": 106,
+      "receipts_qty": 0,
+      "sales_qty": 58,
+      "closing_qty": 43,
+      "kind": "missing_product"
+    },
+    {
+      "product": "ORO-T ORAL RINSE L PILEX FORTE OINTME",
+      "opening_qty": 287,
+      "receipts_qty": 100,
+      "sales_qty": 123,
+      "closing_qty": 264,
+      "kind": "missing_product"
+    },
+    {
+      "product": "PILEX TAB",
+      "opening_qty": 435,
+      "receipts_qty": 100,
+      "sales_qty": 146,
+      "closing_qty": 388,
+      "kind": "missing_product"
+    },
+    {
+      "product": "PURIM TAB QUISTA ACTIVE (MMF",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "QUISTA ACTIVE CHOL",
+      "opening_qty": 0,
+      "receipts_qty": 7,
+      "sales_qty": 0,
+      "closing_qty": 7,
+      "kind": "missing_product"
+    },
+    {
+      "product": "QUISTA DN MILK MAS",
+      "opening_qty": null,
+      "receipts_qty": 0,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "QUISTA DN VANILLA",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "SHALLAKI TAB",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "SHIGRU TAB",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "TAGARA(VALERTAN)TA",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "TALEKT CAPS TALEKT SYP TENTEX FORTE",
+      "opening_qty": 296,
+      "receipts_qty": 0,
+      "sales_qty": 70,
+      "closing_qty": 226,
+      "kind": "missing_product"
+    },
+    {
+      "product": "TRIKATU TAB",
+      "opening_qty": null,
+      "receipts_qty": 0,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "TRIPHALA TAB",
+      "opening_qty": 2,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "VASAKA SYP VASAKA TAB",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "VEGECORT CREAM",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "missing_product"
+    },
+    {
+      "product": "VRIKSHAMLA TAB * > Non Moving",
+      "opening_qty": null,
+      "receipts_qty": 30,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "OPENING VALUE",
+      "opening_qty": 244583.33,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "SALES VALUE",
+      "opening_qty": 101919.39,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "LAST MONTH SALES:",
+      "opening_qty": 61792.24,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    }
+  ],
+  "extra_rows": [],
+  "duplicates": [
+    {
+      "side": "ground_truth",
+      "product": "LIV 52 SYRUP",
+      "count": 2
+    }
+  ],
+  "mismatches": [],
+  "ocr_review": [],
+  "accounting": [],
+  "confidence": "medium",
+  "notes": [
+    "OCR used tesseract psm 6."
+  ],
+  "result_key": "0000702858_2026_08_ZL_22_411_02092026053751",
+  "unavailable_fields": {},
+  "formula_checked": "simple"
+}

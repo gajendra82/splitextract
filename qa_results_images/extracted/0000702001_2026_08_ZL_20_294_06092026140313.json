@@ -1,0 +1,473 @@
+{
+  "source_file": "0000702001_2026_08_ZL_20_294_06092026140313.jpeg",
+  "source_format": "jpeg",
+  "stockist_name": "SURESH PHARMA",
+  "stockist_address": "B-7,SHUBHAM COMPLEX,INSIDE AJMERI GATE,BEAWAR",
+  "company_name": "ZEAL HIMALAYA",
+  "period_from": "2026-08-01",
+  "period_to": "2026-08-31",
+  "report_title": "Sales & Stock Statement",
+  "line_items": [
+    {
+      "product_code": "H15469",
+      "product_name": "TRIPHALA CAP",
+      "packing": "60",
+      "opening_qty": 1.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 1.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 1.0,
+        "expected_closing": 1.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "H569",
+      "product_name": "HAIRZONE SOLU",
+      "packing": "1 *60ML",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 26.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 26.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 26.0,
+        "expected_closing": 26.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "H589",
+      "product_name": "BLEMINOR ANTI CREA",
+      "packing": "1*30ML",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 1.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 1.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 1.0,
+        "expected_closing": 1.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "HH001",
+      "product_name": "OXITARD CAPS",
+      "packing": "10",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 6.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 6.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 6.0,
+        "expected_closing": 6.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "HI 67",
+      "product_name": "DIABECON DS TAB",
+      "packing": "1*60",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 20.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 20.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 20.0,
+        "expected_closing": 20.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "HI011",
+      "product_name": "HERBOLAX",
+      "packing": "100 TAB",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 5.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 5.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 5.0,
+        "expected_closing": 5.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "H1015",
+      "product_name": "LIV 52 SYP",
+      "packing": "200ML.",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 194.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 194.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 194.0,
+        "expected_closing": 194.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "H1016",
+      "product_name": "LIV-52 TAB",
+      "packing": "100TAB",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 180.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 180.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 180.0,
+        "expected_closing": 180.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "H1020",
+      "product_name": "LIV-52 SYRUP",
+      "packing": "100ML",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 85.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 85.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 85.0,
+        "expected_closing": 85.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "H1024",
+      "product_name": "PILEX TAB",
+      "packing": "60 TAB",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 63.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 63.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 63.0,
+        "expected_closing": 63.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "HI031",
+      "product_name": "CONFIDO TAB",
+      "packing": "1*60AB",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 104.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 104.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 104.0,
+        "expected_closing": 104.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "H1033",
+      "product_name": "TENTEX FORTE",
+      "packing": "10 TAB",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 33.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 33.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 33.0,
+        "expected_closing": 33.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "H104",
+      "product_name": "CLERINA CREAM",
+      "packing": "1 *30GM",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 6.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 6.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 6.0,
+        "expected_closing": 6.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "HI1454",
+      "product_name": "HADJOD CAPS",
+      "packing": "1*60",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 57.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 57.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 57.0,
+        "expected_closing": 57.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "HI21",
+      "product_name": "HIMCOLIN GEL",
+      "packing": "1*30GM",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 150.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 150.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 150.0,
+        "expected_closing": 150.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "HI22",
+      "product_name": "OPTHACARE DROPS",
+      "packing": "1*10ML",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 65.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 65.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 65.0,
+        "expected_closing": 65.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "HI561",
+      "product_name": "AACTARIL SOAP",
+      "packing": "1 *75GM",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 8.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 8.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 8.0,
+        "expected_closing": 8.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "HI568",
+      "product_name": "ABANA TAB",
+      "packing": "60",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 2.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 2.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 2.0,
+        "expected_closing": 2.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "ZE251",
+      "product_name": "PILEX FORTE TAB",
+      "packing": "1*30",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 10.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 10.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 10.0,
+        "expected_closing": 10.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "ZE524",
+      "product_name": "PILEX FORTE OINT",
+      "packing": "1 30GM",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 66.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 66.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 66.0,
+        "expected_closing": 66.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "ZIN0147",
+      "product_name": "KAPIKACHHU CAP",
+      "packing": "1*60",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 5.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 5.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 5.0,
+        "expected_closing": 5.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "ZT001",
+      "product_name": "ORO-T RINSE100ML",
+      "packing": "1 *100ML",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 51.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 51.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 51.0,
+        "expected_closing": 51.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "ZT26",
+      "product_name": "CLERINA FACE WASH",
+      "packing": "1*60ML",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 31.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 31.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 31.0,
+        "expected_closing": 31.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": "ZY01",
+      "product_name": "PURIM TAB",
+      "packing": "1 *60",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 2.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 2.0,
+      "closing_value": 0.0,
+      "extra": {
+        "expected_total": 2.0,
+        "expected_closing": 2.0,
+        "stock_identity_ok": true
+      }
+    }
+  ],
+  "totals": {
+    "sales_value": null,
+    "closing_value": null,
+    "extra": {
+      "extraction_method": "gemini_extraction_fallback",
+      "line_sales_value_sum": 0.0,
+      "line_closing_value_sum": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 1171.0,
+      "stock_identity_kind": "opening_receipts_sales_closing",
+      "stock_identity_formula": "closing=opening+receipts-sales",
+      "stock_identity_fail_count": 0,
+      "stock_validation": {
+        "opening_plus_purchase": 1171.0,
+        "expected_total": 1171.0,
+        "calculated_closing": 1171.0,
+        "extracted_closing": 1171.0,
+        "is_valid": true
+      },
+      "extraction_quality": {
+        "quality": "good",
+        "score": 100,
+        "reasons": [],
+        "threshold": 75.0
+      },
+      "gemini_fallback": "not_called",
+      "early_vision_reason": "missing_stock_headers,low_ocr_quality_score"
+    }
+  }
+}

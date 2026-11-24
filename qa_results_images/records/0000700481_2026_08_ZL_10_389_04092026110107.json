@@ -1,0 +1,577 @@
+{
+  "file": "0000700481_2026_08_ZL_10_389_04092026110107.jpeg",
+  "path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000700481_2026_08_ZL_10_389_04092026110107.jpeg",
+  "format": "Stock and Sales Report For Month Of Aug 2026",
+  "api_method": "gemini_extraction_fallback",
+  "status": "FAIL",
+  "expected_rows": 17,
+  "extracted_rows": 54,
+  "matched_rows": 1,
+  "missing_rows": [
+    {
+      "product": "BONNISAN DROPS soe",
+      "opening_qty": 1766,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "‘BRESOLTAB os CLARINA ANTI ACNE FIW cow. CLARINA ANTI ACNE KIT m9 CCLEARVITAL GEL 3041. son. CONFIDO TAB oe 4",
+      "opening_qty": 8,
+      "receipts_qty": null,
+      "sales_qty": 1,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "CYSTONE SYP 200M, 200M CYSTONE'SE LIQ 20a. DIABECON DS TAB ors DIABECON TAB os",
+      "opening_qty": 3,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "DIAKOF LINCTUS 1060 DIAREX TAB 0 EVECARE CAP ss EVECARE FORTE SUP. 200M EVECARE FORTE TAB to EVECARE SUP 400M. soos. ‘EVECARE SYRUP ee GASEX SYP rool",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 10,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "GASEXTAR 100 7",
+      "opening_qty": 15,
+      "receipts_qty": null,
+      "sales_qty": 7,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "HERARYSOAPS\"75GMBPOWSOGM scat HERBOLAX CAP 10 HINCOCID SUP 200 HIMCOCID SUSP (SAUNF FLAVOUR) 200, ‘HIMCOSPAZ SOFT CAP HINPLASIA TAB sos HIOWNA CHOCO POWDER 20060 HIOWNA KIDZ 40064 ‘owas [HIOWNA KIDZ VANILLA ovat LIV52D5SUP 20a LIV52.D8 TAB oe 5",
+      "opening_qty": 1,
+      "receipts_qty": 10,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "LIVS2 DS SYRUP. 1008",
+      "opening_qty": 1,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "1LS2 SYRUP toon 5",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 1,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "LLIVS2 SYRUP 200M, roo =a",
+      "opening_qty": 29,
+      "receipts_qty": 35,
+      "sales_qty": 29,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "LIVS2 TAB tom 0",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 14,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "LLUKOL SYP 200. LUKOL TAB oe 4",
+      "opening_qty": 8,
+      "receipts_qty": null,
+      "sales_qty": 2,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "‘MENOSAN TAB 20 PILEX FOKTE OINTMENT 306 200 =",
+      "opening_qty": 2,
+      "receipts_qty": null,
+      "sales_qty": 39,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "PILEX TAB oo 7",
+      "opening_qty": 36,
+      "receipts_qty": null,
+      "sales_qty": 21,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "PURE HANDS 200m ‘PURE HANDS 100 MI. soos, ‘PURE HANDS 500M. soca [RENALKA SYRUP. ont 7",
+      "opening_qty": null,
+      "receipts_qty": 56,
+      "sales_qty": 27,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "‘REOSTO TAB 20 [RUMALAYA TORE TAB, oe RUMALAYA GEL 09m RUMALAYA TAB cos SERPINA TAB 100 SPEMAN TAB coe STYPLON TAB 20",
+      "opening_qty": 141,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "TALEKT SYP om, TTENTEX ROYAL CAP 108 V.GEL 306M 20m SUBTOTALFOR: HIMALAYA",
+      "opening_qty": null,
+      "receipts_qty": 14050073,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    }
+  ],
+  "extra_rows": [
+    {
+      "product": "BONNISAAN DROPS",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 1,
+      "kind": "extra_product"
+    },
+    {
+      "product": "BRESOLTAB",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 14,
+      "kind": "extra_product"
+    },
+    {
+      "product": "CLARINA ANTI ACNE F/W",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "CLARINA ANTI ACNE KIT",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "CLEARVITAL GEL 30ML",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "CONFIDO TAB",
+      "opening_qty": 8,
+      "sales_qty": 0,
+      "closing_qty": 7,
+      "kind": "extra_product"
+    },
+    {
+      "product": "CYSTONE SYP 200ML",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "CYSTONE-SF LIQ",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "DIABECON DS TAB",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "DIABECON TAB",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 3,
+      "kind": "extra_product"
+    },
+    {
+      "product": "DIAKOF LINCTUS",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "DIAREX TAB",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "EVECARE CAP",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "EVECARE FORTE SUP",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "EVECARE FORTE TAB",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "EVECARE SUP 400ML",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "EVECARE SYRUP",
+      "opening_qty": 11,
+      "sales_qty": 0,
+      "closing_qty": 11,
+      "kind": "extra_product"
+    },
+    {
+      "product": "GASEX SYP",
+      "opening_qty": 15,
+      "sales_qty": 0,
+      "closing_qty": 5,
+      "kind": "extra_product"
+    },
+    {
+      "product": "GASEX TAB",
+      "opening_qty": 15,
+      "sales_qty": 0,
+      "closing_qty": 8,
+      "kind": "extra_product"
+    },
+    {
+      "product": "H BABY SOAP3*75GM B POW 50GM",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HERBOLAX CAP",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HIMCOCID SUP",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HIMCOCID SUSP (SAUNF FLAVOUR)",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HIMCOSPAZ SOFT CAP",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HIMPLASIA ТАВ",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HIOWNA CHOCO POWDER",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HIOWNA KIDZ 400GM",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "HIOWNA KIDZ VANILLA",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "LIV 52 DS SUP",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 11,
+      "kind": "extra_product"
+    },
+    {
+      "product": "LIV 52 DS TAB",
+      "opening_qty": 1,
+      "sales_qty": 0,
+      "closing_qty": 1,
+      "kind": "extra_product"
+    },
+    {
+      "product": "LIV.52 DS SYRUP",
+      "opening_qty": 18,
+      "sales_qty": 0,
+      "closing_qty": 1,
+      "kind": "extra_product"
+    },
+    {
+      "product": "LIV.52 SYRUP",
+      "opening_qty": 29,
+      "sales_qty": 0,
+      "closing_qty": 35,
+      "kind": "extra_product"
+    },
+    {
+      "product": "LIV.52 SYRUP 200ML",
+      "opening_qty": 29,
+      "sales_qty": 0,
+      "closing_qty": 33,
+      "kind": "extra_product"
+    },
+    {
+      "product": "LIV.52 TAB",
+      "opening_qty": 47,
+      "sales_qty": 0,
+      "closing_qty": 33,
+      "kind": "extra_product"
+    },
+    {
+      "product": "LUKOL SYP",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "LUKOL TAB",
+      "opening_qty": 8,
+      "sales_qty": 0,
+      "closing_qty": 6,
+      "kind": "extra_product"
+    },
+    {
+      "product": "MENOSAN TAB",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "PILEX FORTE OINTMENT 30G",
+      "opening_qty": 72,
+      "sales_qty": 0,
+      "closing_qty": 33,
+      "kind": "extra_product"
+    },
+    {
+      "product": "PILEX TAB",
+      "opening_qty": 56,
+      "sales_qty": 0,
+      "closing_qty": 35,
+      "kind": "extra_product"
+    },
+    {
+      "product": "PURE HANDS",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "PURE HANDS 100 ML",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "PURE HANDS 500ML",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "RENALKA SYRUP",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 29,
+      "kind": "extra_product"
+    },
+    {
+      "product": "REOSTO TAB",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "RUMALAYA FORE TAB",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "RUMALAYA GEL",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 10,
+      "kind": "extra_product"
+    },
+    {
+      "product": "RUMALAYA TAB",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "SERPINA TAB",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "SPEMAN TAB",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "STYPLON TAB",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 41,
+      "kind": "extra_product"
+    },
+    {
+      "product": "TALEKT SYP",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "TENTEX ROYAL CAP",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    },
+    {
+      "product": "V-GEL 30GM",
+      "opening_qty": 0,
+      "sales_qty": 0,
+      "closing_qty": 0,
+      "kind": "extra_product"
+    }
+  ],
+  "duplicates": [],
+  "mismatches": [
+    {
+      "product": "1 rows",
+      "field": "sales_value",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 1,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    },
+    {
+      "product": "1 rows",
+      "field": "closing_value",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 1,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    },
+    {
+      "product": "1 rows",
+      "field": "closing_qty",
+      "expected": null,
+      "actual": 0,
+      "kind": "unavailable_field_not_null",
+      "rows": 1,
+      "note": "This column is not in the PDF. Unavailable must stay null, not 0."
+    }
+  ],
+  "ocr_review": [
+    {
+      "product": "‘ABANA TAB om 5",
+      "api_product": "ABANA TAB",
+      "similarity": 0.783,
+      "note": "Product names differ but the row quantities correspond."
+    },
+    {
+      "product": "‘ABANA TAB om 5",
+      "field": "receipts_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    },
+    {
+      "product": "‘ABANA TAB om 5",
+      "field": "sales_qty",
+      "expected": null,
+      "actual": 0,
+      "note": "Ground truth did not read this cell confidently."
+    }
+  ],
+  "accounting": [],
+  "confidence": "medium",
+  "notes": [
+    "OCR used tesseract psm 6."
+  ],
+  "result_key": "0000700481_2026_08_ZL_10_389_04092026110107",
+  "unavailable_fields": {
+    "sales_value": 1,
+    "closing_value": 1,
+    "closing_qty": 1
+  },
+  "formula_checked": "none"
+}

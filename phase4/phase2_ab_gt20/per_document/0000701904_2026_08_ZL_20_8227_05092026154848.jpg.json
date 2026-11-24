@@ -1,0 +1,995 @@
+{
+  "document_id": "0000701904_2026_08_ZL_20_8227_05092026154848.jpg",
+  "source_path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000701904_2026_08_ZL_20_8227_05092026154848.jpg",
+  "verified_fields": 20,
+  "off": {
+    "error": null,
+    "telemetry": {
+      "gemini_calls": 2,
+      "prompt_tokens": 773,
+      "output_tokens": 91,
+      "latency_ms": 1800,
+      "estimated_cost_usd": 0.000114,
+      "pricing_note": "estimate using flash-lite ballpark $0.1/1M in + $0.4/1M out",
+      "calls": [
+        {
+          "model": "gemini-2.5-flash-lite",
+          "timeout": 30,
+          "latency_ms": 884,
+          "prompt_tokens": 123,
+          "output_tokens": 16,
+          "error": null,
+          "response_mime_type": "application/json",
+          "schema_title": null,
+          "part_kinds": [
+            "text"
+          ]
+        },
+        {
+          "model": "gemini-2.5-flash-lite",
+          "timeout": 30,
+          "latency_ms": 916,
+          "prompt_tokens": 650,
+          "output_tokens": 75,
+          "error": null,
+          "response_mime_type": "application/json",
+          "schema_title": null,
+          "part_kinds": [
+            "text"
+          ]
+        }
+      ],
+      "wall_latency_ms": 1847,
+      "phase2_enabled": false,
+      "ocr_mode": "stored_vl_ocr",
+      "phase2_status": null,
+      "phase2_attempts": null,
+      "phase2_failure_type": null,
+      "extraction_method": "di_ocr_html_override"
+    },
+    "score": {
+      "metrics": {
+        "verified_fields": 20,
+        "correct_fields": 3,
+        "field_accuracy": 0.15,
+        "numeric_accuracy": 0.0,
+        "quantity_accuracy": 0.0,
+        "price_accuracy": 0.0,
+        "date_accuracy": null,
+        "batch_accuracy": null,
+        "header_accuracy": 1.0,
+        "table_column_accuracy": 0.0,
+        "text_accuracy": 0.75,
+        "precision": 1.0,
+        "recall": 0.15,
+        "f1": 0.2608695652173913,
+        "silent_wrong_rate": 0.0,
+        "silent_wrong_count": 0,
+        "silent_wrong_denominator_verified_fields": 20,
+        "accepted_field_silent_wrong_rate": 0.0,
+        "accepted_field_silent_wrong_count": 0,
+        "accepted_field_denominator": 3,
+        "explicit_unresolved_rate": 0.0,
+        "missing_value_rate": 0.05,
+        "critical_error_rate": 0.7,
+        "by_type_prf": {
+          "numeric": {
+            "precision": null,
+            "recall": 0.0,
+            "f1": null,
+            "n": 16
+          },
+          "text": {
+            "precision": 1.0,
+            "recall": 0.75,
+            "f1": 0.8571428571428571,
+            "n": 4
+          },
+          "table": {
+            "precision": null,
+            "recall": 0.0,
+            "f1": null,
+            "n": 16
+          }
+        },
+        "error_type_counts": {
+          "MISSING": 1,
+          "MISSING_PRODUCT": 16
+        }
+      },
+      "document_status": "PARTIALLY_CORRECT",
+      "quantity_accuracy": 0.0,
+      "product_identity": {
+        "gt_products": 4,
+        "found_products": 0,
+        "recall": 0.0
+      },
+      "missing_values": 17,
+      "verified_fields": 20,
+      "correct_fields": 3
+    },
+    "matches": [
+      {
+        "field_id": "vendor",
+        "field_type": "text",
+        "printed_header": "vendor",
+        "product_key": null,
+        "expected_raw": "MUKESH MEDICAL AGENCIES",
+        "expected_normalized": null,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING",
+        "silent_wrong": false,
+        "critical": false,
+        "priority": "medium"
+      },
+      {
+        "field_id": "h_open",
+        "field_type": "header",
+        "printed_header": "OPENING STOCK",
+        "product_key": null,
+        "expected_raw": "OPENING STOCK",
+        "expected_normalized": null,
+        "predicted_raw": "OPENING STOCK",
+        "match_mode": "ocr_header_presence",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": false,
+        "priority": "high"
+      },
+      {
+        "field_id": "h_issue",
+        "field_type": "header",
+        "printed_header": "ISSUE QUANTITY",
+        "product_key": null,
+        "expected_raw": "ISSUE QUANTITY",
+        "expected_normalized": null,
+        "predicted_raw": "ISSUE QUANTITY",
+        "match_mode": "ocr_header_presence",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": false,
+        "priority": "high"
+      },
+      {
+        "field_id": "h_close",
+        "field_type": "header",
+        "printed_header": "CLOSING STOCK",
+        "product_key": null,
+        "expected_raw": "CLOSING STOCK",
+        "expected_normalized": null,
+        "predicted_raw": "CLOSING STOCK",
+        "match_mode": "ocr_header_presence",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": false,
+        "priority": "high"
+      },
+      {
+        "field_id": "aact_op",
+        "field_type": "quantity",
+        "printed_header": "OPENING STOCK",
+        "product_key": "AACTARIL SOAP",
+        "expected_raw": "24",
+        "expected_normalized": 24.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "aact_rec",
+        "field_type": "quantity",
+        "printed_header": "RECEIVE QUANTITY",
+        "product_key": "AACTARIL SOAP",
+        "expected_raw": "144",
+        "expected_normalized": 144.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "aact_iss",
+        "field_type": "quantity",
+        "printed_header": "ISSUE QUANTITY",
+        "product_key": "AACTARIL SOAP",
+        "expected_raw": "67",
+        "expected_normalized": 67.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "aact_cl",
+        "field_type": "quantity",
+        "printed_header": "CLOSING STOCK",
+        "product_key": "AACTARIL SOAP",
+        "expected_raw": "101",
+        "expected_normalized": 101.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "talekt_syp_op",
+        "field_type": "quantity",
+        "printed_header": "OPENING STOCK",
+        "product_key": "TALEKT SYRUP",
+        "expected_raw": "31",
+        "expected_normalized": 31.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "talekt_syp_iss",
+        "field_type": "quantity",
+        "printed_header": "ISSUE QUANTITY",
+        "product_key": "TALEKT SYRUP",
+        "expected_raw": "3",
+        "expected_normalized": 3.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "talekt_syp_cl",
+        "field_type": "quantity",
+        "printed_header": "CLOSING STOCK",
+        "product_key": "TALEKT SYRUP",
+        "expected_raw": "28",
+        "expected_normalized": 28.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "talekt_tab_op",
+        "field_type": "quantity",
+        "printed_header": "OPENING STOCK",
+        "product_key": "TALEKT TAB",
+        "expected_raw": "36",
+        "expected_normalized": 36.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "talekt_tab_iss",
+        "field_type": "quantity",
+        "printed_header": "ISSUE QUANTITY",
+        "product_key": "TALEKT TAB",
+        "expected_raw": "7",
+        "expected_normalized": 7.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "talekt_tab_cl",
+        "field_type": "quantity",
+        "printed_header": "CLOSING STOCK",
+        "product_key": "TALEKT TAB",
+        "expected_raw": "29",
+        "expected_normalized": 29.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "tot_open",
+        "field_type": "quantity",
+        "printed_header": "OPENING STOCK",
+        "product_key": "TOTAL",
+        "expected_raw": "3174",
+        "expected_normalized": 3174.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "tot_rec",
+        "field_type": "quantity",
+        "printed_header": "RECEIVE QUANTITY",
+        "product_key": "TOTAL",
+        "expected_raw": "1014",
+        "expected_normalized": 1014.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "tot_iss",
+        "field_type": "quantity",
+        "printed_header": "ISSUE QUANTITY",
+        "product_key": "TOTAL",
+        "expected_raw": "1981",
+        "expected_normalized": 1981.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "tot_cl",
+        "field_type": "quantity",
+        "printed_header": "CLOSING STOCK",
+        "product_key": "TOTAL",
+        "expected_raw": "2207",
+        "expected_normalized": 2207.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "tot_open_val",
+        "field_type": "price",
+        "printed_header": "OPENING VALUE",
+        "product_key": "TOTAL",
+        "expected_raw": "420409.45",
+        "expected_normalized": 420409.45,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": false,
+        "priority": "high"
+      },
+      {
+        "field_id": "tot_cl_val",
+        "field_type": "price",
+        "printed_header": "CLOSING VALUE",
+        "product_key": "TOTAL",
+        "expected_raw": "297782.21",
+        "expected_normalized": 297782.21,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": false,
+        "priority": "high"
+      }
+    ],
+    "stock_equation": {
+      "accepted": false,
+      "fail_count": 0,
+      "is_valid": false,
+      "healthy_rows": 0,
+      "failing_rows": 0,
+      "reasons": [
+        "empty_line_items",
+        "low_ocr_quality_score"
+      ]
+    },
+    "result": {
+      "stockist_name": null,
+      "company_name": null,
+      "line_item_count": 0,
+      "line_items": [],
+      "extraction_method": "di_ocr_html_override",
+      "di_ocr_override": true,
+      "phase1_validation": {
+        "accepted": false,
+        "status": "unresolved",
+        "reasons": [
+          "empty_line_items",
+          "low_ocr_quality_score"
+        ],
+        "checks": {
+          "schema": true,
+          "quality": false,
+          "stock_identity": true,
+          "rows": false,
+          "duplicates": true,
+          "cell_validation": true,
+          "column_mapping": true,
+          "ocr_verified": true
+        },
+        "quality_score": 0,
+        "parser": "di_ocr_html_override",
+        "failure_type": "EMPTY_OUTPUT",
+        "business_validation": {
+          "status": "unknown",
+          "reason": "identity_profile_unknown"
+        },
+        "source_agreement": null,
+        "source_evidence": true,
+        "cell_validation": {
+          "issues": [],
+          "column_report": {
+            "assignments": [],
+            "unresolved_headers": [],
+            "ambiguous_fields": [],
+            "issues": [
+              "unknown_layout_no_mapping"
+            ],
+            "layout_id": "unknown",
+            "mapping_confidence": 0.0,
+            "has_column_confusion": false
+          },
+          "accepted_critical_fields": 0,
+          "unresolved_critical_fields": 0,
+          "has_blocking_issues": false
+        }
+      },
+      "phase2": null
+    }
+  },
+  "on": {
+    "error": null,
+    "telemetry": {
+      "gemini_calls": 2,
+      "prompt_tokens": 8806,
+      "output_tokens": 16360,
+      "latency_ms": 33971,
+      "estimated_cost_usd": 0.007425,
+      "pricing_note": "estimate using flash-lite ballpark $0.1/1M in + $0.4/1M out",
+      "calls": [
+        {
+          "model": "gemini-2.5-flash-lite",
+          "timeout": 60,
+          "latency_ms": 17068,
+          "prompt_tokens": 4403,
+          "output_tokens": 8180,
+          "error": null,
+          "response_mime_type": "application/json",
+          "schema_title": "SalesExtractionOutput",
+          "part_kinds": [
+            "text",
+            "text"
+          ]
+        },
+        {
+          "model": "gemini-2.5-flash-lite",
+          "timeout": 60,
+          "latency_ms": 16903,
+          "prompt_tokens": 4403,
+          "output_tokens": 8180,
+          "error": null,
+          "response_mime_type": "application/json",
+          "schema_title": "SalesExtractionOutput",
+          "part_kinds": [
+            "text",
+            "text"
+          ]
+        }
+      ],
+      "wall_latency_ms": 34017,
+      "phase2_enabled": true,
+      "ocr_mode": "stored_vl_ocr",
+      "phase2_status": "unresolved",
+      "phase2_attempts": 2,
+      "phase2_failure_type": "EMPTY_OUTPUT",
+      "extraction_method": "di_ocr_html_override"
+    },
+    "score": {
+      "metrics": {
+        "verified_fields": 20,
+        "correct_fields": 3,
+        "field_accuracy": 0.15,
+        "numeric_accuracy": 0.0,
+        "quantity_accuracy": 0.0,
+        "price_accuracy": 0.0,
+        "date_accuracy": null,
+        "batch_accuracy": null,
+        "header_accuracy": 1.0,
+        "table_column_accuracy": 0.0,
+        "text_accuracy": 0.75,
+        "precision": 1.0,
+        "recall": 0.15,
+        "f1": 0.2608695652173913,
+        "silent_wrong_rate": 0.0,
+        "silent_wrong_count": 0,
+        "silent_wrong_denominator_verified_fields": 20,
+        "accepted_field_silent_wrong_rate": 0.0,
+        "accepted_field_silent_wrong_count": 0,
+        "accepted_field_denominator": 3,
+        "explicit_unresolved_rate": 0.0,
+        "missing_value_rate": 0.05,
+        "critical_error_rate": 0.7,
+        "by_type_prf": {
+          "numeric": {
+            "precision": null,
+            "recall": 0.0,
+            "f1": null,
+            "n": 16
+          },
+          "text": {
+            "precision": 1.0,
+            "recall": 0.75,
+            "f1": 0.8571428571428571,
+            "n": 4
+          },
+          "table": {
+            "precision": null,
+            "recall": 0.0,
+            "f1": null,
+            "n": 16
+          }
+        },
+        "error_type_counts": {
+          "MISSING": 1,
+          "MISSING_PRODUCT": 16
+        }
+      },
+      "document_status": "PARTIALLY_CORRECT",
+      "quantity_accuracy": 0.0,
+      "product_identity": {
+        "gt_products": 4,
+        "found_products": 0,
+        "recall": 0.0
+      },
+      "missing_values": 17,
+      "verified_fields": 20,
+      "correct_fields": 3
+    },
+    "matches": [
+      {
+        "field_id": "vendor",
+        "field_type": "text",
+        "printed_header": "vendor",
+        "product_key": null,
+        "expected_raw": "MUKESH MEDICAL AGENCIES",
+        "expected_normalized": null,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING",
+        "silent_wrong": false,
+        "critical": false,
+        "priority": "medium"
+      },
+      {
+        "field_id": "h_open",
+        "field_type": "header",
+        "printed_header": "OPENING STOCK",
+        "product_key": null,
+        "expected_raw": "OPENING STOCK",
+        "expected_normalized": null,
+        "predicted_raw": "OPENING STOCK",
+        "match_mode": "ocr_header_presence",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": false,
+        "priority": "high"
+      },
+      {
+        "field_id": "h_issue",
+        "field_type": "header",
+        "printed_header": "ISSUE QUANTITY",
+        "product_key": null,
+        "expected_raw": "ISSUE QUANTITY",
+        "expected_normalized": null,
+        "predicted_raw": "ISSUE QUANTITY",
+        "match_mode": "ocr_header_presence",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": false,
+        "priority": "high"
+      },
+      {
+        "field_id": "h_close",
+        "field_type": "header",
+        "printed_header": "CLOSING STOCK",
+        "product_key": null,
+        "expected_raw": "CLOSING STOCK",
+        "expected_normalized": null,
+        "predicted_raw": "CLOSING STOCK",
+        "match_mode": "ocr_header_presence",
+        "correct": true,
+        "error_type": null,
+        "silent_wrong": false,
+        "critical": false,
+        "priority": "high"
+      },
+      {
+        "field_id": "aact_op",
+        "field_type": "quantity",
+        "printed_header": "OPENING STOCK",
+        "product_key": "AACTARIL SOAP",
+        "expected_raw": "24",
+        "expected_normalized": 24.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "aact_rec",
+        "field_type": "quantity",
+        "printed_header": "RECEIVE QUANTITY",
+        "product_key": "AACTARIL SOAP",
+        "expected_raw": "144",
+        "expected_normalized": 144.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "aact_iss",
+        "field_type": "quantity",
+        "printed_header": "ISSUE QUANTITY",
+        "product_key": "AACTARIL SOAP",
+        "expected_raw": "67",
+        "expected_normalized": 67.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "aact_cl",
+        "field_type": "quantity",
+        "printed_header": "CLOSING STOCK",
+        "product_key": "AACTARIL SOAP",
+        "expected_raw": "101",
+        "expected_normalized": 101.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "talekt_syp_op",
+        "field_type": "quantity",
+        "printed_header": "OPENING STOCK",
+        "product_key": "TALEKT SYRUP",
+        "expected_raw": "31",
+        "expected_normalized": 31.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "talekt_syp_iss",
+        "field_type": "quantity",
+        "printed_header": "ISSUE QUANTITY",
+        "product_key": "TALEKT SYRUP",
+        "expected_raw": "3",
+        "expected_normalized": 3.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "talekt_syp_cl",
+        "field_type": "quantity",
+        "printed_header": "CLOSING STOCK",
+        "product_key": "TALEKT SYRUP",
+        "expected_raw": "28",
+        "expected_normalized": 28.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "talekt_tab_op",
+        "field_type": "quantity",
+        "printed_header": "OPENING STOCK",
+        "product_key": "TALEKT TAB",
+        "expected_raw": "36",
+        "expected_normalized": 36.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "talekt_tab_iss",
+        "field_type": "quantity",
+        "printed_header": "ISSUE QUANTITY",
+        "product_key": "TALEKT TAB",
+        "expected_raw": "7",
+        "expected_normalized": 7.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "talekt_tab_cl",
+        "field_type": "quantity",
+        "printed_header": "CLOSING STOCK",
+        "product_key": "TALEKT TAB",
+        "expected_raw": "29",
+        "expected_normalized": 29.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "tot_open",
+        "field_type": "quantity",
+        "printed_header": "OPENING STOCK",
+        "product_key": "TOTAL",
+        "expected_raw": "3174",
+        "expected_normalized": 3174.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "tot_rec",
+        "field_type": "quantity",
+        "printed_header": "RECEIVE QUANTITY",
+        "product_key": "TOTAL",
+        "expected_raw": "1014",
+        "expected_normalized": 1014.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "tot_iss",
+        "field_type": "quantity",
+        "printed_header": "ISSUE QUANTITY",
+        "product_key": "TOTAL",
+        "expected_raw": "1981",
+        "expected_normalized": 1981.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "tot_cl",
+        "field_type": "quantity",
+        "printed_header": "CLOSING STOCK",
+        "product_key": "TOTAL",
+        "expected_raw": "2207",
+        "expected_normalized": 2207.0,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": true,
+        "priority": "high"
+      },
+      {
+        "field_id": "tot_open_val",
+        "field_type": "price",
+        "printed_header": "OPENING VALUE",
+        "product_key": "TOTAL",
+        "expected_raw": "420409.45",
+        "expected_normalized": 420409.45,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": false,
+        "priority": "high"
+      },
+      {
+        "field_id": "tot_cl_val",
+        "field_type": "price",
+        "printed_header": "CLOSING VALUE",
+        "product_key": "TOTAL",
+        "expected_raw": "297782.21",
+        "expected_normalized": 297782.21,
+        "predicted_raw": null,
+        "match_mode": null,
+        "correct": false,
+        "error_type": "MISSING_PRODUCT",
+        "silent_wrong": false,
+        "critical": false,
+        "priority": "high"
+      }
+    ],
+    "stock_equation": {
+      "accepted": false,
+      "fail_count": 0,
+      "is_valid": false,
+      "healthy_rows": 0,
+      "failing_rows": 0,
+      "reasons": [
+        "empty_line_items",
+        "low_ocr_quality_score"
+      ]
+    },
+    "result": {
+      "stockist_name": null,
+      "company_name": null,
+      "line_item_count": 0,
+      "line_items": [],
+      "extraction_method": "di_ocr_html_override",
+      "di_ocr_override": true,
+      "phase1_validation": {
+        "accepted": false,
+        "status": "unresolved",
+        "reasons": [
+          "empty_line_items",
+          "low_ocr_quality_score"
+        ],
+        "checks": {
+          "schema": true,
+          "quality": false,
+          "stock_identity": true,
+          "rows": false,
+          "duplicates": true,
+          "cell_validation": true,
+          "column_mapping": true,
+          "ocr_verified": true
+        },
+        "quality_score": 0,
+        "parser": "di_ocr_html_override",
+        "failure_type": "EMPTY_OUTPUT",
+        "business_validation": {
+          "status": "unknown",
+          "reason": "identity_profile_unknown"
+        },
+        "source_agreement": null,
+        "source_evidence": true,
+        "cell_validation": {
+          "issues": [],
+          "column_report": {
+            "assignments": [],
+            "unresolved_headers": [],
+            "ambiguous_fields": [],
+            "issues": [
+              "unknown_layout_no_mapping"
+            ],
+            "layout_id": "unknown",
+            "mapping_confidence": 0.0,
+            "has_column_confusion": false
+          },
+          "accepted_critical_fields": 0,
+          "unresolved_critical_fields": 0,
+          "has_blocking_issues": false
+        }
+      },
+      "phase2": {
+        "status": "unresolved",
+        "failure_type": "EMPTY_OUTPUT",
+        "strategy": "structured_reread",
+        "attempts": 2,
+        "applied": false,
+        "accepted": false,
+        "recovery_log": [
+          {
+            "attempt": 1,
+            "accepted": false,
+            "parsed": false,
+            "returned": []
+          },
+          {
+            "attempt": 2,
+            "accepted": false,
+            "parsed": false,
+            "returned": []
+          }
+        ],
+        "original_values": [],
+        "manual_review": "UNRESOLVED"
+      }
+    }
+  },
+  "comparison": {
+    "field_accuracy_off": 0.15,
+    "field_accuracy_on": 0.15,
+    "field_accuracy_delta": 0.0,
+    "quantity_accuracy_off": 0.0,
+    "quantity_accuracy_on": 0.0,
+    "quantity_accuracy_delta": 0.0,
+    "product_identity_recall_off": 0.0,
+    "product_identity_recall_on": 0.0,
+    "missing_values_off": 17,
+    "missing_values_on": 17,
+    "missing_values_delta": 0
+  },
+  "healthy_row_check": {
+    "healthy_rows_checked": 0,
+    "healthy_rows_changed": 0,
+    "unchanged": true,
+    "changes": []
+  }
+}

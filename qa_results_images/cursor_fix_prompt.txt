@@ -1,0 +1,571 @@
+Fix the underlying extraction handlers for the shared problems below.
+Do not patch individual PDF filenames.
+Do not change column mapping for formats that passed.
+Do not invent values that are not printed. Keep 0 and null distinct.
+Do not treat footer, date, or header text as product rows.
+
+FORMAT: Product wise stock statement
+
+Affected PDFs:
+- 0000700206_2026_08_ZL_18_377_04092026042611.png
+- 0000700221_2026_08_ZL_18_377_04092026042846.png
+- 0000700223_2026_08_ZL_18_377_04092026043208.png
+- 0000700253_2026_08_ZL_18_377_04092026043422.png
+- 0000700308_2026_08_ZL_18_8175_03092026072320.jpg
+- 0000700345_2026_08_ZL_18_377_04092026043609.png
+- 0000700365_2026_08_ZL_18_377_04092026043750.png
+- 0000700374_2026_08_ZL_18_377_04092026044112.png
+- 0000700381_2026_08_ZL_18_377_04092026045438.png
+- 0000700400_2026_08_ZL_18_377_04092026044551.png
+
+Common issue:
+Products printed in the PDF were not extracted.
+
+Handler:
+product_wise_stock_statement_image
+
+Examples:
+0000700206_2026_08_ZL_18_377_04092026042611.png:
+CLARINA ANTI ACNE KIT [CM AKIT CLARINA ANTI-ACNE CREAM FLORASANTE CAP GASEX SYP /200ML GASEX SYP[GINGER-LEMON] GASEX SYRUP (ELAICHI FLA) — GASEX TAB
+Expected opening_qty = 35, sales_qty = 5, closing_qty = 30
+Actual: row not extracted
+
+0000700221_2026_08_ZL_18_377_04092026042846.png:
+CLARINA ANTI ACNE KIT [CM AKIT CLARINA ANTI-ACNE CREAM FLORASANTE CAP GASEX SYP /200ML GASEX SYP[GINGER-LEMON] GASEX SYRUP (ELAICHI FLA) — GASEX TAB
+Expected opening_qty = 35, sales_qty = 5, closing_qty = 30
+Actual: row not extracted
+
+0000700223_2026_08_ZL_18_377_04092026043208.png:
+CLARINA ANTI ACNE KIT [CM AKIT CLARINA ANTI-ACNE CREAM FLORASANTE CAP GASEX SYP /200ML GASEX SYP[GINGER-LEMON] GASEX SYRUP (ELAICHI FLA) — GASEX TAB
+Expected opening_qty = 35, sales_qty = 5, closing_qty = 30
+Actual: row not extracted
+
+Fix the common Product wise stock statement extraction issue.
+Do not patch individual PDF filenames.
+Fix the underlying handler/parser/OCR logic.
+
+FORMAT: Product wise stock statement
+
+Affected PDFs:
+- 0000700220_2026_08_ZL_18_8189_05092026022949.jpeg
+
+Common issue:
+Quantity columns are shifted (opening_qty, sales_qty).
+
+Handler:
+gemini_extraction_fallback
+
+Examples:
+0000700220_2026_08_ZL_18_8189_05092026022949.jpeg:
+KAPIKACHHU CAPS
+Expected opening_qty = 4
+Actual opening_qty = 41
+
+Fix the common Product wise stock statement extraction issue.
+Do not patch individual PDF filenames.
+Fix the underlying handler/parser/OCR logic.
+
+FORMAT: Product wise stock statement
+
+Affected PDFs:
+- 0000700259_2026_08_ZL_18_379_03092026174312.jpg
+- 0000700325_2026_08_ZL_18_379_03092026175634.jpg
+
+Common issue:
+Quantity columns are shifted (closing_qty, opening_qty).
+
+Handler:
+product_wise_stock_statement_image
+
+Examples:
+0000700259_2026_08_ZL_18_379_03092026174312.jpg:
+HIMCOLIN CREAM
+Expected closing_qty = 7
+Actual closing_qty = 17
+
+0000700325_2026_08_ZL_18_379_03092026175634.jpg:
+CYSTONE FORTE TAB
+Expected closing_qty = 4
+Actual closing_qty = 44
+
+Fix the common Product wise stock statement extraction issue.
+Do not patch individual PDF filenames.
+Fix the underlying handler/parser/OCR logic.
+
+FORMAT: Stock & Sales Statement
+
+Affected PDFs:
+- 0000700406_2026_08_ZL_10_384_05092026140711.jpg
+
+Common issue:
+Quantity columns are shifted (closing_qty).
+
+Handler:
+gemini_extraction_fallback
+
+Examples:
+0000700406_2026_08_ZL_10_384_05092026140711.jpg:
+23. PILEX FORTE TABLETS 2X30 S(IN1
+Expected closing_qty = 7
+Actual closing_qty = 77
+
+Fix the common Stock & Sales Statement extraction issue.
+Do not patch individual PDF filenames.
+Fix the underlying handler/parser/OCR logic.
+
+FORMAT: Stock and Sale Report
+
+Affected PDFs:
+- 0000700434_2026_08_ZL_10_386_05092026034503.jpg
+
+Common issue:
+Quantity columns are shifted (opening_qty, sales_qty).
+
+Handler:
+gemini_extraction_fallback
+
+Examples:
+0000700434_2026_08_ZL_10_386_05092026034503.jpg:
+Liv 52 SYRUP *
+Expected sales_qty = 7
+Actual sales_qty = 0
+
+Fix the common Stock and Sale Report extraction issue.
+Do not patch individual PDF filenames.
+Fix the underlying handler/parser/OCR logic.
+
+FORMAT: Stock and Sales Report For Month Of Aug 2026
+
+Affected PDFs:
+- 0000700481_2026_08_ZL_10_389_04092026110107.jpeg
+
+Common issue:
+Products printed in the PDF were not extracted.
+
+Handler:
+gemini_extraction_fallback
+
+Examples:
+0000700481_2026_08_ZL_10_389_04092026110107.jpeg:
+BONNISAN DROPS soe
+Expected opening_qty = 1766, sales_qty = null, closing_qty = null
+Actual: row not extracted
+
+Fix the common Stock and Sales Report For Month Of Aug 2026 extraction issue.
+Do not patch individual PDF filenames.
+Fix the underlying handler/parser/OCR logic.
+
+FORMAT: Stock & Sales Statement
+
+Affected PDFs:
+- 0000700609_2026_08_ZL_10_8251_07092026134940.jpg
+
+Common issue:
+Products printed in the PDF were not extracted.
+
+Handler:
+stock_valuation_stock_rate
+
+Examples:
+0000700609_2026_08_ZL_10_8251_07092026134940.jpg:
+CONFIDO TAB 605 14.
+Expected opening_qty = 2182.86, sales_qty = 18, closing_qty = 96
+Actual: row not extracted
+
+Fix the common Stock & Sales Statement extraction issue.
+Do not patch individual PDF filenames.
+Fix the underlying handler/parser/OCR logic.
+
+FORMAT: Sales & Stock Statement
+
+Affected PDFs:
+- 0000700835_2026_08_ZL_25_447_03092026105819.jpeg
+- 0000701851_2026_08_ZL_20_302_03092026134940.jpg
+
+Common issue:
+Sales and closing quantities are shifted.
+
+Handler:
+gemini_extraction_fallback
+
+Examples:
+0000700835_2026_08_ZL_25_447_03092026105819.jpeg:
+DIABECON DS TAB
+Expected closing_qty = 97
+Actual closing_qty = 37
+
+0000701851_2026_08_ZL_20_302_03092026134940.jpg:
+TRIPHALA TAB
+Expected sales_qty = 4
+Actual sales_qty = 0
+
+Fix the common Sales & Stock Statement extraction issue.
+Do not patch individual PDF filenames.
+Fix the underlying handler/parser/OCR logic.
+
+FORMAT: STOCK STATUS REPORT
+
+Affected PDFs:
+- 0000701012_2026_08_ZL_11_423_03092026183736.jpg
+
+Common issue:
+Products printed in the PDF were not extracted.
+
+Handler:
+gemini_extraction_fallback
+
+Examples:
+0000701012_2026_08_ZL_11_423_03092026183736.jpg:
+0090466 AACTARIL SOAP
+Expected opening_qty = null, sales_qty = 8, closing_qty = 88
+Actual: row not extracted
+
+Fix the common STOCK STATUS REPORT extraction issue.
+Do not patch individual PDF filenames.
+Fix the underlying handler/parser/OCR logic.
+
+FORMAT: Stock Statement
+
+Affected PDFs:
+- 0000701051_2026_08_ZL_11_423_03092026184131.jpg
+
+Common issue:
+Products printed in the PDF were not extracted.
+
+Handler:
+pharma_hub_jun_jul_photo
+
+Examples:
+0000701051_2026_08_ZL_11_423_03092026184131.jpg:
+FIDO TAB 60S 39 4872.27
+Expected opening_qty = null, sales_qty = 0, closing_qty = null
+Actual: row not extracted
+
+Fix the common Stock Statement extraction issue.
+Do not patch individual PDF filenames.
+Fix the underlying handler/parser/OCR logic.
+
+FORMAT: Sales & Stock Statement
+
+Affected PDFs:
+- 0000701078_2026_08_ZL_03_362_05092026080346.jpeg
+
+Common issue:
+Products printed in the PDF were not extracted.
+
+Handler:
+gemini_extraction_fallback
+
+Examples:
+0000701078_2026_08_ZL_03_362_05092026080346.jpeg:
+SOAP
+Expected opening_qty = 82, sales_qty = null, closing_qty = null
+Actual: row not extracted
+
+Fix the common Sales & Stock Statement extraction issue.
+Do not patch individual PDF filenames.
+Fix the underlying handler/parser/OCR logic.
+
+FORMAT: STOCK & SALES ANALYSIS
+
+Affected PDFs:
+- 0000701116_2026_08_ZL_03_362_05092026080412.jpeg
+- 0000702026_2026_08_ZL_12_431_05092026065439.jpg
+
+Common issue:
+Quantity columns are shifted (opening_qty).
+
+Handler:
+gemini_extraction_fallback
+
+Examples:
+0000701116_2026_08_ZL_03_362_05092026080412.jpeg:
+ABANA.TAB.
+Expected opening_qty = 69
+Actual opening_qty = 0
+
+0000702026_2026_08_ZL_12_431_05092026065439.jpg:
+TRIPHALA CAP.60'S
+Expected opening_qty = 2071
+Actual opening_qty = 45
+
+Fix the common STOCK & SALES ANALYSIS extraction issue.
+Do not patch individual PDF filenames.
+Fix the underlying handler/parser/OCR logic.
+
+FORMAT: Sales & Stock Statement
+
+Affected PDFs:
+- 0000701151_2026_08_ZL_14_361_03092026025650.jpg
+
+Common issue:
+Quantity columns are shifted (closing_qty, receipts_qty).
+
+Handler:
+gemini_extraction_fallback
+
+Examples:
+0000701151_2026_08_ZL_14_361_03092026025650.jpg:
+YASHTIMADHU CAPS
+Expected receipts_qty = 60134
+Actual receipts_qty = 60
+
+Fix the common Sales & Stock Statement extraction issue.
+Do not patch individual PDF filenames.
+Fix the underlying handler/parser/OCR logic.
+
+FORMAT: Sales & Stock Statement
+
+Affected PDFs:
+- 0000701273_2026_08_ZL_03_368_06092026130923.jpeg
+
+Common issue:
+Quantity columns are shifted (closing_qty).
+
+Handler:
+gemini_extraction_fallback
+
+Examples:
+0000701273_2026_08_ZL_03_368_06092026130923.jpeg:
+CLARINA CREAM
+Expected closing_qty = 4
+Actual closing_qty = 46
+
+Fix the common Sales & Stock Statement extraction issue.
+Do not patch individual PDF filenames.
+Fix the underlying handler/parser/OCR logic.
+
+FORMAT: STOCK & SALES ANALYSIS
+
+Affected PDFs:
+- 0000701275_2026_08_ZL_03_360_02092026152716.jpg
+
+Common issue:
+Quantity columns are shifted (sales_qty).
+
+Handler:
+gemini_extraction_fallback
+
+Examples:
+0000701275_2026_08_ZL_03_360_02092026152716.jpg:
+HAIR ZONE SOLUTION 60 ML Bot
+Expected sales_qty = 4
+Actual sales_qty = 0
+
+Fix the common STOCK & SALES ANALYSIS extraction issue.
+Do not patch individual PDF filenames.
+Fix the underlying handler/parser/OCR logic.
+
+FORMAT: STOCK & SALES ANALYSIS
+
+Affected PDFs:
+- 0000701406_2026_08_ZL_37_391_04092026155529.jpg
+- 0000701862_2026_08_ZL_20_302_03092026134909.jpg
+- 0000702405_2026_08_ZL_24_242_04092026105409.jpg
+
+Common issue:
+Sales and closing quantities are shifted.
+
+Handler:
+gemini_extraction_fallback
+
+Examples:
+0000701406_2026_08_ZL_37_391_04092026155529.jpg:
+PILEX FORTE OI
+Expected opening_qty = 49
+Actual opening_qty = 0
+
+0000701862_2026_08_ZL_20_302_03092026134909.jpg:
+QUSTA DN MILK M. 2006M =
+Expected closing_qty = 2503.1
+Actual closing_qty = 10
+
+0000702405_2026_08_ZL_24_242_04092026105409.jpg:
+HERBOLEX TAB 100's 56
+Expected opening_qty = 8126.05
+Actual opening_qty = 56
+
+Fix the common STOCK & SALES ANALYSIS extraction issue.
+Do not patch individual PDF filenames.
+Fix the underlying handler/parser/OCR logic.
+
+FORMAT: STOCK AND SALES STATEMENT
+
+Affected PDFs:
+- 0000701468_2026_08_ZL_37_8181_04092026181217.jpg
+
+Common issue:
+Quantity columns are shifted (closing_qty, receipts_qty).
+
+Handler:
+gemini_extraction_fallback
+
+Examples:
+0000701468_2026_08_ZL_37_8181_04092026181217.jpg:
+HIMCOCID SUEPEN
+Expected closing_qty = 7740.9
+Actual closing_qty = 0
+
+Fix the common STOCK AND SALES STATEMENT extraction issue.
+Do not patch individual PDF filenames.
+Fix the underlying handler/parser/OCR logic.
+
+FORMAT: Sales & Stock Statement
+
+Affected PDFs:
+- 0000701789_2026_08_ZL_20_557_05092026163636.jpg
+
+Common issue:
+Quantity columns are shifted (opening_qty, receipts_qty).
+
+Handler:
+zandra_two_column_order_form
+
+Examples:
+0000701789_2026_08_ZL_20_557_05092026163636.jpg:
+HIMCOLIN GEL 1*30GM
+Expected opening_qty = 54
+Actual opening_qty = 0
+
+Fix the common Sales & Stock Statement extraction issue.
+Do not patch individual PDF filenames.
+Fix the underlying handler/parser/OCR logic.
+
+FORMAT: Sales & Stock Statement
+
+Affected PDFs:
+- 0000701864_2026_08_ZL_20_5015_03092026091037.jpg
+
+Common issue:
+Quantity columns are shifted (opening_qty, sales_qty).
+
+Handler:
+gemini_extraction_fallback
+
+Examples:
+0000701864_2026_08_ZL_20_5015_03092026091037.jpg:
+DIABECON-DS TAB
+Expected opening_qty = 4
+Actual opening_qty = 44
+
+Fix the common Sales & Stock Statement extraction issue.
+Do not patch individual PDF filenames.
+Fix the underlying handler/parser/OCR logic.
+
+FORMAT: Stock & Sales Statement
+
+Affected PDFs:
+- 0000701904_2026_08_ZL_20_8227_05092026154848.jpg
+
+Common issue:
+Quantity columns are shifted (opening_qty).
+
+Handler:
+gemini_extraction_fallback
+
+Examples:
+0000701904_2026_08_ZL_20_8227_05092026154848.jpg:
+HAIR ZONE SOL 60m
+Expected opening_qty = 1538666
+Actual opening_qty = 15
+
+Fix the common Stock & Sales Statement extraction issue.
+Do not patch individual PDF filenames.
+Fix the underlying handler/parser/OCR logic.
+
+FORMAT: STOCK & SALES ANALYSIS
+
+Affected PDFs:
+- 0000702041_2026_08_ZL_12_431_05092026065326.jpg
+- 0000702067_2026_08_ZL_12_431_04092026170955.jpeg
+- 0000702148_2026_08_ZL_24_427_03092026121607.jpg
+- 0000702277_2026_08_ZL_24_237_08092026043323.jpg
+
+Common issue:
+Products printed in the PDF were not extracted.
+
+Handler:
+gemini_extraction_fallback
+
+Examples:
+0000702041_2026_08_ZL_12_431_05092026065326.jpg:
+Wiest <4 === 2
+Expected opening_qty = 8, sales_qty = 8, closing_qty = null
+Actual: row not extracted
+
+0000702067_2026_08_ZL_12_431_04092026170955.jpeg:
+AACTARIL SOAP gaa CR a. 30m \L-SEEMINOR ANTI-BLE — 6OML, SCOOCTARINA ACNEFACE WAS — CLARINA ANTI ACNE CR 30 GM DIABECON DS TAB. 60. So
+Expected opening_qty = null, sales_qty = null, closing_qty = 33
+Actual: row not extracted
+
+0000702148_2026_08_ZL_24_427_03092026121607.jpg:
+ARJUNA TAB BOX 5328 .22 1323, 70 151 0.00 81
+Expected opening_qty = null, sales_qty = 8683.39, closing_qty = 70
+Actual: row not extracted
+
+Fix the common STOCK & SALES ANALYSIS extraction issue.
+Do not patch individual PDF filenames.
+Fix the underlying handler/parser/OCR logic.
+
+FORMAT: Stock Statement
+
+Affected PDFs:
+- 0000702070_2026_08_ZL_12_8267_02092026070130.jpg
+
+Common issue:
+Quantity columns are shifted (opening_qty, sales_qty).
+
+Handler:
+pharma_hub_jun_jul_photo
+
+Examples:
+0000702070_2026_08_ZL_12_8267_02092026070130.jpg:
+7 DIABECON DS TAB 1*60 1°60
+Expected sales_qty = 122
+Actual sales_qty = 13
+
+Fix the common Stock Statement extraction issue.
+Do not patch individual PDF filenames.
+Fix the underlying handler/parser/OCR logic.
+
+FORMAT: STOCK & SALES ANALYSIS
+
+Affected PDFs:
+- 0000702097_2026_08_ZL_24_230_03092026040656.jpg
+
+Common issue:
+Quantity columns are shifted (closing_qty, opening_qty).
+
+Handler:
+pharma_hub_jun_jul_photo
+
+Examples:
+0000702097_2026_08_ZL_24_230_03092026040656.jpg:
+H STRESS RELIEF MASSAGE 0 200ML PCs 24
+Expected opening_qty = 2795.43
+Actual opening_qty = 24
+
+Fix the common STOCK & SALES ANALYSIS extraction issue.
+Do not patch individual PDF filenames.
+Fix the underlying handler/parser/OCR logic.
+
+FORMAT: STOCK & SALES ANALYSIS
+
+Affected PDFs:
+- 0000702128_2026_08_ZL_24_230_08092026073748.jpg
+
+Common issue:
+Quantity columns are shifted (closing_qty).
+
+Handler:
+gemini_extraction_fallback
+
+Examples:
+0000702128_2026_08_ZL_24_230_08092026073748.jpg:
+ABANA TABS 1x60 =
+Expected closing_qty = 2893.3
+Actual closing_qty = 41
+
+Fix the common STOCK & SALES ANALYSIS extraction issue.
+Do not patch individual PDF filenames.
+Fix the underlying handler/parser/OCR logic.

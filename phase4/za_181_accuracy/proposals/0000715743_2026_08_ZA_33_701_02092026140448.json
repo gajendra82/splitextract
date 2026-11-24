@@ -1,0 +1,2404 @@
+{
+  "document_id": "0000715743_2026_08_ZA_33_701_02092026140448.jpg",
+  "source_file": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000715743_2026_08_ZA_33_701_02092026140448.jpg",
+  "source_file_exists": true,
+  "verification_status": "unverified",
+  "annotation_origin": "AI_PROPOSED",
+  "ai_generated": true,
+  "human_verified": false,
+  "rows": [
+    {
+      "row_id": "r01",
+      "row_index": 1,
+      "product_name": {
+        "raw": "HIMALAYA- ZANDRA",
+        "normalized": "HIMALAYA- ZANDRA",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": []
+    },
+    {
+      "row_id": "r02",
+      "row_index": 2,
+      "product_name": {
+        "raw": "ARJUNA TAB, 60'S",
+        "normalized": "ARJUNA TAB, 60'S",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opg Qty",
+          "semantic": "opening_qty",
+          "raw": "60",
+          "normalized": 60.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Inw Qty",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Out Qty",
+          "semantic": "sales_qty",
+          "raw": "24",
+          "normalized": 24.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Clg Qty",
+          "semantic": "closing_qty",
+          "raw": "36",
+          "normalized": 36.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r03",
+      "row_index": 3,
+      "product_name": {
+        "raw": "BONNISAN LIQ, 100ML",
+        "normalized": "BONNISAN LIQ, 100ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opg Qty",
+          "semantic": "opening_qty",
+          "raw": "84",
+          "normalized": 84.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Inw Qty",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Out Qty",
+          "semantic": "sales_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 4,
+          "printed_header": "Clg Qty",
+          "semantic": "closing_qty",
+          "raw": "84",
+          "normalized": 84.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r04",
+      "row_index": 4,
+      "product_name": {
+        "raw": "BRESOL SYP, 200ML",
+        "normalized": "BRESOL SYP, 200ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opg Qty",
+          "semantic": "opening_qty",
+          "raw": "28",
+          "normalized": 28.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Inw Qty",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Out Qty",
+          "semantic": "sales_qty",
+          "raw": "10",
+          "normalized": 10.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Clg Qty",
+          "semantic": "closing_qty",
+          "raw": "18",
+          "normalized": 18.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r05",
+      "row_index": 5,
+      "product_name": {
+        "raw": "BRESOL TAB, 60S",
+        "normalized": "BRESOL TAB, 60S",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opg Qty",
+          "semantic": "opening_qty",
+          "raw": "50",
+          "normalized": 50.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Inw Qty",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Out Qty",
+          "semantic": "sales_qty",
+          "raw": "10",
+          "normalized": 10.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Clg Qty",
+          "semantic": "closing_qty",
+          "raw": "40",
+          "normalized": 40.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r06",
+      "row_index": 6,
+      "product_name": {
+        "raw": "BRESOL-NS, 10ML",
+        "normalized": "BRESOL-NS, 10ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opg Qty",
+          "semantic": "opening_qty",
+          "raw": "50",
+          "normalized": 50.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Inw Qty",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Out Qty",
+          "semantic": "sales_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 4,
+          "printed_header": "Clg Qty",
+          "semantic": "closing_qty",
+          "raw": "50",
+          "normalized": 50.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r07",
+      "row_index": 7,
+      "product_name": {
+        "raw": "CYSTONE TAB, 60S",
+        "normalized": "CYSTONE TAB, 60S",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opg Qty",
+          "semantic": "opening_qty",
+          "raw": "100",
+          "normalized": 100.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Inw Qty",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Out Qty",
+          "semantic": "sales_qty",
+          "raw": "2",
+          "normalized": 2.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Clg Qty",
+          "semantic": "closing_qty",
+          "raw": "98",
+          "normalized": 98.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r08",
+      "row_index": 8,
+      "product_name": {
+        "raw": "EVECARE CAP, 30S",
+        "normalized": "EVECARE CAP, 30S",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opg Qty",
+          "semantic": "opening_qty",
+          "raw": "100",
+          "normalized": 100.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Inw Qty",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Out Qty",
+          "semantic": "sales_qty",
+          "raw": "10",
+          "normalized": 10.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Clg Qty",
+          "semantic": "closing_qty",
+          "raw": "90",
+          "normalized": 90.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r09",
+      "row_index": 9,
+      "product_name": {
+        "raw": "EVECARE SYP, 200ML",
+        "normalized": "EVECARE SYP, 200ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opg Qty",
+          "semantic": "opening_qty",
+          "raw": "28",
+          "normalized": 28.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Inw Qty",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Out Qty",
+          "semantic": "sales_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 4,
+          "printed_header": "Clg Qty",
+          "semantic": "closing_qty",
+          "raw": "28",
+          "normalized": 28.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r10",
+      "row_index": 10,
+      "product_name": {
+        "raw": "EVECARE SYP, 400ML",
+        "normalized": "EVECARE SYP, 400ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opg Qty",
+          "semantic": "opening_qty",
+          "raw": "24",
+          "normalized": 24.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Inw Qty",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Out Qty",
+          "semantic": "sales_qty",
+          "raw": "10",
+          "normalized": 10.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Clg Qty",
+          "semantic": "closing_qty",
+          "raw": "14",
+          "normalized": 14.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r11",
+      "row_index": 11,
+      "product_name": {
+        "raw": "GERIFORTE TAB, 100S",
+        "normalized": "GERIFORTE TAB, 100S",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opg Qty",
+          "semantic": "opening_qty",
+          "raw": "49",
+          "normalized": 49.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Inw Qty",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Out Qty",
+          "semantic": "sales_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 4,
+          "printed_header": "Clg Qty",
+          "semantic": "closing_qty",
+          "raw": "49",
+          "normalized": 49.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r12",
+      "row_index": 12,
+      "product_name": {
+        "raw": "HIORA GA GEL, 15ML",
+        "normalized": "HIORA GA GEL, 15ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opg Qty",
+          "semantic": "opening_qty",
+          "raw": "50",
+          "normalized": 50.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Inw Qty",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Out Qty",
+          "semantic": "sales_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 4,
+          "printed_header": "Clg Qty",
+          "semantic": "closing_qty",
+          "raw": "50",
+          "normalized": 50.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r13",
+      "row_index": 13,
+      "product_name": {
+        "raw": "HIORA K M/W, 150ML",
+        "normalized": "HIORA K M/W, 150ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opg Qty",
+          "semantic": "opening_qty",
+          "raw": "25",
+          "normalized": 25.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Inw Qty",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Out Qty",
+          "semantic": "sales_qty",
+          "raw": "2",
+          "normalized": 2.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Clg Qty",
+          "semantic": "closing_qty",
+          "raw": "23",
+          "normalized": 23.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r14",
+      "row_index": 14,
+      "product_name": {
+        "raw": "HIORA SG GEL, 10GM",
+        "normalized": "HIORA SG GEL, 10GM",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opg Qty",
+          "semantic": "opening_qty",
+          "raw": "50",
+          "normalized": 50.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Inw Qty",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Out Qty",
+          "semantic": "sales_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 4,
+          "printed_header": "Clg Qty",
+          "semantic": "closing_qty",
+          "raw": "50",
+          "normalized": 50.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r15",
+      "row_index": 15,
+      "product_name": {
+        "raw": "KARELA TAB, 60'S",
+        "normalized": "KARELA TAB, 60'S",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opg Qty",
+          "semantic": "opening_qty",
+          "raw": "60",
+          "normalized": 60.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Inw Qty",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Out Qty",
+          "semantic": "sales_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 4,
+          "printed_header": "Clg Qty",
+          "semantic": "closing_qty",
+          "raw": "60",
+          "normalized": 60.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r16",
+      "row_index": 16,
+      "product_name": {
+        "raw": "LASUNA TAB, 60'S",
+        "normalized": "LASUNA TAB, 60'S",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opg Qty",
+          "semantic": "opening_qty",
+          "raw": "60",
+          "normalized": 60.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Inw Qty",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Out Qty",
+          "semantic": "sales_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 4,
+          "printed_header": "Clg Qty",
+          "semantic": "closing_qty",
+          "raw": "60",
+          "normalized": 60.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r17",
+      "row_index": 17,
+      "product_name": {
+        "raw": "LIV-52 DROP, 60ML",
+        "normalized": "LIV-52 DROP, 60ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opg Qty",
+          "semantic": "opening_qty",
+          "raw": "31",
+          "normalized": 31.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Inw Qty",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Out Qty",
+          "semantic": "sales_qty",
+          "raw": "18",
+          "normalized": 18.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Clg Qty",
+          "semantic": "closing_qty",
+          "raw": "13",
+          "normalized": 13.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r18",
+      "row_index": 18,
+      "product_name": {
+        "raw": "LIV-52 DS, 100ML",
+        "normalized": "LIV-52 DS, 100ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opg Qty",
+          "semantic": "opening_qty",
+          "raw": "31",
+          "normalized": 31.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Inw Qty",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Out Qty",
+          "semantic": "sales_qty",
+          "raw": "6",
+          "normalized": 6.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Clg Qty",
+          "semantic": "closing_qty",
+          "raw": "25",
+          "normalized": 25.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r19",
+      "row_index": 19,
+      "product_name": {
+        "raw": "LIV-52 DS, 200ML",
+        "normalized": "LIV-52 DS, 200ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opg Qty",
+          "semantic": "opening_qty",
+          "raw": "68",
+          "normalized": 68.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Inw Qty",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Out Qty",
+          "semantic": "sales_qty",
+          "raw": "3",
+          "normalized": 3.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Clg Qty",
+          "semantic": "closing_qty",
+          "raw": "65",
+          "normalized": 65.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r20",
+      "row_index": 20,
+      "product_name": {
+        "raw": "LIV-52 DS, 60S",
+        "normalized": "LIV-52 DS, 60S",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opg Qty",
+          "semantic": "opening_qty",
+          "raw": "94",
+          "normalized": 94.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Inw Qty",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Out Qty",
+          "semantic": "sales_qty",
+          "raw": "2",
+          "normalized": 2.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Clg Qty",
+          "semantic": "closing_qty",
+          "raw": "92",
+          "normalized": 92.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r21",
+      "row_index": 21,
+      "product_name": {
+        "raw": "LIV-52 DS-SF, 200ML",
+        "normalized": "LIV-52 DS-SF, 200ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opg Qty",
+          "semantic": "opening_qty",
+          "raw": "35",
+          "normalized": 35.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Inw Qty",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Out Qty",
+          "semantic": "sales_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 4,
+          "printed_header": "Clg Qty",
+          "semantic": "closing_qty",
+          "raw": "35",
+          "normalized": 35.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r22",
+      "row_index": 22,
+      "product_name": {
+        "raw": "LUKOL, 60S",
+        "normalized": "LUKOL, 60S",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opg Qty",
+          "semantic": "opening_qty",
+          "raw": "61",
+          "normalized": 61.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Inw Qty",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Out Qty",
+          "semantic": "sales_qty",
+          "raw": "5",
+          "normalized": 5.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Clg Qty",
+          "semantic": "closing_qty",
+          "raw": "56",
+          "normalized": 56.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r23",
+      "row_index": 23,
+      "product_name": {
+        "raw": "PLATENZA, 100ML",
+        "normalized": "PLATENZA, 100ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opg Qty",
+          "semantic": "opening_qty",
+          "raw": "56",
+          "normalized": 56.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Inw Qty",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Out Qty",
+          "semantic": "sales_qty",
+          "raw": "13",
+          "normalized": 13.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Clg Qty",
+          "semantic": "closing_qty",
+          "raw": "43",
+          "normalized": 43.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r24",
+      "row_index": 24,
+      "product_name": {
+        "raw": "PLATENZA TAB, 20\"S",
+        "normalized": "PLATENZA TAB, 20\"S",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opg Qty",
+          "semantic": "opening_qty",
+          "raw": "168",
+          "normalized": 168.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Inw Qty",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Out Qty",
+          "semantic": "sales_qty",
+          "raw": "19",
+          "normalized": 19.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Clg Qty",
+          "semantic": "closing_qty",
+          "raw": "149",
+          "normalized": 149.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r25",
+      "row_index": 25,
+      "product_name": {
+        "raw": "QUISTA KIDZ(C/F), 200GM",
+        "normalized": "QUISTA KIDZ(C/F), 200GM",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opg Qty",
+          "semantic": "opening_qty",
+          "raw": "36",
+          "normalized": 36.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Inw Qty",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Out Qty",
+          "semantic": "sales_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 4,
+          "printed_header": "Clg Qty",
+          "semantic": "closing_qty",
+          "raw": "36",
+          "normalized": 36.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r26",
+      "row_index": 26,
+      "product_name": {
+        "raw": "QUISTA KIDZ(V/F), 200GM",
+        "normalized": "QUISTA KIDZ(V/F), 200GM",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opg Qty",
+          "semantic": "opening_qty",
+          "raw": "24",
+          "normalized": 24.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Inw Qty",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Out Qty",
+          "semantic": "sales_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 4,
+          "printed_header": "Clg Qty",
+          "semantic": "closing_qty",
+          "raw": "24",
+          "normalized": 24.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r27",
+      "row_index": 27,
+      "product_name": {
+        "raw": "RENOSANTE CAP, 60'S",
+        "normalized": "RENOSANTE CAP, 60'S",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opg Qty",
+          "semantic": "opening_qty",
+          "raw": "25",
+          "normalized": 25.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Inw Qty",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Out Qty",
+          "semantic": "sales_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 4,
+          "printed_header": "Clg Qty",
+          "semantic": "closing_qty",
+          "raw": "25",
+          "normalized": 25.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r28",
+      "row_index": 28,
+      "product_name": {
+        "raw": "SEPTILIN SYP, 200ML",
+        "normalized": "SEPTILIN SYP, 200ML",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opg Qty",
+          "semantic": "opening_qty",
+          "raw": "28",
+          "normalized": 28.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Inw Qty",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Out Qty",
+          "semantic": "sales_qty",
+          "raw": "3",
+          "normalized": 3.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Clg Qty",
+          "semantic": "closing_qty",
+          "raw": "25",
+          "normalized": 25.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r29",
+      "row_index": 29,
+      "product_name": {
+        "raw": "SEPTILIN TAB, 60S",
+        "normalized": "SEPTILIN TAB, 60S",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opg Qty",
+          "semantic": "opening_qty",
+          "raw": "100",
+          "normalized": 100.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Inw Qty",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Out Qty",
+          "semantic": "sales_qty",
+          "raw": "15",
+          "normalized": 15.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Clg Qty",
+          "semantic": "closing_qty",
+          "raw": "85",
+          "normalized": 85.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r30",
+      "row_index": 30,
+      "product_name": {
+        "raw": "SPEMAN TAB, 60S",
+        "normalized": "SPEMAN TAB, 60S",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opg Qty",
+          "semantic": "opening_qty",
+          "raw": "27",
+          "normalized": 27.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Inw Qty",
+          "semantic": "receipt_qty",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        },
+        {
+          "position": 3,
+          "printed_header": "Out Qty",
+          "semantic": "sales_qty",
+          "raw": "10",
+          "normalized": 10.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Clg Qty",
+          "semantic": "closing_qty",
+          "raw": "17",
+          "normalized": 17.0,
+          "status": "uncertain"
+        }
+      ]
+    },
+    {
+      "row_id": "r31",
+      "row_index": 31,
+      "product_name": {
+        "raw": "Values: HIMALAYA- ZANDRA",
+        "normalized": "Values: HIMALAYA- ZANDRA",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Opg Qty",
+          "semantic": "opening_qty",
+          "raw": "2,63,841",
+          "normalized": 263841.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Inw Qty",
+          "semantic": "receipt_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Out Qty",
+          "semantic": "sales_qty",
+          "raw": "29,868",
+          "normalized": 29868.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Clg Qty",
+          "semantic": "closing_qty",
+          "raw": "2,37,075",
+          "normalized": 237075.0,
+          "status": "uncertain"
+        }
+      ]
+    }
+  ],
+  "headers": [],
+  "notes": [
+    "AI_PROPOSED from the original image only. Not verified. Named quantities are set only when a printed header was copied. Blank cells were not stored as zero."
+  ],
+  "failure": null,
+  "vision_model": "gemini-2.5-flash",
+  "vision_input": "original",
+  "ocr_used_as_label": false
+}

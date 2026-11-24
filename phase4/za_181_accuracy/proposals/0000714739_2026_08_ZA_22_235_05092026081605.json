@@ -1,0 +1,1599 @@
+{
+  "document_id": "0000714739_2026_08_ZA_22_235_05092026081605.png",
+  "source_file": "C:\\Users\\amnsa\\Downloads\\image dataset stock\\0000714739_2026_08_ZA_22_235_05092026081605.png",
+  "source_file_exists": true,
+  "verification_status": "unverified",
+  "annotation_origin": "AI_PROPOSED",
+  "ai_generated": true,
+  "human_verified": false,
+  "rows": [
+    {
+      "row_id": "r01",
+      "row_index": 1,
+      "product_name": {
+        "raw": "ARJUNA TABLETS 60 S INDIA",
+        "normalized": "ARJUNA TABLETS 60 S INDIA",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Year",
+          "semantic": "unknown",
+          "raw": "2026",
+          "normalized": 2026.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Month",
+          "semantic": "unknown",
+          "raw": "8",
+          "normalized": 8.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Div",
+          "semantic": "unknown",
+          "raw": "ZA",
+          "normalized": null,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Cust Code",
+          "semantic": "unknown",
+          "raw": "0000714739",
+          "normalized": 714739.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Customer Name",
+          "semantic": "unknown",
+          "raw": "SAI SARAVANA PHARMACEUTIVALS",
+          "normalized": null,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Mat Code",
+          "semantic": "unknown",
+          "raw": "7002259",
+          "normalized": 7002259.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "MRP",
+          "semantic": "unknown",
+          "raw": "325",
+          "normalized": 325.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "Secondary Rate",
+          "semantic": "not_quantity",
+          "raw": "220.63",
+          "normalized": 220.63,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "OB (Qty)",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 10,
+          "printed_header": "Primary (Qty)",
+          "semantic": "unknown",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 11,
+          "printed_header": "CB (Qty)",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 12,
+          "printed_header": "Secondary Qty total",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 13,
+          "printed_header": "Secondary Value",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 14,
+          "printed_header": "Msg",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r02",
+      "row_index": 2,
+      "product_name": {
+        "raw": "HARIDRA CAPSULES 60 s",
+        "normalized": "HARIDRA CAPSULES 60 s",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Year",
+          "semantic": "unknown",
+          "raw": "2026",
+          "normalized": 2026.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Month",
+          "semantic": "unknown",
+          "raw": "8",
+          "normalized": 8.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Div",
+          "semantic": "unknown",
+          "raw": "ZA",
+          "normalized": null,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Cust Code",
+          "semantic": "unknown",
+          "raw": "0000714739",
+          "normalized": 714739.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Customer Name",
+          "semantic": "unknown",
+          "raw": "SAI SARAVANA PHARMACEUTIVALS",
+          "normalized": null,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Mat Code",
+          "semantic": "unknown",
+          "raw": "7000179",
+          "normalized": 7000179.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "MRP",
+          "semantic": "unknown",
+          "raw": "108",
+          "normalized": 108.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "Secondary Rate",
+          "semantic": "not_quantity",
+          "raw": "73.31",
+          "normalized": 73.31,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "OB (Qty)",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 10,
+          "printed_header": "Primary (Qty)",
+          "semantic": "unknown",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 11,
+          "printed_header": "CB (Qty)",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 12,
+          "printed_header": "Secondary Qty total",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 13,
+          "printed_header": "Secondary Value",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 14,
+          "printed_header": "Msg",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r03",
+      "row_index": 3,
+      "product_name": {
+        "raw": "HARIDRA TABS 60 S INDIA",
+        "normalized": "HARIDRA TABS 60 S INDIA",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Year",
+          "semantic": "unknown",
+          "raw": "2026",
+          "normalized": 2026.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Month",
+          "semantic": "unknown",
+          "raw": "8",
+          "normalized": 8.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Div",
+          "semantic": "unknown",
+          "raw": "ZA",
+          "normalized": null,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Cust Code",
+          "semantic": "unknown",
+          "raw": "0000714739",
+          "normalized": 714739.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Customer Name",
+          "semantic": "unknown",
+          "raw": "SAI SARAVANA PHARMACEUTIVALS",
+          "normalized": null,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Mat Code",
+          "semantic": "unknown",
+          "raw": "7003668",
+          "normalized": 7003668.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "MRP",
+          "semantic": "unknown",
+          "raw": "300",
+          "normalized": 300.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "Secondary Rate",
+          "semantic": "not_quantity",
+          "raw": "203.66",
+          "normalized": 203.66,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "OB (Qty)",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 10,
+          "printed_header": "Primary (Qty)",
+          "semantic": "unknown",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 11,
+          "printed_header": "CB (Qty)",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 12,
+          "printed_header": "Secondary Qty total",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 13,
+          "printed_header": "Secondary Value",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 14,
+          "printed_header": "Msg",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r04",
+      "row_index": 4,
+      "product_name": {
+        "raw": "INTIMA 100ML INDIA",
+        "normalized": "INTIMA 100ML INDIA",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Year",
+          "semantic": "unknown",
+          "raw": "2026",
+          "normalized": 2026.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Month",
+          "semantic": "unknown",
+          "raw": "8",
+          "normalized": 8.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Div",
+          "semantic": "unknown",
+          "raw": "ZA",
+          "normalized": null,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Cust Code",
+          "semantic": "unknown",
+          "raw": "0000714739",
+          "normalized": 714739.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Customer Name",
+          "semantic": "unknown",
+          "raw": "SAI SARAVANA PHARMACEUTIVALS",
+          "normalized": null,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Mat Code",
+          "semantic": "unknown",
+          "raw": "7006108",
+          "normalized": 7006108.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "MRP",
+          "semantic": "unknown",
+          "raw": "170",
+          "normalized": 170.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "Secondary Rate",
+          "semantic": "not_quantity",
+          "raw": "102.7",
+          "normalized": 102.7,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "OB (Qty)",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 10,
+          "printed_header": "Primary (Qty)",
+          "semantic": "unknown",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 11,
+          "printed_header": "CB (Qty)",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 12,
+          "printed_header": "Secondary Qty total",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 13,
+          "printed_header": "Secondary Value",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 14,
+          "printed_header": "Msg",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r05",
+      "row_index": 5,
+      "product_name": {
+        "raw": "KARELA CAPS 120 s",
+        "normalized": "KARELA CAPS 120 s",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Year",
+          "semantic": "unknown",
+          "raw": "2026",
+          "normalized": 2026.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Month",
+          "semantic": "unknown",
+          "raw": "8",
+          "normalized": 8.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Div",
+          "semantic": "unknown",
+          "raw": "ZA",
+          "normalized": null,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Cust Code",
+          "semantic": "unknown",
+          "raw": "0000714739",
+          "normalized": 714739.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Customer Name",
+          "semantic": "unknown",
+          "raw": "SAI SARAVANA PHARMACEUTIVALS",
+          "normalized": null,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Mat Code",
+          "semantic": "unknown",
+          "raw": "7000947",
+          "normalized": 7000947.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "MRP",
+          "semantic": "unknown",
+          "raw": "170",
+          "normalized": 170.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "Secondary Rate",
+          "semantic": "not_quantity",
+          "raw": "115.4",
+          "normalized": 115.4,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "OB (Qty)",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 10,
+          "printed_header": "Primary (Qty)",
+          "semantic": "unknown",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 11,
+          "printed_header": "CB (Qty)",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 12,
+          "printed_header": "Secondary Qty total",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 13,
+          "printed_header": "Secondary Value",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 14,
+          "printed_header": "Msg",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r06",
+      "row_index": 6,
+      "product_name": {
+        "raw": "KARELA CAPSULES 60 s",
+        "normalized": "KARELA CAPSULES 60 s",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Year",
+          "semantic": "unknown",
+          "raw": "2026",
+          "normalized": 2026.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Month",
+          "semantic": "unknown",
+          "raw": "8",
+          "normalized": 8.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Div",
+          "semantic": "unknown",
+          "raw": "ZA",
+          "normalized": null,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Cust Code",
+          "semantic": "unknown",
+          "raw": "0000714739",
+          "normalized": 714739.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Customer Name",
+          "semantic": "unknown",
+          "raw": "SAI SARAVANA PHARMACEUTIVALS",
+          "normalized": null,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Mat Code",
+          "semantic": "unknown",
+          "raw": "7000227",
+          "normalized": 7000227.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "MRP",
+          "semantic": "unknown",
+          "raw": "110",
+          "normalized": 110.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "Secondary Rate",
+          "semantic": "not_quantity",
+          "raw": "74.67",
+          "normalized": 74.67,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "OB (Qty)",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 10,
+          "printed_header": "Primary (Qty)",
+          "semantic": "unknown",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 11,
+          "printed_header": "CB (Qty)",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 12,
+          "printed_header": "Secondary Qty total",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 13,
+          "printed_header": "Secondary Value",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 14,
+          "printed_header": "Msg",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r07",
+      "row_index": 7,
+      "product_name": {
+        "raw": "KARELA TABLETS 60 S INDIA",
+        "normalized": "KARELA TABLETS 60 S INDIA",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Year",
+          "semantic": "unknown",
+          "raw": "2026",
+          "normalized": 2026.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Month",
+          "semantic": "unknown",
+          "raw": "8",
+          "normalized": 8.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Div",
+          "semantic": "unknown",
+          "raw": "ZA",
+          "normalized": null,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Cust Code",
+          "semantic": "unknown",
+          "raw": "0000714739",
+          "normalized": 714739.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Customer Name",
+          "semantic": "unknown",
+          "raw": "SAI SARAVANA PHARMACEUTIVALS",
+          "normalized": null,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Mat Code",
+          "semantic": "unknown",
+          "raw": "7002270",
+          "normalized": 7002270.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "MRP",
+          "semantic": "unknown",
+          "raw": "300",
+          "normalized": 300.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "Secondary Rate",
+          "semantic": "not_quantity",
+          "raw": "203.66",
+          "normalized": 203.66,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "OB (Qty)",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 10,
+          "printed_header": "Primary (Qty)",
+          "semantic": "unknown",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 11,
+          "printed_header": "CB (Qty)",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 12,
+          "printed_header": "Secondary Qty total",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 13,
+          "printed_header": "Secondary Value",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 14,
+          "printed_header": "Msg",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r08",
+      "row_index": 8,
+      "product_name": {
+        "raw": "LASUNA CAPSULES 60 s",
+        "normalized": "LASUNA CAPSULES 60 s",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Year",
+          "semantic": "unknown",
+          "raw": "2026",
+          "normalized": 2026.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Month",
+          "semantic": "unknown",
+          "raw": "8",
+          "normalized": 8.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Div",
+          "semantic": "unknown",
+          "raw": "ZA",
+          "normalized": null,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Cust Code",
+          "semantic": "unknown",
+          "raw": "0000714739",
+          "normalized": 714739.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Customer Name",
+          "semantic": "unknown",
+          "raw": "SAI SARAVANA PHARMACEUTIVALS",
+          "normalized": null,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Mat Code",
+          "semantic": "unknown",
+          "raw": "7000247",
+          "normalized": 7000247.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "MRP",
+          "semantic": "unknown",
+          "raw": "110",
+          "normalized": 110.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "Secondary Rate",
+          "semantic": "not_quantity",
+          "raw": "74.67",
+          "normalized": 74.67,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "OB (Qty)",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 10,
+          "printed_header": "Primary (Qty)",
+          "semantic": "unknown",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 11,
+          "printed_header": "CB (Qty)",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 12,
+          "printed_header": "Secondary Qty total",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 13,
+          "printed_header": "Secondary Value",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 14,
+          "printed_header": "Msg",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r09",
+      "row_index": 9,
+      "product_name": {
+        "raw": "LASUNA TABLETS 60 S INDIA",
+        "normalized": "LASUNA TABLETS 60 S INDIA",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Year",
+          "semantic": "unknown",
+          "raw": "2026",
+          "normalized": 2026.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Month",
+          "semantic": "unknown",
+          "raw": "8",
+          "normalized": 8.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Div",
+          "semantic": "unknown",
+          "raw": "ZA",
+          "normalized": null,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Cust Code",
+          "semantic": "unknown",
+          "raw": "0000714739",
+          "normalized": 714739.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Customer Name",
+          "semantic": "unknown",
+          "raw": "SAI SARAVANA PHARMACEUTIVALS",
+          "normalized": null,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Mat Code",
+          "semantic": "unknown",
+          "raw": "7002262",
+          "normalized": 7002262.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "MRP",
+          "semantic": "unknown",
+          "raw": "325",
+          "normalized": 325.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "Secondary Rate",
+          "semantic": "not_quantity",
+          "raw": "220.63",
+          "normalized": 220.63,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "OB (Qty)",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 10,
+          "printed_header": "Primary (Qty)",
+          "semantic": "unknown",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 11,
+          "printed_header": "CB (Qty)",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 12,
+          "printed_header": "Secondary Qty total",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 13,
+          "printed_header": "Secondary Value",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 14,
+          "printed_header": "Msg",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    },
+    {
+      "row_id": "r10",
+      "row_index": 10,
+      "product_name": {
+        "raw": "MESHASHRINGI TABLETS 60 S INDIA",
+        "normalized": "MESHASHRINGI TABLETS 60 S INDIA",
+        "status": "ai_proposed"
+      },
+      "packing": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "opening_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "receipt_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "sales_scheme_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "stock_out_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "closing_qty": {
+        "raw": null,
+        "normalized": null,
+        "status": "absent"
+      },
+      "columns": [
+        {
+          "position": 1,
+          "printed_header": "Year",
+          "semantic": "unknown",
+          "raw": "2026",
+          "normalized": 2026.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 2,
+          "printed_header": "Month",
+          "semantic": "unknown",
+          "raw": "8",
+          "normalized": 8.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 3,
+          "printed_header": "Div",
+          "semantic": "unknown",
+          "raw": "ZA",
+          "normalized": null,
+          "status": "uncertain"
+        },
+        {
+          "position": 4,
+          "printed_header": "Cust Code",
+          "semantic": "unknown",
+          "raw": "0000714739",
+          "normalized": 714739.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 5,
+          "printed_header": "Customer Name",
+          "semantic": "unknown",
+          "raw": "SAI SARAVANA PHARMACEUTIVALS",
+          "normalized": null,
+          "status": "uncertain"
+        },
+        {
+          "position": 6,
+          "printed_header": "Mat Code",
+          "semantic": "unknown",
+          "raw": "7002271",
+          "normalized": 7002271.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 7,
+          "printed_header": "MRP",
+          "semantic": "unknown",
+          "raw": "300",
+          "normalized": 300.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 8,
+          "printed_header": "Secondary Rate",
+          "semantic": "not_quantity",
+          "raw": "203.66",
+          "normalized": 203.66,
+          "status": "uncertain"
+        },
+        {
+          "position": 9,
+          "printed_header": "OB (Qty)",
+          "semantic": "opening_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 10,
+          "printed_header": "Primary (Qty)",
+          "semantic": "unknown",
+          "raw": "0.00",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 11,
+          "printed_header": "CB (Qty)",
+          "semantic": "closing_qty",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 12,
+          "printed_header": "Secondary Qty total",
+          "semantic": "unknown",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 13,
+          "printed_header": "Secondary Value",
+          "semantic": "not_quantity",
+          "raw": "0",
+          "normalized": 0.0,
+          "status": "uncertain"
+        },
+        {
+          "position": 14,
+          "printed_header": "Msg",
+          "semantic": "unknown",
+          "raw": null,
+          "normalized": null,
+          "status": "blank"
+        }
+      ]
+    }
+  ],
+  "headers": [],
+  "notes": [
+    "AI_PROPOSED from the original image only. Not verified. Named quantities are set only when a printed header was copied. Blank cells were not stored as zero."
+  ],
+  "failure": null,
+  "vision_model": "gemini-2.5-flash",
+  "vision_input": "original",
+  "ocr_used_as_label": false
+}

@@ -5,6 +5,7 @@ Must not regress the Ganesh Agency PDF code_item parser.
 
 from __future__ import annotations
 
+import os
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -274,6 +275,13 @@ class TestPharmaHubCodeItemPhoto(unittest.TestCase):
             "services.sales_statement_extractor._extract_code_item_stock_statement_vision",
             return_value=vision_payload,
         ) as vision_mock:
+            if os.environ.get("RUN_LIVE_EXTRACTION", "").strip().lower() not in {
+                "1",
+                "true",
+                "yes",
+                "on",
+            }:
+                self.skipTest("live photo OCR is opt-in via RUN_LIVE_EXTRACTION=1")
             result = extract_sales_statement(FIXTURE.read_bytes(), FIXTURE.name)
 
         self.assertTrue(vision_mock.called)

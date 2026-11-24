@@ -1,0 +1,8 @@
+{
+  "document_id": "0000717464_2026_08_ZA_01_224_03092026021751.jpg",
+  "sha256": "42da8c3feac5e798077f5c5d9b9d93b450a5017cc746d5ee7e77bf1cf9d89894",
+  "engine": "paddleocr-vl-1.6",
+  "text": "07:45\nVIJJAYA KRISHNA MEDICAL ENTERPRISES\nDR.NO:12-18-16, MUPPIRISETTY VARI VEEDHI KOTHAPET, GUNTUR-522001\nSTOCK AND SALES STATEMENT FROM 01/Aug/2026 TO 31/Aug/2026\n<table><tr><td>Opening Value</td><td>:</td><td>19,919.91</td></tr><tr><td>Purchase</td><td>:</td><td></td></tr><tr><td>Sales Return</td><td>:</td><td></td></tr><tr><td>Purchase Return</td><td>:</td><td></td></tr><tr><td>Closing Value</td><td>:</td><td>19,919.91</td></tr></table>\n<table><tr><td>Item Name</td><td>Pack</td><td>Opening</td><td>Received</td><td>Issued</td><td>P Return</td><td>S Return</td><td>Closing</td></tr><tr><td colspan=\"8\">HI MALAYA ZENI TH 12</td></tr><tr><td>BRESOL SYRUP 200ML\\nBRESOL-NS NASAL SOL\\nHIMALAYA ZENITH 12\\nMENTAT SYP\\nPILEX FORTE TABS\\nPUNARNAVA TABLETS</td><td>200ML\\n10ML\\n200ml\\n2X30S\\n60S</td><td>54.00\\n67.00</td><td></td><td></td><td></td><td></td><td>0.00\\n0.00\\n0.00\\n0.00\\n54.00\\n67.00</td></tr><tr><td colspan=\"2\">GroupTotal :\\nTHE HIMALAYA DRUG COMPANY</td><td colspan=\"5\">19,919.91</td><td>19,919.91</td></tr><tr><td>THE HIMALAYA DRUG COMPANY</td><td></td><td></td><td></td><td></td><td></td><td></td><td>0.00</td></tr><tr><td colspan=\"8\">GroupTotal :</td></tr></table>\n\u4e09",
+  "text_len": 1186,
+  "status": "success"
+}

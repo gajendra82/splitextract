@@ -12,8 +12,11 @@ from services.sales_statement_extractor import (
     extract_sales_statement,
 )
 
-FIXTURE = Path(
-    "0000721532_2026_08_ZL_24_416_05092026081542 (1).docx"
+FIXTURE = (
+    Path(__file__).resolve().parents[1]
+    / "samples"
+    / "invoices"
+    / "0000721532_2026_08_ZL_24_416_05092026081542 (1).docx"
 )
 
 SAMPLE = """

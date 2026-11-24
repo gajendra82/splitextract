@@ -1,0 +1,382 @@
+{
+  "source_file": "0000700406_2026_08_ZL_10_384_05092026140711.jpg",
+  "source_format": "jpg",
+  "stockist_name": null,
+  "stockist_address": null,
+  "company_name": "ADARSH PHARMA BELGAUM",
+  "period_from": "2026-08-01",
+  "period_to": "2026-08-29",
+  "report_title": "HIMALAY ZEAL STOCK & SALES STATEMENT",
+  "line_items": [
+    {
+      "product_code": null,
+      "product_name": "AACTARIL SOAP 75G 75GM",
+      "packing": null,
+      "opening_qty": 40.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 3.0,
+      "sales_value": 256.6,
+      "closing_qty": 37.0,
+      "closing_value": 2874.16,
+      "extra": {
+        "expected_total": 40.0,
+        "expected_closing": 37.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "CLARINA ANTI ACNE CREAM 30GM",
+      "packing": null,
+      "opening_qty": 29.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 29.0,
+      "closing_value": 3397.06,
+      "extra": {
+        "expected_total": 29.0,
+        "expected_closing": 29.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "CLARINA ANTI ACNE FACE WASH GE 60ML",
+      "packing": null,
+      "opening_qty": 50.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 50.0,
+      "closing_value": 4958.0,
+      "extra": {
+        "expected_total": 50.0,
+        "expected_closing": 50.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "CONFIDO TAB 60'S",
+      "packing": null,
+      "opening_qty": 70.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 1.0,
+      "sales_value": 167.86,
+      "closing_qty": 69.0,
+      "closing_value": 10267.89,
+      "extra": {
+        "expected_total": 70.0,
+        "expected_closing": 69.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "DIABECON-DS 60'S",
+      "packing": null,
+      "opening_qty": 43.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 43.0,
+      "closing_value": 8277.07,
+      "extra": {
+        "expected_total": 43.0,
+        "expected_closing": 43.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "HARIDRA TAB 60",
+      "packing": null,
+      "opening_qty": 57.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 57.0,
+      "closing_value": 8193.75,
+      "extra": {
+        "expected_total": 57.0,
+        "expected_closing": 57.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "HERBOLAX TAB",
+      "packing": null,
+      "opening_qty": 39.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 39.0,
+      "closing_value": 5309.85,
+      "extra": {
+        "expected_total": 39.0,
+        "expected_closing": 39.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "HIMCOLIN GEL 30GM",
+      "packing": null,
+      "opening_qty": 43.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 1.0,
+      "sales_value": 231.62,
+      "closing_qty": 42.0,
+      "closing_value": 8623.86,
+      "extra": {
+        "expected_total": 43.0,
+        "expected_closing": 42.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "HIORA D TOOTHPASTE DIABETIC 100GM",
+      "packing": null,
+      "opening_qty": 45.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 45.0,
+      "closing_value": 4057.2,
+      "extra": {
+        "expected_total": 45.0,
+        "expected_closing": 45.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "HIORA DIABETICS TOOTHPASTE 100GM",
+      "packing": null,
+      "opening_qty": 48.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 48.0,
+      "closing_value": 4164.96,
+      "extra": {
+        "expected_total": 48.0,
+        "expected_closing": 48.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV 52 SYP 100ML",
+      "packing": null,
+      "opening_qty": 40.0,
+      "opening_value": null,
+      "receipts_qty": 70.0,
+      "receipts_value": null,
+      "sales_qty": 28.0,
+      "sales_value": 2980.88,
+      "closing_qty": 82.0,
+      "closing_value": 7753.1,
+      "extra": {
+        "expected_total": 110.0,
+        "expected_closing": 82.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV 52 SYP 200ML",
+      "packing": null,
+      "opening_qty": 48.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 6.0,
+      "sales_value": 1072.8,
+      "closing_qty": 42.0,
+      "closing_value": 6638.1,
+      "extra": {
+        "expected_total": 48.0,
+        "expected_closing": 42.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "LIV 52 TAB 100'S",
+      "packing": null,
+      "opening_qty": 32.0,
+      "opening_value": null,
+      "receipts_qty": 100.0,
+      "receipts_value": null,
+      "sales_qty": 21.0,
+      "sales_value": 3520.02,
+      "closing_qty": 111.0,
+      "closing_value": 16494.6,
+      "extra": {
+        "expected_total": 132.0,
+        "expected_closing": 111.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "OPHTHACARE EYE DROPS 10ML",
+      "packing": null,
+      "opening_qty": 63.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 63.0,
+      "closing_value": 4382.91,
+      "extra": {
+        "expected_total": 63.0,
+        "expected_closing": 63.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PILEX FORTE OINTMENT 30GM",
+      "packing": null,
+      "opening_qty": 25.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 23.0,
+      "sales_value": 2628.44,
+      "closing_qty": 2.0,
+      "closing_value": 202.62,
+      "extra": {
+        "expected_total": 25.0,
+        "expected_closing": 2.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PILEX FORTE TABLETS 2X30 S (IN 1",
+      "packing": null,
+      "opening_qty": 80.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 3.0,
+      "sales_value": 351.21,
+      "closing_qty": 77.0,
+      "closing_value": 8009.54,
+      "extra": {
+        "expected_total": 80.0,
+        "expected_closing": 77.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PILEX TAB 60'S",
+      "packing": null,
+      "opening_qty": 40.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 7.0,
+      "sales_value": 1247.96,
+      "closing_qty": 33.0,
+      "closing_value": 5883.24,
+      "extra": {
+        "expected_total": 40.0,
+        "expected_closing": 33.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PURIM TAB 60'S",
+      "packing": null,
+      "opening_qty": 49.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 1.0,
+      "sales_value": 125.0,
+      "closing_qty": 48.0,
+      "closing_value": 5318.88,
+      "extra": {
+        "expected_total": 49.0,
+        "expected_closing": 48.0,
+        "stock_identity_ok": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "TENTEX FORTE TABS 10'S",
+      "packing": null,
+      "opening_qty": 245.0,
+      "opening_value": null,
+      "receipts_qty": 0.0,
+      "receipts_value": null,
+      "sales_qty": 6.0,
+      "sales_value": 598.8,
+      "closing_qty": 239.0,
+      "closing_value": 21144.33,
+      "extra": {
+        "expected_total": 245.0,
+        "expected_closing": 239.0,
+        "stock_identity_ok": true
+      }
+    }
+  ],
+  "totals": {
+    "sales_value": 21478.5,
+    "closing_value": 135951.12,
+    "extra": {
+      "extraction_method": "gemini_extraction_fallback",
+      "line_sales_value_sum": 13181.19,
+      "line_closing_value_sum": 135951.12,
+      "sales_qty": 100.0,
+      "closing_qty": 1156.0,
+      "stock_identity_kind": "opening_receipts_sales_closing",
+      "stock_identity_formula": "closing=opening+receipts-sales",
+      "stock_identity_fail_count": 0,
+      "stock_validation": {
+        "opening_plus_purchase": 1256.0,
+        "expected_total": 1256.0,
+        "calculated_closing": 1156.0,
+        "extracted_closing": 1156.0,
+        "is_valid": true
+      },
+      "extraction_quality": {
+        "quality": "good",
+        "score": 100,
+        "reasons": [],
+        "threshold": 75.0
+      },
+      "gemini_fallback": "not_called"
+    }
+  }
+}

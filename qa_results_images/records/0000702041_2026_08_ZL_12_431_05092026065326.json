@@ -1,0 +1,232 @@
+{
+  "file": "0000702041_2026_08_ZL_12_431_05092026065326.jpg",
+  "path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000702041_2026_08_ZL_12_431_05092026065326.jpg",
+  "format": "STOCK & SALES ANALYSIS",
+  "api_method": "gemini_extraction_fallback",
+  "status": "FAIL",
+  "expected_rows": 26,
+  "extracted_rows": 0,
+  "matched_rows": 0,
+  "missing_rows": [
+    {
+      "product": "Wiest <4 === 2",
+      "opening_qty": 8,
+      "receipts_qty": null,
+      "sales_qty": 8,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "bike CTARRH\"SOAP A pane ae A “ ‘100",
+      "opening_qty": 11,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "ALTHEA. LOTION GI *:\"",
+      "opening_qty": 2,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "BLEMINOR CREAM © . CREAM es CLARINA \".* ~*",
+      "opening_qty": 74,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "CLARINA FACE WASH INFIDO ‘TAB = * (NEW) 3! Sof DraBEcon Heh OOUS: TAB~ DIABECON-DS TAB *=+",
+      "opening_qty": 3,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "Wey, pa rn SYP \\_BIAREX TAB *",
+      "opening_qty": 3,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "\"PIAREX",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": 3,
+      "kind": "missing_product"
+    },
+    {
+      "product": ". CAPA",
+      "opening_qty": 716,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "Ht fADIOD 2 pCH.SHALLAKI ,TAB »~",
+      "opening_qty": null,
+      "receipts_qty": 0,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "at H.SHIGRU TAB oe",
+      "opening_qty": null,
+      "receipts_qty": 0,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "H.TAGARA TAB +",
+      "opening_qty": null,
+      "receipts_qty": 0,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "; . cad H.TRIPHALA. + +: TAB",
+      "opening_qty": null,
+      "receipts_qty": 0,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "i H.VRIKSHAMALA TAB",
+      "opening_qty": 0,
+      "receipts_qty": 0,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "TAB’. + H.YASHTIMADHY ‘ ZONE ee HAIR SPRAY *",
+      "opening_qty": null,
+      "receipts_qty": 0,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "‘s HEMCOLIN ‘GEL °“+*",
+      "opening_qty": 35,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "fo Liv 52 HB TAB. >,",
+      "opening_qty": 3306,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "O2 Sxee Petty + LL) 527 SYP x Bee : : Sal V, .SQeVTAR ihe",
+      "opening_qty": 124,
+      "receipts_qty": 0,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "P* OPTHACARE EYE DROP ° +) *ORO-f° ORAL RINSE",
+      "opening_qty": 1,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "TAB Be ASITARD ot PELHX FORTE CREAM?)",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 6,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "os ; TAB. * BG",
+      "opening_qty": null,
+      "receipts_qty": 5,
+      "sales_qty": 21,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "PIGEX vi op} sPURIM TAB . Ma © a4 QUISTA ACTIV POW*",
+      "opening_qty": 5,
+      "receipts_qty": null,
+      "sales_qty": 7,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "© QUISTA DN ie",
+      "opening_qty": null,
+      "receipts_qty": 0,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "wp: 4 — TENTAX FORTE TAB: < 10\"",
+      "opening_qty": null,
+      "receipts_qty": 5,
+      "sales_qty": null,
+      "closing_qty": 2,
+      "kind": "missing_product"
+    },
+    {
+      "product": "GE TT a SST Wo\" Sahn RE . oe 7 TOTAL’ ie",
+      "opening_qty": null,
+      "receipts_qty": 2,
+      "sales_qty": 9,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "We fo Sone enon 4-4 ee -2",
+      "opening_qty": null,
+      "receipts_qty": null,
+      "sales_qty": 5,
+      "closing_qty": null,
+      "kind": "missing_product"
+    },
+    {
+      "product": "a ie 4 hat ‘ ; * vig ee ”",
+      "opening_qty": 0,
+      "receipts_qty": null,
+      "sales_qty": null,
+      "closing_qty": null,
+      "kind": "missing_product"
+    }
+  ],
+  "extra_rows": [],
+  "duplicates": [],
+  "mismatches": [],
+  "ocr_review": [],
+  "accounting": [],
+  "confidence": "medium",
+  "notes": [
+    "OCR used tesseract psm 6."
+  ],
+  "result_key": "0000702041_2026_08_ZL_12_431_05092026065326",
+  "unavailable_fields": {},
+  "formula_checked": "none"
+}

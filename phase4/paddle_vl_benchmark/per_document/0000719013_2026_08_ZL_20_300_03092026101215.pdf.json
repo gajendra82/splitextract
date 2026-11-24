@@ -1,0 +1,33 @@
+{
+  "document_id": "0000719013_2026_08_ZL_20_300_03092026101215.pdf",
+  "relative_path": "0000719013_2026_08_ZL_20_300_03092026101215.pdf",
+  "source_path": "C:\\Users\\amnsa\\Downloads\\ZL_2026_August\\0000719013_2026_08_ZL_20_300_03092026101215.pdf",
+  "file_type": "pdf",
+  "pdf_kind": "unknown",
+  "manifest_ocr_required": false,
+  "engine": "paddleocr-vl-1.6",
+  "model": "PaddleOCR-VL-1.6",
+  "model_version": "v1.6",
+  "started_at": "2026-10-08T12:49:45.285017+00:00",
+  "pages": [
+    {
+      "page": 1,
+      "status": "error",
+      "paddle_vl_status": "error",
+      "native_text": false,
+      "ocr_required": false,
+      "reason": "pdf_open_failed:FileDataError",
+      "error": "Failed to open file 'C:\\\\Users\\\\amnsa\\\\Downloads\\\\ZL_2026_August\\\\0000719013_2026_08_ZL_20_300_03092026101215.pdf' as type pdf.",
+      "engine": "paddleocr-vl-1.6"
+    }
+  ],
+  "status": "error",
+  "errors": [
+    {
+      "error_type": "pdf_open_failed:FileDataError",
+      "error_message": "Failed to open file 'C:\\\\Users\\\\amnsa\\\\Downloads\\\\ZL_2026_August\\\\0000719013_2026_08_ZL_20_300_03092026101215.pdf' as type pdf."
+    }
+  ],
+  "latency_ms": 31.26669999983278,
+  "finished_at": "2026-10-08T12:49:45.317141+00:00"
+}

@@ -53,7 +53,7 @@ def validate_sales_result(
     if not rows_ok:
         reasons.append("empty_line_items")
 
-    identity_ok, identity_reasons = _identity_ok(result, items)
+    identity_ok, identity_reasons, business = _identity_ok(result, items)
     reasons.extend(identity_reasons)
 
     duplicates_ok = True
@@ -87,13 +87,66 @@ def validate_sales_result(
         and "ambiguous_mapping" not in cell_reasons,
         "ocr_verified": "unverified_ocr_fallback" not in cell_reasons,
     }
+    source_agreement = _source_agreement(result)
+    if source_agreement is False:
+        reasons.append("source_discrepancy")
+        checks["cell_validation"] = False
+    from services.document_intelligence.verification import (
+        gemini_vision_lacks_source_evidence,
+    )
+
+    if gemini_vision_lacks_source_evidence(result):
+        reasons.append("gemini_vision_without_source_evidence")
+        checks["ocr_verified"] = False
     accepted = all(checks.values())
     decision = _decision(
-        accepted=accepted, reasons=_unique(reasons), checks=checks, quality=quality
+        accepted=accepted,
+        reasons=_unique(reasons),
+        checks=checks,
+        quality=quality,
+        business=business,
+        source_agreement=source_agreement,
+        source_evidence=_source_evidence(result),
     )
     if cell_report is not None:
         decision["cell_validation"] = cell_report
     return decision
+
+
+def _grounding_report(result: Dict[str, Any]) -> Dict[str, Any]:
+    totals = result.get("totals") if isinstance(result.get("totals"), dict) else {}
+    extra = totals.get("extra") if isinstance(totals.get("extra"), dict) else {}
+    grounding = extra.get("source_grounding")
+    return grounding if isinstance(grounding, dict) else {}
+
+
+def _source_agreement(result: Dict[str, Any]) -> Optional[bool]:
+    """True only after a source read with no discrepancies. None means unread."""
+    grounding = _grounding_report(result)
+    if not grounding:
+        return None
+    # An unread file is not agreement, even when the discrepancy count is 0.
+    if grounding.get("status") != "checked":
+        return None
+    try:
+        return int(grounding.get("discrepancy_count") or 0) == 0
+    except (TypeError, ValueError):
+        return False
+
+
+def _source_evidence(result: Dict[str, Any]) -> Optional[bool]:
+    from services.source_evidence import has_valid_source_evidence
+
+    # Gemini-as-OCR / SmartRouter table HTML is sufficient even when Paddle pages
+    # timed out empty.
+    if has_valid_source_evidence(extraction_result=result):
+        return True
+    grounding = _grounding_report(result)
+    if not grounding:
+        return None
+    if grounding.get("status") == "insufficient_source_evidence":
+        return False
+    return not bool(grounding.get("blocks_verification"))
 
 
 def extra_flag_failed(result: Dict[str, Any]) -> bool:
@@ -106,11 +159,14 @@ def extra_flag_failed(result: Dict[str, Any]) -> bool:
 
 
 def _identity_ok(result: Dict[str, Any], items: List[Dict[str, Any]]) -> tuple:
-    """Reject when existing stock-identity output shows a serious failure.
+    """Separate a known arithmetic failure from an unknown identity profile.
 
-    Named-parser protection inside evaluate_extraction_quality is ignored here.
+    An unknown profile is not treated as a failed equation. A known profile
+    whose stored result is invalid still fails stock identity.
     """
     reasons: List[str] = []
+    status = "not_recorded"
+    reason: Optional[str] = None
     limit = _identity_limit()
     for statement in _statements(result):
         extra = _extra(statement)
@@ -122,14 +178,30 @@ def _identity_ok(result: Dict[str, Any], items: List[Dict[str, Any]]) -> tuple:
         validation = extra.get("stock_validation")
         fail_count = extra.get("stock_identity_fail_count")
         if isinstance(validation, dict) and validation.get("is_valid") is False:
+            item_reason = str(validation.get("reason") or "stock_identity_failure")
+            if item_reason == "identity_profile_unknown":
+                if status != "inconsistent":
+                    status = "unknown"
+                    reason = item_reason
+                continue
+            status = "inconsistent"
+            reason = item_reason
             reasons.append("stock_identity_failure")
             continue
         fail_pct = _fail_percent(fail_count, statement_items)
         if fail_pct is not None and fail_pct > limit:
+            status = "inconsistent"
+            reason = "stock_identity_failure"
             reasons.append("stock_identity_failure")
+            continue
+        if isinstance(validation, dict) and validation.get("is_valid") is True:
+            if status == "not_recorded":
+                status = "consistent"
+                reason = None
+    business = {"status": status, "reason": reason}
     if "stock_identity_failure" in reasons:
-        return False, _unique(reasons)
-    return True, []
+        return False, _unique(reasons), business
+    return True, [], business
 
 
 def _fail_percent(fail_count: Any, items: List[Dict[str, Any]]) -> Optional[float]:
@@ -295,15 +367,30 @@ def _decision(
     reasons: List[str],
     checks: Dict[str, bool],
     quality: Dict[str, Any],
+    business: Optional[Dict[str, Any]] = None,
+    source_agreement: Optional[bool] = None,
+    source_evidence: Optional[bool] = None,
 ) -> Dict[str, Any]:
+    business_status = str((business or {}).get("status") or "not_recorded")
+    evidence_blocks = source_evidence is False
+    # accepted stays true for a source-matched unknown profile so recovery can
+    # keep the correction. status pass is only a fully checked result.
+    publishable = (
+        accepted
+        and business_status not in {"unknown", "inconsistent"}
+        and not evidence_blocks
+    )
     payload = {
         "accepted": accepted,
-        "status": "pass" if accepted else "unresolved",
+        "status": "pass" if publishable else "unresolved",
         "reasons": reasons,
         "checks": checks,
         "quality_score": quality.get("score"),
         "parser": quality.get("parser"),
         "failure_type": None,
+        "business_validation": business or {"status": "not_recorded", "reason": None},
+        "source_agreement": source_agreement,
+        "source_evidence": source_evidence,
     }
     if not accepted:
         from services.failure_taxonomy import classify_failure
