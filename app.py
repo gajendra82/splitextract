@@ -33901,6 +33901,7 @@ def _sales_line_to_invoice_item(line: Dict[str, Any]) -> Dict[str, Any]:
         "receipts_qty",
         "receipts_value",
         "sales_qty",
+        "sales_value",
         "closing_qty",
         "closing_value",
         "reorder_qty",
@@ -33923,6 +33924,12 @@ def _sales_line_to_invoice_item(line: Dict[str, Any]) -> Dict[str, Any]:
         "dump_stock",
         "near_expiry_qty",
         "near_expiry",
+        "near_expiry_detail_qty",
+        "near_expiry_qty_main",
+        "near_expiry_qty_discrepancy",
+        "near_expiry_batches",
+        "lms",
+        "lms_qty",
         "shortage_qty",
         "total_stock_qty",
         "total_qty",
@@ -33959,6 +33966,10 @@ def _sales_line_to_invoice_item(line: Dict[str, Any]) -> Dict[str, Any]:
             "dump_stock",
             "near_expiry_qty",
             "near_expiry",
+            "near_expiry_detail_qty",
+            "near_expiry_qty_main",
+            "lms",
+            "lms_qty",
             "shortage_qty",
             "total_stock_qty",
             "total_qty",
@@ -34134,6 +34145,14 @@ def _sales_statement_to_flat_invoices(
         statement_no = " ".join(part for part in (stockist, period) if part).strip()
     if not statement_no:
         statement_no = str(sales_result.get("source_file") or "STATEMENT_1")
+    totals = sales_result.get("totals") if isinstance(sales_result.get("totals"), dict) else {}
+    totals_extra = totals.get("extra") if isinstance(totals.get("extra"), dict) else {}
+    near_details = (
+        sales_result.get("near_expiry_details")
+        or totals.get("near_expiry_details")
+        or totals_extra.get("near_expiry_details")
+        or []
+    )
     return [{
         "invoice_no": statement_no[:80],
         "invoice_date": str(sales_result.get("period_to") or sales_result.get("period_from") or ""),
@@ -34148,6 +34167,11 @@ def _sales_statement_to_flat_invoices(
         "irn": "",
         "line_items": lines,
         "confidence": 1.0,
+        # Preserve LMS/NEAR-EXPIRY money + batch detail for StockHDZ-style PDFs.
+        "sales_value": totals.get("sales_value"),
+        "closing_value": totals.get("closing_value"),
+        "lms_value": totals.get("lms_value") or totals_extra.get("lms_value"),
+        "near_expiry_details": near_details,
     }]
 
 
@@ -34355,8 +34379,14 @@ def build_split_extract_response_from_sales_statement(
                 "company_name": sales_result.get("company_name"),
                 "period_from": sales_result.get("period_from"),
                 "period_to": sales_result.get("period_to"),
+                # Universal money: ISSUE/sales total → sales_value (never sales_qty).
                 "sales_value": totals.get("sales_value"),
                 "closing_value": totals.get("closing_value"),
+                "opening_value": totals_extra.get("opening_value"),
+                "receipts_value": totals_extra.get("receipts_value")
+                or totals_extra.get("purchase_value"),
+                "sales_value_source": totals_extra.get("sales_value_source")
+                or totals_extra.get("total_value_row_source"),
                 "extraction_method": totals_extra.get("extraction_method"),
                 "hospital_count": totals_extra.get("hospital_count"),
                 "invoice_count": totals_extra.get("invoice_count"),
@@ -37369,6 +37399,17 @@ async def extract_sales_statement_endpoint(file: UploadFile = File(...)):
             resolve_request_id(),
             float(SALES_EXTRACTION_MAX_EXECUTION_SECONDS),
         )
+        # Force LMS/NEAR-EXPIRY money+batch repair at the HTTP boundary so a
+        # stale parser result (sales_value=qty sum, missing batches) cannot
+        # leave this endpoint.
+        try:
+            from services.stock_native_resolver import apply_lms_nearexp_pdf_fallback
+
+            result = apply_lms_nearexp_pdf_fallback(result, file_bytes=file_bytes)
+        except Exception:
+            logger.exception(
+                "STOCK_LMS_NEAREXP_FALLBACK api_boundary failed file=%s", filename
+            )
         extra = ((result.get("totals") or {}).get("extra") or {})
         if extra.get("extraction_failed") and extra.get("photo_quality_rejected"):
             from services.stock_photo_quality import photo_quality_client_detail
@@ -38077,6 +38118,18 @@ async def extract_sales_statement_endpoint(
                 "source_file": filename,
             }
             raise HTTPException(status_code=422, detail=detail)
+        # Force LMS/NEAR-EXPIRY money+batch repair at the HTTP boundary.
+        try:
+            from services.stock_native_resolver import apply_lms_nearexp_pdf_fallback
+
+            sales_result = apply_lms_nearexp_pdf_fallback(
+                sales_result, file_bytes=file_bytes
+            )
+            extra = ((sales_result.get("totals") or {}).get("extra") or {})
+        except Exception:
+            logger.exception(
+                "STOCK_LMS_NEAREXP_FALLBACK api_boundary failed file=%s", filename
+            )
         # POD hospital GRN workbooks keep the invoice wrapper. Secondary-sales
         # reprocess requires the original statement contract (line_items,
         # stockist_name, period_from, statements).

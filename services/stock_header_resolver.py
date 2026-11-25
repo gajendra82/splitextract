@@ -336,6 +336,10 @@ ALIASES: Dict[str, List[str]] = {
         "opening balance",
         "qty opening",
         "stock opening",
+        # Saleable Stock Report: Opn (Q+F).
+        "opn",
+        "opn q f",
+        "opn (q+f)",
     ],
     "purchase": [
         "pur",
@@ -392,6 +396,13 @@ ALIASES: Dict[str, List[str]] = {
         "co receipt",
         "co. receipt",
         "company receipt",
+        # Saleable Stock Report: N.T.Pur Qnty (net purchase qty).
+        "n t pur",
+        "n t pur qnty",
+        "n t pur qty",
+        "nt pur",
+        "nt pur qnty",
+        "nt pur qty",
     ],
     "sales": [
         "sale",
@@ -433,6 +444,13 @@ ALIASES: Dict[str, List[str]] = {
         "sales bill qty",
         "sale bill qty",
         "salesbillqty",
+        # Saleable Stock Report: N.T.Sale Qnty (net sale qty).
+        "n t sale",
+        "n t sale qnty",
+        "n t sale qty",
+        "nt sale",
+        "nt sale qnty",
+        "nt sale qty",
         # Secondary Qty Total (customer secondary-sale grids).
         "secondary qty total",
         "secondary qty tota",
@@ -550,10 +568,13 @@ ALIASES: Dict[str, List[str]] = {
         "br qty",
         "brs.qty",
         # STOCK & SALES STATEMENT near-expiry band under STOCK.
+        # StockHDZ / Himalaya Zeal movement grids print a bare NEAREXP qty col.
         "nr exp",
         "nr. exp",
         "nr.exp",
         "nrexp",
+        "nearexp",
+        "nearexpiry",
         "near exp",
         "near expiry",
         # Breakage / expiry / purchase-return combined movement column.
@@ -666,6 +687,14 @@ ALIASES: Dict[str, List[str]] = {
         "sfree",
         "s free",
         "s.free",
+        # Saleable Stock Report: N.T.Pur / N.T.Sale FQnty (free qty bands).
+        "fqty",
+        "f qnty",
+        "f qty",
+        "n t pur fqty",
+        "n t sale fqty",
+        "nt pur fqty",
+        "nt sale fqty",
     ],
     "sample": [
         "sample",
@@ -958,15 +987,23 @@ _DIRECT_VALUE_FIELDS = {
     "salesbillamt": "sales_value",
     "op val": "opening_value",
     "opval": "opening_value",
+    # Op.Value normalises to "op value" (dot → space); must beat unglue Op|.Value.
+    "op value": "opening_value",
     "opv": "opening_value",
     "op amt": "opening_value",
     "opamt": "opening_value",
     "open value": "opening_value",
     "open. value": "opening_value",
     "opening value": "opening_value",
+    # Saleable Stock Report: Opn Amt(Q+F).
+    "opn amt": "opening_value",
+    "opn amt q f": "opening_value",
+    "opn amt(q+f)": "opening_value",
     "pur val": "purchase_value",
     "pur. value": "purchase_value",
     "pur.value": "purchase_value",
+    # Pur.Value → "pur value"; keep whole token (do not unglue Pur|.Value).
+    "pur value": "purchase_value",
     "purcv": "purchase_value",
     "purc val": "purchase_value",
     "purchase value": "purchase_value",
@@ -987,6 +1024,10 @@ _DIRECT_VALUE_FIELDS = {
     "rcv amt": "purchase_value",
     "rcvamt": "purchase_value",
     "rcv value": "purchase_value",
+    # Saleable Stock Report: N.T.Pur Amt.
+    "n t pur amt": "purchase_value",
+    "nt pur amt": "purchase_value",
+    "n t pur amount": "purchase_value",
     "salev": "sales_value",
     "sale v": "sales_value",
     "issue value": "sales_value",
@@ -996,12 +1037,19 @@ _DIRECT_VALUE_FIELDS = {
     "iss value": "sales_value",
     "issvalue": "sales_value",
     "iss val": "sales_value",
+    # Saleable Stock Report: N.T.Sale Amt.
+    "n t sale amt": "sales_value",
+    "nt sale amt": "sales_value",
+    "n t sale amount": "sales_value",
     "stockv": "closing_value",
     "stock v": "closing_value",
     "stk v": "closing_value",
     "bal amt": "closing_value",
     "balamt": "closing_value",
     "bal value": "closing_value",
+    # Saleable Stock Report: Bal Amt(Q+F).
+    "bal amt q f": "closing_value",
+    "bal amt(q+f)": "closing_value",
     # Semantic export headers: clos_value / closvalue beside clos_qty.
     "clos value": "closing_value",
     "closvalue": "closing_value",
@@ -1012,9 +1060,9 @@ _DIRECT_VALUE_FIELDS = {
 def _direct_value_field(norm: str) -> Optional[str]:
     if norm in _DIRECT_VALUE_FIELDS:
         return _DIRECT_VALUE_FIELDS[norm]
-    compact = re.sub(r"\s+", "", norm)
+    compact = re.sub(r"[^a-z0-9]+", "", norm)
     for key, field in _DIRECT_VALUE_FIELDS.items():
-        if re.sub(r"\s+", "", key) == compact:
+        if re.sub(r"[^a-z0-9]+", "", key) == compact:
             return field
     return None
 
@@ -2889,6 +2937,9 @@ def _peel_pack_from_qty_texts(texts: Sequence[str]) -> Tuple[List[str], List[str
         # Repeated unit labels (NOs / PCS) are not pack sizes.
         if _is_qty_unit_label(t):
             continue
+        # Batch type markers (I / II / BATCH) are never packing.
+        if _is_batch_type_marker_token(t):
+            continue
         if _unit_pack_token(t):
             packs.append(t)
         else:
@@ -2899,6 +2950,7 @@ def _peel_pack_from_qty_texts(texts: Sequence[str]) -> Tuple[List[str], List[str
             for t in texts
             if re.fullmatch(r"[A-Za-z]{2,6}", str(t or "").strip())
             and not _is_qty_unit_label(t)
+            and not _is_batch_type_marker_token(t)
         ]
         numeric = [
             t
@@ -2906,16 +2958,17 @@ def _peel_pack_from_qty_texts(texts: Sequence[str]) -> Tuple[List[str], List[str
             if re.fullmatch(r"-?\d+(?:[.,]\d+)?", str(t or "").strip().replace(",", ""))
         ]
         unit_only = [t for t in texts if _is_qty_unit_label(t)]
-        if letter and numeric and len(letter) + len(numeric) + len(unit_only) == len(
-            texts
-        ):
+        batch_only = [t for t in texts if _is_batch_type_marker_token(t)]
+        if letter and numeric and len(letter) + len(numeric) + len(unit_only) + len(
+            batch_only
+        ) == len(texts):
             return letter, numeric
         # Truncated pack fragments (10M from 10ML, 100M from 100ML) are not
         # unit tokens and not letter-only. Keep printed numbers; peel the rest.
         numbers: List[str] = []
         others: List[str] = []
         for t in texts:
-            if _is_qty_unit_label(t):
+            if _is_qty_unit_label(t) or _is_batch_type_marker_token(t):
                 continue
             if parse_number(t) is not None:
                 numbers.append(t)
@@ -2926,6 +2979,37 @@ def _peel_pack_from_qty_texts(texts: Sequence[str]) -> Tuple[List[str], List[str
         if numbers and not others:
             return [], numbers
     return packs, rest
+
+
+def _is_batch_type_marker_token(text: Any) -> bool:
+    """True for batch/type labels accidentally peeled from qty cells (not packs).
+
+    Includes bare type letters such as ``I`` / ``II`` next to a qty (batch type),
+    which must never become packing.
+    """
+    raw = str(text or "").strip()
+    if not raw:
+        return False
+    compact = re.sub(r"[^a-z0-9]+", "", raw.casefold())
+    if compact in {
+        "batch",
+        "batchno",
+        "batchnum",
+        "batchnumber",
+        "bno",
+        "type",
+        "sch",
+        "schedule",
+        "scheme",
+    }:
+        return True
+    # Single Roman / Latin batch-type markers (I, II, III, A, B…).
+    if re.fullmatch(r"(?i)[ivx]{1,4}", raw) or re.fullmatch(r"(?i)[a-z]", raw):
+        return True
+    return bool(
+        re.fullmatch(r"(?i)batch(?:\s*(?:no|num|number|#))?\.?", raw)
+        or re.fullmatch(r"(?i)b\.?\s*no\.?", raw)
+    )
 
 
 def _stash_peeled_pack(fields: Dict[str, Optional[str]], packs: Sequence[str]) -> None:
@@ -3861,13 +3945,12 @@ def resolve_columns(
             continue
 
         # M.EXP / Expiry / Expiry Date columns are dates, not expiry_damage qty.
-        # Qty damage columns use Exp/Dmg, Exp Dmg, Breakage, Shortage, etc.
+        # Bare NEAREXP beside OPENING/PURCHASE/LMS is a qty column (handled via
+        # expiry_damage aliases). BATCH/MRP detail tables use EXPIRY as a date.
         if compact_hdr in {
             "mexp",
             "mexpiry",
             "shexp",
-            "nearexpiry",
-            "nearexp",
             "expirydate",
             "expdate",
             "expdt",
@@ -3875,7 +3958,6 @@ def resolve_columns(
         } or norm in {
             "m exp",
             "sh exp",
-            "near expiry",
             "expiry",
             "expiry date",
             "exp date",

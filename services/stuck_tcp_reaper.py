@@ -14,6 +14,7 @@ import re
 import shutil
 import socket
 import subprocess
+import sys
 import threading
 import time
 from typing import Dict, List, Optional, Tuple
@@ -276,15 +277,23 @@ def _reaper_loop() -> None:
             logger.exception("stuck_tcp_reaper_tick_failed")
 
 
+def _reaper_runtime_supported() -> Tuple[bool, str]:
+    """Linux + ``ss`` only; Windows/macOS and missing ``ss`` skip cleanly."""
+    if not sys.platform.startswith("linux"):
+        return False, f"unsupported_platform:{sys.platform}"
+    if not shutil.which("ss"):
+        return False, "ss_unavailable"
+    return True, "ok"
+
+
 def start_stuck_tcp_reaper() -> None:
     global _reaper_thread
     if not STUCK_TCP_REAPER_ENABLED:
         logger.info("stuck_tcp_reaper_disabled")
         return
-    # ``ss`` is Linux iproute2. Windows (and any host without it) cannot reap
-    # Send-Q; skip the thread so the missing binary is not logged every tick.
-    if shutil.which("ss") is None:
-        logger.info("stuck_tcp_reaper_skipped reason=ss_not_on_path")
+    supported, reason = _reaper_runtime_supported()
+    if not supported:
+        logger.info("stuck_tcp_reaper_disabled reason=%s", reason)
         return
     if _reaper_thread is not None and _reaper_thread.is_alive():
         return

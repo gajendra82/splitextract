@@ -853,6 +853,11 @@ def _keep_delimited_movement_headers_enabled() -> bool:
 _DELIMITED_MOVEMENT_HEADER_RE = re.compile(
     r"(?i)^[A-Za-z]{2,10}[-_](?:QNTY|QNT|QTY|AMT|VAL|VALUE|Q)$"
 )
+# Op.Value / Pur.Qnt. / Sl.Value — already one printed header; never Op|.Value.
+_DOTTED_MOVEMENT_HEADER_RE = re.compile(
+    r"(?i)^(?:Op|Opn|Open|Pur|Purc|Purch|Sl|Sale|Sales|Cl|Cls|Clos|Bal|Rcv|Iss)"
+    r"\.?\s*(?:Qnt|Qty|Qnty|Value|Val|Amt)\.?$"
+)
 
 
 def _split_glued_header_text(text: str) -> Optional[Tuple[str, str]]:
@@ -869,6 +874,11 @@ def _split_glued_header_text(text: str) -> Optional[Tuple[str, str]]:
     ):
         logger.info(
             "STOCK_PDF_KEEP_DELIMITED_MOVEMENT_HEADERS token=%r", text.strip()
+        )
+        return None
+    if _DOTTED_MOVEMENT_HEADER_RE.fullmatch(text.strip()):
+        logger.info(
+            "STOCK_PDF_KEEP_DOTTED_MOVEMENT_HEADERS token=%r", text.strip()
         )
         return None
     best: Optional[Tuple[int, str, str]] = None
@@ -1967,6 +1977,49 @@ def _looks_like_legend_or_footer_header(cells: List[Dict[str, Any]]) -> bool:
     return False
 
 
+def _looks_like_near_expiry_detail_header(cells: List[Dict[str, Any]]) -> bool:
+    """BATCH/MRP/EXPIRY detail tables must not beat OPENING/PURCHASE/LMS grids."""
+    texts = [
+        str(c.get("text") or "").strip()
+        for c in (cells or [])
+        if isinstance(c, dict)
+    ]
+    texts = [t for t in texts if t]
+    if not texts:
+        return False
+    blob = " ".join(texts)
+    has_batch = bool(re.search(r"(?i)\bbatch\b", blob))
+    has_mrp_or_rate = bool(re.search(r"(?i)\bmrp\b|\bp\.?\s*rate\b|\brate\b", blob))
+    has_expiry = bool(re.search(r"(?i)\bexpir", blob))
+    has_opening = bool(re.search(r"(?i)\bopening\b|\bop\.?\s*qnt|\bop\.?\s*stk", blob))
+    has_lms = bool(re.search(r"(?i)\blms\b", blob))
+    if has_opening or has_lms:
+        return False
+    return has_batch and has_mrp_or_rate and has_expiry
+
+
+def _header_layout_bonus(cells: List[Dict[str, Any]]) -> int:
+    """Prefer movement qty grids (OPENING/PURCHASE/LMS/SALES) over batch detail."""
+    texts = [
+        str(c.get("text") or "").strip()
+        for c in (cells or [])
+        if isinstance(c, dict)
+    ]
+    blob = " ".join(texts)
+    bonus = 0
+    if re.search(r"(?i)\bopening\b", blob) and re.search(
+        r"(?i)\bpurchase\b|\bpur\b|\breceipt", blob
+    ):
+        bonus += 3
+    if re.search(r"(?i)\blms\b", blob):
+        bonus += 4
+    if re.search(r"(?i)\bsales?\b", blob) and re.search(r"(?i)\bclosing\b", blob):
+        bonus += 2
+    if _looks_like_near_expiry_detail_header(cells):
+        bonus -= 10
+    return bonus
+
+
 def _is_nameless_money_footer_tokens(tokens: List[Dict[str, Any]]) -> bool:
     """All-numeric strip with several .xx amounts — sheet money totals, not a lot.
 
@@ -2891,7 +2944,17 @@ def _extract_pdf_page_rows(
             continue
         if _looks_like_legend_or_footer_header(cells):
             continue
+        # Near-expiry BATCH/MRP/EXPIRY detail is a secondary table — never the
+        # primary header when an OPENING/PURCHASE/LMS movement grid is present.
+        if _looks_like_near_expiry_detail_header(cells):
+            logger.info(
+                "STOCK_PDF_SKIP_NEAR_EXPIRY_DETAIL_HEADER row=%s blob=%s",
+                i,
+                " ".join(str(c.get("text") or "") for c in cells)[:80],
+            )
+            continue
         hits, has_closing = _score_header_cells(cells)
+        hits = hits + _header_layout_bonus(cells)
         left_half = (
             _split_column_pages_enabled()
             and hits >= 3

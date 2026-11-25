@@ -86,8 +86,9 @@ _SHEET_TOTAL_NAME = re.compile(
     r"(?:^|\b)(?:grand\s+|sub\s+|division\s+|company\s+|page\s+|group\s+)?"
     r"total\s+value\b"
     r"|^\s*(?:amount|qty|quantity)\s+(?:grand\s+)?total\b"
-    r"|^\s*(?:division|company|group)\s+total\b"
-    r"|^\s*grand\s+total\b"
+    r"|^\s*(?:division|company|group|firm)\s+totals?"
+    r"(?:\s*(?:amt|amount|value))?\b"
+    r"|^\s*grand\s+totals?(?:\s*(?:amt|amount|value))?\b"
     r"|^\s*group\s*totals?\b"
     r"|total\s+for\b"
     r"|^\s*total\s*count\b"
@@ -889,6 +890,27 @@ def build_line_items_from_tokens(
         ):
             continue
         if re.match(r"^(TOTAL|GRAND|SUB\s*TOTAL)\b", str(name or ""), re.I):
+            continue
+        # Period banner "01/10/26 To :31/10/26" is never a product row.
+        if re.match(
+            r"(?i)^\d{1,2}[./-]\d{1,2}[./-]\d{2,4}\s+To\s*:?\s*"
+            r"\d{1,2}[./-]\d{1,2}[./-]\d{2,4}$",
+            str(name or "").strip(),
+        ):
+            logger.info(
+                "STOCK_PDF_WORDS_PERIOD_BANNER_SKIP name=%s", str(name or "")[:60]
+            )
+            pending_name = None
+            continue
+        # Footer chrome like "Qnt-> OB" / "Value->" after the table.
+        if re.match(
+            r"(?i)^(?:qnt|qty|value)\s*[-–>]+\s*(?:ob|op|cl|cb|pur|sl)?\b",
+            str(name or "").strip(),
+        ):
+            logger.info(
+                "STOCK_PDF_WORDS_FOOTER_ARROW_SKIP name=%s", str(name or "")[:60]
+            )
+            pending_name = None
             continue
         # Letterhead / address chrome on continuation pages is not a product.
         _name_for_skip = f"{name or ''} {item.get('product_code') or ''}"
@@ -2237,6 +2259,342 @@ def _lms_split_pack_from_name(name: str, pack: Optional[str]) -> Tuple[str, Opti
     return name, pack
 
 
+_NEAR_EXPIRY_DETAIL_ROW = re.compile(
+    r"(?P<name>[A-Za-z][A-Za-z0-9 .&'()/-]{1,}?)\s+"
+    r"(?P<pack>\d+\s*(?:['’]?S\.?|ML|GM\.?S?|GMS\.?|G|L|TAB|CAP)[A-Za-z0-9.'/-]*)\s+"
+    r"(?P<batch>#?[A-Za-z0-9-]+)\s+"
+    r"(?P<mrp>\d+\.\d{2})\s+"
+    r"(?P<rate>\d+\.\d{2})"
+    r"(?:\s+(?P<prate>\d+\.\d{2}))?\s+"
+    r"(?P<stock>\d+)\s+"
+    r"(?P<expiry>\d{1,2}/\d{1,2}/\d{2,4})\s*$",
+    re.I,
+)
+
+
+def _norm_product_key(name: Any) -> str:
+    raw = re.sub(r"[^a-z0-9]+", "", str(name or "").lower())
+    return raw
+
+
+def parse_near_expiry_detail_section(text: str) -> List[Dict[str, Any]]:
+    """Parse PRODUCT/PACK/BATCH/MRP/... rows under NEAR EXPIRY DETAIL."""
+    if not text or not re.search(r"(?i)near\s+expir", text):
+        return []
+    chunk = re.split(r"(?i)near\s+expir(?:y)?\s+detail[^\n]*", text, maxsplit=1)
+    if len(chunk) < 2:
+        return []
+    body = chunk[1]
+    details: List[Dict[str, Any]] = []
+    for raw in body.splitlines():
+        line = re.sub(r"\s+", " ", (raw or "").strip())
+        if not line:
+            continue
+        if re.search(r"(?i)^(product|pack|batch|mrp|rate|stock|expir)\b", line):
+            continue
+        if re.search(r"(?i)^page\b|prepared\s+by|computer\s+generated", line):
+            break
+        m = _NEAR_EXPIRY_DETAIL_ROW.match(line)
+        if not m:
+            continue
+        from services.stock_header_resolver import parse_number
+
+        stock_n = parse_number(m.group("stock"))
+        details.append(
+            {
+                "product_name": re.sub(r"\s+", " ", m.group("name")).strip(),
+                "packing": re.sub(r"\s+", " ", m.group("pack")).strip(),
+                "batch": m.group("batch").strip(),
+                "mrp": parse_number(m.group("mrp")),
+                "rate": parse_number(m.group("rate")),
+                "p_rate": parse_number(m.group("prate")) if m.group("prate") else None,
+                "stock_qty": float(stock_n) if stock_n is not None else None,
+                "expiry_date": m.group("expiry").strip(),
+            }
+        )
+    return details
+
+
+def _near_expiry_detail_record(row: Dict[str, Any]) -> Dict[str, Any]:
+    """Normalize a near-expiry batch row for JSON consumers."""
+    batch = row.get("batch") or row.get("batch_no")
+    return {
+        "product_name": row.get("product_name"),
+        "packing": row.get("packing"),
+        "batch_no": batch,
+        "batch": batch,
+        "mrp": row.get("mrp"),
+        "rate": row.get("rate"),
+        "p_rate": row.get("p_rate"),
+        "stock_qty": row.get("stock_qty"),
+        "expiry_date": row.get("expiry_date"),
+    }
+
+
+def annotate_near_expiry_discrepancies(
+    items: List[Dict[str, Any]], details: List[Dict[str, Any]]
+) -> None:
+    """Attach batch details and promote NEAREXP when the detail table has stock.
+
+    Main-grid NEAREXP can print '-' while NEAR EXPIRY DETAIL still lists batches
+    (e.g. Pilex Forte Tab main 0, detail stock 3). Prefer the detail sum on the
+    line item and keep the printed main qty under near_expiry_qty_main.
+    """
+    if not items or not details:
+        return
+    from collections import defaultdict
+
+    sums: Dict[str, float] = defaultdict(float)
+    batches: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+    for row in details:
+        if not isinstance(row, dict):
+            continue
+        key = _norm_product_key(row.get("product_name"))
+        qty = row.get("stock_qty")
+        if key and qty is not None:
+            sums[key] += float(qty)
+        if key:
+            batches[key].append(_near_expiry_detail_record(row))
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        extra = item.setdefault("extra", {})
+        if not isinstance(extra, dict):
+            continue
+        key = _norm_product_key(item.get("product_name"))
+        if not key:
+            continue
+        detail_sum = None
+        matched_key = None
+        if key in sums:
+            detail_sum = sums[key]
+            matched_key = key
+        else:
+            for dkey, dval in sums.items():
+                if key in dkey or dkey in key:
+                    detail_sum = dval
+                    matched_key = dkey
+                    break
+        if matched_key and batches.get(matched_key):
+            extra["near_expiry_batches"] = list(batches[matched_key])
+        if detail_sum is None:
+            continue
+        extra["near_expiry_detail_qty"] = detail_sum
+        main = extra.get("near_expiry_qty")
+        try:
+            main_f = float(main) if main is not None else None
+        except (TypeError, ValueError):
+            main_f = None
+        # Detail table is authoritative when main is blank/zero or disagrees.
+        if main_f is None or abs(main_f) < 0.001:
+            if main_f is not None:
+                extra["near_expiry_qty_main"] = main_f
+            extra["near_expiry_qty"] = detail_sum
+            if main_f is not None and abs(detail_sum - main_f) > 0.01:
+                extra["near_expiry_qty_discrepancy"] = True
+            logger.info(
+                "STOCK_NEAR_EXPIRY_FROM_DETAIL product=%s main=%s detail=%s",
+                item.get("product_name"),
+                main_f,
+                detail_sum,
+            )
+        elif abs(detail_sum - main_f) > 0.01:
+            extra["near_expiry_qty_discrepancy"] = True
+            extra["near_expiry_qty_main"] = main_f
+            # Keep printed main qty, but expose detail sum for reconciliation.
+            logger.info(
+                "STOCK_NEAR_EXPIRY_DISCREPANCY product=%s main=%s detail=%s",
+                item.get("product_name"),
+                main_f,
+                detail_sum,
+            )
+
+
+def _money_footer_from_text_before_near_expiry(text: str) -> Dict[str, Optional[float]]:
+    """LMS / Sales / Closing money totals printed just above NEAR EXPIRY DETAIL."""
+    out: Dict[str, Optional[float]] = {
+        "lms_value": None,
+        "sales_value": None,
+        "closing_value": None,
+    }
+    if not text:
+        return out
+    head = re.split(r"(?i)near\s+expir(?:y)?\s+detail", text, maxsplit=1)[0]
+    from services.stock_header_resolver import parse_number
+
+    amounts: List[float] = []
+    for ln in head.splitlines():
+        raw = (ln or "").strip().replace(",", "")
+        if re.fullmatch(r"-?\d+\.\d{2}", raw):
+            number = parse_number(raw)
+            if number is not None and abs(number) >= 1.0:
+                amounts.append(float(number))
+    if len(amounts) >= 3:
+        out["lms_value"] = amounts[-3]
+        out["sales_value"] = amounts[-2]
+        out["closing_value"] = amounts[-1]
+    elif len(amounts) == 2:
+        out["sales_value"] = amounts[-2]
+        out["closing_value"] = amounts[-1]
+    elif len(amounts) == 1:
+        out["closing_value"] = amounts[-1]
+    return out
+
+
+def _is_stacked_lms_nearexp_layout(text: str) -> bool:
+    """STOCK STATEMENT with OPENING/PURCHASE/LMS/SALES/CLOSING(/NEAREXP)."""
+    if not text:
+        return False
+    head = "\n".join(ln for ln in text.splitlines()[:40] if ln.strip())
+    if not re.search(r"(?i)\bopening\b", head):
+        return False
+    if not re.search(r"(?i)\bpurchase\b", head):
+        return False
+    if not re.search(r"(?i)\blms\b", head):
+        return False
+    if not re.search(r"(?i)\bsales\b", head):
+        return False
+    if not re.search(r"(?i)\bclosing\b", head):
+        return False
+    return True
+
+
+def _stacked_lms_qty_token(text: str) -> Optional[float]:
+    raw = (text or "").strip().replace(",", "")
+    if raw in _DASH_CELL or raw == "":
+        return 0.0
+    if not re.fullmatch(r"-?\d+(?:\.\d+)?", raw):
+        return None
+    from services.stock_header_resolver import parse_number
+
+    return parse_number(raw)
+
+
+def items_from_stacked_lms_nearexp_text(text: str) -> Optional[Dict[str, Any]]:
+    """Fallback when words miss columns: stacked name/pack + 5–6 qty lines.
+
+    Handles StockHDZ-style Himalaya Zeal STOCK STATEMENT pages where each
+    field prints on its own line under OPENING/PURCHASE/LMS/SALES/CLOSING/NEAREXP.
+    """
+    if not _is_stacked_lms_nearexp_layout(text):
+        return None
+    from services.stock_header_resolver import parse_number
+
+    body = re.split(r"(?i)near\s+expir(?:y)?\s+detail", text, maxsplit=1)[0]
+    lines = [ln.strip() for ln in body.splitlines() if ln.strip()]
+    # Skip letterhead until PRODUCT header.
+    start = 0
+    for i, ln in enumerate(lines):
+        if re.fullmatch(r"(?i)product", ln) or re.search(
+            r"(?i)^product\b.*\bopening\b", ln
+        ):
+            start = i + 1
+            # Consume following header tokens (OPENING, PURCHASE, LMS, ...).
+            while start < len(lines) and re.fullmatch(
+                r"(?i)product|opening|purchase|lms|sales|closing|nearexp|"
+                r"near\s*exp(?:iry)?",
+                lines[start],
+            ):
+                start += 1
+            break
+    items: List[Dict[str, Any]] = []
+    i = start
+    pack_re = re.compile(
+        r"(?i)^\d[\w.'/-]*[A-Za-z][\w.'/-]*$|"
+        r"^\d+\s*(?:['’]?S\.?|ML|GM|GMS?|G|L)\b|"
+        # Bare pack counts like "100" / "60" (not a movement qty line).
+        r"^\d{1,4}$"
+    )
+    while i < len(lines):
+        ln = lines[i]
+        if re.fullmatch(r"-?\d+\.\d{2}", ln.replace(",", "")):
+            break
+        if not re.search(r"[A-Za-z]{3,}", ln):
+            i += 1
+            continue
+        if re.search(r"(?i)^(product|opening|purchase|lms|sales|closing)\b", ln):
+            i += 1
+            continue
+        name = re.sub(r"\s+", " ", ln).strip()
+        pack = None
+        j = i + 1
+        if j < len(lines) and pack_re.match(lines[j]):
+            # Bare digits are packing only when enough qty lines follow.
+            if re.fullmatch(r"\d{1,4}", lines[j]):
+                look = []
+                k = j + 1
+                while k < len(lines) and len(look) < 6:
+                    q = _stacked_lms_qty_token(lines[k])
+                    if q is None:
+                        break
+                    look.append(q)
+                    k += 1
+                if len(look) >= 5:
+                    pack = lines[j]
+                    j += 1
+            else:
+                pack = lines[j]
+                j += 1
+        qtys: List[float] = []
+        while j < len(lines) and len(qtys) < 6:
+            q = _stacked_lms_qty_token(lines[j])
+            if q is None:
+                break
+            qtys.append(float(q))
+            j += 1
+        # opening, purchase, lms, sales, closing [, nearexp]
+        if len(qtys) < 5:
+            i += 1
+            continue
+        if _is_total_row_name(name):
+            i = j
+            continue
+        item = _empty_line_item()
+        item["product_name"] = name
+        item["packing"] = pack
+        item["opening_qty"] = qtys[0]
+        item["receipts_qty"] = qtys[1]
+        item["lms"] = qtys[2]
+        item["extra"]["lms"] = qtys[2]
+        item["extra"]["lms_qty"] = qtys[2]
+        item["sales_qty"] = qtys[3]
+        item["closing_qty"] = qtys[4]
+        item["sales_value"] = None
+        item["closing_value"] = None
+        if len(qtys) >= 6:
+            item["extra"]["near_expiry_qty"] = qtys[5]
+            item["extra"]["exp_damage"] = qtys[5]
+        items.append(item)
+        i = j
+    if len(items) < 3:
+        return None
+    money = _money_footer_from_text_before_near_expiry(text)
+    logger.info(
+        "STOCK_PDF_STACKED_LMS_NEAREXP items=%s lms_value=%s sales_value=%s "
+        "closing_value=%s",
+        len(items),
+        money.get("lms_value"),
+        money.get("sales_value"),
+        money.get("closing_value"),
+    )
+    out: Dict[str, Any] = {
+        "line_items": items,
+        "sales_value": money.get("sales_value"),
+        "closing_value": money.get("closing_value"),
+        "lms_value": money.get("lms_value"),
+        "letterhead_is_stockist_only": True,
+        "qty_only": True,
+    }
+    if money.get("lms_value") is not None:
+        out["footer_totals"] = {
+            "lms_value": money.get("lms_value"),
+            "sales_value": money.get("sales_value"),
+            "closing_value": money.get("closing_value"),
+            "last_month_sales_value": money.get("lms_value"),
+        }
+    return out
+
+
 def items_from_lms_qty_rows(
     header_cells: List[Dict[str, Any]],
     data_rows: List[List[Dict[str, Any]]],
@@ -2245,7 +2603,8 @@ def items_from_lms_qty_rows(
 
     LMS is last-month sales and stays out of sales_qty. The unlabeled pack
     sits left of the opening header. A row of money with no product name is
-    the statement total.
+    the statement total. Qty-only layouts must not invent sales_value /
+    closing_value from quantities — leave those null when no money column.
     """
     from services.stock_header_resolver import parse_number
     from services.stock_native_tables import resolver_ready
@@ -2279,7 +2638,14 @@ def items_from_lms_qty_rows(
     def _nearest(x: float) -> Dict[str, Any]:
         return min(bands, key=lambda b: abs(float(b["x_center"]) - x))
 
-    qty_canons = {"opening_qty", "purchase_qty", "sales_qty", "closing_qty", "lms"}
+    qty_canons = {
+        "opening_qty",
+        "purchase_qty",
+        "sales_qty",
+        "closing_qty",
+        "lms",
+        "expiry_damage_qty",
+    }
     value_canons = {
         "sales_value",
         "closing_value",
@@ -2296,24 +2662,49 @@ def items_from_lms_qty_rows(
     items: List[Dict[str, Any]] = []
     sales_total: Optional[float] = None
     closing_total: Optional[float] = None
+    lms_total: Optional[float] = None
+    # Printed footer money band before NEAR EXPIRY DETAIL:
+    #   LMS value / Sales value / Closing value  (e.g. 250325.29 x2 + 179233.42)
+    money_footer: List[float] = []
+    past_money_footer = False
     for raw in data_rows or []:
         tokens = [t for t in (raw or []) if str(t.get("text") or "").strip()]
         if not tokens:
             continue
         texts = [str(t.get("text") or "").strip() for t in tokens]
+        blob = " ".join(texts)
+        # BATCH/MRP near-expiry detail shares the page — never treat as products.
+        if re.search(r"(?i)near\s*expir", blob):
+            break
+        if re.search(r"(?i)^\s*batch\b|\bmrp\b|\bp\.?\s*rate\b", blob) and not re.search(
+            r"(?i)\bopening\b|\blms\b", blob
+        ):
+            break
+        if past_money_footer and any(re.search(r"[A-Za-z]", text) for text in texts):
+            # Product-looking rows after the money footer are near-expiry detail.
+            break
         if not any(re.search(r"[A-Za-z]", text) for text in texts):
             for tok in tokens:
                 text = str(tok.get("text") or "").strip().replace(",", "")
                 if tok.get("x") is None or not re.fullmatch(r"-?\d+\.\d+", text):
                     continue
-                canon = str(_nearest(float(tok["x"])).get("canonical") or "")
                 number = parse_number(text)
                 if number is None:
                     continue
-                if canon == "sales_qty":
-                    sales_total = number
-                elif canon == "closing_qty":
+                if abs(number - int(number)) > 0.001 and abs(number) >= 1.0:
+                    money_footer.append(float(number))
+                    past_money_footer = True
+                canon = str(_nearest(float(tok["x"])).get("canonical") or "")
+                if canon in {"sales_qty", "sales_value", "lms"}:
+                    if canon == "lms" and lms_total is None:
+                        lms_total = number
+                    elif canon != "lms":
+                        sales_total = number
+                elif canon in {"closing_qty", "closing_value"}:
                     closing_total = number
+            continue
+        # Detail rows often carry an expiry date token (dd/mm/yyyy).
+        if any(re.fullmatch(r"\d{1,2}/\d{1,2}/\d{2,4}", t) for t in texts):
             continue
         left: List[Tuple[float, str]] = []
         nums: Dict[str, float] = {}
@@ -2400,11 +2791,19 @@ def items_from_lms_qty_rows(
         item["opening_qty"] = nums.get("opening_qty")
         item["receipts_qty"] = nums.get("purchase_qty")
         item["sales_qty"] = nums.get("sales_qty")
+        # Qty-only grid: never invent money from sales/closing qty.
         item["sales_value"] = nums.get("sales_value")
         item["closing_qty"] = nums.get("closing_qty")
         item["closing_value"] = nums.get("closing_value")
         if "lms" in nums:
-            item["extra"]["lms_qty"] = nums["lms"]
+            lms_n = nums["lms"]
+            item["lms"] = lms_n
+            item["extra"]["lms"] = lms_n
+            item["extra"]["lms_qty"] = lms_n
+        near_n = nums.get("expiry_damage_qty")
+        if near_n is not None:
+            item["extra"]["near_expiry_qty"] = near_n
+            item["extra"]["exp_damage"] = near_n
         rate_n = nums.get("rate")
         if rate_n is None and rate_from_pack is not None:
             rate_n = parse_number(str(rate_from_pack).replace(",", ""))
@@ -2413,18 +2812,40 @@ def items_from_lms_qty_rows(
         items.append(item)
     if len(items) < 3:
         return None
+    # Prefer the three printed money footers (LMS / Sales / Closing values).
+    if len(money_footer) >= 3:
+        lms_total = money_footer[-3]
+        sales_total = money_footer[-2]
+        closing_total = money_footer[-1]
+    elif len(money_footer) == 2:
+        sales_total = money_footer[-2]
+        closing_total = money_footer[-1]
+    elif len(money_footer) == 1 and closing_total is None:
+        closing_total = money_footer[0]
     logger.info(
-        "STOCK_PDF_WORDS_LMS_QTY items=%s sales_value=%s closing_value=%s",
+        "STOCK_PDF_WORDS_LMS_QTY items=%s lms_value=%s sales_value=%s "
+        "closing_value=%s",
         len(items),
+        lms_total,
         sales_total,
         closing_total,
     )
-    return {
+    out: Dict[str, Any] = {
         "line_items": items,
         "closing_value": closing_total,
         "sales_value": sales_total,
         "letterhead_is_stockist_only": True,
+        "qty_only": True,
     }
+    if lms_total is not None:
+        out["lms_value"] = lms_total
+        out["footer_totals"] = {
+            "lms_value": lms_total,
+            "sales_value": sales_total,
+            "closing_value": closing_total,
+            "last_month_sales_value": lms_total,
+        }
+    return out
 
 
 _OPEN_RCVD_LAYOUT = frozenset(
@@ -3121,8 +3542,12 @@ def _count_moved_items(items: Optional[List[Dict[str, Any]]]) -> int:
 
 
 _TRAILING_PACK_RE = re.compile(
-    r"(?i)^(?P<name>.+?)\s+(?P<pack>\d+(?:\.\d+)?\s*(?:['’`]\s*)?S"
-    r"|\d+(?:\.\d+)?\s*(?:ML|MG|GM|GRM|GR|KG|G|M))$"
+    r"(?i)^(?P<name>.+?)\s+(?P<pack>"
+    r"\d+(?:\.\d+)?\s*(?:['’`]\s*)?S\.?"
+    r"|\d+(?:\.\d+)?\s*(?:ML|MG|GM|GRM|GR|KG|G|M|TAB|TABS|CAP|CAPS|TABLET)s?\.?"
+    r"|\d+\s*[xX]\s*\d+"
+    r"|UNITS?"
+    r")$"
 )
 # Glued / parenthetical packs when Packing cell is empty:
 # "…SPRAY100 ML", "…OR6S", "…CHO(10S" / "…(200ML)".
@@ -3821,6 +4246,323 @@ _OPENING_RECEIVED_ISSUED_PAIR_RE = re.compile(
 )
 
 
+def _pdf_text_from_bytes(file_bytes: Optional[bytes], max_pages: int = 3) -> str:
+    if not file_bytes:
+        return ""
+    try:
+        import fitz
+
+        doc = fitz.open(stream=file_bytes, filetype="pdf")
+        parts: List[str] = []
+        for i, page in enumerate(doc):
+            if i >= max_pages:
+                break
+            parts.append(page.get_text("text") or "")
+        doc.close()
+        return "\n".join(parts)
+    except Exception:
+        return ""
+
+
+def _looks_like_lms_nearexp_stock_pdf(text: str) -> bool:
+    """Loose fingerprint: LMS movement grid and/or NEAR EXPIRY DETAIL money band."""
+    if not text:
+        return False
+    has_lms = bool(re.search(r"(?i)\blms\b", text))
+    has_opening = bool(re.search(r"(?i)\bopening\b", text))
+    has_sales = bool(re.search(r"(?i)\bsales?\b", text))
+    has_closing = bool(re.search(r"(?i)\bclosing\b", text))
+    has_near = bool(re.search(r"(?i)near\s+expir", text))
+    if has_lms and has_opening and has_sales and has_closing:
+        return True
+    if has_lms and has_near:
+        return True
+    money = _money_footer_from_text_before_near_expiry(text)
+    if has_near and money.get("sales_value") is not None and money.get("closing_value") is not None:
+        return True
+    return False
+
+
+def apply_lms_nearexp_pdf_fallback(
+    result: Dict[str, Any],
+    *,
+    file_bytes: Optional[bytes] = None,
+    text: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Last-chance repair for OPENING/PURCHASE/LMS + NEAR EXPIRY DETAIL PDFs.
+
+    Runs after any parser (including Gemini). Re-reads printed money footers and
+    batch detail rows from PDF text so sales_value is never the qty sum (e.g.
+    1569), closing_value is restored, and all near-expiry batches land on JSON.
+    """
+    if not isinstance(result, dict):
+        return result
+    if result.get("multi_statement") and isinstance(result.get("statements"), list):
+        result["statements"] = [
+            apply_lms_nearexp_pdf_fallback(stmt, file_bytes=file_bytes, text=text)
+            if isinstance(stmt, dict)
+            else stmt
+            for stmt in result["statements"]
+        ]
+        return result
+
+    blob = str(text or "").strip()
+    if not blob:
+        blob = _pdf_text_from_bytes(file_bytes)
+    if not blob or not _looks_like_lms_nearexp_stock_pdf(blob):
+        return result
+
+    totals = result.setdefault("totals", {})
+    if not isinstance(totals, dict):
+        totals = {}
+        result["totals"] = totals
+    extra = totals.setdefault("extra", {})
+    if not isinstance(extra, dict):
+        extra = {}
+        totals["extra"] = extra
+
+    money = _money_footer_from_text_before_near_expiry(blob)
+    details_raw = parse_near_expiry_detail_section(blob)
+    details = [_near_expiry_detail_record(row) for row in details_raw]
+
+    # Line money must stay null — PDF has qty columns only.
+    items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+    sales_qty_sum = 0.0
+    for it in items:
+        for key in (
+            "opening_value",
+            "receipts_value",
+            "sales_value",
+            "closing_value",
+        ):
+            val = it.get(key)
+            try:
+                number = float(val) if val not in (None, "") else None
+            except (TypeError, ValueError):
+                number = None
+            if number is None:
+                it[key] = None
+                continue
+            sq = it.get("sales_qty")
+            cq = it.get("closing_qty")
+            drop = abs(number) < 0.001
+            try:
+                if key == "sales_value" and sq is not None and abs(number - float(sq)) < 0.001:
+                    drop = True
+                if key == "closing_value" and cq is not None and abs(number - float(cq)) < 0.001:
+                    drop = True
+            except (TypeError, ValueError):
+                pass
+            if abs(number - round(number)) < 0.001 and abs(number) < 5000:
+                drop = True
+            it[key] = None if drop else number
+        try:
+            sales_qty_sum += float(it.get("sales_qty") or 0)
+        except (TypeError, ValueError):
+            pass
+
+    # Replace bogus totals.sales_value (== qty sum like 1569) with money footer.
+    try:
+        cur_sales = float(totals["sales_value"]) if totals.get("sales_value") not in (None, "") else None
+    except (TypeError, ValueError):
+        cur_sales = None
+    money_sales = money.get("sales_value")
+    money_lms = money.get("lms_value")
+    money_closing = money.get("closing_value")
+    if money_sales is None and money_lms is not None:
+        money_sales = money_lms
+    bogus_sales = (
+        cur_sales is None
+        or (
+            sales_qty_sum > 0
+            and abs(cur_sales - sales_qty_sum) < 0.51
+        )
+        or (
+            money_sales is not None
+            and abs(cur_sales - float(money_sales)) > 0.05
+            and abs(cur_sales - round(cur_sales)) < 0.001
+            and abs(cur_sales) < 20000
+        )
+    )
+    if money_sales is not None and bogus_sales:
+        totals["sales_value"] = float(money_sales)
+        logger.info(
+            "STOCK_LMS_NEAREXP_FALLBACK sales_value=%s was=%s qty_sum=%s",
+            money_sales,
+            cur_sales,
+            sales_qty_sum,
+        )
+    if money_closing is not None:
+        totals["closing_value"] = float(money_closing)
+        extra["closing_value"] = float(money_closing)
+        logger.info(
+            "STOCK_LMS_NEAREXP_FALLBACK closing_value=%s",
+            money_closing,
+        )
+    if money_lms is not None:
+        extra["lms_value"] = float(money_lms)
+        extra["last_month_sales_value"] = float(money_lms)
+        # Also mirror under totals for consumers that only read top-level money.
+        totals["lms_value"] = float(money_lms)
+
+    if details:
+        extra["near_expiry_details"] = details
+        result["near_expiry_details"] = list(details)
+        # Duplicate under totals for schemas that only forward totals.*.
+        totals["near_expiry_details"] = list(details)
+        annotate_near_expiry_discrepancies(items, details)
+        logger.info(
+            "STOCK_LMS_NEAREXP_FALLBACK near_expiry_details=%s",
+            len(details),
+        )
+
+    extra["qty_only"] = True
+    extra["no_sales_value"] = True
+    extra["no_closing_value"] = True
+    extra["lms_nearexp_fallback"] = True
+    extra["total_row_source"] = "lms_nearexp_money_footer"
+    if not str(extra.get("extraction_method") or "").startswith("pdf_words_lms"):
+        # Keep original method, but mark repair.
+        extra["lms_nearexp_repaired_from"] = extra.get("extraction_method")
+    return result
+
+
+def finalize_lms_qty_only_statement(result: Dict[str, Any]) -> Dict[str, Any]:
+    """Qty-only OPENING/PURCHASE/LMS grids: no per-line money; keep footer money.
+
+    Clears invented sales_value(=sales_qty) / closing_value=0 on lines, restores
+    LMS/Sales/Closing money totals from extra when sanitize wiped them, and
+    stamps no_*_value so later coercers keep nulls.
+    """
+    if not isinstance(result, dict):
+        return result
+    totals = result.setdefault("totals", {})
+    if not isinstance(totals, dict):
+        return result
+    extra = totals.setdefault("extra", {})
+    if not isinstance(extra, dict):
+        return result
+    method = str(extra.get("extraction_method") or "")
+    if method not in {"pdf_words_lms_qty", "pdf_stacked_lms_nearexp"} and not (
+        extra.get("qty_only") and extra.get("lms_value") is not None
+    ):
+        # Still apply when near-expiry LMS layout was tagged.
+        if not (extra.get("qty_only") and extra.get("near_expiry_details")):
+            if not extra.get("lms_nearexp_fallback"):
+                return result
+    extra["qty_only"] = True
+    extra["no_sales_value"] = True
+    extra["no_closing_value"] = True
+    extra["no_opening_value"] = True
+    extra["no_receipts_value"] = True
+    for it in result.get("line_items") or []:
+        if not isinstance(it, dict):
+            continue
+        # Never invent per-line money on this layout.
+        for key in (
+            "opening_value",
+            "receipts_value",
+            "sales_value",
+            "closing_value",
+        ):
+            val = it.get(key)
+            if val in (None, ""):
+                it[key] = None
+                continue
+            try:
+                number = float(val)
+            except (TypeError, ValueError):
+                it[key] = None
+                continue
+            # Drop zeros and qty-copies (sales_value == sales_qty).
+            if abs(number) < 0.001:
+                it[key] = None
+                continue
+            if key == "sales_value":
+                sq = it.get("sales_qty")
+                try:
+                    if sq is not None and abs(number - float(sq)) < 0.001:
+                        it[key] = None
+                        continue
+                except (TypeError, ValueError):
+                    pass
+            if key == "closing_value":
+                cq = it.get("closing_qty")
+                try:
+                    if cq is not None and abs(number - float(cq)) < 0.001:
+                        it[key] = None
+                        continue
+                except (TypeError, ValueError):
+                    pass
+            # Any remaining small whole number on a qty-only sheet is not money.
+            if abs(number - round(number)) < 0.001 and abs(number) < 5000:
+                it[key] = None
+    # Restore footer money (LMS / Sales / Closing values).
+    lms_v = extra.get("lms_value")
+    if lms_v is None:
+        lms_v = extra.get("last_month_sales_value")
+    if lms_v is None:
+        lms_v = totals.get("lms_value")
+    sales_v = totals.get("sales_value")
+    closing_v = totals.get("closing_value")
+    # If sanitize replaced money with qty sum (~sales_qty total), restore.
+    try:
+        sales_qty_sum = float(extra.get("sales_qty") or 0)
+    except (TypeError, ValueError):
+        sales_qty_sum = 0.0
+    if sales_qty_sum <= 0:
+        try:
+            sales_qty_sum = sum(
+                float(i.get("sales_qty") or 0)
+                for i in (result.get("line_items") or [])
+                if isinstance(i, dict)
+            )
+        except (TypeError, ValueError):
+            sales_qty_sum = 0.0
+    try:
+        sales_f = float(sales_v) if sales_v not in (None, "") else None
+    except (TypeError, ValueError):
+        sales_f = None
+    if sales_f is not None and sales_qty_sum > 0 and abs(sales_f - sales_qty_sum) < 0.51:
+        sales_f = None
+    if sales_f is None and lms_v is not None:
+        try:
+            sales_f = float(lms_v)
+        except (TypeError, ValueError):
+            sales_f = None
+    if sales_f is not None:
+        totals["sales_value"] = float(sales_f)
+    if closing_v in (None, "", 0, 0.0) and extra.get("closing_value") is not None:
+        closing_v = extra.get("closing_value")
+    try:
+        closing_f = float(closing_v) if closing_v not in (None, "") else None
+    except (TypeError, ValueError):
+        closing_f = None
+    if closing_f is not None and abs(closing_f) >= 1.0:
+        totals["closing_value"] = float(closing_f)
+        extra["closing_value"] = float(closing_f)
+    if lms_v is not None:
+        try:
+            extra["lms_value"] = float(lms_v)
+            extra["last_month_sales_value"] = float(lms_v)
+            totals["lms_value"] = float(lms_v)
+        except (TypeError, ValueError):
+            pass
+    extra["total_row_source"] = "lms_nearexp_money_footer"
+    # Normalize near-expiry detail records for consumers.
+    details = extra.get("near_expiry_details") or result.get("near_expiry_details")
+    if isinstance(details, list) and details:
+        normalized = [
+            _near_expiry_detail_record(row) if isinstance(row, dict) else row
+            for row in details
+        ]
+        extra["near_expiry_details"] = normalized
+        totals["near_expiry_details"] = list(normalized)
+        result["near_expiry_details"] = list(normalized)
+        annotate_near_expiry_discrepancies(result.get("line_items") or [], normalized)
+    return result
+
+
 def _apply_opening_received_issued_header_summary(
     result: Dict[str, Any], peek: str
 ) -> bool:
@@ -3834,6 +4576,10 @@ def _apply_opening_received_issued_header_summary(
     if not isinstance(result, dict):
         return False
     blob = str(peek or "")
+    # OPENING/PURCHASE/LMS/NEAREXP StockHDZ pages are qty + footer money only —
+    # do not treat them as Opening Value / Received labeled money summaries.
+    if _is_stacked_lms_nearexp_layout(blob):
+        return False
     if not blob.strip() or not _OPENING_RECEIVED_ISSUED_HEADER_RE.search(blob):
         return False
     from services.stock_header_resolver import parse_number
@@ -4278,6 +5024,25 @@ def _apply_pdf_words_letterhead_meta(result: Dict[str, Any], peek: str) -> bool:
                 company = company_from_report
                 break
     if not company:
+        # "For HIMALAYA" / "For HIMALAYA ZEAL" under STOCK REPORT.
+        for ln in header_lines:
+            m_for = re.match(
+                r"(?i)^For\s+(HIMALAYA(?:\s+[A-Za-z0-9()/\-]+)*)\s*$",
+                ln.strip(),
+            )
+            if not m_for:
+                continue
+            picked = re.sub(r"\s+", " ", m_for.group(1)).strip(" -")
+            if picked and (not stockist or picked.upper() != stockist.upper()):
+                result["company_name"] = picked
+                logger.info(
+                    "STOCK_PDF_WORDS_LETTERHEAD_META for_company=%r",
+                    result["company_name"],
+                )
+                changed = True
+                company = picked
+                break
+    if not company:
         for ln in header_lines:
             if stockist and ln.upper() == stockist.upper():
                 continue
@@ -4306,9 +5071,25 @@ def _apply_pdf_words_letterhead_meta(result: Dict[str, Any], peek: str) -> bool:
                 continue
             if company_now and ln.upper() == company_now.upper():
                 continue
+            if re.match(r"(?i)^For\s+HIMALAYA\b", ln):
+                continue
             if _LETTERHEAD_TITLE_RE.search(ln):
                 continue
             if _LETTERHEAD_ADDRESS_RE.search(ln):
+                parts.append(ln)
+            elif (
+                re.search(r"[A-Za-z]{3,}", ln)
+                and not re.search(
+                    r"(?i)\b(?:stock\s+report|particular|packing|op\.?\s*qnt)\b",
+                    ln,
+                )
+                and not re.match(
+                    r"(?i)^\d{1,2}[./-]\d{1,2}[./-]\d{2,4}\s+To\b",
+                    ln,
+                )
+                and (not stockist or ln.upper() != stockist.upper())
+            ):
+                # Multi-line street/city under the firm name (ADITYA PLACE…).
                 parts.append(ln)
         if parts:
             result["stockist_address"] = " ".join(parts)
@@ -4407,11 +5188,37 @@ def parse_pdf_free_column_statement(
                 _doc.close()
             except Exception:
                 peek = ""
-        parsed = items_from_free_column_rows(
+        page_results = built.get("page_results") or []
+        # OPENING/PURCHASE/LMS/SALES grids must win over free-column and over
+        # near-expiry BATCH/MRP detail tables that share the same page.
+        parsed = items_from_lms_qty_rows(
             built.get("header_cells") or [],
             built.get("data_rows") or [],
         )
-        page_results = built.get("page_results") or []
+        if parsed and parsed.get("line_items"):
+            logger.info(
+                "STOCK_PDF_WORDS_LMS_QTY prefer=lms_movement items=%s",
+                len(parsed["line_items"]),
+            )
+        # Stacked plain-text recovers rows word banding drops (e.g. HERBOLAX
+        # TAB with pack "100" next to an all-dash twin). Prefer when fuller.
+        if peek and _is_stacked_lms_nearexp_layout(peek):
+            stacked_lms = items_from_stacked_lms_nearexp_text(peek)
+            stacked_n = len((stacked_lms or {}).get("line_items") or [])
+            word_n = len((parsed or {}).get("line_items") or [])
+            if stacked_lms and stacked_n > word_n:
+                parsed = stacked_lms
+                logger.info(
+                    "STOCK_PDF_STACKED_LMS_NEAREXP prefer=fuller_than_words "
+                    "stacked=%s words=%s",
+                    stacked_n,
+                    word_n,
+                )
+        if not parsed or not parsed.get("line_items"):
+            parsed = items_from_free_column_rows(
+                built.get("header_cells") or [],
+                built.get("data_rows") or [],
+            )
         # Prefer x-aligned qty/value rows over the wrapped-name Receipt/Issue
         # y-band reader. That reader treats packing digits as opening_qty.
         if (
@@ -4426,11 +5233,6 @@ def parse_pdf_free_column_statement(
                 )
         if (not parsed or not parsed.get("line_items")) and pdf is not None:
             parsed = items_from_receipt_issue_pages(pdf, page_results)
-        if not parsed or not parsed.get("line_items"):
-            parsed = items_from_lms_qty_rows(
-                built.get("header_cells") or [],
-                built.get("data_rows") or [],
-            )
         if (not parsed or not parsed.get("line_items")) and pdf is not None:
             parsed = items_from_open_rcvd_sold_pages(
                 pdf, built.get("page_results") or []
@@ -4439,6 +5241,16 @@ def parse_pdf_free_column_statement(
             parsed = _items_from_resolved_word_columns(
                 built.get("page_results") or []
             )
+        # Durable fallback for STOCK STATEMENT LMS/NEAREXP pages when word
+        # banding still misses (stacked name/pack/qty lines in plain text).
+        if (not parsed or not parsed.get("line_items")) and peek:
+            stacked = items_from_stacked_lms_nearexp_text(peek)
+            if stacked and stacked.get("line_items"):
+                parsed = stacked
+                logger.info(
+                    "STOCK_PDF_STACKED_LMS_NEAREXP prefer=text_fallback items=%s",
+                    len(parsed["line_items"]),
+                )
         if (
             parsed
             and parsed.get("letterhead_is_stockist_only")
@@ -4452,9 +5264,10 @@ def parse_pdf_free_column_statement(
             )
     except Exception as exc:
         logger.info(
-            "STOCK_PDF_WORDS_TABLE file=%s status=skipped error=%s",
+            "STOCK_PDF_WORDS_TABLE file=%s status=skipped error=%s detail=%s",
             filename,
             type(exc).__name__,
+            str(exc)[:240],
         )
         return None
     finally:
@@ -4707,6 +5520,16 @@ def parse_pdf_free_column_statement(
             result["stockist_address"] = lines[1]
     _apply_pdf_words_letterhead_meta(result, peek)
     _apply_opening_received_issued_header_summary(result, peek)
+    # STOCK STATEMENT : HIMALAYA ZEAL — company is the titled division.
+    stmt_co = re.search(
+        r"STOCK\s+STATEMENT\s*:\s*([^\n]+)",
+        peek,
+        re.I,
+    )
+    if stmt_co and stmt_co.group(1).strip():
+        result["company_name"] = re.sub(
+            r"\s+", " ", stmt_co.group(1)
+        ).strip(" -")
     # Printed Manufacturer/Division beats a letterhead street line.
     mfr_line = re.search(
         r"Manufacturer\s*Name\s*:\s*(.+?)(?:\s+Division\b|$)",
@@ -4736,14 +5559,66 @@ def parse_pdf_free_column_statement(
         )
     _apply_op_qty_pur_sale_bal_meta(result, peek)
     extra = result.setdefault("totals", {}).setdefault("extra", {})
-    extra["extraction_method"] = "pdf_words_free_columns"
+    extra["extraction_method"] = (
+        "pdf_words_lms_qty"
+        if parsed.get("qty_only") and any(
+            isinstance(it, dict)
+            and isinstance(it.get("extra"), dict)
+            and it["extra"].get("lms_qty") is not None
+            for it in (result.get("line_items") or [])
+        )
+        else "pdf_words_free_columns"
+    )
     extra["statement_count"] = 1
     if parsed.get("qty_only"):
         extra["qty_only"] = True
+        # Qty-only movement grids have no per-line money columns — keep null,
+        # never leave invented 0 / sales_qty copies on line items.
+        for it in result.get("line_items") or []:
+            if not isinstance(it, dict):
+                continue
+            if it.get("sales_value") in (0, 0.0) and it.get("sales_qty") not in (
+                None,
+                "",
+            ):
+                # Defensive: some upstream paths copy qty into value.
+                if abs(float(it.get("sales_value") or 0) - float(it.get("sales_qty") or -1)) < 0.001:
+                    it["sales_value"] = None
+            if it.get("closing_value") in (0, 0.0) and "closing_value" not in (
+                parsed.get("value_summary") or {}
+            ):
+                it["closing_value"] = None
     if parsed.get("closing_value") is not None:
         result["totals"]["closing_value"] = parsed["closing_value"]
     if parsed.get("sales_value") is not None:
         result["totals"]["sales_value"] = parsed["sales_value"]
+    if parsed.get("lms_value") is not None:
+        extra["lms_value"] = parsed["lms_value"]
+        extra["last_month_sales_value"] = parsed["lms_value"]
+    # Three money lines above NEAR EXPIRY DETAIL = LMS / Sales / Closing values.
+    # Always prefer these printed amounts for LMS qty-only sheets.
+    money_band = _money_footer_from_text_before_near_expiry(peek)
+    if money_band.get("lms_value") is not None:
+        extra["lms_value"] = money_band["lms_value"]
+        extra["last_month_sales_value"] = money_band["lms_value"]
+    if money_band.get("sales_value") is not None:
+        result["totals"]["sales_value"] = money_band["sales_value"]
+    if money_band.get("closing_value") is not None:
+        result["totals"]["closing_value"] = money_band["closing_value"]
+        extra["closing_value"] = money_band["closing_value"]
+    near_details = parse_near_expiry_detail_section(peek)
+    if near_details:
+        extra["near_expiry_details"] = [
+            _near_expiry_detail_record(row) for row in near_details
+        ]
+        result["near_expiry_details"] = list(extra["near_expiry_details"])
+        annotate_near_expiry_discrepancies(
+            result.get("line_items") or [], extra["near_expiry_details"]
+        )
+        logger.info(
+            "STOCK_NEAR_EXPIRY_DETAIL rows=%s",
+            len(near_details),
+        )
     for key, value in (parsed.get("value_summary") or {}).items():
         if key in {"sales_value", "closing_value"} or value is None:
             continue
@@ -4751,6 +5626,13 @@ def parse_pdf_free_column_statement(
     footer = parsed.get("footer_totals")
     if not footer:
         footer = _footer_totals_from_page_results(page_results)
+    if not footer and any(money_band.get(k) is not None for k in money_band):
+        footer = {
+            "lms_value": money_band.get("lms_value"),
+            "sales_value": money_band.get("sales_value"),
+            "closing_value": money_band.get("closing_value"),
+            "last_month_sales_value": money_band.get("lms_value"),
+        }
     # Manufacturer Op/Pur/Sale/Bal money band already filled totals — do not
     # let a qty-only footer wipe sales_value / closing_value or the source tag.
     keep_mfr_band = bool(extra.get("manufacturer_band_totals"))
@@ -4825,6 +5707,7 @@ def parse_pdf_free_column_statement(
         result = _finalize_statement_period_fields(result, content_text=peek)
     except Exception:
         pass
+    result = finalize_lms_qty_only_statement(result)
     logger.info(
         "STOCK_PDF_WORDS_TABLE file=%s items=%s closing_value=%s",
         filename,
