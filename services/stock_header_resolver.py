@@ -336,6 +336,10 @@ ALIASES: Dict[str, List[str]] = {
         "opening balance",
         "qty opening",
         "stock opening",
+        # Saleable Stock Report: Opn (Q+F).
+        "opn",
+        "opn q f",
+        "opn (q+f)",
     ],
     "purchase": [
         "pur",
@@ -392,6 +396,13 @@ ALIASES: Dict[str, List[str]] = {
         "co receipt",
         "co. receipt",
         "company receipt",
+        # Saleable Stock Report: N.T.Pur Qnty (net purchase qty).
+        "n t pur",
+        "n t pur qnty",
+        "n t pur qty",
+        "nt pur",
+        "nt pur qnty",
+        "nt pur qty",
     ],
     "sales": [
         "sale",
@@ -433,6 +444,13 @@ ALIASES: Dict[str, List[str]] = {
         "sales bill qty",
         "sale bill qty",
         "salesbillqty",
+        # Saleable Stock Report: N.T.Sale Qnty (net sale qty).
+        "n t sale",
+        "n t sale qnty",
+        "n t sale qty",
+        "nt sale",
+        "nt sale qnty",
+        "nt sale qty",
         # Secondary Qty Total (customer secondary-sale grids).
         "secondary qty total",
         "secondary qty tota",
@@ -666,6 +684,14 @@ ALIASES: Dict[str, List[str]] = {
         "sfree",
         "s free",
         "s.free",
+        # Saleable Stock Report: N.T.Pur / N.T.Sale FQnty (free qty bands).
+        "fqty",
+        "f qnty",
+        "f qty",
+        "n t pur fqty",
+        "n t sale fqty",
+        "nt pur fqty",
+        "nt sale fqty",
     ],
     "sample": [
         "sample",
@@ -964,6 +990,10 @@ _DIRECT_VALUE_FIELDS = {
     "open value": "opening_value",
     "open. value": "opening_value",
     "opening value": "opening_value",
+    # Saleable Stock Report: Opn Amt(Q+F).
+    "opn amt": "opening_value",
+    "opn amt q f": "opening_value",
+    "opn amt(q+f)": "opening_value",
     "pur val": "purchase_value",
     "pur. value": "purchase_value",
     "pur.value": "purchase_value",
@@ -987,6 +1017,10 @@ _DIRECT_VALUE_FIELDS = {
     "rcv amt": "purchase_value",
     "rcvamt": "purchase_value",
     "rcv value": "purchase_value",
+    # Saleable Stock Report: N.T.Pur Amt.
+    "n t pur amt": "purchase_value",
+    "nt pur amt": "purchase_value",
+    "n t pur amount": "purchase_value",
     "salev": "sales_value",
     "sale v": "sales_value",
     "issue value": "sales_value",
@@ -996,12 +1030,19 @@ _DIRECT_VALUE_FIELDS = {
     "iss value": "sales_value",
     "issvalue": "sales_value",
     "iss val": "sales_value",
+    # Saleable Stock Report: N.T.Sale Amt.
+    "n t sale amt": "sales_value",
+    "nt sale amt": "sales_value",
+    "n t sale amount": "sales_value",
     "stockv": "closing_value",
     "stock v": "closing_value",
     "stk v": "closing_value",
     "bal amt": "closing_value",
     "balamt": "closing_value",
     "bal value": "closing_value",
+    # Saleable Stock Report: Bal Amt(Q+F).
+    "bal amt q f": "closing_value",
+    "bal amt(q+f)": "closing_value",
     # Semantic export headers: clos_value / closvalue beside clos_qty.
     "clos value": "closing_value",
     "closvalue": "closing_value",

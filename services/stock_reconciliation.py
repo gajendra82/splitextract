@@ -1068,6 +1068,39 @@ def apply_stock_reconciliation(
             calculated_closing = round(recon_closing_sum, 2)
         else:
             calculated_closing = round(expected_total - sales_sum, 2)
+        # Saleable Stock Report Firm/Grand/Company Total is the printed footer —
+        # do not replace it with a line sum (blank-Bal derived closings inflate it).
+        # Same for Excel Saleable Opn/Rec/Issue/Bal grids (xls_total / xls_grand_total):
+        # Firm Total can exceed company line sums on the sheet.
+        preserve_saleable_footer_qty = str(extra_t.get("total_row_source") or "") in {
+            "saleable_grand_total",
+            "saleable_firm_total",
+            "saleable_company_total",
+            "xls_grand_total",
+            "xls_total",
+        }
+        footer_closing = extra_t.get("closing_qty")
+        footer_sales = extra_t.get("sales_qty")
+        try:
+            footer_closing_f = (
+                float(footer_closing) if footer_closing is not None else None
+            )
+        except (TypeError, ValueError):
+            footer_closing_f = None
+        try:
+            footer_sales_f = float(footer_sales) if footer_sales is not None else None
+        except (TypeError, ValueError):
+            footer_sales_f = None
+        extracted_closing = (
+            footer_closing_f
+            if preserve_saleable_footer_qty and footer_closing_f is not None
+            else closing_sum
+        )
+        extracted_sales = (
+            footer_sales_f
+            if preserve_saleable_footer_qty and footer_sales_f is not None
+            else sales_sum
+        )
         prev = extra_t.get("stock_validation")
         prev = dict(prev) if isinstance(prev, dict) else {}
         prev.update(
@@ -1076,18 +1109,30 @@ def apply_stock_reconciliation(
                 "expected_total": expected_total,
                 "extracted_opening": round(opening_sum, 2),
                 "extracted_purchase": round(receipt_sum, 2),
-                "extracted_sales_qty": round(sales_sum, 2),
+                "extracted_sales_qty": round(extracted_sales, 2),
                 "calculated_closing": calculated_closing,
-                "extracted_closing": round(closing_sum, 2),
+                "extracted_closing": round(float(extracted_closing), 2),
                 "is_valid": fail == 0
-                and abs(calculated_closing - closing_sum) < 0.05,
+                and abs(calculated_closing - float(extracted_closing)) < 0.05,
             }
         )
         extra_t["stock_validation"] = prev
-        if extra_t.get("sales_qty") is not None or sales_sum:
-            extra_t["sales_qty"] = round(sales_sum, 2)
-        if extra_t.get("closing_qty") is not None or closing_sum:
-            extra_t["closing_qty"] = round(closing_sum, 2)
+        extra_t["line_sales_qty_sum"] = round(sales_sum, 2)
+        extra_t["line_closing_qty_sum"] = round(closing_sum, 2)
+        if preserve_saleable_footer_qty:
+            logger.info(
+                "STOCK_RECON_PRESERVE_SALEABLE_FOOTER_QTY sales=%s closing=%s "
+                "line_sales=%s line_closing=%s",
+                footer_sales_f,
+                footer_closing_f,
+                sales_sum,
+                closing_sum,
+            )
+        else:
+            if extra_t.get("sales_qty") is not None or sales_sum:
+                extra_t["sales_qty"] = round(sales_sum, 2)
+            if extra_t.get("closing_qty") is not None or closing_sum:
+                extra_t["closing_qty"] = round(closing_sum, 2)
     except Exception:
         logger.exception("STOCK_RECONCILIATION_VALIDATION_SYNC_FAILED")
     return result
