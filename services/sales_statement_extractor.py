@@ -49146,6 +49146,104 @@ def _parse_sharda_opstk_crqty_pdf(
     return result
 
 
+def _camera_multipage_item_pack_free_vision(
+    multipage: Optional[Dict[str, Any]],
+) -> Optional[Dict[str, Any]]:
+    """Keep FREE/P.RETURN Vision multi_statement reads; flatten to one payload.
+
+    Camera multipage can over-split one ITEM|PACK|…|SALE sheet by company OCR
+    noise into multi_statement with empty top-level line_items. Callers that
+    only checked line_items discarded the Vision SALE digits and fell through
+    to early Gemini. Returns a flattened single statement when the family
+    matches; otherwise None (caller keeps the original multipage shape).
+    """
+    if not isinstance(multipage, dict) or not multipage.get("multi_statement"):
+        return None
+    stmts = multipage.get("statements")
+    if not isinstance(stmts, list) or not stmts:
+        return None
+    extra = (multipage.get("totals") or {}).get("extra") or {}
+    if not (
+        extra.get("vision_table_final")
+        or str(extra.get("extraction_method") or "") == "vision_table"
+    ):
+        return None
+
+    def _looks_item_pack_free(stmt: Dict[str, Any]) -> bool:
+        sex = (stmt.get("totals") or {}).get("extra") or {}
+        if sex.get("layout") == "item_pack_free_return":
+            return True
+        if sex.get("stock_identity_kind") == "item_pack_free_return":
+            return True
+        for it in (stmt.get("line_items") or [])[:8]:
+            if not isinstance(it, dict):
+                continue
+            headers = (it.get("extra") or {}).get("vision_column_headers") or []
+            blob = " ".join(str(h or "") for h in headers).upper()
+            if (
+                "FREE" in blob
+                and "SALE" in blob
+                and (
+                    "P.RETURN" in blob
+                    or "PRETURN" in blob.replace(" ", "")
+                    or "S.RETURN" in blob
+                )
+            ):
+                return True
+        return False
+
+    if not any(
+        isinstance(s, dict) and _looks_item_pack_free(s) for s in stmts
+    ):
+        return None
+
+    flat: List[Dict[str, Any]] = []
+    first: Dict[str, Any] = {}
+    for stmt in stmts:
+        if not isinstance(stmt, dict):
+            continue
+        if not first:
+            first = stmt
+        flat.extend(
+            it for it in (stmt.get("line_items") or []) if isinstance(it, dict)
+        )
+    if not flat:
+        return None
+    out = {
+        "source_file": multipage.get("source_file") or first.get("source_file"),
+        "source_format": multipage.get("source_format") or "pdf",
+        "stockist_name": first.get("stockist_name"),
+        "stockist_address": first.get("stockist_address"),
+        "company_name": first.get("company_name"),
+        "period_from": first.get("period_from"),
+        "period_to": first.get("period_to"),
+        "report_title": first.get("report_title"),
+        "line_items": flat,
+        "totals": {
+            "sales_value": None,
+            "closing_value": None,
+            "extra": {
+                **dict(extra),
+                "statement_count": 1,
+                "vision_table_final": True,
+                "extraction_method": "vision_table",
+                "layout": "item_pack_free_return",
+                "stock_identity_kind": "item_pack_free_return",
+                "no_sales_value": True,
+                "qty_only": True,
+                "camera_multipage_flattened": True,
+                "camera_multipage_groups_before_flatten": len(stmts),
+                "skip_post_pipeline_gemini": True,
+            },
+        },
+    }
+    logger.info(
+        "STOCK_MULTIPAGE flattened_item_pack_free_vision groups=%s items=%s",
+        len(stmts),
+        len(flat),
+    )
+    return out
+
 
 def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
     """Split multi-stockist PDFs into statements, then extract each."""
@@ -49433,7 +49531,27 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
                 max_pages=max_pages,
                 zoom=zoom,
             )
-            if multipage and (multipage.get("line_items") or []):
+            # multi_statement payloads omit top-level line_items; discarding them
+            # used to fall through to early Gemini and zero printed SALE qty.
+            _mp_stmts = (
+                multipage.get("statements")
+                if isinstance(multipage, dict) and multipage.get("multi_statement")
+                else None
+            )
+            _mp_has_stmt_items = bool(
+                isinstance(_mp_stmts, list)
+                and any(
+                    isinstance(s, dict) and (s.get("line_items") or [])
+                    for s in _mp_stmts
+                )
+            )
+            if multipage and (
+                (multipage.get("line_items") or []) or _mp_has_stmt_items
+            ):
+                flattened = _camera_multipage_item_pack_free_vision(multipage)
+                if flattened is not None:
+                    flattened["source_file"] = flattened.get("source_file") or filename
+                    multipage = flattened
                 try:
                     from services.stock_reconciliation import (
                         apply_stock_reconciliation,
@@ -49448,19 +49566,40 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
                         request_id = resolve_request_id()
                     except Exception:
                         request_id = "-"
-                    multipage = apply_stock_reconciliation(
-                        multipage, request_id=request_id, page=1
-                    )
+                    if multipage.get("multi_statement") and isinstance(
+                        multipage.get("statements"), list
+                    ):
+                        multipage["statements"] = [
+                            apply_stock_reconciliation(
+                                s, request_id=request_id, page=1
+                            )
+                            if isinstance(s, dict)
+                            else s
+                            for s in multipage["statements"]
+                        ]
+                    else:
+                        multipage = apply_stock_reconciliation(
+                            multipage, request_id=request_id, page=1
+                        )
                 except Exception:
                     pass
+                _mp_extra = ((multipage.get("totals") or {}).get("extra") or {})
+                _mp_n_items = len(multipage.get("line_items") or [])
+                if not _mp_n_items and isinstance(multipage.get("statements"), list):
+                    _mp_n_items = sum(
+                        len(s.get("line_items") or [])
+                        for s in multipage.get("statements") or []
+                        if isinstance(s, dict)
+                    )
                 logger.info(
                     "[STOCK_EXTRACTION_PATH] stage=camera_multipage_ok "
-                    "file=%s pages=%s line_items=%s",
+                    "file=%s pages=%s line_items=%s multi_statement=%s "
+                    "vision_table_final=%s",
                     filename,
-                    ((multipage.get("totals") or {}).get("extra") or {}).get(
-                        "page_count"
-                    ),
-                    len(multipage.get("line_items") or []),
+                    _mp_extra.get("page_count"),
+                    _mp_n_items,
+                    bool(multipage.get("multi_statement")),
+                    bool(_mp_extra.get("vision_table_final")),
                 )
                 return multipage
         except Exception as exc:
@@ -75944,6 +76083,9 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
     _defer_stock_and_sale_vt = False
     _defer_ssa_unit_sale_vt = False
     _defer_sale_closing_vt = False
+    # Empty-OCR SSA dump miss (e.g. ITEM|PACK|…|FREE|P.RETURN|SALE|CLOSING
+    # phone Excel). Reserve Gemini budget for VISION_TABLE past portrait-noise.
+    _defer_item_pack_free_vt = False
     _diag = {
         "geometry_called": False,
         "vision_called": False,
@@ -76265,6 +76407,15 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                         filename,
                         len(ssa_first.get("line_items") or []),
                     )
+                elif ssa_first is None and _lstsl_empty_ocr:
+                    # Dump burned call #1 and returned unusable (FREE/P.RETURN
+                    # Excel phone grids, etc.). Do not spend call #2 on LstSL.
+                    _defer_item_pack_free_vt = True
+                    logger.info(
+                        "[STOCK_EXTRACTION_PATH] stage=ssa_dump_before_lstsl "
+                        "file=%s status=unusable defer_vt=item_pack_free_portrait",
+                        filename,
+                    )
                 elif (
                     ssa_first
                     and ssa_first.get("line_items")
@@ -76286,6 +76437,7 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                     _ssa_stock_sale_misfile
                     or _defer_ssa_unit_sale_vt
                     or _defer_sale_closing_vt
+                    or _defer_item_pack_free_vt
                 ) and _lstsl_empty_ocr:
                     lstsl_vis = None
                 else:
@@ -76763,6 +76915,12 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                 "reason=sale_closing_only_defer_vt",
                 filename,
             )
+        elif _defer_item_pack_free_vt:
+            logger.info(
+                "[SalesStatement] file=%s Op_Stk before SSA skipped "
+                "reason=item_pack_free_defer_vt",
+                filename,
+            )
         elif (
             _op_stk_before_ssa_phone_enabled()
             and not _skip_vt_for_op_stk
@@ -77074,6 +77232,7 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
             and not _defer_stock_and_sale_vt
             and not _defer_ssa_unit_sale_vt
             and not _defer_sale_closing_vt
+            and not _defer_item_pack_free_vt
             and not _skip_vt_for_op_stk
             and not _opbal_excess_peek
             and not _main_stock_oric_peek
@@ -77507,14 +77666,16 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
         except Exception:
             _stacked_force_vt = False
         # Empty-OCR Stock and Sale Op|Pur|Gd.In / unit-sale SSA slide /
-        # SALE+CLOSING-only: dump was rejected; force VT past portrait-noise.
+        # SALE+CLOSING-only / FREE|P.RETURN dump-miss: force VT past portrait-noise.
         _force_vt_stock_and_sale = bool(_defer_stock_and_sale_vt)
         _force_vt_ssa_unit_sale = bool(_defer_ssa_unit_sale_vt)
         _force_vt_sale_closing = bool(_defer_sale_closing_vt)
+        _force_vt_item_pack_free = bool(_defer_item_pack_free_vt)
         _force_vt_ssa_rescue = bool(
             _force_vt_stock_and_sale
             or _force_vt_ssa_unit_sale
             or _force_vt_sale_closing
+            or _force_vt_item_pack_free
         )
         if (
             vision_table_active_for("image")
@@ -77544,6 +77705,12 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                 logger.info(
                     "[SalesStatement] file=%s VISION_TABLE force "
                     "reason=sale_closing_only_rescue",
+                    filename,
+                )
+            elif _force_vt_item_pack_free:
+                logger.info(
+                    "[SalesStatement] file=%s VISION_TABLE force "
+                    "reason=item_pack_free_dump_miss_rescue",
                     filename,
                 )
             elif _ssa_portrait_noise_early and _stacked_force_vt:
@@ -77651,6 +77818,7 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                         _ssa_dump_unreadable_ocr_skip_enabled()
                         and not _defer_ssa_unit_sale_vt
                         and not _defer_sale_closing_vt
+                        and not _defer_item_pack_free_vt
                         and not _ssa_dump_text_is_group_wise(_op_stk_peek or "")
                         and _ssa_dump_vision_table_needs_rescue(result)
                     ):
@@ -77861,6 +78029,7 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                 _ssa_dump_unreadable_ocr_skip_enabled()
                 and not _defer_ssa_unit_sale_vt
                 and not _defer_sale_closing_vt
+                and not _defer_item_pack_free_vt
                 and not _ssa_dump_text_is_group_wise(_op_stk_peek or "")
                 and (
                     _ssa_dump_vision_table_needs_rescue(_vt_fb)
