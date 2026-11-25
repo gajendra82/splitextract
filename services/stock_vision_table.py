@@ -11347,7 +11347,9 @@ def _apply_fields_to_item(
         elif absent in {"purchase_qty", "receipts_qty"}:
             item["receipts_qty"] = None
         elif absent in _EXTRA_FIELDS:
-            item.setdefault("extra", {})[_EXTRA_FIELDS[absent]] = None
+            # field_source already says missing — do not invent null sale_return /
+            # exp_damage keys (identity would treat those columns as present).
+            continue
         elif absent in {"opening_value", "purchase_value", "receipts_value"}:
             item.setdefault("extra", {})[absent] = None
 
@@ -11434,6 +11436,7 @@ _VISION_TOTAL_ROW_NAME = re.compile(
     r"(?:[-–—=~>*\s]*)?"
     r"(?:firm\s+|company\s+|division\s+)?"
     r"(?:grand\s+|group\s+|page\s+|sub\s+|net\s+)?"
+    r"(?:[-–—=~>*\s]*)?(?:grand\s+|group\s+|page\s+|sub\s+|net\s+)?"
     r"totals?\s*"
     r"(?:[:.\-–—_=>*]*)\s*"
     r"(?:"
@@ -14612,6 +14615,32 @@ def _stamp_vision_result(
             "rows=%s",
             len(line_items or []),
         )
+    else:
+        # Barcode|Name|Pack|Opening|Purchase|Sale|Closing|Pur/Sale/Closing Value
+        # — stamp generic open+purchase−sale identity (never SaleRet placeholders).
+        canons = {
+            str(c.get("canonical") or "")
+            for c in (column_map or [])
+            if isinstance(c, dict)
+        }
+        has_open = "opening_qty" in canons
+        has_buy = bool(canons & {"purchase_qty", "receipts_qty"})
+        has_sale = "sales_qty" in canons
+        has_close = "closing_qty" in canons
+        has_saleret = bool(
+            canons & {"sales_return_qty", "sale_return", "expiry_damage_qty", "exp_damage"}
+        )
+        if has_open and has_buy and has_sale and has_close and not has_saleret:
+            extra["stock_identity_kind"] = "opening_receipts_sales_closing"
+            extra.setdefault(
+                "stock_identity_formula",
+                "closing=opening+purchase-sales",
+            )
+            logger.info(
+                "VISION_TABLE stamped stock_identity_kind=opening_receipts_sales_closing "
+                "rows=%s reason=open_purchase_sale_closing_headers",
+                len(line_items or []),
+            )
     if totals_rows:
         kept_totals, footer_money = _filter_lstsl_footer_total_rows(list(totals_rows))
         if footer_money:

@@ -14,7 +14,7 @@ from services.sales_statement_extractor import (
 
 HEADER = (
     "ITEM                        OPENING   PURCHASE  SALE RET.     B/E/PR       "
-    "SALE     AMOUNT-I    CL.STOCK     AMOUNT-I  NEAR EXP.   N.E.VALUE % SALE"
+    "SALE     AMOUNT-I    CL.STOCK     AMOUNT-II  NEAR EXP.   N.E.VALUE % SALE"
 )
 
 SAMPLE = f"""GUPTA MEDICAL AGENCY
@@ -49,7 +49,7 @@ class TestItemOpeningSaleRetAmount(unittest.TestCase):
             "SALE",
             "AMOUNT-I",
             "CL.STOCK",
-            "AMOUNT-I",
+            "AMOUNT-II",
             "NEAR EXP.",
             "N.E.VALUE % SALE",
         ]
@@ -63,6 +63,11 @@ class TestItemOpeningSaleRetAmount(unittest.TestCase):
         self.assertEqual(colmap["sval"], 6)
         self.assertEqual(colmap["bal"], 7)
         self.assertEqual(colmap["bval"], 8)
+
+    def test_packing_tokens_pc_and_star_s(self):
+        self.assertTrue(_looks_like_packing_token("1PC"))
+        self.assertTrue(_looks_like_packing_token("1*30S"))
+        self.assertTrue(_looks_like_packing_token("1*60"))
 
     def test_semantic_table_peels_pack_and_keeps_printed_qty_value(self):
         result = _parse_semantic_text_table(SAMPLE, "state gupta.pdf", "pdf")

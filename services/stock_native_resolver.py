@@ -4334,6 +4334,7 @@ def parse_pdf_free_column_statement(
         pdf_built_has_clone_pages,
         pdf_built_has_mashed_headers,
         pdf_built_has_nul_digits,
+        pdf_built_table_empty,
     )
 
     built: Optional[Dict[str, Any]] = None
@@ -4350,12 +4351,15 @@ def parse_pdf_free_column_statement(
             nul = pdf_built_has_nul_digits(built)
             mashed = pdf_built_has_mashed_headers(built)
             clone = pdf_built_has_clone_pages(built)
-            if nul or mashed or clone:
+            empty = pdf_built_table_empty(built)
+            if nul or mashed or clone or empty:
                 logger.info(
-                    "STOCK_PDF_PSEUDO_DIGITS plumber_nul=%s mashed=%s clone=%s fallback=fitz",
+                    "STOCK_PDF_PSEUDO_DIGITS plumber_nul=%s mashed=%s clone=%s "
+                    "empty=%s fallback=fitz",
                     int(nul),
                     int(mashed),
                     int(clone),
+                    int(empty),
                 )
                 built = from_fitz_pdf_bytes(file_bytes)
             peek = ""
@@ -4372,9 +4376,17 @@ def parse_pdf_free_column_statement(
                 type(plumber_exc).__name__,
             )
             built = None
-        if built is None or pdf_built_has_nul_digits(built):
+        if (
+            built is None
+            or pdf_built_has_nul_digits(built)
+            or pdf_built_table_empty(built)
+        ):
             if built is not None:
-                logger.info("STOCK_PDF_PSEUDO_DIGITS plumber_nul=1 fallback=fitz")
+                logger.info(
+                    "STOCK_PDF_PSEUDO_DIGITS plumber_nul=%s empty=%s fallback=fitz",
+                    int(pdf_built_has_nul_digits(built)),
+                    int(pdf_built_table_empty(built)),
+                )
             built = from_fitz_pdf_bytes(file_bytes)
         if "\x00" in (peek or ""):
             try:

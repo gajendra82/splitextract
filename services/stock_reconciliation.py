@@ -68,6 +68,9 @@ def _sales_return_qty(item: Dict[str, Any]) -> float:
     extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
     if sales_return == 0.0 and extra.get("sale_return") is not None:
         sales_return = _f(extra.get("sale_return"))
+    # ITEM|OPENING|SALE RET.|B/E/PR grids store the printed return here.
+    if sales_return == 0.0 and extra.get("sale_return_qty") is not None:
+        sales_return = _f(extra.get("sale_return_qty"))
     # Stock and Sales Detail Report: Cr.Qty (+ Cr.Sch.Qty) is the printed return.
     if sales_return == 0.0 and (
         extra.get("credit_qty") is not None or extra.get("credit_scheme_qty") is not None
@@ -277,6 +280,8 @@ def _sales_return_column_present(item: Dict[str, Any]) -> bool:
     if fs.get("sales_return_qty") == "printed":
         return True
     if extra.get("sale_return") is not None or extra.get("sales_return") is not None:
+        return True
+    if extra.get("sale_return_qty") is not None:
         return True
     if extra.get("credit_qty") is not None or extra.get("credit_scheme_qty") is not None:
         return True
