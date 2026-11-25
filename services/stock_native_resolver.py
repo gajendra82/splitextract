@@ -4596,16 +4596,19 @@ def _guard_as_float(raw: Any) -> Optional[float]:
 
 
 def _guard_money_like(val: float) -> bool:
-    """Rupee-shaped: has paise, or whole amount large enough to not be pack qty."""
+    """Rupee-shaped: has paise (preferred), or very large whole rupees."""
     if abs(val) < 1.0:
         return False
+    # Paise / decimal rupees — strongest money signal (avoids qty 530 → money).
     if abs(val - round(val)) > 0.001:
         return True
-    return abs(val) >= 500.0
+    # Whole-rupee VALUE cells only when far above typical pack/sales qtys.
+    return abs(val) >= 1000.0
 
 
 def _guard_qty_like(val: float) -> bool:
-    return abs(val - round(val)) <= 0.001 and 0 <= abs(val) < 500.0
+    """Whole non-money quantity. Zero is blank, not a printed qty for unswap."""
+    return abs(val - round(val)) <= 0.001 and 0 < abs(val) < 500.0
 
 
 def _repair_sales_qty_value_pair(item: Dict[str, Any]) -> bool:
@@ -4623,11 +4626,13 @@ def _repair_sales_qty_value_pair(item: Dict[str, Any]) -> bool:
         extra["field_source"] = {}
         fs = extra["field_source"]
     changed = False
+    sv_blank = sv is None or abs(sv) < 0.001
 
-    # Case A: money parked in sales_qty, whole qty parked in sales_value → swap.
+    # Case A: money parked in sales_qty, non-zero whole qty parked in sales_value.
     if (
         sq is not None
         and sv is not None
+        and not sv_blank
         and _guard_money_like(sq)
         and _guard_qty_like(sv)
         and not _guard_money_like(sv)
@@ -4663,12 +4668,9 @@ def _repair_sales_qty_value_pair(item: Dict[str, Any]) -> bool:
                 str(item.get("product_name") or "")[:60],
                 sq,
             )
-        # Case C: money in sales_qty while sales_value blank → move printed money.
-        elif (
-            sq is not None
-            and _guard_money_like(sq)
-            and (sv is None or abs(sv) < 0.001)
-        ):
+        # Case C: money in sales_qty while sales_value blank/zero → move money.
+        # Do not invent sales_qty (leave missing). Never treat 0 as the qty.
+        elif sq is not None and _guard_money_like(sq) and sv_blank:
             item["sales_value"] = float(sq)
             item["sales_qty"] = None
             fs["sales_value"] = "printed"
