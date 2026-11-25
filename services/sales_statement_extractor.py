@@ -7342,6 +7342,9 @@ def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
         "opening_received_issued_grouptotal",
         # OPENING/PURCHASE/LMS/NEAREXP StockHDZ footer money band.
         "lms_nearexp_money_footer",
+        # Opg/Inw/Out/Clg Values: four-money band + labeled footers.
+        "values_four_money_band",
+        "labeled_stock_value_footer",
         # PharmAssist Opening Val / Purchase / Sales / Closing Val peel.
         "pharmassist_footer_ocr",
         # Marg ORIC OPENING|RECEIVE|ISSUE|CLOSING printed / Vision TOTAL peel.
@@ -9858,6 +9861,28 @@ def extract_sales_statement(file_bytes: bytes, filename: str) -> Dict[str, Any]:
             logger.exception(
                 "STOCK_LMS_NEAREXP_FALLBACK failed file=%s", name
             )
+        try:
+            from services.stock_native_resolver import (
+                apply_universal_stock_footer_financials,
+            )
+
+            result = apply_universal_stock_footer_financials(
+                result, file_bytes=file_bytes
+            )
+        except Exception:
+            logger.exception(
+                "STOCK_FOOTER_FINANCIALS failed file=%s", name
+            )
+    else:
+        # Non-PDF: still try footer money from any parked OCR/page text.
+        try:
+            from services.stock_native_resolver import (
+                apply_universal_stock_footer_financials,
+            )
+
+            result = apply_universal_stock_footer_financials(result)
+        except Exception:
+            pass
     return _group_statements_by_stockist_month(result)
 
 
@@ -47841,6 +47866,311 @@ _CHOPADA_ZANDRA_STOP_RE = re.compile(
 )
 
 
+def _is_opg_inw_out_clg_values_statement(text: str) -> bool:
+    """Opg Qty | Inw Qty | Out Qty | Clg Qty (+ optional Days Last Sold / Exp Due).
+
+    Common Data Spec / Melaram-style Stock and Sales Statement (Zandra division
+    Gmail forwards). Footer prints ``Values:`` + four money amounts.
+    Searches full text so Gmail/email wrappers do not hide the grid headers.
+    """
+    if not text:
+        return False
+    blob = text
+    if not re.search(r"(?i)\bOpg\s*Qty\b", blob):
+        return False
+    if not re.search(r"(?i)\bInw\s*Qty\b", blob):
+        return False
+    if not re.search(r"(?i)\bOut\s*Qty\b", blob):
+        return False
+    if not re.search(r"(?i)\bClg\s*Qty\b", blob):
+        return False
+    return True
+
+
+def _parse_opg_inw_out_clg_values_statement(
+    doc, filename: str
+) -> Optional[Dict[str, Any]]:
+    """Native text parser for Opg/Inw/Out/Clg qty grids with Values: money footer.
+
+    Qty-only product rows. Aggregate Opening/Inward/Outward/Closing money comes
+    from the printed Values band (universal footer extractor). Exp Due / Days
+    Last Sold land in extra expiry metadata — never as money.
+    """
+    page_texts = [(page.get_text("text") or "") for page in doc]
+    full_text = "\n".join(page_texts)
+    if not _is_opg_inw_out_clg_values_statement(full_text):
+        return None
+
+    result = empty_result(filename, "pdf")
+    result["report_title"] = "Stock and Sales Statement"
+
+    # Title: Stock and Sales Statement of HIMALAYA DRUG ZANDRA DIVISION for …
+    title = re.search(
+        r"Stock\s+and\s+Sales\s+Statement\s+of\s+(.+?)\s+for\s+"
+        r"(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})\s+to\s+(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})",
+        full_text,
+        re.I | re.S,
+    )
+    if title:
+        result["company_name"] = re.sub(r"\s+", " ", title.group(1)).strip()
+        result["period_from"] = _normalize_date(title.group(2))
+        result["period_to"] = _normalize_date(title.group(3))
+    else:
+        period = re.search(
+            r"(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})\s+to\s+(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})",
+            full_text,
+            re.I,
+        )
+        if period:
+            result["period_from"] = _normalize_date(period.group(1))
+            result["period_to"] = _normalize_date(period.group(2))
+
+    # Stockist letterhead before the statement title (Gmail body).
+    for ln in full_text.splitlines():
+        stripped = ln.strip()
+        if not stripped:
+            continue
+        if re.search(r"(?i)stock\s+and\s+sales\s+statement", stripped):
+            break
+        if re.search(r"(?i)^\d+\s+message\b|^to:|^from:|@gmail\.com", stripped):
+            continue
+        if (
+            re.search(r"[A-Za-z]{3,}", stripped)
+            and not re.search(r"GSTin|LicNo|Phone|EMail|WLF\d", stripped, re.I)
+            and not result.get("stockist_name")
+        ):
+            # Prefer ALL-CAPS / firm-looking names.
+            if re.search(r"[A-Z]{3,}", stripped):
+                result["stockist_name"] = _clean_name(stripped)
+        elif result.get("stockist_name") and not result.get("stockist_address"):
+            if re.search(r"(?i)bilaspur|nagar|road|market|[A-Za-z]{3,}", stripped):
+                if not re.search(r"GSTin|LicNo|Phone|EMail", stripped, re.I):
+                    result["stockist_address"] = _clean_name(stripped)
+
+    # Product rows: numbered name + 4 qty (+ optional Days Last Sold / Exp Due).
+    _QTY = re.compile(r"^(?:-|\d+)$")
+    _NAME = re.compile(r"^[A-Za-z].*[A-Za-z].*")
+    _SERIAL_NAME = re.compile(r"^\d{1,3}\s+[A-Za-z]")
+    _STOP = re.compile(
+        r"(?i)^(Values?\b|Notes\b|Thanking\b|For,|S/w\s+Support|Opg\s+Qty\s+and|"
+        r"Item\s+Name|HIMALAYA\s+DRUG\s+ZANDRA\s+DIVISION\s*$)"
+    )
+    # Packing may be 30S / 200ML / 30*2*1 / 200'GM; optional trailing glued qty.
+    _PACK_TRAIL = re.compile(
+        r",\s*(\d[\w.'\"/*\-]*?(?:\s*[A-Za-z][\w.'\"/*\-]*)?)"
+        r"(?:\s+(\d{1,5}))?$"
+    )
+    lines = [ln.strip() for ln in full_text.splitlines() if ln.strip()]
+    # Start after header band containing Opg Qty.
+    start = 0
+    for i, ln in enumerate(lines):
+        if re.search(r"(?i)\bOpg\s*Qty\b", ln) and re.search(r"(?i)\bInw\s*Qty\b", ln):
+            start = i + 1
+            break
+        if re.fullmatch(r"(?i)Opg\s*Qty", ln):
+            # Multi-line headers — skip until past Clg Qty / Exp Due labels.
+            j = i + 1
+            while j < len(lines) and re.search(
+                r"(?i)^(Inw|Out|Clg)\s*Qty|Days\s+Last|as\s+on|Exp\s+Due|from\s+\d",
+                lines[j],
+            ):
+                j += 1
+            start = j
+            break
+
+    items: List[Dict[str, Any]] = []
+    i = start
+    while i < len(lines):
+        ln = lines[i]
+        if _STOP.match(ln):
+            break
+        # Skip lone serial numbers (next line is the product name).
+        if re.fullmatch(r"\d{1,3}", ln):
+            i += 1
+            if i >= len(lines):
+                break
+            ln = lines[i]
+        # Name may be "12 EVECARE SYRUP, 200ML" or plain "BONNISAN DROPS, 30ML".
+        name_m = re.match(r"^(?:\d{1,3}\s+)?(.+)$", ln)
+        name = (name_m.group(1) if name_m else ln).strip()
+        if not _NAME.match(name) or _STOP.match(name):
+            i += 1
+            continue
+        if re.search(r"(?i)^Values?\b|^Notes\b|GSTin|LicNo|Phone|EMail", name):
+            i += 1
+            continue
+        packing = None
+        glued_opening: Optional[float] = None
+        pack_m = _PACK_TRAIL.search(name)
+        if pack_m:
+            packing = pack_m.group(1).strip()
+            if pack_m.group(2):
+                glued_opening = float(pack_m.group(2))
+            name = name[: pack_m.start()].strip()
+        # Collect following qty tokens.
+        qtys: List[Optional[float]] = []
+        if glued_opening is not None:
+            qtys.append(glued_opening)
+        j = i + 1
+        while j < len(lines) and len(qtys) < 6:
+            tok = lines[j]
+            if _STOP.match(tok):
+                break
+            # "12 EVECARE SYRUP…" — next product with glued serial.
+            if _SERIAL_NAME.match(tok):
+                break
+            # Letter-leading product name (no serial on this line).
+            if _NAME.match(tok) and not _QTY.fullmatch(tok):
+                break
+            # Bare number: qty while <4. After 4 qtys:
+            # - next line is letter-starting name → this bare number is the
+            #   next product's lone serial (stop; do not consume as days).
+            # - next line is "N NAME" (glued serial) → this number is
+            #   Days Last Sold / Exp Due (consume), then stop at next product.
+            # - next line is another bare number → consume as days/exp.
+            if re.fullmatch(r"\d{1,3}", tok):
+                if len(qtys) >= 4 and j + 1 < len(lines):
+                    nxt = lines[j + 1]
+                    if _NAME.match(nxt) and not _QTY.fullmatch(nxt):
+                        # Lone serial for next product (name on following line).
+                        break
+                    if _SERIAL_NAME.match(nxt) or _STOP.match(nxt):
+                        # Days/Exp metadata before a glued-serial product / footer.
+                        qtys.append(float(tok))
+                        j += 1
+                        break
+                qtys.append(float(tok))
+                j += 1
+                continue
+            if tok == "-":
+                qtys.append(0.0)
+                j += 1
+                continue
+            break
+        if len(qtys) < 4:
+            i += 1
+            continue
+        opening, inward, outward, closing = qtys[0], qtys[1], qtys[2], qtys[3]
+        days_last_sold = qtys[4] if len(qtys) >= 5 else None
+        exp_due_days = qtys[5] if len(qtys) >= 6 else None
+        # When only 5 numbers: trailing is usually Days Last Sold OR Exp Due.
+        if len(qtys) == 5:
+            days_last_sold = qtys[4]
+            exp_due_days = None
+
+        item = empty_line_item()
+        item["product_name"] = _clean_name(name)
+        item["packing"] = packing
+        item["opening_qty"] = float(opening)
+        item["receipts_qty"] = float(inward)
+        item["sales_qty"] = float(outward)
+        item["closing_qty"] = float(closing)
+        item["sales_value"] = None
+        item["closing_value"] = None
+        item["opening_value"] = None
+        item["receipts_value"] = None
+        extra = item.setdefault("extra", {})
+        extra["layout"] = "opg_inw_out_clg_values"
+        if days_last_sold is not None:
+            extra["days_last_sold"] = float(days_last_sold)
+        if exp_due_days is not None:
+            extra["exp_due_days"] = float(exp_due_days)
+            extra["near_expiry_qty"] = None  # days metadata, not stock qty
+            extra["expiry_due"] = True
+        items.append(item)
+        i = j
+
+    if len(items) < 3:
+        return None
+
+    result["line_items"] = items
+    extra = result["totals"].setdefault("extra", {})
+    extra["extraction_method"] = "opg_inw_out_clg_values_pdf"
+    extra["qty_only"] = True
+    extra["no_sales_value"] = True
+    extra["no_closing_value"] = True
+    extra["column_roles"] = [
+        "opening_qty",
+        "receipts_qty",
+        "sales_qty",
+        "closing_qty",
+        "days_last_sold",
+        "exp_due_days",
+    ]
+    extra["source_columns_detected"] = [
+        "Opg Qty",
+        "Inw Qty",
+        "Out Qty",
+        "Clg Qty",
+    ]
+    if re.search(r"(?i)Days\s+Last\s+Sold", full_text):
+        extra["source_columns_detected"].append("Days Last Sold")
+    if re.search(r"(?i)Exp\s+Due", full_text):
+        extra["source_columns_detected"].append("Exp Due")
+        extra["expiry_metadata_present"] = True
+
+    # Expiry-related metadata (schema): never treat Exp Due days as money/qty.
+    exp_as_on = re.search(
+        r"(?i)Days\s+Last\s+Sold\s*\n?\s*as\s+on\s+(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})",
+        full_text,
+    )
+    exp_from = re.search(
+        r"(?i)Exp\s+Due\s*\n?\s*from\s+(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})",
+        full_text,
+    )
+    rows_with_exp = sum(
+        1
+        for it in items
+        if isinstance(it.get("extra"), dict)
+        and it["extra"].get("exp_due_days") is not None
+    )
+    rows_with_days_sold = sum(
+        1
+        for it in items
+        if isinstance(it.get("extra"), dict)
+        and it["extra"].get("days_last_sold") is not None
+    )
+    extra["expiry_metadata"] = {
+        "present": bool(extra.get("expiry_metadata_present")),
+        "exp_due_as_of": _normalize_date(exp_from.group(1)) if exp_from else None,
+        "days_last_sold_as_of": (
+            _normalize_date(exp_as_on.group(1)) if exp_as_on else None
+        ),
+        "rows_with_exp_due": rows_with_exp,
+        "rows_with_days_last_sold": rows_with_days_sold,
+        "fields": [
+            key
+            for key in ("days_last_sold", "exp_due_days", "expiry_due")
+            if any(
+                isinstance(it.get("extra"), dict) and it["extra"].get(key) is not None
+                for it in items
+            )
+        ],
+    }
+
+    # Aggregate Values: money footer via universal extractor.
+    try:
+        from services.stock_native_resolver import apply_universal_stock_footer_financials
+
+        result = apply_universal_stock_footer_financials(result, text=full_text)
+    except Exception:
+        logger.exception(
+            "OPG_INW_OUT_CLG footer financials failed file=%s", filename
+        )
+
+    logger.info(
+        "OPG_INW_OUT_CLG_VALUES file=%s items=%s sales_value=%s closing_value=%s "
+        "opening_value=%s inward_value=%s",
+        filename,
+        len(items),
+        (result.get("totals") or {}).get("sales_value"),
+        (result.get("totals") or {}).get("closing_value"),
+        (result.get("totals") or {}).get("opening_value"),
+        ((result.get("totals") or {}).get("extra") or {}).get("inward_value"),
+    )
+    return result
+
+
 def _is_zandra_opening_receipt_vertical_format(text: str) -> bool:
     """CHOPADA-style ZANDRA Stock Report: Opening/Receipt/Total/Sales/Closing per page."""
     if not text:
@@ -50781,6 +51111,14 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
         if balaji_hz and balaji_hz.get("line_items"):
             balaji_hz["totals"]["extra"]["statement_count"] = 1
             return balaji_hz
+
+        # Opg Qty | Inw Qty | Out Qty | Clg Qty (+ Values: money footer).
+        # Gmail-forwarded Data Spec / Melaram Zandra statements — qty-only
+        # product grid with aggregate Opening/Inward/Outward/Closing money.
+        opg_inw = _parse_opg_inw_out_clg_values_statement(doc, filename)
+        if opg_inw and opg_inw.get("line_items"):
+            opg_inw["totals"]["extra"]["statement_count"] = 1
+            return opg_inw
 
         # CHOPADA-style ZANDRA report: Opening/Receipt/Total/Sales/Closing with
         # the stockist in the footer. Must run before per-page splitting (which
