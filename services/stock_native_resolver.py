@@ -4264,6 +4264,355 @@ def _pdf_text_from_bytes(file_bytes: Optional[bytes], max_pages: int = 3) -> str
         return ""
 
 
+# Indian / western money tokens printed on stock statement footers.
+# Indian grouping is last-3 then pairs of 2: 2,50,813 / 1,23,571 / 12,34,567.
+_INDIAN_MONEY = r"\d{1,3}(?:,\d{2})*,\d{3}"
+_FOOTER_MONEY_TOKEN = re.compile(
+    r"(?<![\d.])("
+    + _INDIAN_MONEY
+    + r"|\d{1,3}(?:,\d{3})+(?:\.\d{1,2})?"  # Western: 250,813.00
+    + r"|\d+\.\d{2}"  # Plain decimal: 250325.29
+    + r"|\d{4,}"  # Bare whole rupees: 250813
+    + r")(?![\d.])"
+)
+
+_VALUES_FOOTER_BLOCK = re.compile(
+    r"(?is)\bValues?\b\s*(?::\s*[^\n]*)?\s*"
+    r"((?:[^\n]*\n){0,3}?"
+    r"[^\n]*"
+    + _INDIAN_MONEY
+    + r"\s+"
+    + _INDIAN_MONEY
+    + r"[^\n]*)",
+)
+
+
+def _parse_footer_money_token(raw: str) -> Optional[float]:
+    text = str(raw or "").strip().replace("\u00a0", " ")
+    if not text:
+        return None
+    from services.stock_header_resolver import parse_number
+
+    number = parse_number(text.replace(",", ""))
+    if number is None:
+        return None
+    # Footer aggregates are never tiny placeholder digits.
+    if abs(float(number)) < 1.0:
+        return None
+    return float(number)
+
+
+def extract_universal_stock_footer_financials(text: str) -> Dict[str, Any]:
+    """Universal stock-statement footer money band (layout-family, not stockist).
+
+    Recognises:
+    - ``Values: …`` / ``Values`` followed by 4 money amounts
+      (Opening / Inward / Outward-Sales / Closing) — Zandra Opg/Inw/Out/Clg
+    - Labeled Opening/Purchase/Sales/Closing value footers
+    - Three unlabeled decimals above NEAR EXPIRY DETAIL (LMS/Sales/Closing)
+
+    Returns only printed amounts. Never invents zeros.
+    """
+    out: Dict[str, Any] = {
+        "opening_value": None,
+        "inward_value": None,
+        "receipts_value": None,
+        "sales_value": None,
+        "outward_value": None,
+        "closing_value": None,
+        "lms_value": None,
+        "source": None,
+        "detected_columns": [],
+        "raw_amounts": [],
+    }
+    if not (text or "").strip():
+        return out
+    blob = str(text)
+
+    # 1) Values: … 2,50,813 1,23,571 1,54,994 2,32,294
+    for match in _VALUES_FOOTER_BLOCK.finditer(blob):
+        chunk = match.group(0)
+        amounts: List[float] = []
+        for tok in _FOOTER_MONEY_TOKEN.findall(chunk):
+            number = _parse_footer_money_token(tok)
+            if number is not None:
+                amounts.append(number)
+        # Prefer the last 4 distinct-ish money tokens in a Values block.
+        if len(amounts) >= 4:
+            four = amounts[-4:]
+            out["opening_value"] = four[0]
+            out["inward_value"] = four[1]
+            out["receipts_value"] = four[1]
+            out["outward_value"] = four[2]
+            out["sales_value"] = four[2]
+            out["closing_value"] = four[3]
+            out["raw_amounts"] = four
+            out["source"] = "values_four_money_band"
+            out["detected_columns"] = [
+                "opening_value",
+                "inward_value",
+                "outward_value",
+                "closing_value",
+            ]
+            logger.info(
+                "STOCK_FOOTER_FINANCIALS source=values_four opening=%s inward=%s "
+                "outward=%s closing=%s",
+                four[0],
+                four[1],
+                four[2],
+                four[3],
+            )
+            return out
+
+    # 2) Labeled Opening/Purchase/Sales/Closing value lines.
+    try:
+        from services.sales_statement_extractor import _parse_labeled_stock_value_footer
+
+        labeled = _parse_labeled_stock_value_footer(blob) or {}
+    except Exception:
+        labeled = {}
+    if labeled:
+        if labeled.get("opening_value") is not None:
+            out["opening_value"] = float(labeled["opening_value"])
+        if labeled.get("purchase_value") is not None:
+            out["inward_value"] = float(labeled["purchase_value"])
+            out["receipts_value"] = float(labeled["purchase_value"])
+        if labeled.get("sales_value") is not None:
+            out["sales_value"] = float(labeled["sales_value"])
+            out["outward_value"] = float(labeled["sales_value"])
+        if labeled.get("closing_value") is not None:
+            out["closing_value"] = float(labeled["closing_value"])
+        cols = [k for k, v in out.items() if v is not None and k.endswith("_value")]
+        if cols:
+            out["source"] = "labeled_stock_value_footer"
+            out["detected_columns"] = cols
+            out["raw_amounts"] = [
+                out.get("opening_value"),
+                out.get("inward_value"),
+                out.get("sales_value"),
+                out.get("closing_value"),
+            ]
+            return out
+
+    # 3) LMS / Sales / Closing money above NEAR EXPIRY DETAIL.
+    money = _money_footer_from_text_before_near_expiry(blob)
+    if any(money.get(k) is not None for k in money):
+        if money.get("lms_value") is not None:
+            out["lms_value"] = money["lms_value"]
+        if money.get("sales_value") is not None:
+            out["sales_value"] = money["sales_value"]
+            out["outward_value"] = money["sales_value"]
+        if money.get("closing_value") is not None:
+            out["closing_value"] = money["closing_value"]
+        out["source"] = "lms_nearexp_money_footer"
+        out["detected_columns"] = [
+            k
+            for k in ("lms_value", "sales_value", "closing_value")
+            if out.get(k) is not None
+        ]
+        out["raw_amounts"] = [
+            out.get("lms_value"),
+            out.get("sales_value"),
+            out.get("closing_value"),
+        ]
+        return out
+
+    return out
+
+
+def apply_universal_stock_footer_financials(
+    result: Dict[str, Any],
+    *,
+    file_bytes: Optional[bytes] = None,
+    text: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Fill missing aggregate money from printed footers; never invent zeros.
+
+    Product-level sales_value/closing_value stay null on qty-only sheets.
+    Aggregate totals are preserved under totals.* and totals.extra.*.
+    """
+    if not isinstance(result, dict):
+        return result
+    if result.get("multi_statement") and isinstance(result.get("statements"), list):
+        result["statements"] = [
+            apply_universal_stock_footer_financials(
+                stmt, file_bytes=file_bytes, text=text
+            )
+            if isinstance(stmt, dict)
+            else stmt
+            for stmt in result["statements"]
+        ]
+        return result
+
+    blob = str(text or "").strip()
+    if not blob:
+        blob = _pdf_text_from_bytes(file_bytes, max_pages=8)
+    if not blob:
+        # Also accept OCR/page text already parked on the result.
+        extra0 = ((result.get("totals") or {}).get("extra") or {})
+        for key in ("ocr_text", "page_text", "footer_text", "content_text"):
+            val = extra0.get(key)
+            if isinstance(val, str) and val.strip():
+                blob = val
+                break
+    if not blob.strip():
+        return result
+
+    footer = extract_universal_stock_footer_financials(blob)
+    if not footer.get("source"):
+        return result
+
+    totals = result.setdefault("totals", {})
+    if not isinstance(totals, dict):
+        totals = {}
+        result["totals"] = totals
+    extra = totals.setdefault("extra", {})
+    if not isinstance(extra, dict):
+        extra = {}
+        totals["extra"] = extra
+
+    def _missing(val: Any) -> bool:
+        return val in (None, "")
+
+    # Aggregate financials — fill only when currently missing (don't wipe good money).
+    # Also replace bogus qty-sum sales_value (whole number ≈ sum(sales_qty)).
+    try:
+        sales_qty_sum = sum(
+            float(i.get("sales_qty") or 0)
+            for i in (result.get("line_items") or [])
+            if isinstance(i, dict)
+        )
+    except (TypeError, ValueError):
+        sales_qty_sum = 0.0
+    try:
+        cur_sales = (
+            float(totals["sales_value"])
+            if not _missing(totals.get("sales_value"))
+            else None
+        )
+    except (TypeError, ValueError):
+        cur_sales = None
+    sales_is_qty_sum = (
+        cur_sales is not None
+        and sales_qty_sum > 0
+        and abs(cur_sales - sales_qty_sum) < 0.51
+    )
+
+    if footer.get("sales_value") is not None and (
+        _missing(totals.get("sales_value")) or sales_is_qty_sum
+    ):
+        totals["sales_value"] = float(footer["sales_value"])
+    if footer.get("closing_value") is not None and _missing(totals.get("closing_value")):
+        totals["closing_value"] = float(footer["closing_value"])
+    if footer.get("opening_value") is not None:
+        if _missing(totals.get("opening_value")):
+            totals["opening_value"] = float(footer["opening_value"])
+        if _missing(extra.get("opening_value")):
+            extra["opening_value"] = float(footer["opening_value"])
+    if footer.get("inward_value") is not None:
+        if _missing(totals.get("receipts_value")):
+            totals["receipts_value"] = float(footer["inward_value"])
+        extra["inward_value"] = float(footer["inward_value"])
+        if _missing(extra.get("receipts_value")):
+            extra["receipts_value"] = float(footer["inward_value"])
+        if _missing(extra.get("purchase_value")):
+            extra["purchase_value"] = float(footer["inward_value"])
+    if footer.get("outward_value") is not None:
+        extra["outward_value"] = float(footer["outward_value"])
+    if footer.get("lms_value") is not None:
+        extra["lms_value"] = float(footer["lms_value"])
+        totals["lms_value"] = float(footer["lms_value"])
+
+    extra["footer_financials"] = {
+        k: footer.get(k)
+        for k in (
+            "opening_value",
+            "inward_value",
+            "outward_value",
+            "sales_value",
+            "closing_value",
+            "lms_value",
+            "source",
+            "detected_columns",
+            "raw_amounts",
+        )
+    }
+    extra["footer_financial_source"] = footer.get("source")
+    extra["footer_detected_columns"] = list(footer.get("detected_columns") or [])
+    # Completeness vs detected source columns (aggregate only).
+    missing_cols: List[str] = []
+    for col in footer.get("detected_columns") or []:
+        if col == "opening_value" and _missing(totals.get("opening_value")) and _missing(
+            extra.get("opening_value")
+        ):
+            missing_cols.append(col)
+        elif col in {"inward_value", "receipts_value"} and _missing(
+            extra.get("inward_value")
+        ):
+            missing_cols.append(col)
+        elif col in {"outward_value", "sales_value"} and _missing(totals.get("sales_value")):
+            missing_cols.append(col)
+        elif col == "closing_value" and _missing(totals.get("closing_value")):
+            missing_cols.append(col)
+        elif col == "lms_value" and _missing(extra.get("lms_value")):
+            missing_cols.append(col)
+    extra["footer_financial_missing_columns"] = missing_cols
+    extra["footer_financial_complete"] = not missing_cols
+    if footer.get("source") and not extra.get("total_row_source"):
+        extra["total_row_source"] = str(footer["source"])
+    elif footer.get("source") in {
+        "values_four_money_band",
+        "labeled_stock_value_footer",
+        "lms_nearexp_money_footer",
+    }:
+        extra["total_row_source"] = str(footer["source"])
+
+    # Qty-only product grids: keep line money null (never coerce unknown → 0).
+    if extra.get("qty_only") or footer.get("source") == "values_four_money_band":
+        extra["qty_only"] = True
+        extra["no_sales_value"] = True
+        extra["no_closing_value"] = True
+        for it in result.get("line_items") or []:
+            if not isinstance(it, dict):
+                continue
+            for key in ("opening_value", "receipts_value", "sales_value", "closing_value"):
+                val = it.get(key)
+                if val in (0, 0.0):
+                    it[key] = None
+                elif val not in (None, ""):
+                    try:
+                        number = float(val)
+                    except (TypeError, ValueError):
+                        it[key] = None
+                        continue
+                    sq = it.get("sales_qty")
+                    cq = it.get("closing_qty")
+                    if key == "sales_value" and sq is not None:
+                        try:
+                            if abs(number - float(sq)) < 0.001:
+                                it[key] = None
+                        except (TypeError, ValueError):
+                            pass
+                    if key == "closing_value" and cq is not None:
+                        try:
+                            if abs(number - float(cq)) < 0.001:
+                                it[key] = None
+                        except (TypeError, ValueError):
+                            pass
+
+    logger.info(
+        "STOCK_FOOTER_FINANCIALS_APPLIED source=%s opening=%s inward=%s sales=%s "
+        "closing=%s complete=%s",
+        footer.get("source"),
+        totals.get("opening_value") or extra.get("opening_value"),
+        extra.get("inward_value"),
+        totals.get("sales_value"),
+        totals.get("closing_value"),
+        extra.get("footer_financial_complete"),
+    )
+    return result
+
+
 def _looks_like_lms_nearexp_stock_pdf(text: str) -> bool:
     """Loose fingerprint: LMS movement grid and/or NEAR EXPIRY DETAIL money band."""
     if not text:

@@ -367,6 +367,168 @@ def assess_extraction_quality(
     return evaluate_extraction_quality(result, source_metadata)
 
 
+def _score_financial_extraction(result: Dict[str, Any], extra: Dict[str, Any]) -> Dict[str, Any]:
+    """Independent financial score — aggregates only; null ≠ zero."""
+    totals = result.get("totals") if isinstance(result.get("totals"), dict) else {}
+    detected = list(extra.get("footer_detected_columns") or [])
+    missing = list(extra.get("footer_financial_missing_columns") or [])
+    footer = extra.get("footer_financials") if isinstance(extra.get("footer_financials"), dict) else {}
+    qty_only = bool(extra.get("qty_only"))
+
+    # Detected source columns from footer, else infer from present aggregate keys.
+    if not detected and footer.get("detected_columns"):
+        detected = list(footer["detected_columns"])
+    if not detected:
+        for key in (
+            "opening_value",
+            "inward_value",
+            "receipts_value",
+            "sales_value",
+            "outward_value",
+            "closing_value",
+            "lms_value",
+        ):
+            if totals.get(key) not in (None, "") or extra.get(key) not in (None, ""):
+                detected.append(key)
+
+    present = 0
+    for col in detected:
+        if col == "opening_value" and (
+            totals.get("opening_value") not in (None, "")
+            or extra.get("opening_value") not in (None, "")
+        ):
+            present += 1
+        elif col in {"inward_value", "receipts_value"} and (
+            extra.get("inward_value") not in (None, "")
+            or totals.get("receipts_value") not in (None, "")
+        ):
+            present += 1
+        elif col in {"outward_value", "sales_value"} and totals.get("sales_value") not in (
+            None,
+            "",
+        ):
+            present += 1
+        elif col == "closing_value" and totals.get("closing_value") not in (None, ""):
+            present += 1
+        elif col == "lms_value" and extra.get("lms_value") not in (None, ""):
+            present += 1
+
+    if not detected:
+        # Qty-only sheets without a Values footer: financial N/A, not a fail.
+        score = 100 if qty_only else 50
+        return {
+            "score": score,
+            "detected_columns": [],
+            "present_columns": present,
+            "missing_columns": missing,
+            "complete": qty_only,
+            "qty_only": qty_only,
+        }
+
+    score = int(round(100.0 * present / max(len(detected), 1)))
+    if missing:
+        score = min(score, max(0, 100 - 20 * len(missing)))
+    if extra.get("footer_financial_complete") is False:
+        score = min(score, 70)
+    return {
+        "score": max(0, min(100, score)),
+        "detected_columns": detected,
+        "present_columns": present,
+        "missing_columns": missing,
+        "complete": not missing and present >= len(detected),
+        "qty_only": qty_only,
+        "source": extra.get("footer_financial_source") or footer.get("source"),
+    }
+
+
+def _score_quantity_extraction(items: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Independent quantity completeness across opening/receipts/sales/closing."""
+    if not items:
+        return {"score": 0, "numeric_pct": 0.0, "movement_pct": 0.0}
+    numeric_rows = 0
+    movement_rows = 0
+    for item in items:
+        qty_fields = (
+            item.get("opening_qty"),
+            item.get("receipts_qty"),
+            item.get("sales_qty"),
+            item.get("closing_qty"),
+        )
+        if any(_number(value) is not None for value in qty_fields):
+            numeric_rows += 1
+        if any((_number(value) or 0.0) != 0.0 for value in qty_fields):
+            movement_rows += 1
+    numeric_pct = 100.0 * numeric_rows / len(items)
+    movement_pct = 100.0 * movement_rows / len(items)
+    score = int(round(0.7 * numeric_pct + 0.3 * min(100.0, movement_pct * 1.2)))
+    return {
+        "score": max(0, min(100, score)),
+        "numeric_pct": round(numeric_pct, 2),
+        "movement_pct": round(movement_pct, 2),
+    }
+
+
+def _score_identity_extraction(
+    items: List[Dict[str, Any]],
+    extra: Dict[str, Any],
+    *,
+    veto_active: bool,
+    veto_info: Dict[str, Any],
+    identity_gate: float,
+) -> Dict[str, Any]:
+    """Independent stock-identity score."""
+    fail_count = extra.get("stock_identity_fail_count")
+    if fail_count is None or not items:
+        applies = _identity_applies(items, extra, veto_active=veto_active)
+        return {
+            "score": 100 if not applies else 80,
+            "applies": applies,
+            "fail_count": fail_count,
+            "fail_pct": None,
+        }
+    fail_pct = 100.0 * float(fail_count) / max(len(items), 1)
+    if veto_active and veto_info.get("veto"):
+        score = 0
+    elif fail_pct <= max(0.0, identity_gate):
+        score = int(round(100.0 - fail_pct))
+    else:
+        score = max(0, int(round(70.0 - fail_pct)))
+    return {
+        "score": max(0, min(100, score)),
+        "applies": True,
+        "fail_count": fail_count,
+        "fail_pct": round(fail_pct, 2),
+    }
+
+
+def _score_row_completeness(
+    items: List[Dict[str, Any]],
+    *,
+    name_pct: float,
+    noise_pct: float,
+    header_rows: int,
+) -> Dict[str, Any]:
+    """Independent product-row / identity-of-rows score."""
+    if not items:
+        return {"score": 0, "name_pct": 0.0, "noise_pct": 0.0, "header_rows": 0}
+    score = 100
+    score -= int(max(0.0, 50 - name_pct))
+    score -= int(max(0.0, noise_pct - 30))
+    if header_rows:
+        score -= min(40, header_rows * 8)
+    dup = _duplicate_percent(items)
+    if len(items) >= 6 and dup > 40:
+        score -= 20
+    return {
+        "score": max(0, min(100, score)),
+        "name_pct": round(name_pct, 2),
+        "noise_pct": round(noise_pct, 2),
+        "header_rows": header_rows,
+        "duplicate_pct": round(dup, 2),
+        "row_count": len(items),
+    }
+
+
 def evaluate_extraction_quality(
     result: Optional[Dict[str, Any]],
     source_metadata: Optional[Dict[str, Any]] = None,
@@ -379,6 +541,12 @@ def evaluate_extraction_quality(
             "score": 0,
             "should_fallback": True,
             "reasons": ["empty_line_items"],
+            "dimension_scores": {
+                "financial": {"score": 0},
+                "quantity": {"score": 0},
+                "identity": {"score": 0},
+                "row_completeness": {"score": 0},
+            },
         }
 
     items = _items(result)
@@ -531,14 +699,51 @@ def evaluate_extraction_quality(
                 protected = False
                 reasons.append("stock_identity_failure")
                 hard_fail = True
+
+    # Independent dimension scores (always computed).
+    financial_dim = _score_financial_extraction(result, extra if isinstance(extra, dict) else {})
+    quantity_dim = _score_quantity_extraction(items)
+    identity_dim = _score_identity_extraction(
+        items,
+        extra if isinstance(extra, dict) else {},
+        veto_active=veto_active,
+        veto_info=veto_info,
+        identity_gate=identity_gate,
+    )
+    row_dim = _score_row_completeness(
+        items, name_pct=name_pct, noise_pct=noise_pct, header_rows=header_rows
+    )
+    dimension_scores = {
+        "financial": financial_dim,
+        "quantity": quantity_dim,
+        "identity": identity_dim,
+        "row_completeness": row_dim,
+    }
+
+    # Footer detected but incomplete → surface as reason (does not alone veto natives).
+    if financial_dim.get("detected_columns") and not financial_dim.get("complete"):
+        if "missing_footer_financials" not in reasons:
+            reasons.append("missing_footer_financials")
+
     if protected and not (veto_active and veto_info.get("veto")):
-        return {
+        # Still attach dimension scores; overall stays good for named parsers.
+        out = {
             "quality": "good",
             "score": 100,
             "should_fallback": False,
             "reasons": [],
             "parser": method,
+            "dimension_scores": dimension_scores,
         }
+        if financial_dim.get("detected_columns") and not financial_dim.get("complete"):
+            out["reasons"] = ["missing_footer_financials"]
+            # Do not force Gemini fallback solely for missing money on protected qty grids
+            # that already carry footer_financials — only flag incompleteness.
+            if not financial_dim.get("source"):
+                out["should_fallback"] = True
+                out["quality"] = "poor"
+                out["score"] = min(100, int(financial_dim.get("score") or 0))
+        return out
 
     if items and not hard_fail:
         if name_pct < 50:
@@ -594,6 +799,8 @@ def evaluate_extraction_quality(
             score -= 35
         if "all_zero_suspicious" in reasons:
             score -= 30
+        if "missing_footer_financials" in reasons:
+            score -= max(0, 25 - int((financial_dim.get("score") or 0) // 4))
         score = max(0, min(100, score))
 
     # Phase 4a: failed soffice convert → never KEEP_PARSER at score 100.
@@ -613,6 +820,15 @@ def evaluate_extraction_quality(
     # Empty extract always falls back when Vision can see the file.
     if not items:
         should_fallback = True
+    # Missing footer money alone should not force Gemini when rows/qty are solid
+    # and a Values band was never printed (qty_only without detected columns).
+    if (
+        reasons == ["missing_footer_financials"]
+        and financial_dim.get("qty_only")
+        and not financial_dim.get("detected_columns")
+    ):
+        should_fallback = False
+        reasons = []
 
     return {
         "quality": "poor" if should_fallback else "good",
@@ -620,4 +836,5 @@ def evaluate_extraction_quality(
         "should_fallback": should_fallback,
         "reasons": reasons,
         "parser": method or "generic",
+        "dimension_scores": dimension_scores,
     }
