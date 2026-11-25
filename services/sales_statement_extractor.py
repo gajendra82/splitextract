@@ -7048,6 +7048,8 @@ def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
         # Opening|Received|Issued|Closing labeled header / GroupTotal money.
         "opening_received_issued_header",
         "opening_received_issued_grouptotal",
+        # OPENING/PURCHASE/LMS/NEAREXP StockHDZ footer money band.
+        "lms_nearexp_money_footer",
         # PharmAssist Opening Val / Purchase / Sales / Closing Val peel.
         "pharmassist_footer_ocr",
         # Marg ORIC OPENING|RECEIVE|ISSUE|CLOSING printed / Vision TOTAL peel.
@@ -8971,10 +8973,14 @@ def _ensure_stock_qty_value_fields(result: Dict[str, Any]) -> Dict[str, Any]:
             "stock_sales_analysis_geometry",
             "ssa_sales_free_columns",
             "marg_sale_purchase_analysis",
+            "pdf_words_lms_qty",
+            "pdf_stacked_lms_nearexp",
             # item_pack_preturn_sale intentionally omitted: it prints unlabeled
             # opening_value on rows; only sales/closing money stay footer-only.
         }
         or bool(extra.get("qty_only"))
+        or bool(extra.get("no_sales_value"))
+        or bool(extra.get("no_closing_value"))
     )
     line_items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
     # Restore stamped printed opening_value before null/zero normalization.
@@ -9291,6 +9297,14 @@ def extract_sales_statement(file_bytes: bytes, filename: str) -> Dict[str, Any]:
         result = _sanitize_statement_financials_vision_safe(result)
     else:
         result = _sanitize_statement_financials(result)
+    # LMS/NEAREXP qty-only: restore footer money + clear invented line values
+    # after sanitize (which can treat money totals as bogus qty sums).
+    try:
+        from services.stock_native_resolver import finalize_lms_qty_only_statement
+
+        result = finalize_lms_qty_only_statement(result)
+    except Exception:
+        pass
     result = _apply_stock_identity_validation(result)
     try:
         from services.stock_reconciliation import apply_stock_reconciliation
@@ -9306,6 +9320,12 @@ def extract_sales_statement(file_bytes: bytes, filename: str) -> Dict[str, Any]:
     except Exception:
         pass
     result = _ensure_stock_qty_value_fields(result)
+    try:
+        from services.stock_native_resolver import finalize_lms_qty_only_statement
+
+        result = finalize_lms_qty_only_statement(result)
+    except Exception:
+        pass
     result = _product_wise_drop_banner_items(result)
     result = _drop_promotional_footer_line_items(result)
 
@@ -9507,6 +9527,18 @@ def extract_sales_statement(file_bytes: bytes, filename: str) -> Dict[str, Any]:
     result = _finalize_statement_period_fields(result)
     # Every path: TOTAL / GRAND TOTAL footers must never remain as products.
     result = _peel_named_total_products(result)
+    # Last-chance: OPENING/PURCHASE/LMS + NEAR EXPIRY DETAIL money/batches.
+    # Fixes Gemini paths that park sales_qty sum (e.g. 1569) in sales_value
+    # and drop batch detail rows.
+    if ext == ".pdf":
+        try:
+            from services.stock_native_resolver import apply_lms_nearexp_pdf_fallback
+
+            result = apply_lms_nearexp_pdf_fallback(result, file_bytes=file_bytes)
+        except Exception:
+            logger.exception(
+                "STOCK_LMS_NEAREXP_FALLBACK failed file=%s", name
+            )
     return _group_statements_by_stockist_month(result)
 
 
@@ -49763,6 +49795,38 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
                 type(exc).__name__,
             )
 
+        # OPENING / PURCHASE / LMS / SALES / CLOSING (/NEAREXP) — StockHDZ /
+        # Himalaya Zeal STOCK STATEMENT. Prefer native LMS qty reader (+ near-
+        # expiry detail fallback) before Swil / Gemini invent values.
+        try:
+            from services.stock_native_resolver import (
+                _is_stacked_lms_nearexp_layout,
+                parse_pdf_free_column_statement,
+            )
+
+            hdz_blob = "\n".join(
+                (page.get_text("text") or "")
+                for page_index, page in enumerate(doc)
+                if page_index < min(2, max_pages)
+            )
+            if _is_stacked_lms_nearexp_layout(hdz_blob):
+                hdz_pdf = parse_pdf_free_column_statement(file_bytes, filename)
+                if hdz_pdf and hdz_pdf.get("line_items"):
+                    hdz_pdf["totals"]["extra"]["statement_count"] = 1
+                    logger.info(
+                        "STOCK_OPENING_PURCHASE_LMS file=%s status=early_pdf_hit "
+                        "rows=%s",
+                        filename,
+                        len(hdz_pdf["line_items"]),
+                    )
+                    return hdz_pdf
+        except Exception as exc:
+            logger.info(
+                "STOCK_OPENING_PURCHASE_LMS file=%s status=early_pdf_skip error=%s",
+                filename,
+                type(exc).__name__,
+            )
+
         swil_pair = _parse_swil_landscape_qty_value_statement(
             doc, filename, allow_portrait_pair=True
         )
@@ -71199,6 +71263,14 @@ def _particular_packing_header_fields(text: str) -> Dict[str, Optional[str]]:
         )
         if m_for:
             company = _clean_name(m_for.group(1))
+        else:
+            m_for_bare = re.search(
+                r"(?m)^For\s+(HIMALAYA(?:\s+[A-Za-z0-9()/\-]+)*)\s*$",
+                text or "",
+                re.I,
+            )
+            if m_for_bare:
+                company = _clean_name(m_for_bare.group(1))
     period_from = period_to = None
     m = re.search(
         r"(\d{1,2}[./]\d{1,2}[./]\d{2,4})\s*To\s*:?\s*(\d{1,2}[./]\d{1,2}[./]\d{2,4})",

@@ -1,0 +1,243 @@
+{
+  "totals": {
+    "sales_value": 250325.29,
+    "closing_value": 179233.42,
+    "extra": {
+      "extraction_method": "pdf_words_lms_qty",
+      "lms_value": 250325.29,
+      "sales_qty": 1569.0,
+      "near_expiry_details": [
+        {
+          "product_name": "Triphala Capsules",
+          "packing": "60'S",
+          "batch_no": "37211073",
+          "batch": "37211073",
+          "mrp": 165.0,
+          "rate": 120.99,
+          "p_rate": null,
+          "stock_qty": 1.0,
+          "expiry_date": "01/06/2024"
+        },
+        {
+          "product_name": "Diabecon Ds Tab",
+          "packing": "60'S",
+          "batch_no": "#1062415",
+          "batch": "#1062415",
+          "mrp": 234.38,
+          "rate": 172.05,
+          "p_rate": null,
+          "stock_qty": 7.0,
+          "expiry_date": "01/11/2026"
+        },
+        {
+          "product_name": "Diabecon Ds Tab",
+          "packing": "60'S",
+          "batch_no": "#1062418",
+          "batch": "#1062418",
+          "mrp": 257.81,
+          "rate": 189.07,
+          "p_rate": null,
+          "stock_qty": 4.0,
+          "expiry_date": "01/11/2026"
+        },
+        {
+          "product_name": "Oxitard Cap.",
+          "packing": "10'S",
+          "batch_no": "#7224004",
+          "batch": "#7224004",
+          "mrp": 117.19,
+          "rate": 89.28,
+          "p_rate": null,
+          "stock_qty": 57.0,
+          "expiry_date": "01/11/2026"
+        },
+        {
+          "product_name": "Diarex Syp",
+          "packing": "100l",
+          "batch_no": "#2524009",
+          "batch": "#2524009",
+          "mrp": 103.13,
+          "rate": 78.58,
+          "p_rate": null,
+          "stock_qty": 12.0,
+          "expiry_date": "01/09/2026"
+        },
+        {
+          "product_name": "Pilex Forte Tab",
+          "packing": "30'S",
+          "batch_no": "#7225000",
+          "batch": "#7225000",
+          "mrp": 140.63,
+          "rate": 107.14,
+          "p_rate": null,
+          "stock_qty": 3.0,
+          "expiry_date": "01/01/2027"
+        }
+      ],
+      "total_row_source": "lms_nearexp_money_footer",
+      "qty_only": true
+    }
+  },
+  "near_expiry_details": [
+    {
+      "product_name": "Triphala Capsules",
+      "packing": "60'S",
+      "batch_no": "37211073",
+      "batch": "37211073",
+      "mrp": 165.0,
+      "rate": 120.99,
+      "p_rate": null,
+      "stock_qty": 1.0,
+      "expiry_date": "01/06/2024"
+    },
+    {
+      "product_name": "Diabecon Ds Tab",
+      "packing": "60'S",
+      "batch_no": "#1062415",
+      "batch": "#1062415",
+      "mrp": 234.38,
+      "rate": 172.05,
+      "p_rate": null,
+      "stock_qty": 7.0,
+      "expiry_date": "01/11/2026"
+    },
+    {
+      "product_name": "Diabecon Ds Tab",
+      "packing": "60'S",
+      "batch_no": "#1062418",
+      "batch": "#1062418",
+      "mrp": 257.81,
+      "rate": 189.07,
+      "p_rate": null,
+      "stock_qty": 4.0,
+      "expiry_date": "01/11/2026"
+    },
+    {
+      "product_name": "Oxitard Cap.",
+      "packing": "10'S",
+      "batch_no": "#7224004",
+      "batch": "#7224004",
+      "mrp": 117.19,
+      "rate": 89.28,
+      "p_rate": null,
+      "stock_qty": 57.0,
+      "expiry_date": "01/11/2026"
+    },
+    {
+      "product_name": "Diarex Syp",
+      "packing": "100l",
+      "batch_no": "#2524009",
+      "batch": "#2524009",
+      "mrp": 103.13,
+      "rate": 78.58,
+      "p_rate": null,
+      "stock_qty": 12.0,
+      "expiry_date": "01/09/2026"
+    },
+    {
+      "product_name": "Pilex Forte Tab",
+      "packing": "30'S",
+      "batch_no": "#7225000",
+      "batch": "#7225000",
+      "mrp": 140.63,
+      "rate": 107.14,
+      "p_rate": null,
+      "stock_qty": 3.0,
+      "expiry_date": "01/01/2027"
+    }
+  ],
+  "pilex": {
+    "name": "PILEX FORTE TAB",
+    "extra": {
+      "lms": 27.0,
+      "lms_qty": 27.0,
+      "near_expiry_qty": 3.0,
+      "exp_damage": 0.0,
+      "near_expiry_batches": [
+        {
+          "product_name": "Pilex Forte Tab",
+          "packing": "30'S",
+          "batch_no": "#7225000",
+          "batch": "#7225000",
+          "mrp": 140.63,
+          "rate": 107.14,
+          "p_rate": null,
+          "stock_qty": 3.0,
+          "expiry_date": "01/01/2027"
+        }
+      ],
+      "near_expiry_detail_qty": 3.0,
+      "near_expiry_qty_main": 0.0,
+      "near_expiry_qty_discrepancy": true,
+      "expected_total": 118.0,
+      "expected_closing": 91.0,
+      "stock_identity_ok": true,
+      "reconciliation": {
+        "expected_total_qty": 118.0,
+        "expected_closing_qty": 91.0,
+        "actual_closing_qty": 91.0,
+        "quantity_difference": 0.0,
+        "total_ok": true,
+        "closing_ok": true,
+        "valid": true,
+        "opening_qty": 118.0,
+        "purchase_qty": 0.0,
+        "sales_qty": 27.0,
+        "extracted_closing_qty": 91.0,
+        "base_source": "opening_plus_purchase_plus_returns",
+        "sales_return_in_total": false,
+        "base_qty": 118.0,
+        "adjustments": {
+          "sales_return_qty": 0.0,
+          "sales_qty": 27.0,
+          "sales_free_qty": 0.0,
+          "purchase_return_qty": 0.0,
+          "expiry_damage_qty": 0.0,
+          "sample_qty": 0.0,
+          "other_outward_qty": 0.0,
+          "others_qty": 0.0,
+          "br_trf_qty": 0.0
+        },
+        "formula_variant": "opening_plus_purchase_minus_sales",
+        "br_trf_in_identity": false,
+        "expected_closing_with_br_trf": 91.0,
+        "expected_closing_without_br_trf": 91.0
+      },
+      "br_trf_in_identity": false
+    },
+    "sv": null,
+    "cv": null
+  },
+  "diabecon": {
+    "name": "DIABECON DS TAB",
+    "extra": {
+      "near_expiry_qty": 4.0,
+      "near_expiry_detail_qty": 11.0,
+      "near_expiry_qty_discrepancy": true,
+      "near_expiry_batches": [
+        {
+          "product_name": "Diabecon Ds Tab",
+          "packing": "60'S",
+          "batch_no": "#1062415",
+          "batch": "#1062415",
+          "mrp": 234.38,
+          "rate": 172.05,
+          "p_rate": null,
+          "stock_qty": 7.0,
+          "expiry_date": "01/11/2026"
+        },
+        {
+          "product_name": "Diabecon Ds Tab",
+          "packing": "60'S",
+          "batch_no": "#1062418",
+          "batch": "#1062418",
+          "mrp": 257.81,
+          "rate": 189.07,
+          "p_rate": null,
+          "stock_qty": 4.0,
+          "expiry_date": "01/11/2026"
+        }
+      ]
+    }
+  }
+}

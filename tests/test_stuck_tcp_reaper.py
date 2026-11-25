@@ -12,10 +12,14 @@ class StuckTcpReaperTests(unittest.TestCase):
     def setUp(self):
         with reaper._lock:
             reaper._high_sendq_since.clear()
+        reaper.stop_stuck_tcp_reaper()
+        reaper._reaper_thread = None
 
     def tearDown(self):
         with reaper._lock:
             reaper._high_sendq_since.clear()
+        reaper.stop_stuck_tcp_reaper()
+        reaper._reaper_thread = None
 
     def test_observe_then_reap_after_min_age(self):
         row = {
@@ -55,6 +59,47 @@ class StuckTcpReaperTests(unittest.TestCase):
             self.assertEqual(reaper.reap_stuck_sendq_once(now=200.0), 0)
         with reaper._lock:
             self.assertNotIn("20.207.239.62:1", reaper._high_sendq_since)
+
+    def test_runtime_supported_requires_linux_and_ss(self):
+        with patch.object(reaper.sys, "platform", "win32"), patch.object(
+            reaper.shutil, "which", return_value=r"C:\ss.exe"
+        ):
+            ok, reason = reaper._reaper_runtime_supported()
+            self.assertFalse(ok)
+            self.assertTrue(reason.startswith("unsupported_platform:"))
+
+        with patch.object(reaper.sys, "platform", "linux"), patch.object(
+            reaper.shutil, "which", return_value=None
+        ):
+            ok, reason = reaper._reaper_runtime_supported()
+            self.assertFalse(ok)
+            self.assertEqual(reason, "ss_unavailable")
+
+        with patch.object(reaper.sys, "platform", "linux"), patch.object(
+            reaper.shutil, "which", return_value="/usr/bin/ss"
+        ):
+            ok, reason = reaper._reaper_runtime_supported()
+            self.assertTrue(ok)
+            self.assertEqual(reason, "ok")
+
+    def test_start_skips_when_unsupported(self):
+        with patch.object(reaper, "STUCK_TCP_REAPER_ENABLED", True), patch.object(
+            reaper, "_reaper_runtime_supported", return_value=(False, "unsupported_platform:win32")
+        ), patch.object(reaper.threading, "Thread") as thread_cls:
+            reaper.start_stuck_tcp_reaper()
+            thread_cls.assert_not_called()
+            self.assertIsNone(reaper._reaper_thread)
+
+    def test_start_launches_on_linux_with_ss(self):
+        fake_thread = MagicMock()
+        fake_thread.is_alive.return_value = True
+        with patch.object(reaper, "STUCK_TCP_REAPER_ENABLED", True), patch.object(
+            reaper, "_reaper_runtime_supported", return_value=(True, "ok")
+        ), patch.object(reaper.threading, "Thread", return_value=fake_thread) as thread_cls:
+            reaper.start_stuck_tcp_reaper()
+            thread_cls.assert_called_once()
+            fake_thread.start.assert_called_once()
+            self.assertIs(reaper._reaper_thread, fake_thread)
 
 
 if __name__ == "__main__":

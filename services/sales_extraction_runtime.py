@@ -681,6 +681,19 @@ async def _run_sales_background_job(
             raise
 
         extraction_duration_seconds = time.time() - extraction_started
+        # Force LMS/NEAR-EXPIRY money+batch repair (StockHDZ family) even when
+        # Gemini parked sales_qty sum into sales_value.
+        try:
+            from services.stock_native_resolver import apply_lms_nearexp_pdf_fallback
+
+            sales_result = apply_lms_nearexp_pdf_fallback(
+                sales_result, file_bytes=file_bytes
+            )
+        except Exception:
+            logger.exception(
+                "STOCK_LMS_NEAREXP_FALLBACK background failed request_id=%s",
+                request_id,
+            )
         extra = ((sales_result.get("totals") or {}).get("extra") or {})
         quality = extra.get("extraction_quality") or {}
         update_sales_progress(
