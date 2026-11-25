@@ -391,6 +391,25 @@ def expected_total_qty(item: Dict[str, Any]) -> float:
     return round(base, 4)
 
 
+def _open_pur_ret_sales_close_layout(item: Dict[str, Any]) -> bool:
+    """PRODUCT|OPEN|PUR.|RETURN|PUR.RET|SALES|CLOSE qty grid.
+
+    On this printed layout PUR.RET contributes positively to closing
+    (Clarina 30+50+2-13=69, Himcolin 6+2-4=4). Do not use the generic
+    purchase-return-outward formula for these rows only.
+    """
+    extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+    layout = str(extra.get("layout") or "")
+    kind = str(extra.get("stock_identity_kind") or "")
+    if layout == "stock_statement_open_pur_ret_sales_close":
+        return True
+    if kind == "open_pur_ret_sales_close":
+        return True
+    if str(extra.get("pur_ret_sign") or "").lower() == "inward":
+        return True
+    return False
+
+
 def compute_closing_formula(item: Dict[str, Any]) -> Tuple[float, Dict[str, Any]]:
     """Return (expected_closing, formula metadata). Never mutates item."""
     opening = _printed_or_zero(item, "opening_qty")
@@ -409,6 +428,35 @@ def compute_closing_formula(item: Dict[str, Any]) -> Tuple[float, Dict[str, Any]
     total = _trusted_printed_total(item)
     sret_present = _sales_return_column_present(item)
     total_in = _header_marks_total_in(item)
+
+    # Layout-specific: OPEN+PUR+RETURN+PUR.RET−SALES=CLOSE (PUR.RET inward).
+    if _open_pur_ret_sales_close_layout(item):
+        base = open_pur + sales_return + purchase_return
+        expected = round(base - sales - sales_free - expiry - sample - other_plain, 4)
+        meta = {
+            "base_source": "opening_plus_purchase_plus_return_plus_pur_ret",
+            "sales_return_in_total": False,
+            "base_qty": round(base, 4),
+            "formula_variant": "open_pur_ret_sales_close_pur_ret_inward",
+            "br_trf_in_identity": False,
+            "adjustments": {
+                "sales_return_qty": round(sales_return, 4),
+                "sales_qty": round(sales, 4),
+                "sales_free_qty": round(sales_free, 4),
+                # Positive contribution — recorded for evidence, not subtracted.
+                "purchase_return_qty": round(purchase_return, 4),
+                "purchase_return_sign": "inward",
+                "expiry_damage_qty": round(expiry, 4),
+                "sample_qty": round(sample, 4),
+                "other_outward_qty": round(other_plain, 4),
+                "others_qty": round(others_signed, 4),
+                "br_trf_qty": round(br, 4),
+            },
+            "expected_closing_qty": expected,
+            "expected_closing_without_br_trf": expected,
+            "expected_closing_with_br_trf": expected,
+        }
+        return expected, meta
 
     sret_in_total = False
     if total is not None:
