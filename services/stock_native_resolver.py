@@ -210,7 +210,43 @@ def _footer_totals_from_page_results(
             frag: Dict[str, float] = {}
             label = _footer_row_label_blob(row)
             is_group_total = bool(re.search(r"(?i)\bgroup\s*totals?\b", label))
-            if kind == "value":
+
+            def _footer_num(raw: Any) -> Optional[float]:
+                if raw in (None, ""):
+                    return None
+                try:
+                    return float(raw)
+                except (TypeError, ValueError):
+                    return None
+
+            # Printed money columns (AMOUNT-I / AMOUNT-II, Sale Value, …).
+            # Harvest these first so a nameless qty+value footer is never
+            # remapped as if SALE/CL.STOCK qty were rupees.
+            extra_item = (
+                item.get("extra") if isinstance(item.get("extra"), dict) else {}
+            )
+            printed_values: Dict[str, float] = {}
+            for src in (
+                "opening_value",
+                "receipts_value",
+                "sales_value",
+                "closing_value",
+            ):
+                val = _footer_num(item.get(src))
+                if val is None:
+                    val = _footer_num(extra_item.get(src))
+                if val is not None:
+                    printed_values[src] = val
+            has_paired_value_cols = bool(
+                printed_values.get("sales_value") is not None
+                or printed_values.get("closing_value") is not None
+                or printed_values.get("opening_value") is not None
+                or printed_values.get("receipts_value") is not None
+            )
+
+            # Qty columns always keep qty identity when value columns exist.
+            # Pure money-under-qty-header footers (no value canons) still remap.
+            if kind == "value" and not has_paired_value_cols:
                 # GroupTotal prints money under Opening/Received/Issued/Closing;
                 # Issued is sales-at-cost, while "Sales Value On prate" often
                 # sits in the trailing free column.
@@ -231,48 +267,21 @@ def _footer_totals_from_page_results(
                     ("closing_qty", "closing_qty"),
                 )
             for src, dest in mapping:
-                val = item.get(src)
-                if val in (None, ""):
+                val = _footer_num(item.get(src))
+                if val is None:
                     continue
-                try:
-                    frag[dest] = float(val)
-                except (TypeError, ValueError):
-                    continue
-            if kind != "value":
-                for src in (
-                    "opening_value",
-                    "receipts_value",
-                    "sales_value",
-                    "closing_value",
-                ):
-                    val = item.get(src)
-                    if val in (None, ""):
-                        extra = (
-                            item.get("extra")
-                            if isinstance(item.get("extra"), dict)
-                            else {}
-                        )
-                        val = extra.get(src)
-                    if val in (None, ""):
-                        continue
-                    try:
-                        frag[src] = float(val)
-                    except (TypeError, ValueError):
-                        continue
-            elif is_group_total:
+                frag[dest] = val
+            for src, val in printed_values.items():
+                frag[src] = val
+            if kind == "value" and is_group_total and frag.get("sales_value") is None:
                 free_val = None
-                extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
                 for key in ("free_out_qty", "free_in_qty", "sample_qty"):
                     raw = item.get(key)
                     if raw in (None, ""):
-                        raw = extra.get(key)
-                    if raw in (None, ""):
-                        continue
-                    try:
-                        free_val = float(raw)
+                        raw = extra_item.get(key)
+                    free_val = _footer_num(raw)
+                    if free_val is not None:
                         break
-                    except (TypeError, ValueError):
-                        continue
                 if free_val is not None and abs(free_val) >= 1.0:
                     frag["sales_value"] = free_val
             if re.search(r"(?i)\bgrand\s*totals?\b", label):
@@ -284,17 +293,18 @@ def _footer_totals_from_page_results(
             candidates.append((priority, order, frag))
             order += 1
             logger.info(
-                "STOCK_PDF_WORDS_FOOTER_TOTALS kind=%s priority=%s opening=%s "
-                "receipts=%s sales=%s closing=%s",
+                "STOCK_PDF_WORDS_FOOTER_TOTALS kind=%s paired_values=%s "
+                "priority=%s opening=%s receipts=%s sales_qty=%s sales_value=%s "
+                "closing_qty=%s closing_value=%s",
                 kind,
+                has_paired_value_cols,
                 priority,
                 frag.get("opening_qty", frag.get("opening_value")),
                 frag.get("receipts_qty", frag.get("receipts_value")),
-                frag.get(
-                    "sales_qty",
-                    frag.get("sales_value", frag.get("sales_issue_value")),
-                ),
-                frag.get("closing_qty", frag.get("closing_value")),
+                frag.get("sales_qty"),
+                frag.get("sales_value", frag.get("sales_issue_value")),
+                frag.get("closing_qty"),
+                frag.get("closing_value"),
             )
     if not candidates:
         return {}
@@ -4560,6 +4570,243 @@ def finalize_lms_qty_only_statement(result: Dict[str, Any]) -> Dict[str, Any]:
         totals["near_expiry_details"] = list(normalized)
         result["near_expiry_details"] = list(normalized)
         annotate_near_expiry_discrepancies(result.get("line_items") or [], normalized)
+    return result
+
+
+def _universal_sales_qty_value_guard_enabled() -> bool:
+    """STOCK_UNIVERSAL_SALES_QTY_VALUE_GUARD — all-path sales qty↔value repair.
+
+    Default ON. Runs after every PDF/Excel/image extract. Re-slots printed
+    sales_qty / sales_value when they are clearly swapped or when qty was
+    copied into value. Never invents money from rate×qty. Kill switch:
+    STOCK_UNIVERSAL_SALES_QTY_VALUE_GUARD=false.
+    """
+    return os.getenv(
+        "STOCK_UNIVERSAL_SALES_QTY_VALUE_GUARD", "true"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _guard_as_float(raw: Any) -> Optional[float]:
+    if raw in (None, ""):
+        return None
+    try:
+        return float(str(raw).replace(",", "").strip())
+    except (TypeError, ValueError):
+        return None
+
+
+def _guard_money_like(val: float) -> bool:
+    """Rupee-shaped: has paise, or whole amount large enough to not be pack qty."""
+    if abs(val) < 1.0:
+        return False
+    if abs(val - round(val)) > 0.001:
+        return True
+    return abs(val) >= 500.0
+
+
+def _guard_qty_like(val: float) -> bool:
+    return abs(val - round(val)) <= 0.001 and 0 <= abs(val) < 500.0
+
+
+def _repair_sales_qty_value_pair(item: Dict[str, Any]) -> bool:
+    """Fix one line: unswap money↔qty, or clear qty copied into sales_value."""
+    if not isinstance(item, dict):
+        return False
+    sq = _guard_as_float(item.get("sales_qty"))
+    sv = _guard_as_float(item.get("sales_value"))
+    extra = item.setdefault("extra", {})
+    if not isinstance(extra, dict):
+        item["extra"] = {}
+        extra = item["extra"]
+    fs = extra.setdefault("field_source", {})
+    if not isinstance(fs, dict):
+        extra["field_source"] = {}
+        fs = extra["field_source"]
+    changed = False
+
+    # Case A: money parked in sales_qty, whole qty parked in sales_value → swap.
+    if (
+        sq is not None
+        and sv is not None
+        and _guard_money_like(sq)
+        and _guard_qty_like(sv)
+        and not _guard_money_like(sv)
+    ):
+        item["sales_qty"] = float(sv)
+        item["sales_value"] = float(sq)
+        fs["sales_qty"] = "printed"
+        fs["sales_value"] = "printed"
+        changed = True
+        logger.info(
+            "STOCK_UNIVERSAL_SALES_QTY_VALUE_GUARD action=unswap product=%s "
+            "sales_qty=%s sales_value=%s",
+            str(item.get("product_name") or "")[:60],
+            item["sales_qty"],
+            item["sales_value"],
+        )
+    else:
+        # Case B: sales_value is an exact copy of sales_qty (small whole) → clear.
+        if (
+            sq is not None
+            and sv is not None
+            and abs(sq - sv) < 0.001
+            and abs(sq) > 0.001
+            and _guard_qty_like(sv)
+            and not _guard_money_like(sv)
+        ):
+            item["sales_value"] = None
+            fs["sales_value"] = "missing"
+            changed = True
+            logger.info(
+                "STOCK_UNIVERSAL_SALES_QTY_VALUE_GUARD action=clear_qty_copy "
+                "product=%s qty=%s",
+                str(item.get("product_name") or "")[:60],
+                sq,
+            )
+        # Case C: money in sales_qty while sales_value blank → move printed money.
+        elif (
+            sq is not None
+            and _guard_money_like(sq)
+            and (sv is None or abs(sv) < 0.001)
+        ):
+            item["sales_value"] = float(sq)
+            item["sales_qty"] = None
+            fs["sales_value"] = "printed"
+            fs["sales_qty"] = "missing"
+            changed = True
+            logger.info(
+                "STOCK_UNIVERSAL_SALES_QTY_VALUE_GUARD action=money_from_qty "
+                "product=%s sales_value=%s",
+                str(item.get("product_name") or "")[:60],
+                item["sales_value"],
+            )
+
+    if changed:
+        flags = list(extra.get("flags") or [])
+        if "UNIVERSAL_SALES_QTY_VALUE_GUARD" not in flags:
+            flags.append("UNIVERSAL_SALES_QTY_VALUE_GUARD")
+        extra["flags"] = flags
+    return changed
+
+
+def _repair_totals_sales_value_qty_sum(result: Dict[str, Any]) -> bool:
+    """When totals.sales_value equals line sales_qty sum, prefer printed money.
+
+    Prefers (in order): sum of line sales_value that look like money, then
+    extra.printed_* / footer money keys. Never invents from rate×qty.
+    """
+    totals = result.get("totals")
+    if not isinstance(totals, dict):
+        return False
+    extra = totals.setdefault("extra", {})
+    if not isinstance(extra, dict):
+        totals["extra"] = {}
+        extra = totals["extra"]
+    # Qty-only / LMS layouts keep footer money via finalize_lms — do not remap.
+    if extra.get("qty_only") or extra.get("no_sales_value"):
+        return False
+    items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+    if not items:
+        return False
+    qty_sum = 0.0
+    money_sum = 0.0
+    money_rows = 0
+    for it in items:
+        sq = _guard_as_float(it.get("sales_qty"))
+        sv = _guard_as_float(it.get("sales_value"))
+        if sq is not None:
+            qty_sum += sq
+        if sv is not None and _guard_money_like(sv):
+            money_sum += sv
+            money_rows += 1
+    totals_sv = _guard_as_float(totals.get("sales_value"))
+    if totals_sv is None or qty_sum <= 0:
+        return False
+    # Already money-shaped and not equal to qty sum — leave alone.
+    if _guard_money_like(totals_sv) and abs(totals_sv - qty_sum) > 0.51:
+        return False
+    if abs(totals_sv - qty_sum) > 0.51:
+        return False
+    # totals.sales_value collapsed to qty sum. Prefer printed line money sum.
+    candidate: Optional[float] = None
+    if money_rows > 0 and money_sum > 0 and abs(money_sum - qty_sum) > 0.51:
+        candidate = round(money_sum, 2)
+    if candidate is None:
+        for key in (
+            "printed_amount_total_sales_value",
+            "printed_sales_value",
+            "footer_sales_value",
+            "sales_issue_value",
+        ):
+            raw = extra.get(key)
+            num = _guard_as_float(raw)
+            if num is not None and _guard_money_like(num) and abs(num - qty_sum) > 0.51:
+                candidate = float(num)
+                break
+    if candidate is None:
+        return False
+    totals["sales_value"] = float(candidate)
+    extra["sales_value_source"] = "universal_sales_qty_value_guard"
+    logger.info(
+        "STOCK_UNIVERSAL_SALES_QTY_VALUE_GUARD action=totals_from_money "
+        "was_qty_sum=%s sales_value=%s",
+        qty_sum,
+        candidate,
+    )
+    return True
+
+
+def apply_universal_sales_qty_value_guard(result: Dict[str, Any]) -> Dict[str, Any]:
+    """Stockist-agnostic sales_qty / sales_value repair for PDF + Excel + image.
+
+    Layout-family fallback (not stockist-named): when Sale Qty lands in
+    sales_value or money lands in sales_qty, re-slot the printed numbers.
+    Does not invent sales_value from rate × qty. Default ON.
+    """
+    if not _universal_sales_qty_value_guard_enabled():
+        return result
+    if not isinstance(result, dict):
+        return result
+    totals = result.get("totals") if isinstance(result.get("totals"), dict) else {}
+    extra = totals.get("extra") if isinstance(totals.get("extra"), dict) else {}
+    # Qty-only sheets have no per-line Sale Value column — only clear copies.
+    qty_only = bool(extra.get("qty_only") or extra.get("no_sales_value"))
+    fixed = 0
+    for item in result.get("line_items") or []:
+        if not isinstance(item, dict):
+            continue
+        if qty_only:
+            # On qty-only grids, only strip qty copies; never promote money.
+            sq = _guard_as_float(item.get("sales_qty"))
+            sv = _guard_as_float(item.get("sales_value"))
+            if (
+                sq is not None
+                and sv is not None
+                and abs(sq - sv) < 0.001
+                and abs(sq) > 0.001
+                and _guard_qty_like(sv)
+            ):
+                item["sales_value"] = None
+                item_extra = item.setdefault("extra", {})
+                if isinstance(item_extra, dict):
+                    fs = item_extra.setdefault("field_source", {})
+                    if isinstance(fs, dict):
+                        fs["sales_value"] = "missing"
+                    flags = list(item_extra.get("flags") or [])
+                    if "UNIVERSAL_SALES_QTY_VALUE_GUARD" not in flags:
+                        flags.append("UNIVERSAL_SALES_QTY_VALUE_GUARD")
+                    item_extra["flags"] = flags
+                fixed += 1
+            continue
+        if _repair_sales_qty_value_pair(item):
+            fixed += 1
+    totals_fixed = _repair_totals_sales_value_qty_sum(result)
+    if fixed or totals_fixed:
+        logger.info(
+            "STOCK_UNIVERSAL_SALES_QTY_VALUE_GUARD lines_fixed=%s totals_fixed=%s",
+            fixed,
+            int(bool(totals_fixed)),
+        )
     return result
 
 

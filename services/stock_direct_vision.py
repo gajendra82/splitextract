@@ -2493,6 +2493,152 @@ def _coerce_vision_payload(parsed: Dict[str, Any]) -> Dict[str, Any]:
     return parsed
 
 
+def _detail_op_qty_val_alignment_signals(
+    result: Optional[Dict[str, Any]],
+) -> Dict[str, Any]:
+    """Detect Op.Qty/Op.Val copied into P/Cl and Sl.No / header-total mismatches.
+
+    Layout-family check for Stock and Sales Detail / SSA qty+value Vision.
+    Never rewrites printed numbers — signals only for soft-fail / quality gate.
+    Skip when ``excel_column_aligned`` (native Excel/Word already header-mapped).
+    """
+    empty = {
+        "op_into_receipts": 0,
+        "op_into_closing": 0,
+        "max_sl_no": 0,
+        "row_count": 0,
+        "sl_no_mismatch": False,
+        "header_total_mismatch": False,
+        "skipped_excel_aligned": False,
+        "soft_reasons": [],
+    }
+    if not isinstance(result, dict):
+        return empty
+    totals = result.get("totals") if isinstance(result.get("totals"), dict) else {}
+    extra_t = totals.get("extra") if isinstance(totals.get("extra"), dict) else {}
+    if extra_t.get("excel_column_aligned"):
+        empty["skipped_excel_aligned"] = True
+        return empty
+
+    items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+    row_count = len(items)
+    empty["row_count"] = row_count
+    if row_count < 3:
+        return empty
+
+    op_into_receipts = 0
+    op_into_closing = 0
+    max_sl = 0
+    for item in items:
+        try:
+            opening = float(item.get("opening_qty") or 0)
+            receipts = float(item.get("receipts_qty") or 0)
+            sales = float(item.get("sales_qty") or 0)
+            closing = float(item.get("closing_qty") or 0)
+        except (TypeError, ValueError):
+            continue
+        extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        try:
+            opening_value = float(
+                item.get("opening_value")
+                if item.get("opening_value") is not None
+                else (extra.get("opening_value") or 0)
+            )
+        except (TypeError, ValueError):
+            opening_value = 0.0
+        try:
+            receipts_value = float(
+                item.get("receipts_value")
+                if item.get("receipts_value") is not None
+                else (extra.get("receipts_value") or extra.get("purchase_value") or 0)
+            )
+        except (TypeError, ValueError):
+            receipts_value = 0.0
+        try:
+            closing_value = float(item.get("closing_value") or 0)
+        except (TypeError, ValueError):
+            closing_value = 0.0
+        sl_raw = extra.get("sl_no")
+        try:
+            if sl_raw not in (None, ""):
+                max_sl = max(max_sl, int(float(str(sl_raw).strip())))
+        except (TypeError, ValueError):
+            pass
+
+        # Op parked in P: same qty (+ money when both present) while row moved.
+        if (
+            opening > 0
+            and abs(receipts - opening) < 0.01
+            and (
+                (opening_value > 1 and abs(receipts_value - opening_value) < 0.05)
+                or (receipts_value <= 1 and sales > 0)
+            )
+            and abs(closing - opening) > 1.01
+        ):
+            op_into_receipts += 1
+        # Op idle-copied into Cl while sales moved stock.
+        if (
+            opening > 0
+            and sales > 0
+            and abs(closing - opening) < 0.01
+            and (
+                closing_value <= 1
+                or opening_value <= 1
+                or abs(closing_value - opening_value) < 0.05
+            )
+        ):
+            op_into_closing += 1
+
+    empty["op_into_receipts"] = op_into_receipts
+    empty["op_into_closing"] = op_into_closing
+    empty["max_sl_no"] = max_sl
+
+    soft: List[str] = []
+    if op_into_receipts >= max(2, row_count // 5):
+        soft.append("op_copied_into_receipts_majority")
+    if op_into_closing >= max(2, row_count // 5):
+        soft.append("op_copied_into_closing_majority")
+    # Sl.No max printed on Detail Report (e.g. 45) vs extracted item count.
+    if max_sl >= 10 and row_count + 2 < max_sl and (max_sl - row_count) >= max(
+        3, max_sl // 5
+    ):
+        empty["sl_no_mismatch"] = True
+        soft.append("sl_no_row_count_mismatch")
+
+    # Printed Total-row S.Val / Cl.Val vs line sums (header Total or GRAND TOTAL).
+    try:
+        printed_sv = float(totals.get("sales_value")) if totals.get("sales_value") not in (None, "") else None
+    except (TypeError, ValueError):
+        printed_sv = None
+    try:
+        printed_cv = (
+            float(totals.get("closing_value"))
+            if totals.get("closing_value") not in (None, "")
+            else None
+        )
+    except (TypeError, ValueError):
+        printed_cv = None
+    line_sv = sum(float(i.get("sales_value") or 0) for i in items)
+    line_cv = sum(float(i.get("closing_value") or 0) for i in items)
+    total_mismatch = False
+    if printed_sv is not None and printed_sv > 100 and line_sv > 0:
+        if abs(printed_sv - line_sv) > max(50.0, 0.08 * printed_sv):
+            total_mismatch = True
+    if printed_cv is not None and printed_cv > 100 and line_cv > 0:
+        if abs(printed_cv - line_cv) > max(50.0, 0.08 * printed_cv):
+            total_mismatch = True
+    if total_mismatch and (
+        op_into_receipts
+        or op_into_closing
+        or empty["sl_no_mismatch"]
+        or soft
+    ):
+        empty["header_total_mismatch"] = True
+        soft.append("header_total_mismatch")
+    empty["soft_reasons"] = soft
+    return empty
+
+
 def validate_stock_direct_vision(
     result: Optional[Dict[str, Any]],
     layout: str = "product_stock_report_saleret",
@@ -2783,6 +2929,24 @@ def validate_stock_direct_vision(
     if op_qty_val and sales_qty_drop >= max(1, row_count // 6):
         soft_reasons.append("sales_qty_drop_majority")
 
+    align = (
+        _detail_op_qty_val_alignment_signals(result)
+        if op_qty_val
+        else {"soft_reasons": [], "op_into_receipts": 0, "op_into_closing": 0}
+    )
+    for reason in align.get("soft_reasons") or []:
+        if reason not in soft_reasons:
+            soft_reasons.append(reason)
+    if align.get("soft_reasons"):
+        _log(
+            "STOCK_SALES_DETAIL_ALIGNMENT_GATE",
+            op_into_receipts=align.get("op_into_receipts"),
+            op_into_closing=align.get("op_into_closing"),
+            max_sl_no=align.get("max_sl_no"),
+            row_count=align.get("row_count"),
+            reasons=",".join(align.get("soft_reasons") or []),
+        )
+
     hard_ok = not reasons
     if op_qty_pur_sale_bal:
         identity_score = max(0, row_count * 3)
@@ -2795,6 +2959,8 @@ def validate_stock_direct_vision(
             - money_without_qty * 2
             - receipts_qty_drop * 2
             - sales_qty_drop * 2
+            - int(align.get("op_into_receipts") or 0) * 2
+            - int(align.get("op_into_closing") or 0) * 2
             - max(0, identity_fail - row_count // 4),
         )
     else:
@@ -2811,6 +2977,7 @@ def validate_stock_direct_vision(
         "low_confidence_cells": low_confidence_cells,
         "identity_score": identity_score,
         "identity_valid": identity_fail == 0,
+        "alignment_signals": align if op_qty_val else None,
     }
 
 
@@ -5024,6 +5191,10 @@ def extract_stock_sales_op_qty_val_direct_vision(
                 "receipts_qty_drop_majority",
                 "sales_qty_drop_majority",
                 "identity_failure_majority",
+                "op_copied_into_receipts_majority",
+                "op_copied_into_closing_majority",
+                "sl_no_row_count_mismatch",
+                "header_total_mismatch",
             }
         )
         # Column-shift soft fails use a full re-read (below). Identity-repair
@@ -5112,8 +5283,16 @@ def extract_stock_sales_op_qty_val_direct_vision(
                     )
                     return result
         else:
-            # Header pages: plain re-read. Continuation: mid-band Op→S zoom.
-            use_movement_retry = bool(continuation and column_shift_soft)
+            # Header pages: plain re-read unless Op was parked in P/Cl.
+            # Continuation / Op-copy: mid-band Op→S zoom.
+            use_movement_retry = bool(
+                column_shift_soft
+                and (
+                    continuation
+                    or "op_copied_into_receipts_majority" in soft_rs
+                    or "op_copied_into_closing_majority" in soft_rs
+                )
+            )
             retry_bytes = _limit_detail_vision_image(
                 _widen_detail_movement_columns(vision_primary)
                 if use_movement_retry

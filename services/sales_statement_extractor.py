@@ -9616,6 +9616,14 @@ def extract_sales_statement(file_bytes: bytes, filename: str) -> Dict[str, Any]:
         result = finalize_lms_qty_only_statement(result)
     except Exception:
         pass
+    # All-path sales_qty↔sales_value repair (PDF/Excel/image). Re-slots printed
+    # cells only; never invents money from rate×qty.
+    try:
+        from services.stock_native_resolver import apply_universal_sales_qty_value_guard
+
+        result = apply_universal_sales_qty_value_guard(result)
+    except Exception:
+        pass
     result = _apply_stock_identity_validation(result)
     try:
         from services.stock_reconciliation import apply_stock_reconciliation
@@ -15918,9 +15926,30 @@ def _parse_docx(file_bytes: bytes, filename: str) -> Dict[str, Any]:
             first_norm = _norm_docx_header(cells[0])
             if first_norm in {"slno", "sno", "srno"}:
                 continue
-            if first_norm == "total" or str(cells[0]).strip().lower() == "total":
+            first_label = str(cells[0] or "").strip()
+            is_total_row = first_norm in {"total", "grandtotal"} or bool(
+                re.match(r"^(?:GRAND\s+)?TOTAL\b", first_label, re.I)
+            )
+            if is_total_row:
+                is_grand = first_norm == "grandtotal" or bool(
+                    re.match(r"^GRAND\s+TOTAL\b", first_label, re.I)
+                )
+                prev_src = str(
+                    (result.get("totals") or {})
+                    .get("extra", {})
+                    .get("total_row_source")
+                    or ""
+                )
+                # Prefer last GRAND TOTAL; never let a later plain TOTAL overwrite it.
+                if prev_src == "stock_sales_detail_grand_total" and not is_grand:
+                    continue
                 if table_is_detail or len(cells) >= 20:
                     _parse_stock_sales_detail_total_row(cells, colmap, result)
+                    result["totals"].setdefault("extra", {})["total_row_source"] = (
+                        "stock_sales_detail_grand_total"
+                        if is_grand
+                        else "stock_sales_detail_total"
+                    )
                 else:
                     # Legacy narrow table fallback
                     if len(cells) > 9:
@@ -15928,6 +15957,11 @@ def _parse_docx(file_bytes: bytes, filename: str) -> Dict[str, Any]:
                     if len(cells) > 19:
                         result["totals"]["closing_value"] = _to_nullable_float(cells[19])
                     result["totals"]["extra"]["raw"] = cells
+                    result["totals"]["extra"]["total_row_source"] = (
+                        "stock_sales_detail_grand_total"
+                        if is_grand
+                        else "stock_sales_detail_total"
+                    )
                 continue
 
             if table_is_detail or (
@@ -15963,9 +15997,10 @@ def _parse_docx(file_bytes: bytes, filename: str) -> Dict[str, Any]:
 
     result["line_items"] = items
     if is_stock_sales_detail:
-        result["totals"].setdefault("extra", {})["extraction_method"] = (
-            "docx_stock_sales_detail"
-        )
+        extra_d = result["totals"].setdefault("extra", {})
+        extra_d["extraction_method"] = "docx_stock_sales_detail"
+        # Native Word tables are column-aligned — skip image misalignment gates.
+        extra_d["excel_column_aligned"] = True
         # Prefer printed Total-row closing; if absent, fall back to line sum.
         if result["totals"].get("closing_value") is None and items:
             result["totals"]["closing_value"] = round(
@@ -15977,9 +16012,9 @@ def _parse_docx(file_bytes: bytes, filename: str) -> Dict[str, Any]:
             )
         line_closing = round(sum(_to_float(i.get("closing_value")) for i in items), 2)
         printed_closing = result["totals"].get("closing_value")
-        result["totals"]["extra"]["line_closing_value_sum"] = line_closing
+        extra_d["line_closing_value_sum"] = line_closing
         if printed_closing is not None:
-            result["totals"]["extra"]["closing_value_matches_lines"] = (
+            extra_d["closing_value_matches_lines"] = (
                 abs(float(printed_closing) - line_closing) < 0.05
             )
     result = _docx_maybe_native_resolver(result, doc)
@@ -17535,6 +17570,9 @@ _XLS_HEADER_ALIASES = {
     "openingstk": "op",
     "openstk": "op",
     "openingqty": "op",
+    # Stock and Sales Detail Report Excel: Op.Qty / Op Qty.
+    "opqty": "op",
+    "op.qty": "op",
     "obqty": "op",
     "ob(qty)": "op",
     "ob": "op",
@@ -17559,6 +17597,10 @@ _XLS_HEADER_ALIASES = {
     "purchase": "pur",
     "purchases": "pur",
     "purchaseqty": "pur",
+    # Stock and Sales Detail Report Excel: P.Qty / P Qty (not Op.Qty).
+    "pqty": "pur",
+    "p.qty": "pur",
+    "purqty": "pur",
     # PurTot — purchase total qty (OStk / PurTot / SaleTot / Qoh sheets).
     "purtot": "pur",
     "purtotal": "pur",
@@ -17599,6 +17641,9 @@ _XLS_HEADER_ALIASES = {
     "saleqty": "sale",
     "salesqty": "sale",
     "soldqty": "sale",
+    # Stock and Sales Detail Report Excel: S.Qty / S Qty.
+    "sqty": "sale",
+    "s.qty": "sale",
     # SaleTot — sale total qty beside Qoh closing.
     "saletot": "sale",
     "saletotal": "sale",
@@ -17636,6 +17681,10 @@ _XLS_HEADER_ALIASES = {
     "closingqty": "bal",
     "closqty": "bal",
     "clsqty": "bal",
+    # Stock and Sales Detail Report Excel: Cl.Qty / Cl Qty.
+    "clqty": "bal",
+    "cl.qty": "bal",
+    "c.qty": "bal",
     "closingquantity": "bal",
     "cbqty": "bal",
     "cb(qty)": "bal",
@@ -17713,6 +17762,12 @@ _XLS_HEADER_ALIASES = {
     "salevalue": "sval",
     "saleamount": "sval",
     "salesamount": "sval",
+    # STOCK REGISTER: SALE | AMOUNT-I | CL.STOCK | AMOUNT-II (qty then money).
+    "amounti": "sval",
+    "amount-i": "sval",
+    "amountii": "bval",
+    "amount-ii": "bval",
+    "amount2": "bval",
     # SALE AMO. / Sale Amt — truncated sales money (qty stays under SALE).
     "saleamo": "sval",
     "saleamt": "sval",
@@ -17740,6 +17795,14 @@ _XLS_HEADER_ALIASES = {
     "purchasevalue": "purval",
     "inwardvalue": "purval",
     "purval": "purval",
+    # Stock and Sales Detail Report Excel: P.Val / P Val.
+    "pval": "purval",
+    "p.val": "purval",
+    # Detail scheme markers — never qty/value columns.
+    "psch": "ignore",
+    "p.sch": "ignore",
+    "ssch": "ignore",
+    "s.sch": "ignore",
     "qtyopening": "op",
     "quantityopening": "op",
     "stockopening": "op",
@@ -24123,6 +24186,12 @@ def _xls_fill_from_rows(
     ):
         extra.setdefault("layout", "product_opening_purchase_sale_closing")
         extra.setdefault("extraction_method", "excel_op_pur_sale_closing")
+    # Header-mapped Excel (Op.Qty/P.Qty/S.Qty/Cl.Qty Detail or ORIC) is
+    # column-aligned — quality gate must not flag image Op→P/Cl misreads.
+    if {"op", "pur", "sale", "bal"} <= set(colmap) or (
+        "op" in colmap and "opval" in colmap and "bal" in colmap and "bval" in colmap
+    ):
+        extra["excel_column_aligned"] = True
     return result
 
 
@@ -37043,6 +37112,8 @@ def _parse_ssa_opening_receipt_issue_value(
     result["report_title"] = "STOCK & SALES ANALYSIS"
     items: List[Dict[str, Any]] = []
     in_purchase_detail = False
+    # Multiple TOTAL / GRAND TOTAL bands: keep candidates; prefer last GRAND TOTAL.
+    total_candidates: List[Tuple[bool, List[str]]] = []
     header_stockist = _ssa_ori_header_stockist(text)
     if header_stockist:
         result["stockist_name"] = header_stockist
@@ -37089,20 +37160,15 @@ def _parse_ssa_opening_receipt_issue_value(
         ):
             result["stockist_address"] = _clean_name(stripped)
             continue
-        if re.match(r"^TOTAL\b", stripped, re.I):
+        # TOTAL and GRAND TOTAL (last GRAND TOTAL wins when several exist).
+        if re.match(r"^(?:GRAND\s+)?TOTAL\b", stripped, re.I):
             tokens = stripped.split()
-            nums = [t for t in tokens[1:] if _SSA_ORI_TOKEN_RE.match(t)]
+            # Drop the TOTAL / GRAND TOTAL label tokens before reading qty/value.
+            start = 2 if re.match(r"^GRAND\s+TOTAL\b", stripped, re.I) else 1
+            nums = [t for t in tokens[start:] if _SSA_ORI_TOKEN_RE.match(t)]
             if len(nums) >= 8:
-                extra = result["totals"]["extra"]
-                extra["opening_qty"] = _ssa_ori_number(nums[0])
-                extra["opening_value"] = _ssa_ori_number(nums[1])
-                extra["receipts_qty"] = _ssa_ori_number(nums[2])
-                extra["receipts_value"] = _ssa_ori_number(nums[3])
-                extra["sales_qty"] = _ssa_ori_number(nums[4])
-                result["totals"]["sales_value"] = _ssa_ori_number(nums[5])
-                extra["closing_qty"] = _ssa_ori_number(nums[6])
-                result["totals"]["closing_value"] = _ssa_ori_number(nums[7])
-                extra["total_row_source"] = "ssa_ori_grand_total"
+                is_grand = bool(re.match(r"^GRAND\s+TOTAL\b", stripped, re.I))
+                total_candidates.append((is_grand, nums))
             continue
 
         tokens = stripped.split()
@@ -37119,7 +37185,9 @@ def _parse_ssa_opening_receipt_issue_value(
             continue
         tail, drop_n = selected
         name = " ".join(tokens[:-drop_n]).strip()
-        if not name or _ssa_skip_product(name) or re.match(r"^TOTAL\b", name, re.I):
+        if not name or _ssa_skip_product(name) or re.match(
+            r"^(?:GRAND\s+)?TOTAL\b", name, re.I
+        ):
             continue
         name, pack = _ssa_ori_split_pack(name)
         if not name:
@@ -37127,6 +37195,8 @@ def _parse_ssa_opening_receipt_issue_value(
         item = empty_line_item()
         item["product_name"] = name
         item["packing"] = pack
+        # OPENING QTY/VAL | RECEIPT QTY/VAL | ISSUE QTY/VAL | CLOSING QTY/VAL | DUMP
+        # Never park Op (tail[0]/tail[1]) into receipts or closing.
         item["opening_qty"] = _ssa_ori_number(tail[0])
         item["receipts_qty"] = _ssa_ori_number(tail[2])
         item["sales_qty"] = _ssa_ori_number(tail[4])
@@ -37143,6 +37213,28 @@ def _parse_ssa_opening_receipt_issue_value(
 
     if not items:
         return None
+    if total_candidates:
+        grand = [nums for is_grand, nums in total_candidates if is_grand]
+        chosen = grand[-1] if grand else total_candidates[-1][1]
+        extra = result["totals"]["extra"]
+        extra["opening_qty"] = _ssa_ori_number(chosen[0])
+        extra["opening_value"] = _ssa_ori_number(chosen[1])
+        extra["receipts_qty"] = _ssa_ori_number(chosen[2])
+        extra["receipts_value"] = _ssa_ori_number(chosen[3])
+        extra["sales_qty"] = _ssa_ori_number(chosen[4])
+        result["totals"]["sales_value"] = _ssa_ori_number(chosen[5])
+        extra["closing_qty"] = _ssa_ori_number(chosen[6])
+        result["totals"]["closing_value"] = _ssa_ori_number(chosen[7])
+        extra["total_row_source"] = (
+            "ssa_ori_grand_total" if grand else "ssa_ori_total"
+        )
+        logger.info(
+            "SSA_ORI_TOTAL_CHOICE candidates=%s chosen_source=%s sales=%s closing=%s",
+            len(total_candidates),
+            extra["total_row_source"],
+            result["totals"].get("sales_value"),
+            result["totals"].get("closing_value"),
+        )
     result["line_items"] = items
     extra = result["totals"]["extra"]
     extra["extraction_method"] = "ssa_opening_receipt_issue_value"
@@ -42882,37 +42974,19 @@ def _parse_stock_sales_detail_opval(doc, filename: str) -> Optional[Dict[str, An
                 fs["other_outward_qty"] = "printed"
             items.append(item)
 
+        # Collect Total / GRAND TOTAL bands; prefer last GRAND TOTAL when several exist.
+        detail_total_bands: List[Tuple[bool, Dict[str, List[str]], float]] = []
         for row in rows:
             blob = " ".join(tok for _a, _b, tok in row["words"])
-            if not re.search(r"\bTotal\b", blob, re.I):
+            if not re.search(r"\b(?:GRAND\s+)?TOTAL\b", blob, re.I):
                 continue
-            cells = {}
+            cells: Dict[str, List[str]] = {}
             for _x0, x1, token in row["words"]:
                 field = field_for(x1)
                 if field:
                     cells.setdefault(field, []).append(token)
-            extra_t = result["totals"].setdefault("extra", {})
-            op_val = _detail_opval_number(cells.get("opening_value") or [])
-            if op_val is not None:
-                result["totals"]["opening_value"] = op_val
-                extra_t["opening_value"] = op_val
-            if stock_detail_opval_printed_totals_enabled():
-                sales_tot = _detail_opval_number(cells.get("sales_value") or [])
-                closing_tot = _detail_opval_number(cells.get("closing_value") or [])
-                if sales_tot is not None:
-                    result["totals"]["sales_value"] = sales_tot
-                if closing_tot is not None:
-                    result["totals"]["closing_value"] = closing_tot
-                purchase_tot = _detail_opval_number(cells.get("purchase_value") or [])
-                if purchase_tot is not None:
-                    extra_t["purchase_value"] = purchase_tot
-                extra_t["total_row_source"] = "stock_sales_detail_total"
-                logger.info(
-                    "DETAIL_OPVAL_PRINTED_TOTALS file=%s sales_value=%s closing_value=%s",
-                    filename,
-                    sales_tot,
-                    closing_tot,
-                )
+            is_grand = bool(re.search(r"\bGRAND\s+TOTAL\b", blob, re.I))
+            detail_total_bands.append((is_grand, cells, float(row["y"])))
             if not result.get("company_name"):
                 for prev in rows:
                     if prev["y"] >= row["y"]:
@@ -42923,6 +42997,38 @@ def _parse_stock_sales_detail_opval(doc, filename: str) -> Optional[Dict[str, An
                     if left and not re.search(r"Stock|Seller|Sl\.No|Op\.Qty", left, re.I):
                         result["company_name"] = _clean_name(left)
                         break
+        if detail_total_bands and stock_detail_opval_printed_totals_enabled():
+            grand_bands = [b for b in detail_total_bands if b[0]]
+            chosen = grand_bands[-1] if grand_bands else detail_total_bands[-1]
+            cells = chosen[1]
+            extra_t = result["totals"].setdefault("extra", {})
+            op_val = _detail_opval_number(cells.get("opening_value") or [])
+            if op_val is not None:
+                result["totals"]["opening_value"] = op_val
+                extra_t["opening_value"] = op_val
+            sales_tot = _detail_opval_number(cells.get("sales_value") or [])
+            closing_tot = _detail_opval_number(cells.get("closing_value") or [])
+            if sales_tot is not None:
+                result["totals"]["sales_value"] = sales_tot
+            if closing_tot is not None:
+                result["totals"]["closing_value"] = closing_tot
+            purchase_tot = _detail_opval_number(cells.get("purchase_value") or [])
+            if purchase_tot is not None:
+                extra_t["purchase_value"] = purchase_tot
+            extra_t["total_row_source"] = (
+                "stock_sales_detail_grand_total"
+                if chosen[0]
+                else "stock_sales_detail_total"
+            )
+            logger.info(
+                "DETAIL_OPVAL_PRINTED_TOTALS file=%s source=%s sales_value=%s "
+                "closing_value=%s bands=%s",
+                filename,
+                extra_t["total_row_source"],
+                sales_tot,
+                closing_tot,
+                len(detail_total_bands),
+            )
 
     if not items:
         return None
@@ -58170,8 +58276,12 @@ _SSA_QTY_VALUE_VISION_PROMPT = """
 This image is a paired QTY + VALUE stock grid (STOCK & SALES ANALYSIS, or a
 STOCK REPORT with Op.Qnt/Op.Value/Pur.Qnt/Pur.Value/Sl.Qnt/Sl.Value/Cl.Qnt/Cl.Value).
 It is NOT a Product Stock Report qty-only sheet, NOT ZANDRA Stock and Sale, and NOT an OpBal sheet.
+If headers are Op.Qty|Op.Val|P.Qty|P.Sch|P.Val|S.Qty|…|Cl.Qty|Cl.Val (Stock and
+Sales Detail Report), return line_items=[] — that layout is a different reader.
 
 Columns LEFT TO RIGHT. A dash or blank cell is 0. NEVER shift a later number left.
+NEVER copy OPENING QTY/VALUE into RECEIPT or CLOSING. Map each printed cell
+only under its own header.
 
 1 ITEM DESCRIPTION / Particular -> product_name
 2 pack / unit (75G, 60, Pcs, 1 PIC, 1 TUB) -> packing
@@ -58288,7 +58398,10 @@ Rules:
 - Example: ABANA TAB 60'S rate 141.17, opening 23 / 3246.91, receipt 100 / 14117.00,
   issue 35 / 5675.62, closing 88 / 12422.96, dump 1.
 - Skip HIMALAYA [ZEAL] banner and TOTAL as products.
+- When several TOTAL / GRAND TOTAL bands print, use ONLY the last GRAND TOTAL
+  (else the last TOTAL) for totals.sales_value / totals.closing_value.
 - Do not copy sales_qty into closing_qty. Do not copy receipts_value into the next row's receipts_qty.
+- Never put opening_qty into receipts_qty or closing_qty.
 """.strip()
 
 
