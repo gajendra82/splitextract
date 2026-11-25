@@ -33901,6 +33901,7 @@ def _sales_line_to_invoice_item(line: Dict[str, Any]) -> Dict[str, Any]:
         "receipts_qty",
         "receipts_value",
         "sales_qty",
+        "sales_value",
         "closing_qty",
         "closing_value",
         "reorder_qty",
@@ -34378,8 +34379,14 @@ def build_split_extract_response_from_sales_statement(
                 "company_name": sales_result.get("company_name"),
                 "period_from": sales_result.get("period_from"),
                 "period_to": sales_result.get("period_to"),
+                # Universal money: ISSUE/sales total → sales_value (never sales_qty).
                 "sales_value": totals.get("sales_value"),
                 "closing_value": totals.get("closing_value"),
+                "opening_value": totals_extra.get("opening_value"),
+                "receipts_value": totals_extra.get("receipts_value")
+                or totals_extra.get("purchase_value"),
+                "sales_value_source": totals_extra.get("sales_value_source")
+                or totals_extra.get("total_value_row_source"),
                 "extraction_method": totals_extra.get("extraction_method"),
                 "hospital_count": totals_extra.get("hospital_count"),
                 "invoice_count": totals_extra.get("invoice_count"),
