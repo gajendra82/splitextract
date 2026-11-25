@@ -11865,6 +11865,9 @@ _LSTSL_FOOTER_LABEL_NAME = re.compile(
 # Does not match product names that merely start with Total (e.g. TOTAL CARE).
 _VISION_TOTAL_ROW_NAME = re.compile(
     r"(?ix)^\s*(?:[-–—_=.*]{2,}\s*)?"
+    r"(?:[-–—=~>*\s]*)?"
+    r"(?:firm\s+|company\s+|division\s+)?"
+    r"(?:grand\s+|group\s+|page\s+|sub\s+|net\s+)?"
     r"(?:[-–—=~>*\s]*)?(?:grand\s+|group\s+|page\s+|sub\s+|net\s+)?"
     r"totals?\s*"
     r"(?:[:.\-–—_=>*]*)\s*"
