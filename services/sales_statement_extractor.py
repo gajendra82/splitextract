@@ -75487,12 +75487,15 @@ Map each header to a role. Do not assume a column that is not printed.
 If the headers include both Jun and Jul, return {"layout_ok": false, "detected_headers": [], "line_items": []}.
 
 Roles:
-product, packing, opening_qty, receipts_qty, total_qty, sales_qty, sale_return_qty,
-expiry_qty, shortage_qty, closing_qty, closing_value, sales_value, order_qty, other
+product, packing, opening_qty, opening_value, receipts_qty, receipts_value, total_qty,
+sales_qty, sale_return_qty, expiry_qty, shortage_qty, closing_qty, closing_value,
+sales_value, order_qty, lms, other
 
 Typical names:
-Opening -> opening_qty
-Purchase or Receipt -> receipts_qty
+Opening or Opening Stock or Opening Qty -> opening_qty
+Opening Value -> opening_value
+Purchase or Receipt or Receive Quantity -> receipts_qty
+Receive Value or Receipt Value -> receipts_value
 Total -> total_qty
 Sales -> sales_qty
 Sales Ret or SalesReturn -> sale_return_qty
@@ -75500,8 +75503,12 @@ Exp, Exp/Dmg, Expiry -> expiry_qty
 Shortage -> shortage_qty
 Closing or Closing Stock -> closing_qty
 Closing Amt or Closing Value or Stock-Value -> closing_value
-ISSUE or ISSUE QTY -> sales_qty. ISSUE VALUE -> sales_value.
+ISSUE or ISSUE QTY or ISSUE QUANTITY -> sales_qty. ISSUE VALUE -> sales_value.
+LAST MONTH SALE -> extra.lms. It is not sales_qty.
 Order Qty or Open Qty -> order_qty
+When STOCK/QUANTITY and VALUE are both printed for the same band, the quantity
+is the stock count and VALUE is the rupee amount. Never put the VALUE amount
+into opening_qty, receipts_qty, sales_qty, or closing_qty.
 
 ISSUE and CLOSING are different columns. A missing vertical line between them does not merge them.
 sales_qty is the number under ISSUE. closing_qty is the number under CLOSING.
@@ -75543,7 +75550,9 @@ Return ONLY JSON:
       "product_name": string,
       "packing": string|null,
       "opening_qty": number,
+      "opening_value": number|null,
       "receipts_qty": number,
+      "receipts_value": number|null,
       "sales_qty": number,
       "sales_value": number|null,
       "closing_qty": number,
@@ -75553,7 +75562,8 @@ Return ONLY JSON:
         "sale_return_qty": number,
         "expiry_qty": number,
         "shortage_qty": number,
-        "order_qty": number|null
+        "order_qty": number|null,
+        "lms": number|null
       }
     }
   ]
@@ -75581,11 +75591,21 @@ def _header_driven_role(label: str) -> str:
         return "closing_value"
     if "CLOS" in token:
         return "closing_qty"
+    # OPENING STOCK|OPENING VALUE and RECEIVE QUANTITY|RECEIVE VALUE.
+    # VALUE is money. STOCK/QUANTITY stays the quantity role below.
+    if re.search(r"\b(?:OPENING|OPEN|OP)\s+(?:VAL|VALUE|AMT)\b", token):
+        return "opening_value"
+    if re.search(
+        r"\b(?:RECEIVE|RECEIPT|PURCHASE|PURCH)\w*\s+(?:VAL|VALUE|AMT)\b", token
+    ):
+        return "receipts_value"
+    if re.search(r"LAST\s+MONTH|LASTMONTH|\bLMS\b", token):
+        return "lms"
     if re.search(r"EXP|DMG|DAMAGE", token):
         return "expiry_qty"
     if "SHORT" in token:
         return "shortage_qty"
-    if re.search(r"PURCH|RECEIPT", token):
+    if re.search(r"PURCH|RECEIPT|RECEIV", token):
         return "receipts_qty"
     if re.search(r"\bTOTAL\b", token):
         return "total_qty"
@@ -75609,7 +75629,20 @@ def _header_driven_headers(parsed: Optional[Dict[str, Any]]) -> List[Dict[str, s
     for raw in parsed.get("detected_headers") or []:
         if isinstance(raw, dict):
             name = str(raw.get("name") or raw.get("header") or "").strip()
-            role = str(raw.get("role") or "") or _header_driven_role(name)
+            named = _header_driven_role(name) if name else ""
+            model_role = str(raw.get("role") or "")
+            # Printed VALUE / LAST MONTH SALE wins over a model role that
+            # parked that column on a quantity.
+            if named in {
+                "opening_value",
+                "receipts_value",
+                "sales_value",
+                "closing_value",
+                "lms",
+            }:
+                role = named
+            else:
+                role = model_role or named
         else:
             name = str(raw or "").strip()
             role = _header_driven_role(name)
@@ -75670,8 +75703,14 @@ def _header_driven_items(
         item["opening_qty"] = _excel_mobile_blank_qty(raw.get("opening_qty"))
         item["receipts_qty"] = _excel_mobile_blank_qty(raw.get("receipts_qty"))
         item["sales_qty"] = _excel_mobile_blank_qty(raw.get("sales_qty"))
-        item["opening_value"] = None
-        item["receipts_value"] = None
+        if "opening_value" in roles and raw.get("opening_value") not in (None, ""):
+            item["opening_value"] = _to_float(raw.get("opening_value"))
+        else:
+            item["opening_value"] = None
+        if "receipts_value" in roles and raw.get("receipts_value") not in (None, ""):
+            item["receipts_value"] = _to_float(raw.get("receipts_value"))
+        else:
+            item["receipts_value"] = None
         if "sales_value" in roles and raw.get("sales_value") not in (None, ""):
             item["sales_value"] = _to_float(raw.get("sales_value"))
         else:
@@ -75699,6 +75738,11 @@ def _header_driven_items(
         for key in ("sale_return_qty", "expiry_qty", "shortage_qty", "order_qty"):
             if key in roles or extra_raw.get(key) not in (None, ""):
                 extra[key] = _excel_mobile_blank_qty(extra_raw.get(key))
+        lms = extra_raw.get("lms")
+        if lms in (None, "") and "lms" in roles:
+            lms = raw.get("lms")
+        if lms not in (None, ""):
+            extra["lms"] = _excel_mobile_blank_qty(lms)
         item["extra"] = extra
         items.append(item)
     return items

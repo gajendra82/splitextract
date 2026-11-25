@@ -1,0 +1,390 @@
+{
+  "info": {
+    "name": "SplitExtract local",
+    "description": "Local collection for the invoice splitter and stock/sales statement API. Server default in this workspace is http://127.0.0.1:8002. File fields are empty until you pick a file in Postman. use_blob_storage is false so a local run does not call Azure.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:8002"
+    },
+    {
+      "key": "request_id",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Root",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/"
+          }
+        },
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/health"
+          }
+        },
+        {
+          "name": "Live",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/live"
+          }
+        },
+        {
+          "name": "Ready",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/ready"
+          }
+        },
+        {
+          "name": "Sales extraction health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/extract-sales-statement/health"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Sales statement",
+      "item": [
+        {
+          "name": "Extract sales statement (sync)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Request-ID",
+                "value": "",
+                "description": "Optional. Leave blank and the server generates one.",
+                "disabled": true
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": [],
+                  "description": "Required. txt, pdf, doc, docx, jpg, jpeg, png, bmp, tif, tiff, webp, htm, html, xls, xlsx."
+                },
+                {
+                  "key": "batch_id",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true
+                },
+                {
+                  "key": "use_blob_storage",
+                  "value": "false",
+                  "type": "text"
+                },
+                {
+                  "key": "blob_container",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true
+                },
+                {
+                  "key": "target_invoices_blob_folder",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true
+                },
+                {
+                  "key": "split_id",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true
+                },
+                {
+                  "key": "file_name",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/extract-sales-statement",
+            "description": "Synchronous stock/sales extraction. Pick a file on the file row, then Send. This can take several minutes on a scanned PDF."
+          }
+        },
+        {
+          "name": "Submit sales statement (async)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": []
+                },
+                {
+                  "key": "use_blob_storage",
+                  "value": "false",
+                  "type": "text"
+                },
+                {
+                  "key": "batch_id",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true
+                },
+                {
+                  "key": "file_name",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/extract-sales-statement/submit",
+            "description": "Returns 202 with request_id. Copy request_id into the collection variable, then call Status."
+          }
+        },
+        {
+          "name": "Sales statement status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/extract-sales-statement/status/{{request_id}}"
+          }
+        },
+        {
+          "name": "Cancel sales statement",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/extract-sales-statement/cancel/{{request_id}}"
+          }
+        },
+        {
+          "name": "Extract multi-page images",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "files[]",
+                  "type": "file",
+                  "src": [],
+                  "description": "Add one row per page, in order. Same key files[] on every row."
+                },
+                {
+                  "key": "stockist_id",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true
+                },
+                {
+                  "key": "month",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true
+                },
+                {
+                  "key": "is_multi_page",
+                  "value": "true",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/extract-sales-statement-multi",
+            "description": "One stock statement from several page images. In Postman, duplicate the files[] row for each page."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Invoices",
+      "item": [
+        {
+          "name": "Split and extract",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": [],
+                  "description": "PDF or image. Or leave empty and send split_raw_url / split_raw_blob_path."
+                },
+                {
+                  "key": "use_blob_storage",
+                  "value": "false",
+                  "type": "text",
+                  "description": "API default is true. false keeps the run local."
+                },
+                {
+                  "key": "batch_id",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true
+                },
+                {
+                  "key": "blob_container",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true
+                },
+                {
+                  "key": "target_invoices_blob_folder",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true
+                },
+                {
+                  "key": "parallel_batch_size",
+                  "value": "3",
+                  "type": "text",
+                  "disabled": true
+                },
+                {
+                  "key": "split_id",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true
+                },
+                {
+                  "key": "file_name",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true
+                },
+                {
+                  "key": "split_raw_blob_path",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true
+                },
+                {
+                  "key": "split_raw_url",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/split-and-extract"
+          }
+        },
+        {
+          "name": "Test extract",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": [],
+                  "description": "PDF or image. No blob storage and no queue."
+                },
+                {
+                  "key": "parallel_batch_size",
+                  "value": "3",
+                  "type": "text",
+                  "disabled": true
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/test-extract"
+          }
+        },
+        {
+          "name": "Extract POD GRN",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": [],
+                  "description": "Excel POD / hospital-wise sales workbook."
+                },
+                {
+                  "key": "use_blob_storage",
+                  "value": "false",
+                  "type": "text"
+                },
+                {
+                  "key": "batch_id",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true
+                },
+                {
+                  "key": "blob_container",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true
+                },
+                {
+                  "key": "target_invoices_blob_folder",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true
+                },
+                {
+                  "key": "split_id",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true
+                },
+                {
+                  "key": "file_name",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true
+                },
+                {
+                  "key": "split_raw_blob_path",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true
+                },
+                {
+                  "key": "split_raw_url",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/extract-pod-grn",
+            "description": "Same multipart fields as Split and extract. Returns the split-and-extract JSON shape."
+          }
+        }
+      ]
+    }
+  ]
+}
