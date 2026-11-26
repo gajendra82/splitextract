@@ -8416,6 +8416,28 @@ def _repair_pur_free_sale_closing_left_shift(item: Dict[str, Any]) -> bool:
     cq = item.get("closing_qty")
     cv = item.get("closing_value")
 
+    # Qty-only Sale|Approx Sale Free|…|Closing (no VALUE band): Sale Free is a
+    # real column. Large SALE/CLOSING qtys look like money (≥500) and case_d
+    # would park free_out into closing — skip on this layout family.
+    hdrs = [
+        str(h or "").strip().lower()
+        for h in (extra.get("vision_column_headers") or [])
+        if str(h or "").strip()
+    ]
+    if hdrs:
+        has_value_band = any(re.search(r"\bval(?:ue)?\b", h) for h in hdrs)
+        has_sale = any(
+            re.search(r"(?i)\bsale\b", h)
+            and not re.search(r"(?i)free|return|ret", h)
+            for h in hdrs
+        )
+        has_sale_free = any(
+            re.search(r"(?i)sale\s*fre|approx", h) for h in hdrs
+        )
+        has_closing = any(re.search(r"(?i)clos", h) for h in hdrs)
+        if has_sale and has_sale_free and has_closing and not has_value_band:
+            return False
+
     # Case A: PUR FREE blank dropped — sale parked in free_in, closing in free_out.
     case_a = (
         fs.get("free_in_qty") == "printed"
