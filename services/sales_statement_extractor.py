@@ -66121,6 +66121,27 @@ def _extract_zandra_two_column_order_photo(
     # A sideways stock-and-sales grid shares the center rule. It is not an order form.
     if _sideways_full_width_stock_grid(file_bytes):
         return None
+    # Stock-and-sale tables with gridlines can trigger the pixel-based order
+    # form detector.  A quick OCR sample of the header area rejects them.
+    try:
+        from PIL import Image, ImageOps
+        _img = ImageOps.exif_transpose(Image.open(io.BytesIO(file_bytes))).convert("RGB")
+        _w, _h = _img.size
+        _header_crop = _img.crop((0, 0, _w, int(_h * 0.25)))
+        _header_text = _a2z_tesseract().image_to_string(_header_crop) or ""
+        if re.search(
+            r"OP\s*STK|CL\s*STOCK|SALE\s*QTY|STOCK\s*&\s*SALE|PRODUCT\s*WISE|"
+            r"PUR\s*QTY|PUR\s*VALUE|CLOSING\s*VALUE|SALE\s*VALUE",
+            _header_text,
+            re.I,
+        ):
+            logger.info(
+                "ZANDRA_ORDER_FORM_REJECTED file=%s reason=stock_sale_header_detected",
+                filename,
+            )
+            return None
+    except Exception:
+        pass
     # This phone photo stores the page sideways and writes the amount in
     # Value Rs. Read that before the OCR anchor, which is absent without
     # Tesseract. Other order forms still use the OCR anchor.
