@@ -76855,6 +76855,28 @@ def _extract_sideways_rate_ssa_photo(
     except Exception as exc:
         logger.warning("Sideways RATE SSA upright page skipped: %s", exc)
         return None
+
+    # Guard: standard stock-and-sale tables (OP STK / SALE QTY / CL STOCK headers)
+    # can trip the pixel-based full-width-grid detector.  OCR the top of the
+    # upright image and bail out so the vision_table path handles them instead.
+    try:
+        _w, _h = image.size
+        _hdr_crop = image.crop((0, 0, _w, int(_h * 0.20)))
+        _hdr_text = _a2z_tesseract().image_to_string(_hdr_crop) or ""
+        if re.search(
+            r"OP\s*STK|CL\s*STOCK|SALE\s*QTY|STOCK\s*&\s*SALE|PRODUCT\s*WISE|"
+            r"PUR\s*QTY|PUR\s*VALUE|CLOSING\s*VALUE|SALE\s*VALUE",
+            _hdr_text,
+            re.I,
+        ):
+            logger.info(
+                "SIDEWAYS_RATE_SSA_REJECTED file=%s reason=stock_sale_header_detected",
+                filename,
+            )
+            return None
+    except Exception:
+        pass
+
     model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
     payload = {
         "contents": [
