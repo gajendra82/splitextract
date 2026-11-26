@@ -7073,16 +7073,24 @@ def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
     sum_closing_value = sum(_to_float(i.get("closing_value")) for i in items if isinstance(i, dict))
     sum_sales_qty = sum(_to_float(i.get("sales_qty")) for i in items if isinstance(i, dict))
     sum_closing_qty = sum(_to_float(i.get("closing_qty")) for i in items if isinstance(i, dict))
-    # Printed line money present? Keep sums null (not 0) when no product row
-    # carries a sales/closing value cell — qty-only grids must not fake 0.0.
-    _has_line_sales_value = any(
-        isinstance(i, dict) and i.get("sales_value") not in (None, "")
-        for i in items
-    )
-    _has_line_closing_value = any(
-        isinstance(i, dict) and i.get("closing_value") not in (None, "")
-        for i in items
-    )
+    # Printed line money present? Ignore Vision-stamped 0.0 on qty-only grids
+    # so line_*_value_sum can mirror printed footer totals for the UI.
+    def _nonzero_line_money(key: str) -> bool:
+        for i in items:
+            if not isinstance(i, dict):
+                continue
+            raw = i.get(key)
+            if raw in (None, ""):
+                continue
+            try:
+                if abs(float(raw)) >= 0.005:
+                    return True
+            except (TypeError, ValueError):
+                continue
+        return False
+
+    _has_line_sales_value = _nonzero_line_money("sales_value")
+    _has_line_closing_value = _nonzero_line_money("closing_value")
 
     totals = result.setdefault("totals", {"sales_value": None, "closing_value": None, "extra": {}})
     if not isinstance(totals.get("extra"), dict):
@@ -9942,7 +9950,11 @@ def extract_sales_statement(file_bytes: bytes, filename: str) -> Dict[str, Any]:
                 apply_sales_total_value_recovery_fallback,
             )
 
-            result = apply_universal_stock_footer_financials(result)
+            # Pass image bytes so Total Values / standalone footer OCR can run
+            # when Vision already filled qty rows but left aggregate money null.
+            result = apply_universal_stock_footer_financials(
+                result, file_bytes=file_bytes
+            )
             result = apply_sales_total_value_recovery_fallback(
                 result, file_bytes=file_bytes
             )

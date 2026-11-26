@@ -4300,6 +4300,23 @@ _VALUES_FOOTER_BLOCK = re.compile(
     + r"[^\n]*)",
 )
 
+# "Total Values is based on PRate" / "Total Values" with western decimals
+# under Opening|Inward|Sales|[Other]|Closing (qty-only grids).
+_TOTAL_VALUES_PRATE_BLOCK = re.compile(
+    r"(?is)\bTotal\s+Values?\b(?:\s+is\s+based\s+on\s+\w+)?"
+    r"[^\n]*\n?"
+    r"([^\n]*(?:\d+\.\d{2}|\d{1,3}(?:,\d{2})*,\d{3})[^\n]*)"
+)
+
+# Lone money amount printed below the Total Values / footnote band.
+_STANDALONE_FOOTER_MONEY = re.compile(
+    r"(?m)^\s*("
+    + _INDIAN_MONEY
+    + r"|\d{1,3}(?:,\d{3})+(?:\.\d{1,2})?"
+    + r"|\d+\.\d{2}"
+    + r")\s*$"
+)
+
 
 def _parse_footer_money_token(raw: str) -> Optional[float]:
     text = str(raw or "").strip().replace("\u00a0", " ")
@@ -4316,12 +4333,62 @@ def _parse_footer_money_token(raw: str) -> Optional[float]:
     return float(number)
 
 
+def _extract_standalone_footer_amounts(
+    blob: str, *, after_pos: int = 0
+) -> List[Dict[str, Any]]:
+    """Preserve unlabeled money printed below a Total Values / footer band.
+
+    Never guesses meaning — stores amount + raw location only.
+    """
+    found: List[Dict[str, Any]] = []
+    if not blob or after_pos < 0:
+        return found
+    tail = blob[after_pos:]
+    # Skip the Total Values money line itself; keep later lone amounts.
+    lines = tail.splitlines()
+    saw_total_values = False
+    for idx, ln in enumerate(lines):
+        if re.search(r"(?i)\btotal\s+values?\b", ln):
+            saw_total_values = True
+            continue
+        if not saw_total_values and after_pos == 0:
+            continue
+        m = _STANDALONE_FOOTER_MONEY.match(ln)
+        if not m:
+            continue
+        # Skip footnote / section headers that happen to be numeric-only.
+        number = _parse_footer_money_token(m.group(1))
+        if number is None:
+            continue
+        # Skip tiny placeholders; keep real rupee footers.
+        if abs(number) < 100.0:
+            continue
+        raw_label = None
+        if idx > 0:
+            prev = lines[idx - 1].strip()
+            if prev and re.search(r"[A-Za-z]", prev) and not re.search(
+                r"(?i)\btotal\s+values?\b", prev
+            ):
+                raw_label = prev[:120]
+        found.append(
+            {
+                "amount": float(number),
+                "raw_label": raw_label,
+                "source_location": "below_total_values_row",
+                "raw_text": m.group(1),
+            }
+        )
+    return found
+
+
 def extract_universal_stock_footer_financials(text: str) -> Dict[str, Any]:
     """Universal stock-statement footer money band (layout-family, not stockist).
 
     Recognises:
     - ``Values: …`` / ``Values`` followed by 4 money amounts
       (Opening / Inward / Outward-Sales / Closing) — Zandra Opg/Inw/Out/Clg
+    - ``Total Values is based on PRate`` with 4–5 money amounts under
+      Opening / Inward / Sales / [Other] / Closing
     - Labeled Opening/Purchase/Sales/Closing value footers
     - Three unlabeled decimals above NEAR EXPIRY DETAIL (LMS/Sales/Closing)
 
@@ -4333,24 +4400,96 @@ def extract_universal_stock_footer_financials(text: str) -> Dict[str, Any]:
         "receipts_value": None,
         "sales_value": None,
         "outward_value": None,
+        "other_value": None,
         "closing_value": None,
         "lms_value": None,
         "source": None,
         "detected_columns": [],
         "raw_amounts": [],
+        "standalone_amounts": [],
     }
     if not (text or "").strip():
         return out
     blob = str(text)
 
-    # 1) Values: … 2,50,813 1,23,571 1,54,994 2,32,294
-    for match in _VALUES_FOOTER_BLOCK.finditer(blob):
-        chunk = match.group(0)
+    def _amounts_from_chunk(chunk: str, *, keep_zero: bool = False) -> List[float]:
         amounts: List[float] = []
         for tok in _FOOTER_MONEY_TOKEN.findall(chunk):
             number = _parse_footer_money_token(tok)
             if number is not None:
                 amounts.append(number)
+                continue
+            if keep_zero:
+                try:
+                    raw = float(str(tok).replace(",", ""))
+                except (TypeError, ValueError):
+                    continue
+                if abs(raw) < 0.0005:
+                    amounts.append(0.0)
+        return amounts
+
+    # 0) Total Values is based on PRate — Opening/Inward/Sales/[Other]/Closing.
+    for match in _TOTAL_VALUES_PRATE_BLOCK.finditer(blob):
+        chunk = match.group(0)
+        # Prefer amounts on the Total Values line itself so a lone amount on
+        # the next line (e.g. 157618.62) is not pulled into the money band.
+        label_line = chunk.splitlines()[0] if chunk else chunk
+        amounts = _amounts_from_chunk(label_line, keep_zero=True)
+        if len(amounts) < 4:
+            amounts = _amounts_from_chunk(chunk, keep_zero=True)
+        if len(amounts) < 4:
+            continue
+        # Prefer last 5 (with Other) else last 4 — only from the Values line.
+        band = amounts[-5:] if len(amounts) >= 5 else amounts[-4:]
+        if len(band) == 5:
+            out["opening_value"] = band[0]
+            out["inward_value"] = band[1]
+            out["receipts_value"] = band[1]
+            out["sales_value"] = band[2]
+            out["outward_value"] = band[2]
+            out["other_value"] = band[3]
+            out["closing_value"] = band[4]
+            out["detected_columns"] = [
+                "opening_value",
+                "inward_value",
+                "sales_value",
+                "other_value",
+                "closing_value",
+            ]
+        else:
+            out["opening_value"] = band[0]
+            out["inward_value"] = band[1]
+            out["receipts_value"] = band[1]
+            out["sales_value"] = band[2]
+            out["outward_value"] = band[2]
+            out["closing_value"] = band[3]
+            out["detected_columns"] = [
+                "opening_value",
+                "inward_value",
+                "sales_value",
+                "closing_value",
+            ]
+        out["raw_amounts"] = list(band)
+        out["source"] = "total_values_prate_money_band"
+        out["standalone_amounts"] = _extract_standalone_footer_amounts(
+            blob, after_pos=match.start() + len(label_line)
+        )
+        logger.info(
+            "STOCK_FOOTER_FINANCIALS source=total_values_prate opening=%s "
+            "inward=%s sales=%s other=%s closing=%s standalone=%s",
+            out.get("opening_value"),
+            out.get("inward_value"),
+            out.get("sales_value"),
+            out.get("other_value"),
+            out.get("closing_value"),
+            len(out.get("standalone_amounts") or []),
+        )
+        return out
+
+    # 1) Values: … 2,50,813 1,23,571 1,54,994 2,32,294
+    for match in _VALUES_FOOTER_BLOCK.finditer(blob):
+        chunk = match.group(0)
+        amounts = _amounts_from_chunk(chunk)
         # Prefer the last 4 distinct-ish money tokens in a Values block.
         if len(amounts) >= 4:
             four = amounts[-4:]
@@ -4368,6 +4507,9 @@ def extract_universal_stock_footer_financials(text: str) -> Dict[str, Any]:
                 "outward_value",
                 "closing_value",
             ]
+            out["standalone_amounts"] = _extract_standalone_footer_amounts(
+                blob, after_pos=match.end()
+            )
             logger.info(
                 "STOCK_FOOTER_FINANCIALS source=values_four opening=%s inward=%s "
                 "outward=%s closing=%s",
@@ -4434,6 +4576,152 @@ def extract_universal_stock_footer_financials(text: str) -> Dict[str, Any]:
     return out
 
 
+def _image_footer_ocr_text(file_bytes: Optional[bytes]) -> str:
+    """OCR the bottom band of a stock-statement image (jpg/png/webp).
+
+    Used when Vision already mapped qty rows but Total Values / standalone
+    money only appear in the footer chrome. Never invents amounts.
+    """
+    if not file_bytes:
+        return ""
+    head = file_bytes[:16]
+    is_image = (
+        head.startswith(b"\xff\xd8\xff")  # JPEG
+        or head.startswith(b"\x89PNG\r\n\x1a\n")  # PNG
+        or head[:4] == b"RIFF"  # WEBP container
+        or head[:4] in {b"GIF8", b"II*\x00", b"MM\x00*"}
+    )
+    if not is_image:
+        return ""
+    try:
+        from services.sales_statement_extractor import _ocr_image_footer_text
+
+        # Slightly taller band so Total Values + standalone amount both fit.
+        text = _ocr_image_footer_text(file_bytes, top_ratio=0.62) or ""
+        if text.strip():
+            logger.info(
+                "STOCK_FOOTER_FINANCIALS source=image_footer_ocr chars=%s",
+                len(text),
+            )
+        return text
+    except Exception:
+        logger.info("STOCK_FOOTER_FINANCIALS image_footer_ocr_failed")
+        return ""
+
+
+def _footer_financials_from_vision_total_rows(
+    result: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Build footer money from peeled vision TOTAL / Total Values rows.
+
+    Remaps money parked in qty slots. Never invents — only copies mapped cells.
+    """
+    out: Dict[str, Any] = {
+        "opening_value": None,
+        "inward_value": None,
+        "receipts_value": None,
+        "sales_value": None,
+        "outward_value": None,
+        "other_value": None,
+        "closing_value": None,
+        "lms_value": None,
+        "source": None,
+        "detected_columns": [],
+        "raw_amounts": [],
+        "standalone_amounts": [],
+    }
+    if not isinstance(result, dict):
+        return out
+    extra = ((result.get("totals") or {}).get("extra") or {})
+    rows = extra.get("vision_table_total_rows") or []
+    if not isinstance(rows, list) or not rows:
+        return out
+    try:
+        from services.stock_vision_table import _remap_total_values_money_parked_in_qty
+    except Exception:
+        return out
+
+    named = [
+        r
+        for r in rows
+        if isinstance(r, dict)
+        and re.search(r"TOTAL|VALUES?", str(r.get("product_name") or ""), re.I)
+    ]
+    grand = [
+        r
+        for r in named
+        if re.search(r"(?i)grand\s+total", str(r.get("product_name") or ""))
+    ]
+    printed = grand[-1] if grand else (named[-1] if named else None)
+    if not isinstance(printed, dict):
+        return out
+    _remap_total_values_money_parked_in_qty(printed)
+
+    def _num(key: str) -> Optional[float]:
+        raw = printed.get(key)
+        if raw is None and isinstance(printed.get("extra"), dict):
+            raw = printed["extra"].get(key)
+        try:
+            return float(raw) if raw not in (None, "") else None
+        except (TypeError, ValueError):
+            return None
+
+    opening = _num("opening_value")
+    inward = _num("receipts_value")
+    if inward is None and isinstance(printed.get("extra"), dict):
+        try:
+            pv = printed["extra"].get("purchase_value")
+            inward = float(pv) if pv not in (None, "") else None
+        except (TypeError, ValueError):
+            inward = None
+    sales = _num("sales_value")
+    closing = _num("closing_value")
+    other = None
+    if isinstance(printed.get("extra"), dict):
+        try:
+            ov = printed["extra"].get("other_value")
+            other = float(ov) if ov not in (None, "") else None
+        except (TypeError, ValueError):
+            other = None
+
+    if sales is None and closing is None and opening is None:
+        return out
+
+    out["opening_value"] = opening
+    out["inward_value"] = inward
+    out["receipts_value"] = inward
+    out["sales_value"] = sales
+    out["outward_value"] = sales
+    out["other_value"] = other
+    out["closing_value"] = closing
+    out["source"] = "vision_total_values_row"
+    cols = []
+    for key, val in (
+        ("opening_value", opening),
+        ("inward_value", inward),
+        ("sales_value", sales),
+        ("other_value", other),
+        ("closing_value", closing),
+    ):
+        if val is not None:
+            cols.append(key)
+    out["detected_columns"] = cols
+    out["raw_amounts"] = [opening, inward, sales, other, closing]
+    # Standalone amounts already parked by a prior OCR pass.
+    prior = extra.get("standalone_printed_amounts")
+    if isinstance(prior, list) and prior:
+        out["standalone_amounts"] = list(prior)
+    logger.info(
+        "STOCK_FOOTER_FINANCIALS source=vision_total_values_row opening=%s "
+        "inward=%s sales=%s closing=%s",
+        opening,
+        inward,
+        sales,
+        closing,
+    )
+    return out
+
+
 def apply_universal_stock_footer_financials(
     result: Dict[str, Any],
     *,
@@ -4469,11 +4757,17 @@ def apply_universal_stock_footer_financials(
             if isinstance(val, str) and val.strip():
                 blob = val
                 break
-    if not blob.strip():
-        return result
+    if not blob.strip() and file_bytes:
+        # Image uploads: OCR the bottom band for Total Values / standalone money.
+        blob = _image_footer_ocr_text(file_bytes)
 
-    footer = extract_universal_stock_footer_financials(blob)
+    footer = extract_universal_stock_footer_financials(blob) if blob.strip() else {}
     if not footer.get("source"):
+        # Fall back to already-mapped vision TOTAL / Total Values rows.
+        footer = _footer_financials_from_vision_total_rows(result)
+    if not footer.get("source"):
+        # Totals may already hold printed money — still mirror UI sums.
+        _mirror_line_value_sums_from_totals(result)
         return result
 
     totals = result.setdefault("totals", {})
@@ -4516,8 +4810,15 @@ def apply_universal_stock_footer_financials(
         _missing(totals.get("sales_value")) or sales_is_qty_sum
     ):
         totals["sales_value"] = float(footer["sales_value"])
+        extra["sales_value_source"] = str(
+            footer.get("source") or "universal_stock_footer_financials"
+        )
+        extra["has_printed_sales_value"] = True
     if footer.get("closing_value") is not None and _missing(totals.get("closing_value")):
         totals["closing_value"] = float(footer["closing_value"])
+        extra["closing_value_source"] = str(
+            footer.get("source") or "universal_stock_footer_financials"
+        )
     if footer.get("opening_value") is not None:
         if _missing(totals.get("opening_value")):
             totals["opening_value"] = float(footer["opening_value"])
@@ -4533,6 +4834,8 @@ def apply_universal_stock_footer_financials(
             extra["purchase_value"] = float(footer["inward_value"])
     if footer.get("outward_value") is not None:
         extra["outward_value"] = float(footer["outward_value"])
+    if footer.get("other_value") is not None:
+        extra["other_value"] = float(footer["other_value"])
     if footer.get("lms_value") is not None:
         extra["lms_value"] = float(footer["lms_value"])
         totals["lms_value"] = float(footer["lms_value"])
@@ -4543,14 +4846,18 @@ def apply_universal_stock_footer_financials(
             "opening_value",
             "inward_value",
             "outward_value",
+            "other_value",
             "sales_value",
             "closing_value",
             "lms_value",
             "source",
             "detected_columns",
             "raw_amounts",
+            "standalone_amounts",
         )
     }
+    if footer.get("standalone_amounts"):
+        extra["standalone_printed_amounts"] = list(footer["standalone_amounts"])
     extra["footer_financial_source"] = footer.get("source")
     extra["footer_detected_columns"] = list(footer.get("detected_columns") or [])
     # Completeness vs detected source columns (aggregate only).
@@ -4566,6 +4873,8 @@ def apply_universal_stock_footer_financials(
             missing_cols.append(col)
         elif col in {"outward_value", "sales_value"} and _missing(totals.get("sales_value")):
             missing_cols.append(col)
+        elif col == "other_value" and _missing(extra.get("other_value")):
+            missing_cols.append(col)
         elif col == "closing_value" and _missing(totals.get("closing_value")):
             missing_cols.append(col)
         elif col == "lms_value" and _missing(extra.get("lms_value")):
@@ -4578,7 +4887,11 @@ def apply_universal_stock_footer_financials(
         extra["total_row_source"] = str(footer["source"])
 
     # Qty-only product grids: keep line money null (never coerce unknown → 0).
-    if extra.get("qty_only") or footer.get("source") == "values_four_money_band":
+    _qty_only_sources = {
+        "values_four_money_band",
+        "total_values_prate_money_band",
+    }
+    if extra.get("qty_only") or footer.get("source") in _qty_only_sources:
         extra["qty_only"] = True
         extra["no_sales_value"] = True
         extra["no_closing_value"] = True
@@ -4610,6 +4923,9 @@ def apply_universal_stock_footer_financials(
                         except (TypeError, ValueError):
                             pass
 
+    # UI reads line_*_value_sum — mirror printed footer money when lines are qty-only.
+    _mirror_line_value_sums_from_totals(result)
+
     logger.info(
         "STOCK_FOOTER_FINANCIALS_APPLIED source=%s opening=%s inward=%s sales=%s "
         "closing=%s complete=%s",
@@ -4623,6 +4939,78 @@ def apply_universal_stock_footer_financials(
     return result
 
 
+def _line_has_nonzero_money(items: List[Dict[str, Any]], key: str) -> bool:
+    """True when any product row carries a non-zero printed money cell.
+
+    Vision qty-only grids often stamp sales_value/closing_value as 0.0 for
+    missing columns — that must not block mirroring printed footer totals
+    into line_*_value_sum for the UI.
+    """
+    for item in items or []:
+        if not isinstance(item, dict):
+            continue
+        raw = item.get(key)
+        if raw in (None, ""):
+            continue
+        try:
+            if abs(float(raw)) >= 0.005:
+                return True
+        except (TypeError, ValueError):
+            continue
+    return False
+
+
+def _mirror_line_value_sums_from_totals(result: Dict[str, Any]) -> None:
+    """When product rows have no money, mirror totals.* into line_*_value_sum for UI.
+
+    Never invents amounts — only copies already-printed aggregate totals.
+    Overwrites stale 0.0 line sums left by qty-only Vision rows.
+    """
+    if not isinstance(result, dict):
+        return
+    totals = result.get("totals")
+    if not isinstance(totals, dict):
+        return
+    extra = totals.setdefault("extra", {})
+    if not isinstance(extra, dict):
+        return
+    items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+    has_sv = _line_has_nonzero_money(items, "sales_value")
+    has_cv = _line_has_nonzero_money(items, "closing_value")
+    if not has_sv and not _stvr_missing(totals.get("sales_value")):
+        try:
+            sv = float(totals["sales_value"])
+            extra["line_sales_value_sum"] = sv
+            extra["line_sales_value_sum_source"] = str(
+                extra.get("sales_value_source")
+                or extra.get("footer_financial_source")
+                or "totals_sales_value"
+            )
+            logger.info(
+                "STOCK_LINE_VALUE_SUM_MIRROR field=sales_value value=%s source=%s",
+                sv,
+                extra["line_sales_value_sum_source"],
+            )
+        except (TypeError, ValueError):
+            pass
+    if not has_cv and not _stvr_missing(totals.get("closing_value")):
+        try:
+            cv = float(totals["closing_value"])
+            extra["line_closing_value_sum"] = cv
+            extra["line_closing_value_sum_source"] = str(
+                extra.get("closing_value_source")
+                or extra.get("footer_financial_source")
+                or "totals_closing_value"
+            )
+            logger.info(
+                "STOCK_LINE_VALUE_SUM_MIRROR field=closing_value value=%s source=%s",
+                cv,
+                extra["line_closing_value_sum_source"],
+            )
+        except (TypeError, ValueError):
+            pass
+
+
 # ---------------------------------------------------------------------------
 # Sales Total Value Recovery Fallback (layout-family, not stockist-named)
 # ---------------------------------------------------------------------------
@@ -4631,7 +5019,7 @@ _SALES_TOTAL_LABEL_RE = re.compile(
     r"(?ix)^\s*(?:[-–—_=.*]{0,4}\s*)?"
     r"(?:(?:firm|company|division|page|sub)\s+)?"
     r"(?:"
-    r"total\s+value"
+    r"total\s+values?(?:\s+is\s+based\s+on\s+\w+)?"
     r"|grand\s+totals?(?:\s+value|\s+amt|\s+amount)?"
     r"|net\s+sales?(?:\s+value)?"
     r"|total\s+sales?(?:\s+value)?"
@@ -4696,12 +5084,13 @@ def _stvr_label_claims_money(label: str) -> bool:
         return False
     return bool(
         re.search(
-            r"(?i)\b(?:total\s+value|value\s+total|grand\s+totals?\s*(?:value|amt|amount)"
+            r"(?i)\b(?:total\s+values?(?:\s+is\s+based\s+on\s+\w+)?|"
+            r"value\s+total|grand\s+totals?\s*(?:value|amt|amount)"
             r"|net\s+sales?|total\s+sales?\s*(?:value|amt|amount)?"
             r"|sales?\s+totals?\s*(?:value|amt|amount)?|(?:rs\.?|inr)\b)",
             key,
         )
-        or re.search(r"(?i)\b(?:value|amt|amount)\b", key)
+        or re.search(r"(?i)\b(?:value|amt|amount|prate)\b", key)
     )
 
 
@@ -5349,6 +5738,8 @@ def apply_sales_total_value_recovery_fallback(
         log_base["status"] = "not_needed"
         log_base["validation_result"] = "ok_primary"
         extra["sales_total_value_recovery"] = log_base
+        # Still mirror UI sums when footer already filled totals but lines are qty-only.
+        _mirror_line_value_sums_from_totals(result)
         logger.info(
             "STOCK_SALES_TOTAL_VALUE_RECOVERY status=not_needed format=%s sales=%s",
             source_format,
@@ -5510,35 +5901,24 @@ def apply_sales_total_value_recovery_fallback(
     if applied and extra.get("total_row_source") in _weak_sources:
         extra["total_row_source"] = "sales_total_value_recovery"
 
-    # No product-level money: mirror calculated totals into line_*_value_sum
-    # (UI reads these). Prefer null only when totals are also missing.
-    items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
-    has_sv = any(i.get("sales_value") not in (None, "") for i in items)
-    has_cv = any(i.get("closing_value") not in (None, "") for i in items)
-    if not has_sv:
-        if not _stvr_missing(totals.get("sales_value")):
-            try:
-                extra["line_sales_value_sum"] = float(totals["sales_value"])
-                extra["line_sales_value_sum_source"] = "sales_total_value_recovery"
-            except (TypeError, ValueError):
-                extra["line_sales_value_sum"] = None
-        else:
-            extra["line_sales_value_sum"] = None
-            extra.setdefault(
-                "line_sales_value_sum_source", "unavailable_no_line_values"
-            )
-    if not has_cv:
-        if not _stvr_missing(totals.get("closing_value")):
-            try:
-                extra["line_closing_value_sum"] = float(totals["closing_value"])
-                extra["line_closing_value_sum_source"] = "sales_total_value_recovery"
-            except (TypeError, ValueError):
-                extra["line_closing_value_sum"] = None
-        else:
-            extra["line_closing_value_sum"] = None
-            extra.setdefault(
-                "line_closing_value_sum_source", "unavailable_no_line_values"
-            )
+    # No product-level money (ignore Vision's stamped 0.0): mirror totals for UI.
+    _mirror_line_value_sums_from_totals(result)
+    if _stvr_missing(totals.get("sales_value")) and not _line_has_nonzero_money(
+        [i for i in (result.get("line_items") or []) if isinstance(i, dict)],
+        "sales_value",
+    ):
+        extra.setdefault("line_sales_value_sum", None)
+        extra.setdefault(
+            "line_sales_value_sum_source", "unavailable_no_line_values"
+        )
+    if _stvr_missing(totals.get("closing_value")) and not _line_has_nonzero_money(
+        [i for i in (result.get("line_items") or []) if isinstance(i, dict)],
+        "closing_value",
+    ):
+        extra.setdefault("line_closing_value_sum", None)
+        extra.setdefault(
+            "line_closing_value_sum_source", "unavailable_no_line_values"
+        )
 
     if applied or log_base.get("recovered_sales_value") is not None:
         log_base["status"] = "recovered"
