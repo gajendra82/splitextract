@@ -8784,8 +8784,15 @@ def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
                 "closing=opening+PI+ST(In)+In-Out-Sale-ST(Out)+StockAdj; "
                 "Mar and Apr are not current sales"
             )
-        # Skipped rows are never counted as passes; discrepancies fail identity.
-        totals["extra"]["stock_identity_fail_count"] = mismatch
+        # Short OP/PI grids: document CLQty gaps are discrepancies, not extract
+        # corruption. Keep recon fail/discrepancy counters for reporting, but do
+        # not set stock_identity_fail_count (quality gate / Laravel would treat
+        # the sheet as empty/failed and surface "No products were extracted").
+        if short_op_pi:
+            totals["extra"]["stock_identity_fail_count"] = 0
+            totals["extra"]["stock_document_gap"] = True
+        else:
+            totals["extra"]["stock_identity_fail_count"] = mismatch
         totals["extra"]["stock_validation"] = {
             "extracted_opening": opening_sum,
             "extracted_purchase": receipt_sum,
@@ -23877,9 +23884,9 @@ def _xls_fill_from_rows(
     if "bal" in colmap and "bval" not in colmap:
         extra["no_closing_value"] = True
         extra.setdefault("qty_only", True)
-    if _apply_sale_identity_blanks or (
-        {"op", "pur", "sale", "bal"} <= set(colmap) and "sval" not in colmap
-    ):
+    # Qty-only Op/Pur/Sale/Bal grids: tag layout for identity soft-handling.
+    # (Never reference an undefined flag here — that skipped the whole sheet.)
+    if {"op", "pur", "sale", "bal"} <= set(colmap) and "sval" not in colmap:
         extra.setdefault("layout", "product_opening_purchase_sale_closing")
         extra.setdefault("extraction_method", "excel_op_pur_sale_closing")
     # Header-mapped Excel (Op.Qty/P.Qty/S.Qty/Cl.Qty Detail or ORIC) is

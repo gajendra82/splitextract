@@ -1214,7 +1214,19 @@ def apply_stock_reconciliation(
     extra_t["stock_reconciliation_skip_count"] = skip_n
     extra_t["stock_reconciliation_discrepancy_count"] = discrepancy_n
     extra_t["stock_reconciliation_reconciled_count"] = reconciled_n
-    extra_t["stock_identity_fail_count"] = fail
+    # Short OP/PI document-gap sheets: discrepancies stay on recon counters
+    # only. Overwriting stock_identity_fail_count would tank quality and make
+    # Laravel report "No products were extracted" despite valid line_items.
+    if (
+        str(extra_t.get("extraction_method") or "") == "stock_sales_op_pi_clqty"
+        or extra_t.get("stock_document_gap")
+        or str(extra_t.get("stock_identity_kind") or "") == "stock_sales_op_pi_clqty"
+    ):
+        extra_t["stock_identity_fail_count"] = 0
+        extra_t["stock_document_gap"] = True
+        extra_t["stock_identity_discrepancy_count"] = discrepancy_n
+    else:
+        extra_t["stock_identity_fail_count"] = fail
     extra_t["aggregate_qty_variance"] = round(aggregate_variance, 4)
     # Keep stock_validation mirrors in sync with current line_items + recon gate
     # (identity validation may have run with a softer fail count earlier).

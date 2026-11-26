@@ -521,8 +521,26 @@ def _score_identity_extraction(
 ) -> Dict[str, Any]:
     """Independent stock-identity score."""
     fail_count = extra.get("stock_identity_fail_count")
-    if fail_count is None or not items:
-        applies = _identity_applies(items, extra, veto_active=veto_active)
+    applies = _identity_applies(items, extra, veto_active=veto_active)
+    # Short OP/PI document-gap sheets record discrepancies separately; the
+    # OP+PI−Sale formula is not an extract identity gate.
+    if (
+        str(extra.get("extraction_method") or "") == "stock_sales_op_pi_clqty"
+        or extra.get("stock_document_gap")
+    ):
+        return {
+            "score": 100,
+            "applies": False,
+            "fail_count": int(fail_count or 0),
+            "fail_pct": 0.0,
+            "document_gap": True,
+            "discrepancy_count": int(
+                extra.get("stock_reconciliation_discrepancy_count")
+                or extra.get("stock_identity_discrepancy_count")
+                or 0
+            ),
+        }
+    if fail_count is None or not items or not applies:
         return {
             "score": 100 if not applies else 80,
             "applies": applies,
@@ -748,6 +766,10 @@ def evaluate_extraction_quality(
         # sheet itself; keep header-aligned Cr/Db columns, do not Gemini-overwrite.
         "stock_sales_detail_opval",
         "docx_stock_sales_detail",
+        # Short OP/PI/Sale/CLQty XLSX: printed CLQty often ≠ OP+PI−Sale
+        # (hidden transfers). Keep openpyxl rows; discrepancies are reported
+        # via recon counters, not as extract corruption.
+        "stock_sales_op_pi_clqty",
     } and os.getenv(
         "STOCK_OP_QTY_VAL_KEEP_ON_IDENTITY_FAIL", "true"
     ).strip().lower() in {"1", "true", "yes", "on"}
@@ -833,7 +855,17 @@ def evaluate_extraction_quality(
         _fail_n = int(fail_count) if fail_count is not None else 0
     except (TypeError, ValueError):
         _fail_n = 0
-    if _fail_n > 0 and "stock_identity_failure" not in reasons:
+    _short_op_pi_doc_gap = (
+        method == "stock_sales_op_pi_clqty"
+        or bool(extra.get("stock_document_gap"))
+        if isinstance(extra, dict)
+        else method == "stock_sales_op_pi_clqty"
+    )
+    if (
+        _fail_n > 0
+        and "stock_identity_failure" not in reasons
+        and not _short_op_pi_doc_gap
+    ):
         reasons.append("stock_identity_failure")
     if int(row_dim.get("missing_source_rows") or 0) > 0:
         if "missing_source_rows" not in reasons:

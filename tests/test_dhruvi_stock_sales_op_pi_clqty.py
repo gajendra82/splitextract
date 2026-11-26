@@ -252,8 +252,11 @@ class TestDhruviStockSalesOpPiClqty(unittest.TestCase):
         self.assertEqual(validation.get("row_discrepancy_count"), 44)
         self.assertEqual(validation.get("row_reconciled_count"), 54)
         self.assertEqual(validation.get("row_skipped_count"), 0)
-        # Fail count mirrors discrepancies; skips are not passes.
-        self.assertEqual(self.extra.get("stock_identity_fail_count"), 44)
+        # Document-gap discrepancies live on recon counters; identity fail
+        # stays 0 so quality/Laravel do not treat the extract as empty.
+        self.assertEqual(self.extra.get("stock_identity_fail_count"), 0)
+        self.assertTrue(self.extra.get("stock_document_gap"))
+        self.assertEqual(self.extra.get("stock_reconciliation_fail_count"), 44)
 
 
 class TestShortOpPiReconcileUnit(unittest.TestCase):
