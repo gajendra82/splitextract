@@ -17531,7 +17531,7 @@ def _find_marg_erp_xls_header(
                 roles.setdefault("opening_qty", ci)
             elif lab == "OPENING VALUE":
                 roles["opening_value"] = ci
-            elif lab in {"PURCHASE QUANTITY", "PURCHASE QTY", "PURCHASE"}:
+            elif lab in {"PURCHASE QUANTITY", "PURCHASE QTY", "PURCHASE", "PRIMARY"}:
                 roles["purchase_qty"] = ci
             elif "SALE RETURN" in lab:
                 roles["sale_return_qty"] = ci
@@ -17541,7 +17541,7 @@ def _find_marg_erp_xls_header(
                 roles["receive_qty"] = ci
             elif lab == "RECEIVE VALUE":
                 roles["receive_value"] = ci
-            elif lab in {"SALE QUANTITY", "SALE QTY", "SALES QUANTITY", "SALES QTY"}:
+            elif lab in {"SALE QUANTITY", "SALE QTY", "SALES QUANTITY", "SALES QTY", "SALE", "SALES"}:
                 roles["sales_qty"] = ci
             elif lab in {"P/R QUANTITY", "P/R QTY", "PR QUANTITY", "PR QTY"}:
                 roles["pr_qty"] = ci
