@@ -25909,6 +25909,51 @@ def _parse_stock_sales_analysis_words(
     return result
 
 
+def _pdf_text_reconciliation_is_garbled(result: Optional[Dict[str, Any]]) -> bool:
+    """Detect garbled PDF text extraction where numbers are misassigned to wrong rows.
+
+    For qty-only ORIC tables the identity opening + receipts - sales ≈ closing
+    should hold for most rows. When pdfplumber drops dashes and numbers, Gemini
+    assigns numbers to wrong products and the identity fails almost everywhere.
+    """
+    if not isinstance(result, dict):
+        return False
+    items = result.get("line_items") or []
+    if len(items) < 6:
+        return False
+    method = (result.get("totals") or {}).get("extra", {}).get("extraction_method", "")
+    if "gemini" not in method:
+        return False
+    checked = 0
+    balanced = 0
+    for it in items:
+        if not isinstance(it, dict):
+            continue
+        op = _to_float(it.get("opening_qty"))
+        rec = _to_float(it.get("receipts_qty"))
+        sal = _to_float(it.get("sales_qty"))
+        cl = _to_float(it.get("closing_qty"))
+        if op + rec + sal + cl < 0.01:
+            continue
+        checked += 1
+        expected = op + rec - sal
+        if expected >= 0 and abs(expected - cl) <= max(1.0, cl * 0.05):
+            balanced += 1
+    if checked < 6:
+        return False
+    ratio = balanced / checked
+    if ratio < 0.25:
+        logger.info(
+            "PDF_TEXT_RECONCILIATION_GARBLED balanced=%s/%s ratio=%.2f method=%s",
+            balanced,
+            checked,
+            ratio,
+            method,
+        )
+        return True
+    return False
+
+
 def _statement_nonzero_rows(result: Optional[Dict[str, Any]]) -> int:
     if not isinstance(result, dict):
         return 0
@@ -31309,6 +31354,7 @@ def _extract_statement_from_pdf_group(
         or not result.get("line_items")
         or _statement_numbers_are_blank(result)
         or text_nonzero < 8
+        or _pdf_text_reconciliation_is_garbled(result)
     )
 
     if has_page_images and text_weak:
