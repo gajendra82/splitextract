@@ -406,6 +406,8 @@ def _score_financial_extraction(result: Dict[str, Any], extra: Dict[str, Any]) -
             present += 1
         elif col in {"inward_value", "receipts_value"} and (
             extra.get("inward_value") not in (None, "")
+            or extra.get("receipts_value") not in (None, "")
+            or extra.get("purchase_value") not in (None, "")
             or totals.get("receipts_value") not in (None, "")
         ):
             present += 1

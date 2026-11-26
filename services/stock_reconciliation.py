@@ -46,18 +46,32 @@ def _f(value: Any) -> float:
 
 
 def _printed_or_zero(item: Dict[str, Any], field: str, *extra_keys: str) -> float:
-    """Use printed value; treat missing/absent columns as 0 (not invent)."""
+    """Use printed value; treat missing/absent columns as 0 (not invent).
+
+    Confirmed blank cells (field_source=missing + null/empty) contribute 0 to
+    identity math only — callers must not write this 0 back onto the item.
+    """
     extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
     fs = extra.get("field_source") if isinstance(extra.get("field_source"), dict) else {}
-    if field in item and item.get(field) not in (None, ""):
-        if fs.get(field) == "missing" and _f(item.get(field)) == 0.0:
+
+    def _read(key: str, container: Dict[str, Any]) -> Optional[float]:
+        if key not in container:
+            return None
+        val = container.get(key)
+        if val in (None, "") and fs.get(key) == "missing":
+            # Confirmed blank cell → 0 for recon math only.
             return 0.0
-        return _f(item.get(field))
-    for key in extra_keys:
-        if key in extra and extra.get(key) not in (None, ""):
-            if fs.get(key) == "missing" and _f(extra.get(key)) == 0.0:
-                return 0.0
-            return _f(extra.get(key))
+        if val in (None, ""):
+            return None
+        return _f(val)
+
+    for key in (field,) + tuple(extra_keys):
+        got = _read(key, item)
+        if got is not None:
+            return got
+        got = _read(key, extra)
+        if got is not None:
+            return got
     return 0.0
 
 
@@ -875,6 +889,10 @@ def reconcile_row(item: Dict[str, Any]) -> Dict[str, Any]:
         "formula_variant": formula.get("formula_variant"),
         "br_trf_in_identity": formula.get("br_trf_in_identity"),
     }
+    # Source blank receipt/purchase stays null on the item; recon uses 0 only.
+    if fs.get("receipts_qty") == "missing" or fs.get("purchase_qty") == "missing":
+        out["purchase_qty"] = 0.0
+        out["purchase_qty_source"] = "blank"
     if value_diag is not None:
         out["value"] = value_diag
     # Alternate expected when Br.Trf. adaptive considered both sides.
@@ -1131,6 +1149,8 @@ def apply_stock_reconciliation(
             "saleable_company_total",
             "xls_grand_total",
             "xls_total",
+            "xls_company_total",
+            "xls_firm_total",
         }
         footer_closing = extra_t.get("closing_qty")
         footer_sales = extra_t.get("sales_qty")
