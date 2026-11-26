@@ -317,6 +317,9 @@ ALIASES: Dict[str, List[str]] = {
         "opening stock",
         # HSN/SAC CODE WISE STOCK REPORT: OPENING STOCK-1 (series suffix).
         "opening stock 1",
+        # Bare "STOCK-1" word box when "OPENING STOCK-1" header splits into
+        # two cells — prevents the closing alias "stock" from capturing it.
+        "stock 1",
         # Vision/OCR often truncates the final letter(s) of "Opening stock".
         "opening stoc",
         # MR Report: OPENING STK QTY (two-line header).

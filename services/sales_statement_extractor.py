@@ -27340,6 +27340,527 @@ def _pdf_text_reconciliation_is_garbled(result: Optional[Dict[str, Any]]) -> boo
     return False
 
 
+# ---------------------------------------------------------------------------
+# Gemini column-remap fallback for pdf_words_free_columns
+# ---------------------------------------------------------------------------
+# When the alias-based native word-box extractor mis-assigns columns (e.g.
+# opening_qty is null for all items because a split header like
+# "OPENING STOCK-1" routes to closing), this hybrid re-reads the page image
+# via Gemini to identify columns, then re-assigns the same word-box numbers
+# using Gemini's mapping.  Purely additive — existing extraction stays intact.
+
+
+_GEMINI_COLUMN_IDENTIFY_PROMPT = """\
+This is a pharmaceutical stock / sales statement PDF page.
+Look at the TABLE COLUMN HEADERS ONLY (the row that labels the data columns).
+
+For each column header, identify what field it represents.
+Return a JSON array ordered LEFT-TO-RIGHT across the page:
+
+[
+  {"header": "exact header text as printed", "field": "<field>"},
+  ...
+]
+
+<field> must be one of:
+  serial, product_name, packing, batch,
+  opening_qty, opening_value,
+  purchase_qty, purchase_value,
+  sales_qty, sales_value,
+  closing_qty, closing_value,
+  free_qty, rate, ignore
+
+Rules:
+- "OPENING STOCK" / "Op. Stk" / "OP BAL" / "OPENING STOCK-1" → opening_qty
+- "PURCHASE" / "RECEIPT" / "REC" / "PURCHASE-1" → purchase_qty
+- "SALE" / "ISSUE" / "SALES" / "SALE-1" → sales_qty
+- "CLOSING STOCK" / "CL STK" / "CL.QTY" / "BAL QTY" → closing_qty
+- "CLOSING VALUE" / "CL VAL" / "VALUE" (after closing) → closing_value
+- "OPENING VALUE" / "OP VAL" → opening_value
+- Ignore LMS, dump, near-expiry, sample, return columns → ignore
+- SNO / SR / S.NO → serial
+- ITEM / PRODUCT / PARTICULARS / DESCRIPTION → product_name
+- PACK / PACKING → packing
+- BATCH / LOT → batch
+- MRP / RATE / PTR → rate
+
+Return ONLY the JSON array.
+"""
+
+
+def _free_cols_opening_missing(result: Optional[Dict[str, Any]]) -> bool:
+    """True when pdf_words_free_columns returned mostly-null opening_qty."""
+    if not result:
+        return True
+    items = result.get("line_items") or []
+    if len(items) < 4:
+        return False
+    has_value = 0
+    total = 0
+    for it in items:
+        if not isinstance(it, dict):
+            continue
+        cl = _to_float(it.get("closing_qty"))
+        sv = _to_float(it.get("sales_value"))
+        cv = _to_float(it.get("closing_value"))
+        if cl + sv + cv < 0.01:
+            continue
+        total += 1
+        op = _to_float(it.get("opening_qty"))
+        if op > 0.01:
+            has_value += 1
+    if total < 4:
+        return False
+    ratio = has_value / total
+    if ratio < 0.15:
+        logger.info(
+            "FREE_COLS_OPENING_MISSING opening_present=%s/%s ratio=%.2f",
+            has_value, total, ratio,
+        )
+        return True
+    return False
+
+
+def _gemini_column_remap_stock_pdf(
+    file_bytes: bytes,
+    filename: str,
+) -> Optional[Dict[str, Any]]:
+    """Hybrid Gemini column-remap: Gemini identifies columns from the page
+    image, then word-box values are re-assigned using Gemini's mapping.
+
+    Returns a full statement dict or None on failure.
+    """
+    import fitz
+    from services.sales_extraction_runtime import (
+        sales_generate_content_via_vertex as generate_content_via_vertex,
+    )
+
+    model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
+
+    try:
+        doc = fitz.open(stream=file_bytes, filetype="pdf")
+    except Exception:
+        return None
+    if not doc.page_count:
+        doc.close()
+        return None
+
+    page = doc[0]
+    pix = page.get_pixmap(matrix=fitz.Matrix(2.0, 2.0), alpha=False)
+    image_bytes = pix.tobytes("png")
+
+    # --- Step 1: ask Gemini to identify column headers -----------------------
+    b64 = base64.b64encode(image_bytes).decode("ascii")
+    payload = {
+        "contents": [
+            {
+                "role": "user",
+                "parts": [
+                    {"text": _GEMINI_COLUMN_IDENTIFY_PROMPT},
+                    {"inline_data": {"mime_type": "image/png", "data": b64}},
+                ],
+            }
+        ],
+        "generationConfig": {"temperature": 0.0, "maxOutputTokens": 4096},
+    }
+
+    gemini_columns = None
+    for attempt in range(2):
+        try:
+            response = generate_content_via_vertex(
+                model=model, payload=payload, timeout=60
+            )
+            text = _gemini_response_text(response)
+            parsed = _extract_json_array_from_text(text)
+            if parsed and len(parsed) >= 3:
+                gemini_columns = parsed
+                break
+        except Exception as exc:
+            logger.info(
+                "GEMINI_COLUMN_REMAP file=%s attempt=%s error=%s",
+                filename, attempt, type(exc).__name__,
+            )
+            time.sleep(min(2 ** attempt, 4))
+
+    if not gemini_columns:
+        logger.info("GEMINI_COLUMN_REMAP file=%s status=no_columns", filename)
+        doc.close()
+        return None
+
+    logger.info(
+        "GEMINI_COLUMN_REMAP file=%s columns=%s",
+        filename,
+        [c.get("field") for c in gemini_columns],
+    )
+
+    # --- Step 2: map Gemini columns to canonical field names ------------------
+    _FIELD_MAP = {
+        "serial": None,
+        "product_name": "product_name",
+        "packing": "packing",
+        "batch": "batch",
+        "opening_qty": "opening_qty",
+        "opening_value": "opening_value",
+        "purchase_qty": "receipts_qty",
+        "purchase_value": "receipts_value",
+        "sales_qty": "sales_qty",
+        "sales_value": "sales_value",
+        "closing_qty": "closing_qty",
+        "closing_value": "closing_value",
+        "free_qty": None,
+        "rate": None,
+        "ignore": None,
+    }
+
+    column_fields = []
+    for col in gemini_columns:
+        field = _FIELD_MAP.get(col.get("field", "ignore"))
+        column_fields.append(field)
+
+    qty_fields = [f for f in column_fields if f and "qty" in f]
+    if len(qty_fields) < 2:
+        logger.info(
+            "GEMINI_COLUMN_REMAP file=%s status=too_few_qty_columns fields=%s",
+            filename, column_fields,
+        )
+        doc.close()
+        return None
+
+    # --- Step 3: get word boxes and build rows --------------------------------
+    words = page.get_text("words") or []
+    doc.close()
+    if not words:
+        return None
+
+    from services.stock_header_resolver import normalize_header
+
+    heights = [w[3] - w[1] for w in words]
+    from statistics import median as _median
+    med_h = _median(heights) if heights else 8.0
+    y_tol = 0.5 * med_h
+
+    sorted_words = sorted(words, key=lambda w: (w[1], w[0]))
+    rows: list = []
+    for w in sorted_words:
+        top = w[1]
+        if rows:
+            prev_top = rows[-1][0][1]
+            if abs(top - prev_top) <= y_tol:
+                rows[-1].append(w)
+                continue
+        rows.append([w])
+
+    if len(rows) < 3:
+        return None
+
+    # --- Step 4+5: match Gemini header texts to word-box x-positions -----------
+    # Strategy: find the primary header row (highest stock-keyword score),
+    # merge it with adjacent rows that also carry header words, then match
+    # each Gemini column's header text to word boxes WITHIN those rows only.
+    n_gemini_cols = len(gemini_columns)
+
+    _stock_hdr_kw = {
+        "OPENING", "PURCHASE", "SALE", "SALES", "CLOSING", "STOCK",
+        "RECEIPT", "ISSUE", "VALUE", "QTY", "QUANTITY", "PACKING",
+        "ITEM", "NAME", "SNO",
+    }
+
+    # Score each row for stock-header keywords
+    row_scores: list = []
+    for ri, row in enumerate(rows):
+        words_upper = [str(w[4]).strip().upper() for w in row if str(w[4]).strip()]
+        score = sum(1 for t in words_upper if t in _stock_hdr_kw)
+        row_scores.append(score)
+
+    # Primary header row = highest score
+    best_score = max(row_scores) if row_scores else 0
+    if best_score < 2:
+        return None
+    primary_hdr_ri = row_scores.index(best_score)
+
+    # Include adjacent rows that also have header words (score >= 1)
+    header_row_indices: list = [primary_hdr_ri]
+    if primary_hdr_ri > 0 and row_scores[primary_hdr_ri - 1] >= 1:
+        header_row_indices.insert(0, primary_hdr_ri - 1)
+    if primary_hdr_ri + 1 < len(rows) and row_scores[primary_hdr_ri + 1] >= 1:
+        header_row_indices.append(primary_hdr_ri + 1)
+
+    # Collect ALL header words from these rows, sorted left-to-right
+    header_area_words: list = []
+    for ri in header_row_indices:
+        header_area_words.extend(rows[ri])
+    header_area_words.sort(key=lambda w: (w[0], w[1]))
+
+    def _norm_w(text: str) -> str:
+        return text.strip().upper().replace("-", "").replace(".", "").replace(" ", "")
+
+    def _find_header_x_range(header_text: str) -> Optional[tuple]:
+        """Find x-range by matching header tokens within header rows only."""
+        tokens = [t for t in re.findall(r"[A-Za-z0-9]+[.-]*[0-9]*", header_text) if t]
+        tokens = [t for t in tokens if len(t.rstrip(".-")) >= 2]
+        if not tokens:
+            return None
+
+        # For each token, find ALL matching word boxes (there may be dupes
+        # like "CLOSING" appearing twice in the header row).
+        per_token_matches: list = []
+        for tok in tokens:
+            tok_norm = _norm_w(tok)
+            matches = []
+            for w in header_area_words:
+                w_norm = _norm_w(str(w[4]))
+                if w_norm == tok_norm or w_norm.startswith(tok_norm):
+                    matches.append(w)
+            per_token_matches.append(matches)
+
+        if not all(per_token_matches):
+            # At least one token had no match — try partial
+            matched_x0 = None
+            matched_x1 = None
+            for ms in per_token_matches:
+                for w in ms:
+                    if matched_x0 is None or w[0] < matched_x0:
+                        matched_x0 = w[0]
+                    if matched_x1 is None or w[2] > matched_x1:
+                        matched_x1 = w[2]
+            return (matched_x0, matched_x1) if matched_x0 is not None else None
+
+        if len(tokens) == 1:
+            # Single token — pick the best positional match.
+            # For ambiguous words like "CLOSING" that appear multiple times,
+            # we'll resolve later via left-to-right ordering.
+            return (per_token_matches[0][0][0], per_token_matches[0][0][2])
+
+        # Multi-token: find a combination where boxes are close together
+        # (within the same row, adjacent x-positions).
+        best_combo = None
+        best_span = float("inf")
+        from itertools import product as _product
+        combos = list(_product(*per_token_matches))
+        if len(combos) > 100:
+            combos = combos[:100]
+        for combo in combos:
+            xs = [(w[0], w[2]) for w in combo]
+            x0 = min(x[0] for x in xs)
+            x1 = max(x[1] for x in xs)
+            span = x1 - x0
+            # Prefer small spans (words close together)
+            if span < best_span:
+                best_span = span
+                best_combo = combo
+        if best_combo:
+            x0 = min(w[0] for w in best_combo)
+            x1 = max(w[2] for w in best_combo)
+            return (x0, x1)
+        return None
+
+    # Build header cells from Gemini columns
+    header_cells: list = []
+    used_x_ranges: list = []
+    for ci, col in enumerate(gemini_columns):
+        field = column_fields[ci] if ci < len(column_fields) else None
+        header_text = col.get("header", "")
+        x_range = _find_header_x_range(header_text)
+        if x_range:
+            header_cells.append({
+                "x0": x_range[0], "x1": x_range[1],
+                "text": header_text, "field": field,
+            })
+            used_x_ranges.append(x_range)
+        elif field in ("product_name",):
+            header_cells.append({
+                "x0": 0, "x1": 200, "text": header_text, "field": field,
+            })
+
+    # Disambiguate single-token columns that matched the same word box
+    # (e.g. two "CLOSING" columns).  Re-resolve by picking distinct boxes
+    # ordered left-to-right according to Gemini's column order.
+    _ambig_fields: dict = {}
+    for hc in header_cells:
+        key = _norm_w(hc["text"])
+        toks = [t for t in re.findall(r"[A-Za-z0-9]+[.-]*[0-9]*", hc["text"]) if len(t.rstrip(".-")) >= 2]
+        if len(toks) == 1:
+            _ambig_fields.setdefault(key, []).append(hc)
+    for key, cells in _ambig_fields.items():
+        if len(cells) < 2:
+            continue
+        tok_norm = key
+        matches = [w for w in header_area_words if _norm_w(str(w[4])) == tok_norm or _norm_w(str(w[4])).startswith(tok_norm)]
+        matches.sort(key=lambda w: w[0])
+        for i, hc in enumerate(cells):
+            if i < len(matches):
+                hc["x0"] = matches[i][0]
+                hc["x1"] = matches[i][2]
+
+    # Need at least the qty columns to proceed
+    qty_cells = [c for c in header_cells if c.get("field") and "qty" in c["field"]]
+    if len(qty_cells) < 2:
+        return None
+
+    # Data starts after the last header row
+    header_row_idx = max(header_row_indices)
+
+    # Compute column x-centres and boundaries
+    col_centres = [(c["x0"] + c["x1"]) / 2 for c in header_cells]
+
+    def _assign_column(x_mid: float) -> Optional[str]:
+        """Find the closest header column for a data value x-centre."""
+        best_dist = float("inf")
+        best_field = None
+        for ci, cx in enumerate(col_centres):
+            dist = abs(x_mid - cx)
+            if dist < best_dist:
+                best_dist = dist
+                best_field = header_cells[ci].get("field")
+        return best_field
+
+    # --- Step 6: extract data rows -------------------------------------------
+    _NUM_RE = re.compile(r"^[\d.,]+$")
+    line_items: list = []
+    stockist_name = None
+    period_from = None
+    period_to = None
+
+    # Try to pick up metadata from text above the header
+    pre_header_text = ""
+    for ri in range(header_row_idx):
+        pre_header_text += " ".join(str(w[4]) for w in rows[ri]) + "\n"
+
+    # Stockist name: first non-trivial line
+    for line in pre_header_text.strip().split("\n"):
+        line = line.strip()
+        if len(line) > 3 and not re.match(r"^\d", line):
+            stockist_name = line
+            break
+
+    # Period
+    period_match = re.search(
+        r"(\d{1,2}[/\-]\d{1,2}[/\-]\d{2,4})\s*(?:to|[-–])\s*(\d{1,2}[/\-]\d{1,2}[/\-]\d{2,4})",
+        pre_header_text, re.I,
+    )
+    if period_match:
+        def _try_parse_date(s: str) -> Optional[str]:
+            s = s.strip().replace("-", "/")
+            parts = s.split("/")
+            if len(parts) == 3:
+                d, m, y = parts
+                if len(y) == 2:
+                    y = "20" + y
+                try:
+                    return f"{int(y):04d}-{int(m):02d}-{int(d):02d}"
+                except (ValueError, TypeError):
+                    pass
+            return None
+        period_from = _try_parse_date(period_match.group(1))
+        period_to = _try_parse_date(period_match.group(2))
+
+    for ri in range(header_row_idx + 1, len(rows)):
+        row = sorted(rows[ri], key=lambda w: w[0])
+        texts = [str(w[4]).strip() for w in row]
+        joined = " ".join(texts).strip()
+        if not joined:
+            continue
+        # Skip footer/total rows
+        if re.match(r"^(total|grand\s*total|page\s*\d|printed)", joined, re.I):
+            continue
+
+        item: Dict[str, Any] = {
+            "product_code": None,
+            "product_name": None,
+            "packing": None,
+            "opening_qty": None,
+            "opening_value": None,
+            "receipts_qty": None,
+            "receipts_value": None,
+            "sales_qty": None,
+            "sales_value": None,
+            "closing_qty": None,
+            "closing_value": None,
+            "extra": {},
+        }
+        name_parts: list = []
+        for w in row:
+            text = str(w[4]).strip()
+            if not text:
+                continue
+            x_mid = (w[0] + w[2]) / 2
+            field = _assign_column(x_mid)
+            clean = text.replace(",", "")
+
+            if field and field != "product_name" and _NUM_RE.match(clean):
+                try:
+                    val = float(clean)
+                    if item.get(field) is None:
+                        item[field] = val
+                    else:
+                        # Collision — keep the one already set
+                        pass
+                except ValueError:
+                    pass
+            elif field == "product_name" or not _NUM_RE.match(clean):
+                name_parts.append(text)
+
+        item["product_name"] = " ".join(name_parts).strip() or None
+        # Skip rows with no product name or no numeric data
+        has_nums = any(
+            item.get(f) is not None and _to_float(item.get(f)) > 0
+            for f in ("opening_qty", "receipts_qty", "sales_qty",
+                       "closing_qty", "closing_value", "sales_value")
+        )
+        if not item["product_name"] or not has_nums:
+            continue
+
+        line_items.append(item)
+
+    if not line_items:
+        return None
+
+    # --- Step 7: build result ------------------------------------------------
+    result = empty_result(filename, "pdf")
+    result["line_items"] = line_items
+    result["stockist_name"] = stockist_name
+    result["period_from"] = period_from
+    result["period_to"] = period_to
+    totals = result.setdefault("totals", {})
+    extra = totals.setdefault("extra", {})
+    extra["extraction_method"] = "pdf_words_gemini_columns"
+
+    # Sum closing_value
+    cv_sum = sum(_to_float(it.get("closing_value")) for it in line_items)
+    sv_sum = sum(_to_float(it.get("sales_value")) for it in line_items)
+    totals["closing_value"] = cv_sum if cv_sum > 0 else None
+    totals["sales_value"] = sv_sum if sv_sum > 0 else None
+
+    logger.info(
+        "GEMINI_COLUMN_REMAP file=%s status=success items=%s method=pdf_words_gemini_columns",
+        filename, len(line_items),
+    )
+    return result
+
+
+def _extract_json_array_from_text(text: str) -> Optional[list]:
+    """Extract a JSON array from Gemini response text."""
+    if not text:
+        return None
+    # Try to find JSON array in the response
+    start = text.find("[")
+    if start < 0:
+        return None
+    # Find matching close bracket
+    depth = 0
+    for i in range(start, len(text)):
+        if text[i] == "[":
+            depth += 1
+        elif text[i] == "]":
+            depth -= 1
+            if depth == 0:
+                try:
+                    return json.loads(text[start : i + 1])
+                except (json.JSONDecodeError, ValueError):
+                    return None
+    return None
+
+
 def _statement_nonzero_rows(result: Optional[Dict[str, Any]]) -> int:
     if not isinstance(result, dict):
         return 0
@@ -52984,6 +53505,35 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
 
                 free_cols = parse_pdf_free_column_statement(file_bytes, filename)
                 if free_cols and free_cols.get("line_items"):
+                    # Quality gate: if opening_qty is missing for most items,
+                    # try hybrid Gemini column-remap before accepting.
+                    if _free_cols_opening_missing(free_cols):
+                        logger.info(
+                            "GEMINI_COLUMN_REMAP_TRIGGER file=%s "
+                            "reason=opening_missing items=%s",
+                            filename, len(free_cols["line_items"]),
+                        )
+                        try:
+                            remapped = _gemini_column_remap_stock_pdf(
+                                file_bytes, filename,
+                            )
+                            if (
+                                remapped
+                                and remapped.get("line_items")
+                                and not _free_cols_opening_missing(remapped)
+                            ):
+                                logger.info(
+                                    "GEMINI_COLUMN_REMAP_ACCEPTED file=%s "
+                                    "items=%s",
+                                    filename, len(remapped["line_items"]),
+                                )
+                                return remapped
+                        except Exception as remap_exc:
+                            logger.info(
+                                "GEMINI_COLUMN_REMAP file=%s "
+                                "status=fallback_failed error=%s",
+                                filename, type(remap_exc).__name__,
+                            )
                     return free_cols
             except Exception as exc:
                 logger.info(
