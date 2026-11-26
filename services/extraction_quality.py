@@ -404,20 +404,39 @@ def _score_financial_extraction(result: Dict[str, Any], extra: Dict[str, Any]) -
             or extra.get("opening_value") not in (None, "")
         ):
             present += 1
-        elif col in {"inward_value", "receipts_value"} and (
+        elif col in {"inward_value", "receipts_value", "purchase_value"} and (
             extra.get("inward_value") not in (None, "")
+            or extra.get("receipts_value") not in (None, "")
+            or extra.get("purchase_value") not in (None, "")
             or totals.get("receipts_value") not in (None, "")
         ):
             present += 1
-        elif col in {"outward_value", "sales_value"} and totals.get("sales_value") not in (
-            None,
-            "",
+        elif col in {"outward_value", "sales_value"} and (
+            totals.get("sales_value") not in (None, "")
+            or extra.get("outward_value") not in (None, "")
+            or extra.get("sales_value") not in (None, "")
         ):
             present += 1
-        elif col == "closing_value" and totals.get("closing_value") not in (None, ""):
+        elif col == "closing_value" and (
+            totals.get("closing_value") not in (None, "")
+            or extra.get("closing_value") not in (None, "")
+        ):
             present += 1
         elif col == "lms_value" and extra.get("lms_value") not in (None, ""):
             present += 1
+
+    # Prefer explicit footer completeness when the extractor stamped it.
+    if extra.get("footer_financial_complete") is True and not missing:
+        return {
+            "score": 100,
+            "detected_columns": detected
+            or list(extra.get("footer_detected_columns") or []),
+            "present_columns": present or len(detected),
+            "missing_columns": [],
+            "complete": True,
+            "qty_only": qty_only,
+            "source": extra.get("footer_financial_source") or footer.get("source"),
+        }
 
     if not detected:
         # Qty-only sheets without a Values footer: financial N/A, not a fail.
@@ -436,12 +455,16 @@ def _score_financial_extraction(result: Dict[str, Any], extra: Dict[str, Any]) -
         score = min(score, max(0, 100 - 20 * len(missing)))
     if extra.get("footer_financial_complete") is False:
         score = min(score, 70)
+    complete = bool(
+        (not missing and present >= len(detected))
+        or extra.get("footer_financial_complete") is True
+    )
     return {
         "score": max(0, min(100, score)),
         "detected_columns": detected,
         "present_columns": present,
         "missing_columns": missing,
-        "complete": not missing and present >= len(detected),
+        "complete": complete,
         "qty_only": qty_only,
         "source": extra.get("footer_financial_source") or footer.get("source"),
     }
@@ -790,9 +813,21 @@ def evaluate_extraction_quality(
     }
 
     # Footer detected but incomplete → surface as reason (does not alone veto natives).
-    if financial_dim.get("detected_columns") and not financial_dim.get("complete"):
+    # Never claim missing_footer_financials when the extractor stamped complete=true.
+    footer_complete_flag = (
+        extra.get("footer_financial_complete")
+        if isinstance(extra, dict)
+        else None
+    )
+    if (
+        financial_dim.get("detected_columns")
+        and not financial_dim.get("complete")
+        and footer_complete_flag is not True
+    ):
         if "missing_footer_financials" not in reasons:
             reasons.append("missing_footer_financials")
+    elif footer_complete_flag is True and "missing_footer_financials" in reasons:
+        reasons = [r for r in reasons if r != "missing_footer_financials"]
 
     try:
         _fail_n = int(fail_count) if fail_count is not None else 0

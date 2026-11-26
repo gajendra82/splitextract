@@ -7347,6 +7347,8 @@ def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
         "labeled_stock_value_footer",
         # PRODUCT|OPEN|PUR.|RETURN|PUR.RET|SALES|CLOSE printed SALES/CLOSE money.
         "open_pur_ret_sales_close_footer",
+        # XLSX OP/PI/Sale/SI Value/CLQty grand Total Value row.
+        "xls_op_pi_clqty_total_value",
         # PharmAssist Opening Val / Purchase / Sales / Closing Val peel.
         "pharmassist_footer_ocr",
         # Marg ORIC OPENING|RECEIVE|ISSUE|CLOSING printed / Vision TOTAL peel.
@@ -8841,6 +8843,26 @@ def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
     # opening + PI - Sale must not replace CLQty on this sheet.
     if totals["extra"].get("extraction_method") == "stock_sales_op_pi_clqty":
         mismatch = 0
+        discrepancy_n = 0
+        reconciled_n = 0
+        skipped_n = 0
+        aggregate_variance = 0.0
+        detected = {
+            str(x).lower()
+            for x in (totals["extra"].get("source_columns_detected") or [])
+        }
+        # Short Dhruvi-style grids omit ST In/Out / In / Out / StockAdj. Printed
+        # CLQty often diverges from OP+PI−Sale (hidden transfers). Keep printed
+        # CLQty; classify reconciled vs discrepancy — never auto-pass the gap.
+        short_op_pi = not detected.intersection(
+            {
+                "st_in_qty",
+                "st_out_qty",
+                "in_qty",
+                "out_qty",
+                "stock_adj_qty",
+            }
+        )
 
         def _move(item: Dict[str, Any], field: str) -> float:
             if field in ("opening_qty", "receipts_qty", "sales_qty", "closing_qty"):
@@ -8868,12 +8890,39 @@ def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
                 + _move(item, "stock_adj_qty")
             )
             expected = round(expected, 2)
+            closing_raw = item.get("closing_qty")
+            if closing_raw in (None, ""):
+                row_extra["expected_closing"] = expected
+                row_extra["stock_identity_ok"] = False
+                row_extra["reconciliation_classification"] = "skipped"
+                row_extra["stock_identity_skipped"] = "short_op_pi_clqty_missing_closing"
+                skipped_n += 1
+                continue
             closing = _move(item, "closing_qty")
+            gap = round(closing - expected, 2)
             row_extra["expected_closing"] = expected
-            ok = abs(expected - closing) <= 0.05
-            row_extra["stock_identity_ok"] = ok
-            if not ok:
-                mismatch += 1
+            if short_op_pi:
+                # Marker for recon short-grid path; classification is authoritative.
+                row_extra["stock_identity_skipped"] = "short_op_pi_clqty_doc_gap"
+                if abs(gap) <= 0.05:
+                    row_extra["stock_identity_ok"] = True
+                    row_extra["reconciliation_classification"] = "reconciled"
+                    row_extra.pop("qty_reconcile_gap", None)
+                    reconciled_n += 1
+                else:
+                    row_extra["stock_identity_ok"] = False
+                    row_extra["reconciliation_classification"] = "discrepancy"
+                    row_extra["qty_reconcile_gap"] = gap
+                    discrepancy_n += 1
+                    mismatch += 1
+                aggregate_variance += gap
+            else:
+                ok = abs(gap) <= 0.05
+                row_extra["stock_identity_ok"] = ok
+                if not ok:
+                    mismatch += 1
+                    row_extra["qty_reconcile_gap"] = gap
+                aggregate_variance += gap
         opening_sum = sum(
             _to_float(i.get("opening_qty")) for i in items if isinstance(i, dict)
         )
@@ -8886,22 +8935,40 @@ def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
         closing_sum = sum(
             _to_float(i.get("closing_qty")) for i in items if isinstance(i, dict)
         )
+        expected_closing_sum = round(opening_sum + receipt_sum - sales_sum, 2)
+        aggregate_variance = round(aggregate_variance, 2)
         totals["extra"]["opening_qty"] = opening_sum
         totals["extra"]["receipts_qty"] = receipt_sum
         totals["extra"]["sales_qty"] = sales_sum
         totals["extra"]["closing_qty"] = closing_sum
         totals["extra"]["stock_identity_kind"] = "stock_sales_op_pi_clqty"
-        totals["extra"]["stock_identity_formula"] = (
-            "closing=opening+PI+ST(In)+In-Out-Sale-ST(Out)+StockAdj; "
-            "Mar and Apr are not current sales"
-        )
+        totals["extra"]["aggregate_qty_variance"] = aggregate_variance
+        if short_op_pi:
+            totals["extra"]["stock_identity_formula"] = (
+                "closing=CLQty printed; expected=OP+PI-Sale; "
+                "classify reconciled|discrepancy|skipped (no invented adjustments)"
+            )
+            totals["extra"]["stock_identity_reconciled_count"] = reconciled_n
+            totals["extra"]["stock_identity_discrepancy_count"] = discrepancy_n
+            totals["extra"]["stock_identity_skip_count"] = skipped_n
+        else:
+            totals["extra"]["stock_identity_formula"] = (
+                "closing=opening+PI+ST(In)+In-Out-Sale-ST(Out)+StockAdj; "
+                "Mar and Apr are not current sales"
+            )
+        # Skipped rows are never counted as passes; discrepancies fail identity.
         totals["extra"]["stock_identity_fail_count"] = mismatch
         totals["extra"]["stock_validation"] = {
             "extracted_opening": opening_sum,
             "extracted_purchase": receipt_sum,
             "extracted_sales_qty": sales_sum,
             "extracted_closing": closing_sum,
-            "is_valid": mismatch == 0,
+            "calculated_closing": expected_closing_sum,
+            "aggregate_qty_variance": aggregate_variance,
+            "row_discrepancy_count": discrepancy_n if short_op_pi else mismatch,
+            "row_reconciled_count": reconciled_n if short_op_pi else max(0, len(items) - mismatch),
+            "row_skipped_count": skipped_n if short_op_pi else 0,
+            "is_valid": mismatch == 0 and abs(aggregate_variance) < 0.05,
         }
         return result
 
@@ -19556,6 +19623,7 @@ def _parse_marg_sale_purchase_analysis_text(
     return parsed
 
 
+# Long Marg OP/PI grid (ST In/Out, Mar/Apr, …) — exact positional fallback.
 _OP_PI_CLQTY_HEADER = (
     "productname",
     "packing",
@@ -19607,6 +19675,56 @@ _OP_PI_CLQTY_OPTIONAL = {
     "mrp": "mrp",
     "pcode": "product_code",
 }
+# Token → role for short and long OP/PI/Sale/CLQty grids (Dhruvi / Marg).
+_OP_PI_CLQTY_TOKEN_ROLES: Dict[str, str] = {
+    "productname": "product_name",
+    "product": "product_name",
+    "item": "product_name",
+    "itemname": "product_name",
+    "packing": "packing",
+    "pack": "packing",
+    "op": "opening_qty",
+    "opqty": "opening_qty",
+    "opening": "opening_qty",
+    "openingqty": "opening_qty",
+    "opval": "opening_value",
+    "opvalue": "opening_value",
+    "openingval": "opening_value",
+    "openingvalue": "opening_value",
+    "pi": "purchase_qty",
+    "piqty": "purchase_qty",
+    "purchase": "purchase_qty",
+    "purchaseqty": "purchase_qty",
+    "purqty": "purchase_qty",
+    "pival": "purchase_value",
+    "pivalue": "purchase_value",
+    "purchaseval": "purchase_value",
+    "purchasevalue": "purchase_value",
+    "stin": "st_in_qty",
+    "stvalue": "st_in_value",  # first ST Value → in; stout paired below
+    "in": "in_qty",
+    "out": "out_qty",
+    "mar": "mar_qty",
+    "apr": "apr_qty",
+    "sale": "sales_qty",
+    "sales": "sales_qty",
+    "saleqty": "sales_qty",
+    "salesqty": "sales_qty",
+    "sivalue": "sales_value",
+    "sival": "sales_value",
+    "salevalue": "sales_value",
+    "salesvalue": "sales_value",
+    "stout": "st_out_qty",
+    "stockadj": "stock_adj_qty",
+    "stockadjvalue": "stock_adj_value",
+    "clqty": "closing_qty",
+    "closingqty": "closing_qty",
+    "clqnty": "closing_qty",
+    "clvalue": "closing_value",
+    "clval": "closing_value",
+    "closingvalue": "closing_value",
+    "closingval": "closing_value",
+}
 
 
 def _op_pi_header_pairs(row: List[Any]) -> List[Tuple[int, str]]:
@@ -19621,20 +19739,64 @@ def _op_pi_header_pairs(row: List[Any]) -> List[Tuple[int, str]]:
 def _find_stock_sales_op_pi_clqty_header(
     rows: List[List[Any]],
 ) -> Optional[Tuple[int, Dict[str, int]]]:
-    """Product / OP / PI / Sale / SI Value / CLQty. Other stock headers return None."""
+    """Product / OP / PI / Sale / SI Value / CLQty (+ optional OPVal/PIVal/CLValue).
+
+    Accepts the short Dhruvi layout (no ST In/Out / Mar / Apr) and the longer
+    Marg positional header. Returns None for unrelated stock grids.
+    """
     for index, row in enumerate(rows[:25]):
         pairs = _op_pi_header_pairs(row)
         tokens = [token for _ci, token in pairs]
-        if tokens[: len(_OP_PI_CLQTY_HEADER)] != list(_OP_PI_CLQTY_HEADER):
+        if not tokens:
             continue
-        roles = {
-            role: pairs[pos][0]
-            for pos, role in enumerate(_OP_PI_CLQTY_ROLES)
-        }
-        for ci, token in pairs[len(_OP_PI_CLQTY_HEADER) :]:
+
+        # Exact long Marg band (legacy positional map).
+        if tokens[: len(_OP_PI_CLQTY_HEADER)] == list(_OP_PI_CLQTY_HEADER):
+            roles = {
+                role: pairs[pos][0]
+                for pos, role in enumerate(_OP_PI_CLQTY_ROLES)
+            }
+            for ci, token in pairs[len(_OP_PI_CLQTY_HEADER) :]:
+                field = _OP_PI_CLQTY_OPTIONAL.get(token)
+                if field and field not in roles:
+                    roles[field] = ci
+            return index, roles
+
+        # Role map by header token (short OP/PI/Sale/CLQty and variants).
+        roles: Dict[str, int] = {}
+        st_value_hits = 0
+        for ci, token in pairs:
             field = _OP_PI_CLQTY_OPTIONAL.get(token)
             if field and field not in roles:
                 roles[field] = ci
+                continue
+            if token == "stvalue":
+                # First ST Value → st_in_value; second → st_out_value.
+                st_value_hits += 1
+                dest = "st_in_value" if st_value_hits == 1 else "st_out_value"
+                if dest not in roles:
+                    roles[dest] = ci
+                continue
+            dest = _OP_PI_CLQTY_TOKEN_ROLES.get(token)
+            if dest and dest not in roles:
+                roles[dest] = ci
+
+        required = {
+            "product_name",
+            "opening_qty",
+            "purchase_qty",
+            "sales_qty",
+            "closing_qty",
+        }
+        if not required.issubset(roles):
+            continue
+        # Require the distinctive PI + CLQty fingerprint so generic
+        # Opening/Purchase/Sales sheets do not steal this path.
+        token_set = set(tokens)
+        if "pi" not in token_set and "piqty" not in token_set:
+            continue
+        if "clqty" not in token_set and "closingqty" not in token_set:
+            continue
         return index, roles
     return None
 
@@ -19700,13 +19862,78 @@ def _parse_stock_sales_op_pi_clqty_xls(
         if re.match(r"^division\b", raw_name, re.I):
             continue
         if re.match(r"^total\b", raw_name, re.I):
-            if not re.search(r"\(", raw_name):
-                result["totals"]["sales_value"] = qty(row, "sales_value")
-                result["totals"]["closing_value"] = qty(row, "closing_value")
-                extra = result["totals"].setdefault("extra", {})
-                extra["opening_value"] = qty(row, "opening_value")
-                extra["purchase_value"] = qty(row, "purchase_value")
+            # Prefer grand ``Total Value`` over division subtots like
+            # ``Total Value (ZENITH)`` — never treat a product as a total.
+            if re.search(r"\(", raw_name):
+                continue
+            # Map footer money only from labeled value columns on this row.
+            # OPVal→opening, PIVal→receipts/purchase, SI Value→sales,
+            # CLValue→closing. Never invent outward_value or swap labels.
+            sales_total = (
+                qty(row, "sales_value") if "sales_value" in roles else None
+            )
+            closing_total = (
+                qty(row, "closing_value") if "closing_value" in roles else None
+            )
+            opening_total = (
+                qty(row, "opening_value") if "opening_value" in roles else None
+            )
+            purchase_total = (
+                qty(row, "purchase_value") if "purchase_value" in roles else None
+            )
+            if sales_total is not None:
+                result["totals"]["sales_value"] = sales_total
+            if closing_total is not None:
+                result["totals"]["closing_value"] = closing_total
+            extra = result["totals"].setdefault("extra", {})
+            if opening_total is not None:
+                extra["opening_value"] = opening_total
+            if purchase_total is not None:
+                extra["purchase_value"] = purchase_total
+                extra["receipts_value"] = purchase_total
+            if "st_out_value" in roles:
                 extra["st_out_value"] = qty(row, "st_out_value")
+            # Explicitly drop unrelated footer aliases — do not substitute
+            # opening/closing into outward_value or other unmapped fields.
+            extra.pop("outward_value", None)
+            extra.pop("inward_value", None)
+            detected_footer = []
+            footer_financials: Dict[str, Any] = {
+                "source": "xls_op_pi_clqty_total_value",
+            }
+            if opening_total is not None:
+                detected_footer.append("opening_value")
+                footer_financials["opening_value"] = opening_total
+            if purchase_total is not None:
+                detected_footer.append("receipts_value")
+                footer_financials["receipts_value"] = purchase_total
+                footer_financials["purchase_value"] = purchase_total
+            if sales_total is not None:
+                detected_footer.append("sales_value")
+                footer_financials["sales_value"] = sales_total
+            if closing_total is not None:
+                detected_footer.append("closing_value")
+                footer_financials["closing_value"] = closing_total
+            extra["total_row_source"] = "xls_op_pi_clqty_total_value"
+            extra["total_value_row_source"] = "xls_op_pi_clqty_total_value"
+            extra["has_printed_sales_value"] = sales_total is not None
+            extra["sales_value_source"] = "xls_op_pi_clqty_total_value"
+            extra["closing_value_source"] = "xls_op_pi_clqty_total_value"
+            extra["footer_financial_source"] = "xls_op_pi_clqty_total_value"
+            extra["footer_detected_columns"] = detected_footer
+            extra["footer_financials"] = footer_financials
+            missing_footer = [
+                col
+                for col in detected_footer
+                if footer_financials.get(col) in (None, "")
+            ]
+            extra["footer_financial_missing_columns"] = missing_footer
+            # Complete iff every labeled value column on the Total Value row
+            # actually carried a number — never claim complete while quality
+            # reports missing_footer_financials.
+            extra["footer_financial_complete"] = bool(
+                detected_footer
+            ) and not missing_footer
             continue
 
         name = _clean_name(re.sub(r"^[.\s]+", "", raw_name))
@@ -19735,6 +19962,18 @@ def _parse_stock_sales_op_pi_clqty_xls(
         extra_item["opening_value"] = item["opening_value"]
         extra_item["purchase_qty"] = purchase
         extra_item["purchase_value"] = purchase_value
+        extra_item["receipts_value"] = purchase_value
+        fs = {
+            "opening_qty": "printed",
+            "opening_value": "printed" if "opening_value" in roles else "missing",
+            "receipts_qty": "printed",
+            "receipts_value": "printed" if "purchase_value" in roles else "missing",
+            "sales_qty": "printed",
+            "sales_value": "printed" if "sales_value" in roles else "missing",
+            "closing_qty": "printed",
+            "closing_value": "printed" if "closing_value" in roles else "missing",
+        }
+        extra_item["field_source"] = fs
         for role in (
             "st_in_qty",
             "st_in_value",
@@ -19747,7 +19986,8 @@ def _parse_stock_sales_op_pi_clqty_xls(
             "stock_adj_qty",
             "stock_adj_value",
         ):
-            extra_item[role] = qty(row, role)
+            if role in roles:
+                extra_item[role] = qty(row, role)
         for role in ("pts", "npr", "ptr", "mrp"):
             raw = cell(row, role)
             if raw not in (None, ""):
@@ -19761,6 +20001,15 @@ def _parse_stock_sales_op_pi_clqty_xls(
     extra["extraction_method"] = "stock_sales_op_pi_clqty"
     extra["layout"] = "stock_sales_op_pi_clqty"
     extra["sheet"] = sheet_name
+    extra["parser_engine"] = "openpyxl" if str(ext).lower() in {".xlsx", ".xlsm", "xlsx", "xlsm"} else "xlrd"
+    extra["ocr_used"] = False
+    extra["llm_used"] = False
+    extra["source_columns_detected"] = sorted(roles.keys())
+    # Keep grand Total Value money through sanitize (qty-only bogus guard).
+    if result["totals"].get("sales_value") not in (None, ""):
+        extra.setdefault("has_printed_sales_value", True)
+        extra.setdefault("total_row_source", "xls_op_pi_clqty_total_value")
+        extra.setdefault("total_value_row_source", "xls_op_pi_clqty_total_value")
     return result
 
 
@@ -21322,6 +21571,21 @@ def _parse_xls(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
         prompt_xls = _parse_prompt_datewise_xls(rows, filename, ext)
         if prompt_xls and prompt_xls.get("line_items"):
             return _xls_finalize_result(prompt_xls)
+        # OP / PI / Sale / SI Value / CLQty (+ OPVal/PIVal/CLValue) — Dhruvi /
+        # short Stock & Sales grids. Must beat generic semantic_xls which
+        # parks PI/CLQty incorrectly and drops SI Value.
+        op_pi_clqty = _parse_stock_sales_op_pi_clqty_xls(
+            rows, filename, ext, sheet_name
+        )
+        if op_pi_clqty and op_pi_clqty.get("line_items"):
+            logger.info(
+                "SECONDARY_SALES_READER file=%s engine=openpyxl "
+                "method=stock_sales_op_pi_clqty items=%s sheet=%s",
+                filename,
+                len(op_pi_clqty.get("line_items") or []),
+                sheet_name,
+            )
+            return _xls_finalize_result(op_pi_clqty)
         # ZL secondary tabular export (Customer_name / Material_* / *_bal_qty)
         zl_header = _find_zl_secondary_xlsx_header(rows)
         if zl_header is not None:
