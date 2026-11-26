@@ -195,7 +195,8 @@ class TestItemPackFreeReturnTotalValue(unittest.TestCase):
         result = extract_sales_statement(payload, "generic.xlsx")
         self.assertIsNone(result["totals"]["closing_value"])
         self.assertEqual(result["line_items"][0]["closing_qty"], 6)
-        self.assertEqual(result["line_items"][0]["closing_value"], 0.0)
+        # Qty-only Closing column — no printed value cell → null, not 0.0.
+        self.assertIsNone(result["line_items"][0]["closing_value"])
 
 
 @unittest.skipUnless(os.path.exists(_SOURCE_XLS), "source workbook is not on this machine")
