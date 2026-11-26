@@ -2051,7 +2051,7 @@ def _ps_pharma_leading_pack_unit_enabled() -> bool:
 
 def _ps_pharma_is_pack_unit_token(tok: str) -> bool:
     t = str(tok or "").strip().lower().rstrip(".,;:|")
-    return t in {
+    if t in {
         "pcs",
         "pc",
         "nos",
@@ -2065,7 +2065,10 @@ def _ps_pharma_is_pack_unit_token(tok: str) -> bool:
         "bot",
         "bottle",
         "strip",
-    }
+    }:
+        return True
+    # Pack size+unit glued without space (1Ps / 2PCS) before OPENING.
+    return bool(re.fullmatch(r"\d+(?:ps|pcs|nos|pc)", t, re.I))
 
 
 def _ssa_oric_trailing_qty_column_enabled() -> bool:
@@ -2251,10 +2254,16 @@ def _parse_ps_pharma_statement(text: str, filename: str) -> Optional[Dict[str, A
     # A printed "-" is an empty qty cell, not a missing column.
     # OCR often turns the dash into = ~ _ / letter noise; treat those as empty too.
     # Letter runs up to 3 chars cover OCR dash noise (ae/ee/ils/Se/be/fos).
+    # Letter empty-frags must NOT swallow pack units (GM/ML/TAB/…).
+    # OCR often turns printed dashes into degree (U+00B0) or replacement chars.
     _ps_empty_frag = (
-        r"-|=|~|_|\.|—|–|==|===|__|~~|np,?|&|[A-Za-z]=|=[A-Za-z]?|[A-Za-z]{1,3}"
+        r"-|=|~|_|\.|—|–|==|===|__|~~|np,?|&|\ufffd|\u00b0|\?|"
+        r"[A-Za-z]=|=[A-Za-z]?|[A-Za-z]\)|"
+        r"(?!(?:ML|MG|GMS|GM|GRM|KG|G|TAB|TABS|TA|CAP|CAPS|SYP|S|PS|PCS)$)"
+        r"[A-Za-z]{1,3}"
     )
-    qty_tok = rf"(?:-?\d+(?:\.\d+)?|{_ps_empty_frag})"
+    # Trailing OCR paren on a digit (0) / 6)) stays a qty token.
+    qty_tok = rf"(?:-?\d+(?:\.\d+)?\)?|{_ps_empty_frag})"
     row_re = re.compile(
         rf"^(.+?)\s+({qty_tok})\s+({qty_tok})\s+({qty_tok})\s+({qty_tok})\s*$"
     )
@@ -2267,11 +2276,12 @@ def _parse_ps_pharma_statement(text: str, filename: str) -> Optional[Dict[str, A
         rf"^({qty_tok})\s+({qty_tok})\s+({qty_tok})\s+({qty_tok})\s*$"
     )
     # OCR keeps quotes/spaces: 60 'S, 60'S, 100 TA (truncated TAB).
-    pack_unit = re.compile(r"^(?:ML|MG|GM|G|TAB|TABS|TA|CAP|CAPS|SYP|S)$", re.I)
+    pack_unit = re.compile(r"^(?:ML|MG|GM|G|TAB|TABS|TA|CAP|CAPS|SYP|S|PS|PCS)$", re.I)
     pack_token = re.compile(
         r"^(?:\d+\s*\*\s*\d+S?|"
-        r"\d+X\d+(?:\.\d+)?(?:ML|MG|GM|G|TAB|TABS|TA|CAP|CAPS|SYP|S)?|"
-        r"\d+(?:\.\d+)?[`']?(?:ML|MG|GM|G|TAB|TABS|TA|CAP|CAPS|SYP|S)|"
+        r"\d+X\d+(?:\.\d+)?(?:ML|MG|GM|G|TAB|TABS|TA|CAP|CAPS|SYP|S|PS|PCS)?|"
+        r"\d+(?:\.\d+)?[`']?(?:ML|MG|GM|G|TAB|TABS|TA|CAP|CAPS|SYP|S|PS|PCS)|"
+        r"\d+(?:PS|PCS)|"
         r"\d+ML|\d+MG|\d+GM|0\.\d+ML)$",
         re.I,
     )
@@ -2319,18 +2329,22 @@ def _parse_ps_pharma_statement(text: str, filename: str) -> Optional[Dict[str, A
             "s",
             "n",
             "z",
+            "\ufffd",
+            "\u00b0",
+            "?",
         }
     )
     _ps_empty_qty_re = re.compile(
-        r"^(?:[A-Za-z]=|=[A-Za-z]?|[a-zA-Z]{1,3}|==+|__+|~~+|np,?)$",
+        r"^(?:[A-Za-z]=|=[A-Za-z]?|[A-Za-z]\)|[a-zA-Z]{1,3}|==+|__+|~~+|np,?|"
+        r"\ufffd|\u00b0)$",
         re.I,
     )
 
     def _ps_qty(token: str) -> float:
-        t = str(token).strip()
+        t = str(token).strip().rstrip(")")
         if t.lower() in _ps_empty_qty or _ps_empty_qty_re.fullmatch(t):
             return 0.0
-        return _to_float(token)
+        return _to_float(t)
 
     def _ps_name_pack(left: str) -> Tuple[str, Optional[str]]:
         tokens = _clean_name(left).split()
@@ -2362,6 +2376,17 @@ def _parse_ps_pharma_statement(text: str, filename: str) -> Optional[Dict[str, A
         ):
             packing = tokens[-1].rstrip(".,;:|")
             name_tokens = tokens[:-1]
+        # Bare size after form word: "LIV.52 TAB 100" → packing "100 TAB".
+        if packing is None and len(name_tokens) >= 2 and re.fullmatch(
+            r"\d+(?:\.\d+)?", name_tokens[-1] or ""
+        ):
+            unit_tok = name_tokens[-2]
+            if re.fullmatch(
+                r"(?i)TABS?|CAPS?|SYP|DROPS?|SYRUP",
+                unit_tok or "",
+            ):
+                packing = f"{name_tokens[-1]} {unit_tok.upper()}"
+                name_tokens = name_tokens[:-1]
         return _clean_name(" ".join(name_tokens)), packing
 
     def _ps_item(
@@ -2394,10 +2419,11 @@ def _parse_ps_pharma_statement(text: str, filename: str) -> Optional[Dict[str, A
         item["receipts_qty"] = _ps_qty(receipt)
         item["sales_qty"] = _ps_qty(issue)  # ISSUE
         item["closing_qty"] = _ps_qty(closing)
-        item["sales_value"] = 0.0
-        item["closing_value"] = 0.0
+        item["sales_value"] = None
+        item["closing_value"] = None
         item["opening_value"] = None
         item["receipts_value"] = None
+        _ssa_oric_clean_product_fields(item)
         if trailing is not None:
             trail_s = str(trailing).strip()
             if trail_s and not (
@@ -2415,7 +2441,9 @@ def _parse_ps_pharma_statement(text: str, filename: str) -> Optional[Dict[str, A
     items: List[Dict[str, Any]] = []
     pending_name = ""
     for ln in lines:
-        if re.match(r"^\s*TOTAL\b", ln, re.I):
+        if re.match(r"^\s*(?:PURCHASE\s+DETAIL|SUPPLIER\s+NAME)\b", ln, re.I):
+            break
+        if re.match(r"^\s*(?:GRAND\s*)?TOTAL\b", ln, re.I):
             pending_name = ""
             continue
         if re.search(
@@ -3361,24 +3389,30 @@ def _ssa_oric_product_name_junk(name: str) -> bool:
 
 
 def _ssa_oric_clean_product_fields(item: Dict[str, Any]) -> None:
+    """Normalize pack peel only — never invent or append product-name words.
+
+    Preserve printed suffixes / brackets (e.g. PILEX KIT (COMBO)). Bare trailing
+    pack digits after TAB/CAP become packing (LIV.52 TAB + 100 → 100 TAB).
+    """
     name = str(item.get("product_name") or "").strip()
-    if re.match(r"PURIM\b", name, re.I):
-        item["product_name"] = "PURIM TAB"
-        if not item.get("packing"):
-            item["packing"] = "1X60"
-    if re.match(r"PILEX\s+KIT\b", name, re.I):
-        item["product_name"] = "PILEX KIT"
-        if not item.get("packing"):
-            item["packing"] = "1X1"
-    # Only bare / TAB OCR crumbs — never rename TENTEX ROYAL / FORTE variants.
-    if re.fullmatch(r"TENTEX(?:\s+TAB)?", name, re.I):
-        item["product_name"] = "TENTEX FORTE"
-        if not item.get("packing"):
-            item["packing"] = "1X10"
-    if re.match(r"ORO-?T\b", name, re.I):
-        item["product_name"] = "ORO-T ORAL RINES"
-        if not item.get("packing"):
-            item["packing"] = "1X100ML"
+    packing = str(item.get("packing") or "").strip()
+    if packing:
+        return
+    # Bare trailing size left on the name: "LIV.52 TAB 100" → pack 100 TAB.
+    # Only form words that commonly print size without a unit token.
+    m = re.match(
+        r"(?i)^(?P<head>.+?\b(?P<unit>TABS?|CAPS?|SYP|DROPS?|SYRUP))\s+"
+        r"(?P<size>\d+(?:\.\d+)?)\s*$",
+        name,
+    )
+    if m:
+        item["product_name"] = _clean_name(m.group("head"))
+        item["packing"] = f"{m.group('size')} {m.group('unit').upper()}"
+        return
+    peeled_name, peeled_pack = _ssa_oric_peel_trailing_pack(name)
+    if peeled_pack:
+        item["product_name"] = peeled_name
+        item["packing"] = peeled_pack
 
 
 def _ssa_oric_dedupe_prefer_packed(
@@ -3419,8 +3453,12 @@ Columns LEFT TO RIGHT. A printed dash or blank cell is 0. NEVER shift a later
 number left into an earlier column. NEVER put a packing size into a qty field.
 NEVER copy quantities from the row above or below onto this product.
 
-1 ITEM DESCRIPTION -> product_name (letters only; strip OCR junk)
-2 packing / unit (60'S, 200 ML, 30 TAB, 100G) -> packing
+1 ITEM DESCRIPTION -> product_name (preserve ALL printed text including
+   suffixes and brackets, e.g. PILEX KIT (COMBO). Never append words that
+   are not visible on the page.)
+2 packing / unit (60'S, 200 ML, 30 TAB, 100 TAB, 1PS, 100G) -> packing
+   When the pack is a bare size after a TAB/CAP name (LIV.52 TAB 100),
+   packing is "100 TAB".
 3 OPENING -> opening_qty
 4 RECEIPT -> receipts_qty
 5 ISSUE -> sales_qty
@@ -3468,8 +3506,8 @@ Return ONLY valid JSON:
     "receipts_qty": number|null,
     "sales_qty": number|null,
     "closing_qty": number|null,
-    "sales_value": 0,
-    "closing_value": 0,
+    "sales_value": null,
+    "closing_value": null,
     "extra": {}
   }
 }
@@ -3484,10 +3522,14 @@ Rules:
 - Return line_items in TOP-TO-BOTTOM printed order (first table row first).
 - Do NOT copy ISSUE/RECEIPT digits from the row above or below onto this product.
   If OPENING equals CLOSING and RECEIPT is 0, ISSUE must be 0.
-- ISSUE is sales_qty. sales_value and closing_value stay 0 (no money columns).
+- ISSUE is sales_qty. sales_value and closing_value stay null (no money columns).
+  Never put ISSUE digits into sales_value.
 - Packing stays in packing — never use 60, 200, 30, 100 from packing as opening.
 - Preserve printed quantities. Do not recalculate opening/closing from identity.
-- Skip division banner rows (HIMALAYA ZANDRA alone) and the TOTAL footer as products.
+- Skip division banner rows (HIMALAYA ZANDRA alone) as products.
+- totals.opening/receipts/sales/closing_qty = the LAST printed stock TOTAL or
+  GRAND TOTAL row under OPENING|RECEIPT|ISSUE|CLOSING BEFORE any
+  PURCHASE DETAIL / SUPPLIER NAME section. Do not use purchase invoice TOTAL : amounts.
 - Period like 01-09-2026 - 30-09-2026 → period_from/period_to as YYYY-MM-DD.
 - Emit each printed SKU once — never invent duplicate rows for the same pack.
 """.strip()
@@ -3832,10 +3874,11 @@ def _apply_ssa_oric_qty_only_vision_fields(
         item["receipts_qty"] = _to_float(raw.get("receipts_qty"))
         item["sales_qty"] = _to_float(raw.get("sales_qty"))
         item["closing_qty"] = _to_float(raw.get("closing_qty"))
-        item["sales_value"] = 0.0
-        item["closing_value"] = 0.0
+        item["sales_value"] = None
+        item["closing_value"] = None
         item["opening_value"] = None
         item["receipts_value"] = None
+        _ssa_oric_clean_product_fields(item)
         extra = item.setdefault("extra", {})
         if isinstance(extra, dict):
             extra["layout"] = "opening_receipt_issue_closing_qty"
@@ -3847,8 +3890,8 @@ def _apply_ssa_oric_qty_only_vision_fields(
     for field in ("opening_qty", "receipts_qty", "sales_qty", "closing_qty"):
         if totals_in.get(field) not in (None, ""):
             result["totals"][field] = _to_float(totals_in.get(field))
-    result["totals"]["sales_value"] = 0.0
-    result["totals"]["closing_value"] = 0.0
+    result["totals"]["sales_value"] = None
+    result["totals"]["closing_value"] = None
     return result
 
 
@@ -4417,31 +4460,64 @@ def _extract_ssa_oric_qty_only_vision(
         _ssa_oric_repair_row_qtys(item)
     result["line_items"] = items
 
-    # Qty-only: line sums are authoritative. Printed footer (e.g. 37348) is often
-    # corrupted chrome — never keep a Vision TOTAL that disagrees with ISSUE cells.
+    # Qty-only: keep printed TOTAL when present; compare to line sums; never
+    # silently replace either side; never map ISSUE into sales_value.
     sum_open = sum(_to_float(i.get("opening_qty")) for i in items)
     sum_rec = sum(_to_float(i.get("receipts_qty")) for i in items)
     sum_sales = sum(_to_float(i.get("sales_qty")) for i in items)
     sum_close = sum(_to_float(i.get("closing_qty")) for i in items)
+    line_sums = {
+        "opening_qty": round(sum_open, 2),
+        "receipts_qty": round(sum_rec, 2),
+        "sales_qty": round(sum_sales, 2),
+        "closing_qty": round(sum_close, 2),
+    }
     result.setdefault("totals", {})
-    result["totals"]["opening_qty"] = sum_open
-    result["totals"]["receipts_qty"] = sum_rec
-    result["totals"]["sales_qty"] = sum_sales
-    result["totals"]["closing_qty"] = sum_close
-    result["totals"]["sales_value"] = 0.0
-    result["totals"]["closing_value"] = 0.0
-
+    printed = {
+        key: result["totals"].get(key)
+        for key in ("opening_qty", "receipts_qty", "sales_qty", "closing_qty")
+        if result["totals"].get(key) not in (None, "")
+    }
     extra = result.setdefault("totals", {}).setdefault("extra", {})
     extra["extraction_method"] = "ssa_oric_qty_only_vision"
     extra["layout"] = "opening_receipt_issue_closing_qty"
     extra["qty_only"] = True
     extra["numeric_source"] = "gemini_vision"
     extra["oric_vision_bands"] = len(payloads)
-    extra["sales_qty"] = sum_sales
-    extra["opening_qty"] = sum_open
-    extra["receipts_qty"] = sum_rec
-    extra["closing_qty"] = sum_close
-    extra["sales_qty_source"] = "line_sum"
+    if printed and _oric_qty_keep_printed_totals_on_mismatch_enabled():
+        parsed_footer = {
+            "total_row_raw": "vision_totals",
+            "total_row_numbers": [
+                printed.get("opening_qty"),
+                printed.get("receipts_qty"),
+                printed.get("sales_qty"),
+                printed.get("closing_qty"),
+            ],
+            "total_row_format": "opening_receipt_issue_closing",
+            "total_row_labels": ["OPENING", "RECEIPT", "ISSUE", "CLOSING"],
+            **printed,
+        }
+        reject = _footer_qty_totals_implausible(parsed_footer, line_sums)
+        _stamp_oric_qty_printed_totals_with_mismatch(
+            result,
+            parsed_footer,
+            line_sums,
+            mismatch_reason=reject,
+        )
+    else:
+        result["totals"]["opening_qty"] = sum_open
+        result["totals"]["receipts_qty"] = sum_rec
+        result["totals"]["sales_qty"] = sum_sales
+        result["totals"]["closing_qty"] = sum_close
+        result["totals"]["sales_value"] = None
+        result["totals"]["closing_value"] = None
+        extra["sales_qty"] = sum_sales
+        extra["opening_qty"] = sum_open
+        extra["receipts_qty"] = sum_rec
+        extra["closing_qty"] = sum_close
+        extra["sales_qty_source"] = "line_sum"
+        extra["total_row_source"] = "line_sum_fallback"
+        extra["line_item_qty_sums"] = dict(line_sums)
     if overlay_rows:
         extra["oric_ocr_overlay"] = True
         extra["oric_ocr_overlay_rows"] = len(overlay_rows)
@@ -6470,15 +6546,41 @@ def _parse_statement_total_row(text: str) -> Optional[Dict[str, Any]]:
     header_blob = "\n".join(
         ln for ln in text.splitlines()[:50] if ln.strip()
     )
-    # Prefer GRAND TOTAL, else last TOTAL line (footer)
+    # Stock qty TOTAL sits above PURCHASE DETAIL / invoice money sections.
+    stock_text = text
+    cut = re.search(
+        r"(?im)^\s*PURCHASE\s+DETAIL\b|^\s*SUPPLIER\s+NAME\b",
+        text,
+    )
+    if cut:
+        stock_text = text[: cut.start()]
+
+    def _qty_total_candidate(s: str) -> bool:
+        if re.search(r"\b(?:AMT|AMOUNT|VALUE)\s*$", s, re.I):
+            return False
+        # Purchase-section money: "TOTAL : 419162.00" (colon + one decimal).
+        if re.match(r"^\s*(?:GRAND\s*)?TOTAL\s*:\s*", s, re.I):
+            return False
+        cleaned = s.replace("$", " ").replace(",", "")
+        raw = re.findall(r"-?\d+(?:\.\d+)?", cleaned)
+        nums = [
+            n
+            for n in raw
+            if len(n.split(".")[0].lstrip("-")) <= 8
+        ]
+        return len(nums) >= 4
+
+    # Prefer last GRAND TOTAL (qty, not Amt/Value), else last TOTAL line.
     total_line = None
     grand_line = None
-    for ln in text.splitlines():
+    for ln in stock_text.splitlines():
         s = ln.strip()
-        if re.match(r"^\s*GRAND\s*TOTAL\b", s, re.I):
-            grand_line = s
+        if re.match(r"^\s*GRAND\s*TOTALS?\b", s, re.I):
+            if _qty_total_candidate(s):
+                grand_line = s
         elif re.match(r"^\s*TOTAL\b", s, re.I):
-            total_line = s
+            if _qty_total_candidate(s):
+                total_line = s
     total_line = grand_line or total_line
 
     if not total_line:
@@ -6599,6 +6701,106 @@ def _reject_implausible_footer_qty_totals_enabled() -> bool:
     }
 
 
+def _oric_qty_keep_printed_totals_on_mismatch_enabled() -> bool:
+    """OPENING|RECEIPT|ISSUE|CLOSING qty-only: keep printed TOTAL + line sums.
+
+    Default ON. When printed TOTAL differs from line-item sums, flag
+    TOTAL_MISMATCH — never silently replace either side and never map ISSUE
+    into sales_value. Kill switch: STOCK_ORIC_QTY_KEEP_PRINTED_TOTALS=false.
+    """
+    return os.getenv(
+        "STOCK_ORIC_QTY_KEEP_PRINTED_TOTALS", "true"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _stamp_oric_qty_printed_totals_with_mismatch(
+    result: Dict[str, Any],
+    parsed: Dict[str, Any],
+    line_sums: Dict[str, float],
+    *,
+    mismatch_reason: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Keep printed ORIC qty TOTAL; store line sums; flag TOTAL_MISMATCH."""
+    totals = result.setdefault(
+        "totals", {"sales_value": None, "closing_value": None, "extra": {}}
+    )
+    extra = totals.setdefault("extra", {})
+    if not isinstance(extra, dict):
+        totals["extra"] = {}
+        extra = totals["extra"]
+
+    for key in ("opening_qty", "receipts_qty", "sales_qty", "closing_qty"):
+        if key in parsed and parsed.get(key) is not None:
+            totals[key] = parsed[key]
+
+    # Money columns are not printed on qty-only ORIC sheets.
+    totals["sales_value"] = None
+    totals["closing_value"] = None
+
+    extra["total_row_raw"] = parsed.get("total_row_raw")
+    extra["total_row_numbers"] = parsed.get("total_row_numbers")
+    extra["total_row_format"] = parsed.get("total_row_format")
+    extra["total_row_labels"] = parsed.get("total_row_labels")
+    extra["total_row_source"] = "footer_total"
+    extra["qty_only"] = True
+    extra["line_opening_qty_sum"] = line_sums.get("opening_qty")
+    extra["line_receipts_qty_sum"] = line_sums.get("receipts_qty")
+    extra["line_sales_qty_sum"] = line_sums.get("sales_qty")
+    extra["line_closing_qty_sum"] = line_sums.get("closing_qty")
+    extra["line_item_qty_sums"] = dict(line_sums)
+
+    mismatched: Dict[str, Any] = {}
+    for key in ("opening_qty", "receipts_qty", "sales_qty", "closing_qty"):
+        printed = parsed.get(key)
+        calculated = line_sums.get(key)
+        if printed is None or calculated is None:
+            continue
+        try:
+            p = float(printed)
+            c = float(calculated)
+        except (TypeError, ValueError):
+            continue
+        if abs(p - c) > max(0.51, 0.01 * max(abs(p), abs(c), 1.0)):
+            mismatched[key] = {"printed": p, "calculated": c}
+
+    has_mismatch = bool(mismatched) or bool(mismatch_reason)
+    extra["TOTAL_MISMATCH"] = has_mismatch
+    extra["total_mismatch"] = has_mismatch
+    if has_mismatch:
+        flags = list(extra.get("flags") or [])
+        if "TOTAL_MISMATCH" not in flags:
+            flags.append("TOTAL_MISMATCH")
+        extra["flags"] = flags
+        if mismatch_reason:
+            extra["total_mismatch_reason"] = mismatch_reason
+        extra["total_mismatch_fields"] = mismatched
+    extra["printed_total_validation"] = {
+        "compared": True,
+        "ok": not has_mismatch,
+        "printed": {
+            k: parsed.get(k)
+            for k in ("opening_qty", "receipts_qty", "sales_qty", "closing_qty")
+            if k in parsed
+        },
+        "calculated": dict(line_sums),
+        "mismatched": mismatched,
+    }
+    # Never leave Issue qty parked as sales_value on qty-only ORIC.
+    extra.pop("oric_footer_qty_remapped", None)
+    extra.pop("has_printed_sales_value", None)
+    logger.info(
+        "STOCK_ORIC_QTY_PRINTED_TOTALS mismatch=%s reason=%s printed_open=%s "
+        "line_open=%s printed_issue=%s line_issue=%s",
+        has_mismatch,
+        mismatch_reason,
+        parsed.get("opening_qty"),
+        line_sums.get("opening_qty"),
+        parsed.get("sales_qty"),
+        line_sums.get("sales_qty"),
+    )
+    return result
+
+
 def _line_item_qty_sums(result: Dict[str, Any]) -> Dict[str, float]:
     """Sum printed qty fields from line_items (identity math only for compare)."""
     items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
@@ -6648,6 +6850,154 @@ def _footer_qty_totals_implausible(
     return None
 
 
+def _apply_oric_footer_to_universal_totals(
+    totals: Dict[str, Any],
+    *,
+    opening: Any = None,
+    receipts: Any = None,
+    issue: Any = None,
+    closing: Any = None,
+    source: str,
+    overwrite: bool = False,
+) -> Dict[str, Any]:
+    """Universal OPENING|RECEIPT|ISSUE|CLOSING footer → statement JSON.
+
+    Printed column (last TOTAL / Grand Total [Amt] on the sheet):
+      OPENING  → totals.extra.opening_value
+      RECEIPT  → totals.extra.receipts_value (+ purchase_value)
+      ISSUE    → totals.sales_value   (sales total — never sales_qty)
+      CLOSING  → totals.closing_value
+
+    Qty fields stay on totals.opening_qty / receipts_qty / sales_qty /
+    closing_qty from line sums or a separate qty TOTAL row.
+    """
+    if not isinstance(totals, dict):
+        return {}
+    extra = totals.setdefault("extra", {})
+    if not isinstance(extra, dict):
+        totals["extra"] = {}
+        extra = totals["extra"]
+
+    def _num(raw: Any) -> Optional[float]:
+        if raw in (None, ""):
+            return None
+        try:
+            return float(raw)
+        except (TypeError, ValueError):
+            return None
+
+    applied: Dict[str, Any] = {}
+    open_v = _num(opening)
+    rec_v = _num(receipts)
+    issue_v = _num(issue)
+    close_v = _num(closing)
+
+    if issue_v is not None and (overwrite or totals.get("sales_value") in (None, "")):
+        totals["sales_value"] = issue_v
+        extra["sales_value_source"] = source
+        applied["sales_value"] = issue_v
+    if close_v is not None and (overwrite or totals.get("closing_value") in (None, "")):
+        totals["closing_value"] = close_v
+        extra["closing_value_source"] = source
+        applied["closing_value"] = close_v
+    if open_v is not None and (overwrite or extra.get("opening_value") in (None, "")):
+        extra["opening_value"] = open_v
+        extra["opening_value_source"] = source
+        applied["opening_value"] = open_v
+    if rec_v is not None and (overwrite or extra.get("receipts_value") in (None, "")):
+        extra["receipts_value"] = rec_v
+        extra["purchase_value"] = rec_v
+        extra["receipts_value_source"] = source
+        applied["receipts_value"] = rec_v
+
+    if applied:
+        extra["total_value_row_source"] = source
+        extra["oric_footer_value_map"] = {
+            "OPENING": "opening_value",
+            "RECEIPT": "receipts_value",
+            "ISSUE": "sales_value",
+            "CLOSING": "closing_value",
+        }
+        logger.info(
+            "STOCK_ORIC_FOOTER_UNIVERSAL source=%s sales_value=%s closing_value=%s "
+            "opening_value=%s receipts_value=%s",
+            source,
+            totals.get("sales_value"),
+            totals.get("closing_value"),
+            extra.get("opening_value"),
+            extra.get("receipts_value"),
+        )
+    return applied
+
+
+def _promote_rejected_footer_qty_as_values(
+    totals: Dict[str, Any],
+    parsed: Dict[str, Any],
+    line_sums: Dict[str, float],
+) -> bool:
+    """When TOTAL footer qty is implausible, treat digits as printed money.
+
+    PDF geometry (HIM1-style): last TOTAL row aligns numbers under
+    OPENING|RECEIPT|ISSUE|CLOSING headers — ISSUE cell is the sales total
+    (e.g. 26794), not sales_qty.
+    """
+    if not isinstance(totals, dict) or not isinstance(parsed, dict):
+        return False
+    fmt = str(parsed.get("total_row_format") or "")
+    if fmt not in {
+        "opening_receipt_issue_closing",
+        "opbal_receipt_total_issue_closing",
+        "opbal_receipt_total_issue_expiry_closing",
+        "qty4_generic",
+    }:
+        if totals.get("sales_value") is not None:
+            totals["sales_value"] = None
+        if totals.get("closing_value") is not None:
+            totals["closing_value"] = None
+        return False
+
+    def _money_scale(footer: Any, line_qty: float) -> Optional[float]:
+        if footer is None:
+            return None
+        try:
+            f = float(footer)
+        except (TypeError, ValueError):
+            return None
+        if abs(f) < 1.0:
+            return None
+        if line_qty > 0 and abs(f) <= max(abs(line_qty) * 5.0, abs(line_qty) + 50.0):
+            return None
+        return f
+
+    sales_money = _money_scale(
+        parsed.get("sales_qty"), float(line_sums.get("sales_qty") or 0)
+    )
+    closing_money = _money_scale(
+        parsed.get("closing_qty"), float(line_sums.get("closing_qty") or 0)
+    )
+    opening_money = _money_scale(
+        parsed.get("opening_qty"), float(line_sums.get("opening_qty") or 0)
+    )
+    receipts_money = _money_scale(
+        parsed.get("receipts_qty"), float(line_sums.get("receipts_qty") or 0)
+    )
+    if sales_money is None and closing_money is None:
+        return False
+
+    # Always (re)apply ISSUE→sales_value so a later sanitize/second pass
+    # cannot leave totals.sales_value null while the UI expects the sale total.
+    applied = _apply_oric_footer_to_universal_totals(
+        totals,
+        opening=opening_money,
+        receipts=receipts_money,
+        issue=sales_money,
+        closing=closing_money,
+        source="footer_total_as_value",
+        overwrite=True,
+    )
+    return bool(applied)
+
+
 def _apply_total_row_to_result(result: Dict[str, Any], text: str) -> Dict[str, Any]:
     """Attach parsed footer TOTAL qty columns onto statement totals."""
     if not isinstance(result, dict) or result.get("multi_statement"):
@@ -6678,6 +7028,35 @@ def _apply_total_row_to_result(result: Dict[str, Any], text: str) -> Dict[str, A
     if _reject_implausible_footer_qty_totals_enabled():
         reject_reason = _footer_qty_totals_implausible(parsed, line_sums)
 
+    oric_qty_fmt = str(parsed.get("total_row_format") or "") in {
+        "opening_receipt_issue_closing",
+        "qty4_generic",
+    }
+    qty_only_result = bool(
+        totals["extra"].get("qty_only")
+        or str(totals["extra"].get("layout") or "")
+        == "opening_receipt_issue_closing_qty"
+        or str(totals["extra"].get("extraction_method") or "")
+        in {
+            "ps_pharma_parser",
+            "ssa_oric_qty_only_vision",
+            "ssa_oric_qty_only_ocr",
+            "ssa_oric_geometry",
+        }
+    )
+    if (
+        reject_reason
+        and oric_qty_fmt
+        and qty_only_result
+        and _oric_qty_keep_printed_totals_on_mismatch_enabled()
+    ):
+        return _stamp_oric_qty_printed_totals_with_mismatch(
+            result,
+            parsed,
+            line_sums,
+            mismatch_reason=reject_reason,
+        )
+
     if reject_reason:
         # Keep OCR debug fields; replace qty totals with line sums.
         for key, value in line_sums.items():
@@ -6687,7 +7066,6 @@ def _apply_total_row_to_result(result: Dict[str, Any], text: str) -> Dict[str, A
         totals["extra"]["total_row_format"] = parsed.get("total_row_format")
         totals["extra"]["total_row_labels"] = parsed.get("total_row_labels")
         totals["extra"]["total_row_source"] = "line_item_sum"
-        totals["extra"]["total_row_rejected"] = reject_reason
         totals["extra"]["total_row_rejected_footer"] = {
             k: parsed.get(k)
             for k in (
@@ -6698,18 +7076,53 @@ def _apply_total_row_to_result(result: Dict[str, Any], text: str) -> Dict[str, A
             )
             if k in parsed
         }
+        # Footer digits were VALUE-scale (sale total / closing total), not qty.
+        # Park them on universal totals.sales_value / closing_value so this
+        # OPENING|RECEIPT|ISSUE|CLOSING money footer is not discarded.
+        promoted = _promote_rejected_footer_qty_as_values(
+            totals, parsed, line_sums
+        )
+        if promoted:
+            # Success path for UI: keep ISSUE sales total on totals.sales_value.
+            totals["extra"].pop("total_row_rejected", None)
+            totals["extra"]["oric_footer_qty_remapped"] = reject_reason
+            totals["extra"]["product_rows_qty_only"] = True
+            totals["extra"]["qty_only"] = False
+            totals["extra"]["has_printed_sales_value"] = True
+            totals["extra"]["total_value_row_source"] = "footer_total_as_value"
+            # Never leave sales total blank after a successful ORIC remap.
+            if totals.get("sales_value") in (None, ""):
+                try:
+                    issue_fallback = float(
+                        (totals["extra"].get("total_row_rejected_footer") or {}).get(
+                            "sales_qty"
+                        )
+                    )
+                except (TypeError, ValueError):
+                    issue_fallback = None
+                if issue_fallback is not None and abs(issue_fallback) >= 1.0:
+                    totals["sales_value"] = issue_fallback
+                    totals["extra"]["sales_value_source"] = "footer_total_as_value"
+        else:
+            # Only mark rejected when we did not already map a printed sale total.
+            if not totals["extra"].get("has_printed_sales_value"):
+                totals["extra"]["total_row_rejected"] = reject_reason
+                if totals.get("sales_value") in (None, ""):
+                    totals["sales_value"] = None
+                if totals.get("closing_value") in (None, ""):
+                    totals["closing_value"] = None
         logger.info(
             "STOCK_FOOTER_QTY_TOTALS_REJECTED reason=%s method=%s "
-            "footer_closing=%s line_closing=%s footer_opening=%s line_opening=%s",
+            "footer_closing=%s line_closing=%s footer_opening=%s line_opening=%s "
+            "promoted_values=%s",
             reject_reason,
             portrait_method or None,
             parsed.get("closing_qty"),
             line_sums.get("closing_qty"),
             parsed.get("opening_qty"),
             line_sums.get("opening_qty"),
+            promoted,
         )
-        totals["sales_value"] = None
-        totals["closing_value"] = None
         return result
 
     # Authoritative qty totals from footer row (do not treat as money)
@@ -6744,6 +7157,15 @@ def _apply_total_row_to_result(result: Dict[str, Any], text: str) -> Dict[str, A
         if totals.get("closing_value") in parsed.get("total_row_numbers", []):
             # closing_value money vs closing_qty — clear only if it matches a qty total
             totals["closing_value"] = None
+
+    if (
+        oric_qty_fmt
+        and qty_only_result
+        and _oric_qty_keep_printed_totals_on_mismatch_enabled()
+    ):
+        return _stamp_oric_qty_printed_totals_with_mismatch(
+            result, parsed, line_sums, mismatch_reason=None
+        )
 
     return result
 
@@ -7084,6 +7506,20 @@ def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
     )
     # ORIC printed/Vision TOTAL: keep statement-level qty (do not replace with line sums).
     preserve_main_stock_printed_qty = _total_row_src.startswith("main_stock")
+    # Saleable Stock Report Firm/Grand/Company Total — keep printed qty footer.
+    preserve_saleable_footer_qty = _total_row_src in {
+        "saleable_grand_total",
+        "saleable_firm_total",
+        "saleable_company_total",
+    }
+    # Excel Firm/Company/Grand Total row (Opn/Rec/Issue/Bal grids) — keep
+    # printed footer qty; do not replace with company line-item sums.
+    preserve_xls_footer_qty = _total_row_src in {
+        "xls_grand_total",
+        "xls_total",
+        "xls_company_total",
+        "xls_firm_total",
+    }
     if has_footer_qty:
         if totals.get("sales_qty") is not None:
             totals["extra"]["sales_qty"] = totals.get("sales_qty")
@@ -7097,10 +7533,16 @@ def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
         preserve_prompt_datewise_footer_qty
         or preserve_pack_rate_printed_qty
         or preserve_main_stock_printed_qty
+        or preserve_saleable_footer_qty
+        or preserve_xls_footer_qty
     ):
-        if totals["extra"].get("sales_qty") is None:
+        if preserve_xls_footer_qty and totals.get("sales_qty") is not None:
+            totals["extra"]["sales_qty"] = totals.get("sales_qty")
+        elif totals["extra"].get("sales_qty") is None:
             totals["extra"]["sales_qty"] = sum_sales_qty
-        if totals["extra"].get("closing_qty") is None:
+        if preserve_xls_footer_qty and totals.get("closing_qty") is not None:
+            totals["extra"]["closing_qty"] = totals.get("closing_qty")
+        elif totals["extra"].get("closing_qty") is None:
             totals["extra"]["closing_qty"] = sum_closing_qty
     elif not (
         _op_qty_val_prefer_line_totals_enabled() and op_qty_val_layout
@@ -7166,6 +7608,12 @@ def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
         # (line sales_value is always 0; do not treat as qty-only bogus).
         "ostk_qoh_footer",
         "daxinsoft_footer",
+        # Saleable Stock Report printed Firm / Grand / Company Total money.
+        "saleable_grand_total",
+        "saleable_firm_total",
+        "saleable_company_total",
+        "xls_company_total",
+        "xls_firm_total",
     }
     _total_row_trusted = str(totals.get("extra", {}).get("total_row_source") or "") in (
         _trusted_footer_sources
@@ -9356,6 +9804,11 @@ def _ensure_stock_qty_value_fields(result: Dict[str, Any]) -> Dict[str, Any]:
                 item[key] = 0.0
         for key in ("sales_value", "closing_value"):
             if item.get(key) in (None, ""):
+                # Blank printed cell (field_source=missing) stays null — same
+                # contract as qty fields above.
+                if fs.get(key) == "missing":
+                    item[key] = None
+                    continue
                 # Qty-only layouts (product-wise / E-ZEAL PTR) keep money null.
                 # Busy SSA prints money only on footer Value-in-Rs bands.
                 if key == "sales_value" and (
@@ -9390,6 +9843,8 @@ def _ensure_stock_qty_value_fields(result: Dict[str, Any]) -> Dict[str, Any]:
                 item["opening_value"] = round(float(opening_value), 2)
             else:
                 item["opening_value"] = None
+        elif fs.get("opening_value") == "missing" and opening_value is None:
+            _insert_line_field(item, "opening_qty", "opening_value", None)
         elif preserve_null_pair_values or not has_printed_opening_value:
             if opening_value is None:
                 _insert_line_field(item, "opening_qty", "opening_value", None)
@@ -9412,7 +9867,9 @@ def _ensure_stock_qty_value_fields(result: Dict[str, Any]) -> Dict[str, Any]:
                 item["extra"] = item_extra
             item_extra.setdefault("receipts_value", receipts_value)
             item_extra.setdefault("purchase_value", receipts_value)
-        if preserve_null_pair_values or not has_printed_receipts_value:
+        if fs.get("receipts_value") == "missing" and receipts_value is None:
+            _insert_line_field(item, "receipts_qty", "receipts_value", None)
+        elif preserve_null_pair_values or not has_printed_receipts_value:
             if receipts_value is None:
                 _insert_line_field(item, "receipts_qty", "receipts_value", None)
             else:
@@ -17549,6 +18006,8 @@ _XLS_HEADER_ALIASES = {
     "o.stk": "op",
     "opening": "op",
     "openingstock": "op",
+    # HSN/SAC CODE WISE STOCK REPORT: OPENING STOCK-1 / OPENING VALUE-1.
+    "openingstock1": "op",
     "openingstk": "op",
     "openstk": "op",
     "openingqty": "op",
@@ -17578,6 +18037,7 @@ _XLS_HEADER_ALIASES = {
     "purch": "pur",
     "purchase": "pur",
     "purchases": "pur",
+    "purchase1": "pur",
     "purchaseqty": "pur",
     # Stock and Sales Detail Report Excel: P.Qty / P Qty (not Op.Qty).
     "pqty": "pur",
@@ -17607,6 +18067,13 @@ _XLS_HEADER_ALIASES = {
     "primary(qty)": "pur",
     "sale": "sale",
     "sales": "sale",
+    # HSN/SAC CODE WISE STOCK REPORT: NET SALE-1 / NET SALE VALUE-1.
+    "netsale": "sale",
+    "netsale1": "sale",
+    "netsales": "sale",
+    # Saleable Stock Report: Issue (Q+F) qty (Issue alone already maps sale).
+    "issueqf": "sale",
+    "issueq+f": "sale",
     "saleret": "sret",
     "salereturn": "sret",
     "sreturn": "sret",
@@ -17648,6 +18115,7 @@ _XLS_HEADER_ALIASES = {
     "closing": "bal",
     "clsg": "bal",
     "closingstock": "bal",
+    "closingstock1": "bal",
     "closingstk": "bal",
     "clsgstk": "bal",
     "closingqty": "bal",
@@ -17686,6 +18154,16 @@ _XLS_HEADER_ALIASES = {
     "bval": "bval",
     "closingvalue": "bval",
     "closingval": "bval",
+    # HSN/SAC CODE WISE: CLOSING VALUE-(PUR. RATE) preferred over SALE RATE.
+    "closingvaluepurrate": "bval",
+    "closingvaluepurchaserate": "bval",
+    "closingvalue1": "bval",
+    # Alternate sale-rate closing money — keep PUR.RATE as primary bval.
+    "closingvaluesalerate": "ignore",
+    "closingvaluesalesrate": "ignore",
+    # Saleable Stock Report: Bal Amt(Q+F).
+    "balamtqf": "bval",
+    "balamt": "bval",
     # Semantic export headers: clos_value / closvalue (paired with clos_qty).
     "closvalue": "bval",
     "closval": "bval",
@@ -17726,6 +18204,9 @@ _XLS_HEADER_ALIASES = {
     "issval": "sval",
     "salesvalue": "sval",
     "salevalue": "sval",
+    "netsalevalue": "sval",
+    "netsalevalue1": "sval",
+    "netsalesvalue": "sval",
     "saleamount": "sval",
     "salesamount": "sval",
     # STOCK REGISTER: SALE | AMOUNT-I | CL.STOCK | AMOUNT-II (qty then money).
@@ -17742,6 +18223,7 @@ _XLS_HEADER_ALIASES = {
     "valueofsales": "sval",
     "salval": "sval",
     "openingvalue": "opval",
+    "openingvalue1": "opval",
     "openingval": "opval",
     "opvalue": "opval",
     "opval": "opval",
@@ -17759,6 +18241,9 @@ _XLS_HEADER_ALIASES = {
     "receiptvalue": "purval",
     "receiptsvalue": "purval",
     "purchasevalue": "purval",
+    "purchasevalue1": "purval",
+    "purvalue": "purval",
+    "purvalue1": "purval",
     "inwardvalue": "purval",
     "purval": "purval",
     # Stock and Sales Detail Report Excel: P.Val / P Val.
@@ -17788,6 +18273,11 @@ _XLS_HEADER_ALIASES = {
     "scheme": "scheme",
     "free": "free",
     "freeqty": "free",
+    # HSN/SAC CODE WISE STOCK REPORT free columns.
+    "purfreeqty": "free",
+    "purfree": "free",
+    "salefreeqty": "scheme",
+    "salefree": "scheme",
     "sample": "sample",
     "sampleqty": "sample",
     "expiry": "expiry",
@@ -18201,6 +18691,12 @@ def _xls_norm_header(label: Any) -> str:
     mapped = _XLS_HEADER_ALIASES.get(alnum)
     if mapped is not None:
         return mapped
+    # Series suffix on movement headers: OPENING STOCK-1 / NET SALE-1 / PUR VALUE-1.
+    # Strip a trailing digit run only when a lettered stem remains and aliases.
+    if alnum and not alnum.isdigit():
+        stem = re.sub(r"\d+$", "", alnum)
+        if stem and stem != alnum and stem in _XLS_HEADER_ALIASES:
+            return _XLS_HEADER_ALIASES[stem]
     # Bare STOCK (not TotalStock / ClosingStock) is printed closing qty next to
     # Stock Value on Opening Qty / SALE / STOCK hub exports.
     if alnum == "stock" and _xls_stock_column_as_closing_enabled():
@@ -18684,6 +19180,545 @@ def _xls_col_letter(idx: int) -> str:
         n, rem = divmod(n - 1, 26)
         letters = chr(65 + rem) + letters
     return letters
+
+
+def _xls_col_letters_to_index(letters: str) -> Optional[int]:
+    """A→0, B→1, … AA→26. None when empty/invalid."""
+    text = re.sub(r"[^A-Za-z]", "", str(letters or "")).upper()
+    if not text or len(text) > 3:
+        return None
+    n = 0
+    for ch in text:
+        if not ("A" <= ch <= "Z"):
+            return None
+        n = n * 26 + (ord(ch) - 64)
+    return n - 1 if n > 0 else None
+
+
+def _xls_same_row_formula_enabled() -> bool:
+    """STOCK_XLS_SAME_ROW_FORMULA — evaluate Sale/qty formulas on the same row.
+
+    Default ON. Excel stock sheets often print Sale as ``=(Opening+Purchase)-Closing``
+    without a cached value. Kill-switch: STOCK_XLS_SAME_ROW_FORMULA=false.
+    """
+    return os.getenv("STOCK_XLS_SAME_ROW_FORMULA", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _xls_safe_arith_eval(expr: str) -> Optional[float]:
+    """Evaluate a digits-and-+-*/() expression only. No names/calls/attrs."""
+    import ast
+
+    text = (expr or "").strip()
+    if not text or not re.fullmatch(r"[0-9eE+.\s()\-+*/]+", text):
+        return None
+    try:
+        tree = ast.parse(text, mode="eval")
+    except SyntaxError:
+        return None
+
+    def _eval(node: Any) -> float:
+        if isinstance(node, ast.Expression):
+            return _eval(node.body)
+        if isinstance(node, ast.Constant) and isinstance(node.value, (int, float)):
+            return float(node.value)
+        if isinstance(node, ast.UnaryOp) and isinstance(node.op, (ast.UAdd, ast.USub)):
+            val = _eval(node.operand)
+            return val if isinstance(node.op, ast.UAdd) else -val
+        if isinstance(node, ast.BinOp) and isinstance(
+            node.op, (ast.Add, ast.Sub, ast.Mult, ast.Div)
+        ):
+            left = _eval(node.left)
+            right = _eval(node.right)
+            if isinstance(node.op, ast.Add):
+                return left + right
+            if isinstance(node.op, ast.Sub):
+                return left - right
+            if isinstance(node.op, ast.Mult):
+                return left * right
+            if abs(right) < 1e-15:
+                raise ZeroDivisionError
+            return left / right
+        raise ValueError("unsupported")
+
+    try:
+        return float(_eval(tree))
+    except Exception:
+        return None
+
+
+def _xls_eval_same_row_formula(
+    formula: Any,
+    row: List[Any],
+    excel_row_1based: int,
+) -> Optional[float]:
+    """Resolve ``=(B4+C4)-E4`` using only same-row numeric cells.
+
+    Rejects functions (SUM/…), ranges (A1:A10), other-row refs, and sheet bangs.
+    Does not invent values — only evaluates the formula printed in the cell.
+    """
+    if not _xls_same_row_formula_enabled():
+        return None
+    text = str(formula or "").strip()
+    if not text.startswith("="):
+        return None
+    body = text[1:].strip()
+    if not body:
+        return None
+    # Functions, ranges, cross-sheet — leave unresolved (existing test contract).
+    if re.search(r"[A-Za-z_]+\s*\(|:|!", body):
+        return None
+    refs = list(re.finditer(r"\$?([A-Za-z]{1,3})\$?(\d{1,7})", body))
+    if not refs:
+        return None
+    expr = body
+    for m in reversed(refs):
+        col_letters, row_s = m.group(1), m.group(2)
+        try:
+            ref_row = int(row_s)
+        except ValueError:
+            return None
+        if ref_row != int(excel_row_1based):
+            return None
+        col_idx = _xls_col_letters_to_index(col_letters)
+        if col_idx is None or col_idx >= len(row):
+            return None
+        cell_val = row[col_idx]
+        if isinstance(cell_val, str) and cell_val.strip().startswith("="):
+            return None
+        if cell_val in (None, ""):
+            num = 0.0
+        elif isinstance(cell_val, bool):
+            return None
+        elif isinstance(cell_val, (int, float)):
+            num = float(cell_val)
+        else:
+            num = _to_nullable_float(cell_val)
+            if num is None:
+                return None
+        expr = expr[: m.start()] + f"({num})" + expr[m.end() :]
+    return _xls_safe_arith_eval(expr)
+
+
+def _xls_sale_identity_from_op_pur_close(
+    opening: Any,
+    purchase: Any,
+    closing: Any,
+) -> Optional[float]:
+    """Sale = Opening + Purchase − Closing when those three are numeric."""
+    if any(v in (None, "") for v in (opening, purchase, closing)):
+        # Purchase may be a real 0; only reject when opening/closing absent.
+        pass
+    o = _to_nullable_float(opening)
+    c = _to_nullable_float(closing)
+    if o is None or c is None:
+        return None
+    p = _to_nullable_float(purchase)
+    if p is None:
+        if purchase in (None, ""):
+            p = 0.0
+        else:
+            return None
+    return round(o + p - c, 6)
+
+
+def _xls_is_saleable_opn_rec_issue_bal_layout(colmap: Dict[str, int]) -> bool:
+    """Particular|Packing|Opn/Rec/Issue/Bal × (Q+F)|Amt(Q+F) Saleable Excel."""
+    keys = set(colmap or {})
+    return (
+        "pack" in keys
+        and {"op", "opval", "pur", "purval", "sale", "sval", "bal", "bval"} <= keys
+    )
+
+
+def _xls_total_band_from_row(
+    row: List[Any],
+    *,
+    oq: Optional[int],
+    rq: Optional[int],
+    sq: Optional[int],
+    cq: Optional[int],
+    ov: Optional[int],
+    pv: Optional[int],
+    sv: Optional[int],
+    bv: Optional[int],
+) -> Dict[str, Optional[float]]:
+    """Read one Company/Firm/Grand Total row into a band dict (null if blank)."""
+
+    def _cell(idx: Optional[int]) -> Optional[float]:
+        if idx is None or idx >= len(row):
+            return None
+        if not _xls_cell_has_qty(row[idx]):
+            return None
+        return _to_nullable_float(row[idx])
+
+    return {
+        "opening_qty": _cell(oq),
+        "receipts_qty": _cell(rq),
+        "sales_qty": _cell(sq),
+        "closing_qty": _cell(cq),
+        "opening_value": _cell(ov),
+        "receipts_value": _cell(pv),
+        "purchase_value": _cell(pv),
+        "sales_value": _cell(sv),
+        "closing_value": _cell(bv),
+    }
+
+
+def _xls_apply_total_band_to_result(
+    result: Dict[str, Any],
+    band: Dict[str, Any],
+    *,
+    source: str,
+    label: str,
+) -> None:
+    """Stamp primary statement totals from a printed Company/Firm/Grand band."""
+    totals = result.setdefault(
+        "totals", {"sales_value": None, "closing_value": None, "extra": {}}
+    )
+    extra = totals.setdefault("extra", {})
+    if not isinstance(extra, dict):
+        totals["extra"] = {}
+        extra = totals["extra"]
+    if band.get("sales_value") is not None:
+        totals["sales_value"] = band["sales_value"]
+    if band.get("closing_value") is not None:
+        totals["closing_value"] = band["closing_value"]
+    if band.get("sales_qty") is not None:
+        totals["sales_qty"] = band["sales_qty"]
+        extra["sales_qty"] = band["sales_qty"]
+    if band.get("closing_qty") is not None:
+        totals["closing_qty"] = band["closing_qty"]
+        extra["closing_qty"] = band["closing_qty"]
+    if band.get("opening_qty") is not None:
+        extra["opening_qty"] = band["opening_qty"]
+    if band.get("receipts_qty") is not None:
+        extra["receipts_qty"] = band["receipts_qty"]
+        extra["purchase_qty"] = band["receipts_qty"]
+    if band.get("opening_value") is not None:
+        extra["opening_value"] = band["opening_value"]
+    if band.get("receipts_value") is not None:
+        extra["receipts_value"] = band["receipts_value"]
+        extra["purchase_value"] = band.get("purchase_value", band["receipts_value"])
+    extra["total_row_source"] = source
+    extra["total_row_label"] = label
+    # Valid printed money footer — quality gate must not claim missing financials.
+    if band.get("sales_value") is not None or band.get("closing_value") is not None:
+        extra["has_printed_sales_value"] = band.get("sales_value") is not None
+        extra["has_printed_closing_value"] = band.get("closing_value") is not None
+        cols = []
+        if band.get("opening_value") is not None:
+            cols.append("opening_value")
+        if band.get("receipts_value") is not None:
+            cols.append("receipts_value")
+        if band.get("sales_value") is not None:
+            cols.append("sales_value")
+        if band.get("closing_value") is not None:
+            cols.append("closing_value")
+        if cols:
+            extra["footer_detected_columns"] = cols
+            extra["footer_financial_complete"] = True
+            extra["footer_financial_source"] = source
+            extra["footer_financial_missing_columns"] = []
+
+
+def _xls_line_sum_distance(
+    band: Dict[str, Any], line_sums: Dict[str, float]
+) -> float:
+    """Absolute drift between a printed total band and line-item sums."""
+    dist = 0.0
+    for key in ("opening_qty", "receipts_qty", "sales_qty", "closing_qty"):
+        printed = band.get(key)
+        calc = line_sums.get(key)
+        if printed in (None, "") or calc is None:
+            continue
+        try:
+            dist += abs(float(printed) - float(calc))
+        except (TypeError, ValueError):
+            continue
+    return dist
+
+
+def _xls_prefer_company_firm_totals(result: Dict[str, Any]) -> Dict[str, Any]:
+    """When both Company Total and Firm Total exist, pick the band matching lines.
+
+    Saleable Stock Report Excel prints Company Total (matches product rows) then
+    Firm Total (whole firm). Never leave Firm as primary when lines match Company.
+    Firm Total is preserved under totals.extra.firm_total.
+    """
+    if not isinstance(result, dict):
+        return result
+    totals = result.get("totals")
+    if not isinstance(totals, dict):
+        return result
+    extra = totals.setdefault("extra", {})
+    if not isinstance(extra, dict):
+        totals["extra"] = {}
+        extra = totals["extra"]
+    company = extra.get("company_total")
+    firm = extra.get("firm_total")
+    if not isinstance(company, dict) and not isinstance(firm, dict):
+        return result
+    items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+    if not items:
+        return result
+
+    def _sum_field(key: str, *, alt: Optional[str] = None) -> float:
+        total = 0.0
+        for it in items:
+            raw = it.get(key)
+            if raw in (None, "") and alt:
+                raw = it.get(alt)
+            if raw in (None, ""):
+                continue
+            total += _to_float(raw)
+        return round(total, 6)
+
+    line_sums = {
+        "opening_qty": _sum_field("opening_qty"),
+        "receipts_qty": _sum_field("receipts_qty", alt="purchase_qty"),
+        "sales_qty": _sum_field("sales_qty"),
+        "closing_qty": _sum_field("closing_qty"),
+        "sales_value": _sum_field("sales_value"),
+        "closing_value": _sum_field("closing_value"),
+    }
+    for k, v in line_sums.items():
+        extra[f"line_{k}_sum"] = v
+
+    chosen: Optional[Dict[str, Any]] = None
+    chosen_src = ""
+    chosen_label = ""
+    if isinstance(company, dict) and isinstance(firm, dict):
+        d_co = _xls_line_sum_distance(company, line_sums)
+        d_fi = _xls_line_sum_distance(firm, line_sums)
+        # Prefer Company when it matches lines at least as well as Firm.
+        if d_co <= d_fi + 0.51:
+            chosen, chosen_src, chosen_label = (
+                company,
+                "xls_company_total",
+                str(company.get("label") or "Company Total"),
+            )
+        else:
+            chosen, chosen_src, chosen_label = (
+                firm,
+                "xls_firm_total",
+                str(firm.get("label") or "Firm Total"),
+            )
+        logger.info(
+            "STOCK_XLS_COMPANY_FIRM_SELECT company_dist=%s firm_dist=%s chosen=%s",
+            d_co,
+            d_fi,
+            chosen_src,
+        )
+    elif isinstance(company, dict):
+        chosen, chosen_src, chosen_label = (
+            company,
+            "xls_company_total",
+            str(company.get("label") or "Company Total"),
+        )
+    elif isinstance(firm, dict):
+        # Only Firm printed — keep it, but still validate against lines.
+        chosen, chosen_src, chosen_label = (
+            firm,
+            "xls_firm_total",
+            str(firm.get("label") or "Firm Total"),
+        )
+
+    if chosen is not None:
+        _xls_apply_total_band_to_result(
+            result, chosen, source=chosen_src, label=chosen_label
+        )
+        # Validate primary band vs line sums without rewriting.
+        mismatched: Dict[str, Any] = {}
+        for key in (
+            "opening_qty",
+            "receipts_qty",
+            "sales_qty",
+            "closing_qty",
+            "sales_value",
+            "closing_value",
+        ):
+            p_raw = chosen.get(key)
+            c_raw = line_sums.get(key)
+            if p_raw in (None, "") or c_raw is None:
+                continue
+            try:
+                p = float(p_raw)
+                c = float(c_raw)
+            except (TypeError, ValueError):
+                continue
+            if abs(p - c) > max(0.51, 0.01 * max(abs(p), abs(c), 1.0)):
+                mismatched[key] = {"printed": p, "calculated": c}
+        has_mismatch = bool(mismatched)
+        extra["TOTAL_MISMATCH"] = has_mismatch
+        extra["total_mismatch"] = has_mismatch
+        if has_mismatch:
+            flags = list(extra.get("flags") or [])
+            if "TOTAL_MISMATCH" not in flags:
+                flags.append("TOTAL_MISMATCH")
+            extra["flags"] = flags
+            extra["total_mismatch_fields"] = mismatched
+        else:
+            extra.pop("total_mismatch_fields", None)
+            flags = [f for f in (extra.get("flags") or []) if f != "TOTAL_MISMATCH"]
+            if flags:
+                extra["flags"] = flags
+            elif "flags" in extra and not flags:
+                extra["flags"] = flags
+        extra["printed_total_validation"] = {
+            "compared": True,
+            "ok": not has_mismatch,
+            "printed": {k: chosen.get(k) for k in line_sums if chosen.get(k) is not None},
+            "calculated": dict(line_sums),
+            "mismatched": mismatched,
+            "selected": chosen_src,
+        }
+    return result
+
+
+def _xls_flag_grand_totals_line_sum_mismatch(
+    result: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Compare line-item sums to a printed GRAND TOTALS row; never rewrite totals.
+
+    Stores line_*_sum keys and TOTAL_MISMATCH / printed_total_validation when
+    any compared field drifts. Footer totals remain authoritative.
+    """
+    if not isinstance(result, dict):
+        return result
+    totals = result.get("totals")
+    if not isinstance(totals, dict):
+        return result
+    extra = totals.setdefault("extra", {})
+    if not isinstance(extra, dict):
+        totals["extra"] = {}
+        extra = totals["extra"]
+    src = str(extra.get("total_row_source") or "")
+    if not src.startswith("xls_grand_total"):
+        return result
+    items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+    if not items:
+        return result
+
+    def _sum_field(key: str, *, alt: Optional[str] = None) -> float:
+        total = 0.0
+        for it in items:
+            raw = it.get(key)
+            if raw in (None, "") and alt:
+                raw = it.get(alt)
+            if raw in (None, ""):
+                continue
+            total += _to_float(raw)
+        return round(total, 6)
+
+    line_sums = {
+        "opening_qty": _sum_field("opening_qty"),
+        "receipts_qty": _sum_field("receipts_qty", alt="purchase_qty"),
+        "purchase_qty": _sum_field("purchase_qty", alt="receipts_qty"),
+        "sales_qty": _sum_field("sales_qty"),
+        "closing_qty": _sum_field("closing_qty"),
+        "sales_value": _sum_field("sales_value"),
+        "closing_value": _sum_field("closing_value"),
+        "opening_value": round(
+            sum(
+                _to_float((it.get("extra") or {}).get("opening_value"))
+                for it in items
+                if isinstance(it.get("extra"), dict)
+                and (it.get("extra") or {}).get("opening_value") not in (None, "")
+            ),
+            6,
+        ),
+        "purchase_value": round(
+            sum(
+                _to_float((it.get("extra") or {}).get("receipts_value"))
+                for it in items
+                if isinstance(it.get("extra"), dict)
+                and (it.get("extra") or {}).get("receipts_value") not in (None, "")
+            ),
+            6,
+        ),
+    }
+    for k, v in line_sums.items():
+        extra[f"line_{k}_sum"] = v
+    extra["line_item_qty_sums"] = {
+        k: line_sums[k]
+        for k in (
+            "opening_qty",
+            "receipts_qty",
+            "sales_qty",
+            "closing_qty",
+            "sales_value",
+            "closing_value",
+        )
+    }
+
+    printed = {
+        "opening_qty": extra.get("opening_qty"),
+        "receipts_qty": extra.get("receipts_qty")
+        if extra.get("receipts_qty") not in (None, "")
+        else extra.get("purchase_qty"),
+        "sales_qty": totals.get("sales_qty"),
+        "closing_qty": totals.get("closing_qty"),
+        "sales_value": totals.get("sales_value"),
+        "closing_value": totals.get("closing_value"),
+        "opening_value": extra.get("opening_value"),
+        "purchase_value": extra.get("purchase_value")
+        if extra.get("purchase_value") not in (None, "")
+        else extra.get("receipts_value"),
+    }
+    mismatched: Dict[str, Any] = {}
+    for key in (
+        "opening_qty",
+        "receipts_qty",
+        "sales_qty",
+        "closing_qty",
+        "sales_value",
+        "closing_value",
+        "opening_value",
+        "purchase_value",
+    ):
+        p_raw = printed.get(key)
+        c_raw = line_sums.get(key)
+        if p_raw in (None, "") or c_raw is None:
+            continue
+        try:
+            p = float(p_raw)
+            c = float(c_raw)
+        except (TypeError, ValueError):
+            continue
+        if abs(p - c) > max(0.51, 0.01 * max(abs(p), abs(c), 1.0)):
+            mismatched[key] = {"printed": p, "calculated": c}
+
+    has_mismatch = bool(mismatched)
+    extra["TOTAL_MISMATCH"] = has_mismatch
+    extra["total_mismatch"] = has_mismatch
+    if has_mismatch:
+        flags = list(extra.get("flags") or [])
+        if "TOTAL_MISMATCH" not in flags:
+            flags.append("TOTAL_MISMATCH")
+        extra["flags"] = flags
+        extra["total_mismatch_fields"] = mismatched
+    extra["printed_total_validation"] = {
+        "compared": True,
+        "ok": not has_mismatch,
+        "printed": {k: printed.get(k) for k in printed if printed.get(k) is not None},
+        "calculated": dict(line_sums),
+        "mismatched": mismatched,
+    }
+    logger.info(
+        "STOCK_XLS_GRAND_TOTALS_VALIDATE mismatch=%s sales_qty printed=%s "
+        "line=%s sales_value printed=%s line=%s",
+        has_mismatch,
+        printed.get("sales_qty"),
+        line_sums.get("sales_qty"),
+        printed.get("sales_value"),
+        line_sums.get("sales_value"),
+    )
+    return result
 
 
 def _xls_expand_merged(sh: Any, rows: List[List[Any]]) -> None:
@@ -23383,7 +24418,57 @@ def _xls_fill_from_rows(
 
     items: List[Dict[str, Any]] = []
     start = (header_idx + 1) if header_idx is not None else 0
-    for row in rows[start:]:
+    # Product|Opening|Purchase|Sale|Closing grids often define Sale as
+    # Opening+Purchase-Closing (formula or cached result). Detect that pattern
+    # so blank Sale cells reuse the sheet's own identity (not invented math).
+    _sale_identity_hits = 0
+    if (
+        header_idx is not None
+        and {"op", "pur", "sale", "bal"} <= set(colmap)
+        and _xls_same_row_formula_enabled()
+    ):
+        _si = colmap.get("sale")
+        _oi = colmap.get("op")
+        _pi = colmap.get("pur")
+        _bi = colmap.get("bal")
+        if None not in (_si, _oi, _pi, _bi):
+            for _ri in range(start, len(rows)):
+                _rw = rows[_ri]
+                if not isinstance(_rw, list) or max(_si, _oi, _pi, _bi) >= len(_rw):
+                    continue
+                _sv = _rw[_si]
+                _id = _xls_sale_identity_from_op_pur_close(
+                    _rw[_oi], _rw[_pi], _rw[_bi]
+                )
+                if _id is None:
+                    continue
+                _ev: Optional[float] = None
+                if isinstance(_sv, str) and _sv.strip().startswith("="):
+                    _ev = _xls_eval_same_row_formula(_sv, _rw, _ri + 1)
+                elif _xls_cell_has_qty(_sv):
+                    _ev = _to_nullable_float(_sv)
+                if _ev is not None and abs(_ev - _id) <= 0.051:
+                    _sale_identity_hits += 1
+    _apply_sale_identity_blanks = _sale_identity_hits >= 3
+    # Qty|VALUE grids (NET SALE + NET SALE VALUE, OPENING STOCK-1/VALUE-1, …):
+    # blank sale qty must stay null — never invent from Op+Pur−Close identity.
+    # Qty-only Opening|Purchase|Sale|Closing sheets keep identity blanks.
+    _xls_qty_value_pairs = {
+        "op",
+        "opval",
+        "pur",
+        "purval",
+        "sale",
+        "sval",
+        "bal",
+        "bval",
+    } <= set(colmap) or ("sale" in colmap and "sval" in colmap)
+    if _xls_qty_value_pairs:
+        _apply_sale_identity_blanks = False
+    _xls_saleable_opn_rec = _xls_is_saleable_opn_rec_issue_bal_layout(colmap)
+
+    for row_i, row in enumerate(rows[start:], start=start):
+        excel_row_1based = row_i + 1
         texts = [(ci, c) for ci, c in enumerate(row) if c is not None and str(c).strip() != ""]
         if not texts:
             continue
@@ -23543,59 +24628,140 @@ def _xls_fill_from_rows(
                 _total_label,
                 re.I,
             ):
-                # Prefer GRAND TOTAL over earlier TOTAL/NET TOTAL when both print.
+                # Prefer last GRAND TOTAL qty; Amt rows update money only.
                 _is_grand = bool(
-                    re.match(r"^grand\s*totals?\b", _total_label, re.I)
+                    re.search(r"\bgrand\s*totals?\b", _total_label, re.I)
+                )
+                _is_company = bool(
+                    re.search(r"\bcompany\s*totals?\b", _total_label, re.I)
+                )
+                _is_firm = bool(
+                    re.search(r"\bfirm\s*totals?\b", _total_label, re.I)
+                )
+                _is_amt = bool(
+                    re.search(r"\b(?:amt|amount|value)\s*$", _total_label, re.I)
                 )
                 _prev_src = str(
                     result["totals"]["extra"].get("total_row_source") or ""
                 )
-                _keep_prev_grand = (
-                    _prev_src == "xls_grand_total" and not _is_grand
-                )
-                if not _keep_prev_grand:
-                    sv = _col("sval", "secondary value")
-                    bv = _col("bval")
-                    if sv is not None and sv < len(row) and _xls_cell_has_qty(row[sv]):
-                        result["totals"]["sales_value"] = _to_float(row[sv])
-                    if bv is not None and bv < len(row) and _xls_cell_has_qty(row[bv]):
-                        result["totals"]["closing_value"] = _to_float(row[bv])
-                    sq = _col("sale", "sale qty", "sales qty")
-                    cq = _col("bal", "cl stock", "closing")
-                    oq = _col("op.", "op", "op. stock", "ob (qty)")
-                    rq = _col("pur", "purch", "primary (qty)")
-                    if sq is not None and sq < len(row) and _xls_cell_has_qty(row[sq]):
-                        result["totals"]["sales_qty"] = _to_float(row[sq])
-                    if cq is not None and cq < len(row) and _xls_cell_has_qty(row[cq]):
-                        result["totals"]["closing_qty"] = _to_float(row[cq])
-                    if oq is not None and oq < len(row) and _xls_cell_has_qty(row[oq]):
-                        result["totals"]["extra"]["opening_qty"] = _to_float(row[oq])
-                    if rq is not None and rq < len(row) and _xls_cell_has_qty(row[rq]):
-                        result["totals"]["extra"]["receipts_qty"] = _to_float(row[rq])
-                    ov = _col("opval")
-                    pv = _col("purval")
-                    if ov is not None and ov < len(row) and _xls_cell_has_qty(row[ov]):
-                        result["totals"]["extra"]["opening_value"] = _to_float(row[ov])
-                    if pv is not None and pv < len(row) and _xls_cell_has_qty(row[pv]):
-                        result["totals"]["extra"]["receipts_value"] = _to_float(
-                            row[pv]
-                        )
-                        result["totals"]["extra"]["purchase_value"] = _to_float(
-                            row[pv]
-                        )
-                    result["totals"]["extra"]["total_row_source"] = (
-                        "xls_grand_total" if _is_grand else "xls_total"
+                sq = _col("sale", "sale qty", "sales qty")
+                cq = _col("bal", "cl stock", "closing")
+                oq = _col("op.", "op", "opp", "op. stock", "ob (qty)")
+                rq = _col("pur", "purch", "primary (qty)")
+                sv = _col("sval", "secondary value")
+                bv = _col("bval")
+                ov = _col("opval")
+                pv = _col("purval")
+                if _is_amt:
+                    # Money under Opp/Receipt/Issue/Closing — ISSUE → sales_value.
+                    _keep_prev_amt = (
+                        _prev_src == "xls_grand_total_amt" and not _is_grand
                     )
-                    result["totals"]["extra"]["total_row_label"] = _total_label
-                    logger.info(
-                        "STOCK_XLS_TOTAL_ROW label=%r grand=%s sales_value=%s "
-                        "closing_value=%s receipts_value=%s",
-                        _total_label,
-                        _is_grand,
-                        result["totals"].get("sales_value"),
-                        result["totals"].get("closing_value"),
-                        result["totals"]["extra"].get("receipts_value"),
+                    if not _keep_prev_amt:
+                        def _cell(idx: Optional[int]) -> Any:
+                            if idx is None or idx >= len(row):
+                                return None
+                            if not _xls_cell_has_qty(row[idx]):
+                                return None
+                            return row[idx]
+
+                        # Prefer dedicated value cols; else same ORIC band as PDF.
+                        issue_money = _cell(sv) if sv is not None else _cell(sq)
+                        close_money = _cell(bv) if bv is not None else _cell(cq)
+                        open_money = _cell(ov) if ov is not None else _cell(oq)
+                        rec_money = _cell(pv) if pv is not None else _cell(rq)
+                        _amt_src = (
+                            "xls_grand_total_amt" if _is_grand else "xls_total_amt"
+                        )
+                        _apply_oric_footer_to_universal_totals(
+                            result["totals"],
+                            opening=open_money,
+                            receipts=rec_money,
+                            issue=issue_money,
+                            closing=close_money,
+                            source=_amt_src,
+                            overwrite=True,
+                        )
+                        result["totals"]["extra"]["total_row_source"] = _amt_src
+                        result["totals"]["extra"]["total_row_label"] = _total_label
+                else:
+                    _band = _xls_total_band_from_row(
+                        row,
+                        oq=oq,
+                        rq=rq,
+                        sq=sq,
+                        cq=cq,
+                        ov=ov,
+                        pv=pv,
+                        sv=sv,
+                        bv=bv,
                     )
+                    _band["label"] = _total_label
+                    # Saleable Excel: keep Company Total and Firm Total separate.
+                    if _is_company:
+                        result["totals"]["extra"]["company_total"] = dict(_band)
+                        _xls_apply_total_band_to_result(
+                            result,
+                            _band,
+                            source="xls_company_total",
+                            label=_total_label,
+                        )
+                        logger.info(
+                            "STOCK_XLS_COMPANY_TOTAL sales_qty=%s closing_qty=%s "
+                            "sales_value=%s closing_value=%s",
+                            _band.get("sales_qty"),
+                            _band.get("closing_qty"),
+                            _band.get("sales_value"),
+                            _band.get("closing_value"),
+                        )
+                    elif _is_firm:
+                        result["totals"]["extra"]["firm_total"] = dict(_band)
+                        # Never overwrite an already-selected Company Total primary
+                        # with Firm Total — resolve via line-sum match at end.
+                        if _prev_src not in {
+                            "xls_company_total",
+                            "xls_grand_total",
+                        }:
+                            _xls_apply_total_band_to_result(
+                                result,
+                                _band,
+                                source="xls_firm_total",
+                                label=_total_label,
+                            )
+                        logger.info(
+                            "STOCK_XLS_FIRM_TOTAL sales_qty=%s closing_qty=%s "
+                            "kept_primary_src=%s",
+                            _band.get("sales_qty"),
+                            _band.get("closing_qty"),
+                            result["totals"]["extra"].get("total_row_source"),
+                        )
+                    else:
+                        _keep_prev_grand = (
+                            _prev_src == "xls_grand_total" and not _is_grand
+                        )
+                        # Also keep Company Total when a generic TOTAL follows.
+                        _keep_prev_company = (
+                            _prev_src == "xls_company_total" and not _is_grand
+                        )
+                        if not _keep_prev_grand and not _keep_prev_company:
+                            _xls_apply_total_band_to_result(
+                                result,
+                                _band,
+                                source=(
+                                    "xls_grand_total" if _is_grand else "xls_total"
+                                ),
+                                label=_total_label,
+                            )
+                            logger.info(
+                                "STOCK_XLS_TOTAL_ROW label=%r grand=%s sales_qty=%s "
+                                "closing_qty=%s sales_value=%s closing_value=%s",
+                                _total_label,
+                                _is_grand,
+                                result["totals"].get("sales_qty"),
+                                result["totals"].get("closing_qty"),
+                                result["totals"].get("sales_value"),
+                                result["totals"].get("closing_value"),
+                            )
             continue
         if header_idx is not None:
             qty_cells = [
@@ -23646,6 +24812,20 @@ def _xls_fill_from_rows(
             item["packing"] = str(row[pack_i]).strip()
         elif unlabeled_pack:
             item["packing"] = unlabeled_pack
+        # Single-space "NAME 1*60" / "NAME 1PC" keeps pack glued in the item cell.
+        # Skip on qty|value ITEM NAME grids — packing (100ML/30GM/50GM) is part of
+        # the printed product name, not a separate pack column.
+        if not item.get("packing") and not _xls_qty_value_pairs:
+            _pname = str(item.get("product_name") or "").strip()
+            _bits = _pname.rsplit(None, 1)
+            if len(_bits) == 2 and _looks_like_packing_token(_bits[1]):
+                item["product_name"] = _bits[0].strip()
+                item["packing"] = _bits[1].strip()
+                logger.info(
+                    "STOCK_XLS_TRAILING_PACK_PEEL pack=%r name=%r",
+                    item["packing"],
+                    item["product_name"],
+                )
 
         # Opening/Closing Balance (qty) aliases → op/bal via _xls_norm_header.
         # Prefer OpenBalQty over bare OPENING (often OPENING VALUE).
@@ -23699,8 +24879,114 @@ def _xls_fill_from_rows(
         _assign_number("closing_qty", bal_i)
         _assign_number("closing_value", bval_i)
         _assign_number("sales_value", sval_i)
+        # Purchase header → receipts_qty; also mirror purchase_qty for Laravel.
+        if pur_i is not None and item.get("receipts_qty") not in (None, ""):
+            item["purchase_qty"] = item.get("receipts_qty")
+        # Qty|VALUE: blank NET SALE / NET SALE VALUE cells stay null (never 0
+        # and never copied from opening_qty). sales_value only from sval column.
+        if _xls_qty_value_pairs:
+
+            def _xls_blank_mapped_cell(idx: Optional[int]) -> bool:
+                if idx is None or idx >= len(row):
+                    return True
+                cell = row[idx]
+                if isinstance(cell, str) and cell.strip().startswith("="):
+                    return False
+                return not _xls_cell_has_qty(cell)
+
+            if _xls_blank_mapped_cell(sale_i):
+                item["sales_qty"] = None
+                fs = item["extra"].setdefault("field_source", {})
+                if isinstance(fs, dict):
+                    fs["sales_qty"] = "missing"
+            if _xls_blank_mapped_cell(sval_i):
+                item["sales_value"] = None
+                fs = item["extra"].setdefault("field_source", {})
+                if isinstance(fs, dict):
+                    fs["sales_value"] = "missing"
+            elif sval_i is not None and sval_i < len(row):
+                # Re-read printed NET SALE VALUE only — never opening/other qty.
+                item["sales_value"] = _to_nullable_float(row[sval_i])
+                if item["sales_value"] is None and _xls_cell_has_qty(row[sval_i]):
+                    item["sales_value"] = _to_float(row[sval_i])
+                fs = item["extra"].setdefault("field_source", {})
+                if isinstance(fs, dict) and item.get("sales_value") is not None:
+                    fs["sales_value"] = "printed"
+        # Qty-only Sale column with no Sales Value header → keep value missing.
+        if sval_i is None:
+            item["sales_value"] = None
+            fs = item["extra"].setdefault("field_source", {})
+            if isinstance(fs, dict):
+                fs["sales_value"] = "missing"
+        if bval_i is None:
+            item["closing_value"] = None
+            fs = item["extra"].setdefault("field_source", {})
+            if isinstance(fs, dict):
+                fs["closing_value"] = "missing"
+        # Blank Sale on Opening|Purchase|Sale|Closing when printed Sale cells
+        # already match Opening+Purchase-Closing — apply that identity.
+        if (
+            _apply_sale_identity_blanks
+            and sale_i is not None
+            and sale_i < len(row)
+            and row[sale_i] in (None, "")
+            and item.get("sales_qty") in (None, "", 0, 0.0)
+        ):
+            derived_sale = _xls_sale_identity_from_op_pur_close(
+                item.get("opening_qty"),
+                item.get("receipts_qty"),
+                item.get("closing_qty"),
+            )
+            if derived_sale is not None:
+                item["sales_qty"] = derived_sale
+                fs = item["extra"].setdefault("field_source", {})
+                if isinstance(fs, dict):
+                    fs["sales_qty"] = "excel_sale_identity"
+                logger.info(
+                    "STOCK_XLS_SALE_IDENTITY row=%s sales_qty=%s",
+                    excel_row_1based,
+                    derived_sale,
+                )
         _assign_number("opening_value", _col("opval"), into_extra=True)
         _assign_number("receipts_value", _col("purval"), into_extra=True)
+        # Saleable Opn/Rec/Issue/Bal: blank Excel cells stay null (not 0).
+        # Printed 0.0 Issue/Bal cells remain 0.0. Run after all assigns.
+        if _xls_saleable_opn_rec:
+
+            def _xls_blank_saleable_cell(idx: Optional[int]) -> bool:
+                if idx is None or idx >= len(row):
+                    return True
+                cell = row[idx]
+                if isinstance(cell, str) and cell.strip().startswith("="):
+                    return False
+                return not _xls_cell_has_qty(cell)
+
+            for _fld, _idx, _into_extra in (
+                ("opening_qty", op_i, False),
+                ("receipts_qty", pur_i, False),
+                ("sales_qty", sale_i, False),
+                ("closing_qty", bal_i, False),
+                ("sales_value", sval_i, False),
+                ("closing_value", bval_i, False),
+                ("opening_value", _col("opval"), True),
+                ("receipts_value", _col("purval"), True),
+            ):
+                if not _xls_blank_saleable_cell(_idx):
+                    continue
+                if _into_extra:
+                    item["extra"][_fld] = None
+                    if _fld == "receipts_value":
+                        item["extra"]["purchase_value"] = None
+                else:
+                    item[_fld] = None
+                    if _fld == "receipts_qty":
+                        # Keep purchase_qty semantically aligned with blank Rec.
+                        item["purchase_qty"] = None
+                fs = item["extra"].setdefault("field_source", {})
+                if isinstance(fs, dict):
+                    fs[_fld] = "missing"
+                    if _fld == "receipts_qty":
+                        fs["purchase_qty"] = "missing"
         # LMS is last-month sale — never opening_qty (OP.Stock / Op.Stk is opening).
         lms_i = _col("lms")
         if lms_i is not None:
@@ -23719,9 +25005,20 @@ def _xls_fill_from_rows(
         if rate_i is not None and rate_i < len(row) and _xls_cell_has_qty(row[rate_i]):
             item["extra"]["unit_rate"] = _to_float(row[rate_i])
             rate = item["extra"]["unit_rate"]
-            if rate and not item.get("sales_value") and item.get("sales_qty") is not None:
+            # Qty|VALUE grids already mapped NET SALE VALUE — never invent money.
+            if (
+                rate
+                and not _xls_qty_value_pairs
+                and not item.get("sales_value")
+                and item.get("sales_qty") is not None
+            ):
                 item["sales_value"] = round(item["sales_qty"] * rate, 2)
-            if rate and not item.get("closing_value") and item.get("closing_qty") is not None:
+            if (
+                rate
+                and not _xls_qty_value_pairs
+                and not item.get("closing_value")
+                and item.get("closing_qty") is not None
+            ):
                 item["closing_value"] = round(item["closing_qty"] * rate, 2)
         if zl_bal_layout:
             item["extra"]["layout"] = "zl_opening_primary_closing"
@@ -23886,6 +25183,17 @@ def _xls_fill_from_rows(
                 after_sv,
                 after_cv,
             )
+    # Saleable Excel with both Company Total and Firm Total: pick the band that
+    # matches product-row sums (usually Company); keep Firm Total separately.
+    if items and (
+        isinstance(
+            (result.get("totals") or {}).get("extra", {}).get("company_total"), dict
+        )
+        or isinstance(
+            (result.get("totals") or {}).get("extra", {}).get("firm_total"), dict
+        )
+    ):
+        result = _xls_prefer_company_firm_totals(result)
     # No TOTAL/GRAND TOTAL row: still expose line sums so sales qty is visible.
     # Prefer an existing GRAND TOTAL / TOTAL stamp — never overwrite it.
     extra = result.setdefault("totals", {}).setdefault("extra", {})
@@ -23895,6 +25203,8 @@ def _xls_fill_from_rows(
         "xls_total_amt",
         "xls_grand_total_amt",
         "xls_labeled_rs_footer",
+        "xls_company_total",
+        "xls_firm_total",
     }:
         sum_sq = round(
             sum(_to_float(i.get("sales_qty")) for i in items if isinstance(i, dict)),
@@ -23942,6 +25252,10 @@ def _xls_fill_from_rows(
                 sum_cq,
                 len(items),
             )
+    # Valid GRAND TOTALS / TOTAL footer: keep printed totals authoritative;
+    # store line sums and flag TOTAL_MISMATCH without rewriting source values.
+    if items and _total_src.startswith("xls_grand_total"):
+        result = _xls_flag_grand_totals_line_sum_mismatch(result)
     # Qty-only Opening|Purchase|Sale|Closing: no money columns on the sheet.
     if "sale" in colmap and "sval" not in colmap:
         extra["no_sales_value"] = True
@@ -35139,6 +36453,176 @@ def _saleable_parse_qty_cell(token: str) -> Tuple[Optional[float], str]:
     return None, "uncertain"
 
 
+def _saleable_nt_pur_sale_pairs_enabled() -> bool:
+    """Opn|N.T.Pur(Qnty/FQnty/Amt)|N.T.Sale(Qnty/FQnty/Amt)|Bal qty|amt layout.
+
+    Default ON. Kill with STOCK_SALEABLE_NT_PUR_SALE=false.
+    """
+    return os.getenv("STOCK_SALEABLE_NT_PUR_SALE", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _saleable_nt_pur_sale_column_map(text: str) -> Optional[List[str]]:
+    """Column map for Saleable Stock Report with N.T.Pur / N.T.Sale bands.
+
+    Printed header (after Packing):
+      Opn(Q+F) | Opn Amt | Pur Qnty | Pur FQnty | Pur Amt |
+      Sale Qnty | Sale FQnty | Sale Amt | Bal(Q+F) | Bal Amt
+    FQnty / NearExpiry columns are ignored — never shifted into sales/closing.
+    """
+    if not _saleable_nt_pur_sale_pairs_enabled() or not text:
+        return None
+    if not re.search(r"N\.?\s*T\.?\s*Pur", text, re.I):
+        return None
+    if not re.search(r"N\.?\s*T\.?\s*Sale", text, re.I):
+        return None
+    if not (
+        re.search(r"\bOpn\b", text, re.I) and re.search(r"\bBal\b", text, re.I)
+    ):
+        return None
+    fields = [
+        "opening_qty",
+        "opening_value",
+        "receipts_qty",
+        "free_in_qty",  # N.T.Pur FQnty
+        "receipts_value",
+        "sales_qty",
+        "free_out_qty",  # N.T.Sale FQnty
+        "sales_value",
+        "closing_qty",
+        "closing_value",
+    ]
+    logger.info("SALEABLE_NT_PUR_SALE columns=%s", ",".join(fields))
+    return fields
+
+
+_SALEABLE_PACK_UNIT_RE = (
+    r"ML|MG|GM|GRM|GR|G|TAB|TABS|CAPS?|SYP|SYR|INJ|S|SET|UNIT|UNITS|NOS?|PCS?"
+)
+
+
+def _saleable_fix_truncated_pack(name: str, pack: Optional[str]) -> Optional[str]:
+    """Recover Packing when the PDF text layer truncates a leading digit (00TAB / 0 TAB)."""
+    pack_tok = (pack or "").strip()
+    if not pack_tok or not name:
+        return pack
+    if not re.fullmatch(
+        rf"0+\s*\d*\s*(?:{_SALEABLE_PACK_UNIT_RE})\b.*",
+        pack_tok,
+        re.I,
+    ):
+        return pack
+    _peeled_name, peeled_pack = _saleable_split_packing(name)
+    if not peeled_pack:
+        # Name may keep a spaced pack ("60 TAB") while Packing prints "0 TAB".
+        spaced = re.search(
+            rf"(\d+)\s*({_SALEABLE_PACK_UNIT_RE})\s*$",
+            name or "",
+            re.I,
+        )
+        if spaced:
+            peeled_pack = f"{spaced.group(1)}{spaced.group(2)}"
+    if not peeled_pack:
+        return pack
+    pack_tail = re.sub(r"^0+\s*", "", pack_tok) or pack_tok
+    if peeled_pack.replace(" ", "").upper().endswith(pack_tail.replace(" ", "").upper()):
+        logger.info(
+            "SALEABLE_PACK_TRUNCATE_FIX from=%r to=%r name=%s",
+            pack_tok[:20],
+            peeled_pack[:20],
+            (name or "")[:40],
+        )
+        return peeled_pack
+    return pack
+
+
+def _saleable_blank_bal_derive_enabled() -> bool:
+    """When Bal (Q+F)/Amt print as ——, derive closing from printed movement.
+
+    Default ON. Kill with STOCK_SALEABLE_BLANK_BAL_DERIVE=false.
+    """
+    return os.getenv("STOCK_SALEABLE_BLANK_BAL_DERIVE", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _saleable_apply_blank_bal_derive(
+    item: Dict[str, Any], cells: Sequence[str], fields: Sequence[str]
+) -> None:
+    """Rule 12: Bal column unread (——) → derive closing from printed Opn/Pur/Sale."""
+    if not _saleable_blank_bal_derive_enabled():
+        return
+    try:
+        cq_i = list(fields).index("closing_qty")
+        cv_i = list(fields).index("closing_value")
+    except ValueError:
+        return
+    if cq_i >= len(cells) or cv_i >= len(cells):
+        return
+    cq_blank = _saleable_cell_is_blank_dash(cells[cq_i])
+    cv_blank = _saleable_cell_is_blank_dash(cells[cv_i])
+    if not cq_blank and not cv_blank:
+        return
+    extra = item.setdefault("extra", {})
+    if not isinstance(extra, dict):
+        return
+    fs = extra.setdefault("field_source", {})
+    if not isinstance(fs, dict):
+        return
+
+    def _num(key: str) -> Optional[float]:
+        if fs.get(key) in {"uncertain", "missing"}:
+            return None
+        raw = item.get(key) if key in item else None
+        if raw is None:
+            raw = extra.get(key)
+        if raw is None:
+            return None
+        try:
+            return float(raw)
+        except (TypeError, ValueError):
+            return None
+
+    opening = _num("opening_qty")
+    receipt = _num("receipts_qty")
+    sales = _num("sales_qty")
+    if None in (opening, receipt, sales):
+        return
+    expected = float(opening) + float(receipt) - float(sales)
+    free_out = _num("free_out_qty") if "free_out_qty" in fs else 0.0
+    free_in = _num("free_in_qty") if "free_in_qty" in fs else 0.0
+    if free_out is None or free_in is None:
+        return
+    expected = expected - float(free_out) + float(free_in)
+    if cq_blank:
+        item["closing_qty"] = round(expected, 2)
+        fs["closing_qty"] = "derived"
+    if cv_blank:
+        open_v = _num("opening_value")
+        rec_v = _num("receipts_value")
+        sale_v = _num("sales_value")
+        if None not in (open_v, rec_v, sale_v) and float(receipt) == 0 and float(sales) == 0:
+            # No money movement printed — carry opening amount as closing amount.
+            item["closing_value"] = open_v
+            fs["closing_value"] = "derived"
+        elif sale_v is not None and open_v is not None and rec_v is not None:
+            item["closing_value"] = round(float(open_v) + float(rec_v) - float(sale_v), 2)
+            fs["closing_value"] = "derived"
+    logger.info(
+        "SALEABLE_BLANK_BAL_DERIVE product=%s closing_qty=%s closing_value=%s",
+        str(item.get("product_name") or "")[:40],
+        item.get("closing_qty"),
+        item.get("closing_value"),
+    )
+
+
 def _saleable_combo_pack_peel_enabled() -> bool:
     """Peel combo Packing cells (60+30GM) before Opn/Rec/Issue/Bal qty|amt pairs.
 
@@ -35206,6 +36690,12 @@ def _saleable_leading_pack_cell(cell: str) -> bool:
         logger.info("SALEABLE_PACK_UNIT_PEEL cell=%r", tok[:40])
         return True
     return False
+
+
+def _saleable_cell_is_blank_dash(token: str) -> bool:
+    """True for printed blank markers (—— / — / U+FFFD), not a numeric zero."""
+    raw = str(token or "").strip()
+    return bool(raw) and bool(re.fullmatch(r"[—–\-\s\ufffd]+", raw))
 
 
 def _saleable_pair_cells(raw: str, fields: Sequence[str]) -> Optional[List[str]]:
@@ -35334,7 +36824,7 @@ def _saleable_pair_item(raw: str, fields: Sequence[str]) -> Optional[Dict[str, A
     # Prefer the Packing column when present; only peel size from the name
     # when that column is absent.
     if pack_col:
-        pack = pack_col
+        pack = _saleable_fix_truncated_pack(name, pack_col)
     else:
         name, pack = _saleable_split_packing(name)
     item = empty_line_item()
@@ -35355,6 +36845,7 @@ def _saleable_pair_item(raw: str, fields: Sequence[str]) -> Optional[Dict[str, A
                 name[:40],
                 cells[list(fields).index(field)],
             )
+    _saleable_apply_blank_bal_derive(item, cells, fields)
     _saleable_note_identity(item)
     return item
 
@@ -35404,7 +36895,8 @@ def _parse_saleable_stock_report(
     result = empty_result(filename, source_format)
     result["report_title"] = "Saleable Stock Report"
     items: List[Dict[str, Any]] = []
-    pair_fields = _saleable_pair_column_map(text)
+    nt_pur_sale_fields = _saleable_nt_pur_sale_column_map(text)
+    pair_fields = nt_pur_sale_fields or _saleable_pair_column_map(text)
 
     for ln in text.splitlines():
         raw = ln.strip()
@@ -35481,6 +36973,8 @@ def _parse_saleable_stock_report(
         if not name or _SALEABLE_SKIP_NAME_RE.search(name):
             continue
         pack = _clean_name(matched.get("pack") or "") or None
+        if pack:
+            pack = _saleable_fix_truncated_pack(name, pack)
         if not pack:
             name, pack = _saleable_split_packing(name)
         item = empty_line_item()
@@ -47487,6 +48981,311 @@ _CHOPADA_ZANDRA_STOP_RE = re.compile(
 )
 
 
+def _is_opg_inw_out_clg_values_statement(text: str) -> bool:
+    """Opg Qty | Inw Qty | Out Qty | Clg Qty (+ optional Days Last Sold / Exp Due).
+
+    Common Data Spec / Melaram-style Stock and Sales Statement (Zandra division
+    Gmail forwards). Footer prints ``Values:`` + four money amounts.
+    Searches full text so Gmail/email wrappers do not hide the grid headers.
+    """
+    if not text:
+        return False
+    blob = text
+    if not re.search(r"(?i)\bOpg\s*Qty\b", blob):
+        return False
+    if not re.search(r"(?i)\bInw\s*Qty\b", blob):
+        return False
+    if not re.search(r"(?i)\bOut\s*Qty\b", blob):
+        return False
+    if not re.search(r"(?i)\bClg\s*Qty\b", blob):
+        return False
+    return True
+
+
+def _parse_opg_inw_out_clg_values_statement(
+    doc, filename: str
+) -> Optional[Dict[str, Any]]:
+    """Native text parser for Opg/Inw/Out/Clg qty grids with Values: money footer.
+
+    Qty-only product rows. Aggregate Opening/Inward/Outward/Closing money comes
+    from the printed Values band (universal footer extractor). Exp Due / Days
+    Last Sold land in extra expiry metadata — never as money.
+    """
+    page_texts = [(page.get_text("text") or "") for page in doc]
+    full_text = "\n".join(page_texts)
+    if not _is_opg_inw_out_clg_values_statement(full_text):
+        return None
+
+    result = empty_result(filename, "pdf")
+    result["report_title"] = "Stock and Sales Statement"
+
+    # Title: Stock and Sales Statement of HIMALAYA DRUG ZANDRA DIVISION for …
+    title = re.search(
+        r"Stock\s+and\s+Sales\s+Statement\s+of\s+(.+?)\s+for\s+"
+        r"(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})\s+to\s+(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})",
+        full_text,
+        re.I | re.S,
+    )
+    if title:
+        result["company_name"] = re.sub(r"\s+", " ", title.group(1)).strip()
+        result["period_from"] = _normalize_date(title.group(2))
+        result["period_to"] = _normalize_date(title.group(3))
+    else:
+        period = re.search(
+            r"(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})\s+to\s+(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})",
+            full_text,
+            re.I,
+        )
+        if period:
+            result["period_from"] = _normalize_date(period.group(1))
+            result["period_to"] = _normalize_date(period.group(2))
+
+    # Stockist letterhead before the statement title (Gmail body).
+    for ln in full_text.splitlines():
+        stripped = ln.strip()
+        if not stripped:
+            continue
+        if re.search(r"(?i)stock\s+and\s+sales\s+statement", stripped):
+            break
+        if re.search(r"(?i)^\d+\s+message\b|^to:|^from:|@gmail\.com", stripped):
+            continue
+        if (
+            re.search(r"[A-Za-z]{3,}", stripped)
+            and not re.search(r"GSTin|LicNo|Phone|EMail|WLF\d", stripped, re.I)
+            and not result.get("stockist_name")
+        ):
+            # Prefer ALL-CAPS / firm-looking names.
+            if re.search(r"[A-Z]{3,}", stripped):
+                result["stockist_name"] = _clean_name(stripped)
+        elif result.get("stockist_name") and not result.get("stockist_address"):
+            if re.search(r"(?i)bilaspur|nagar|road|market|[A-Za-z]{3,}", stripped):
+                if not re.search(r"GSTin|LicNo|Phone|EMail", stripped, re.I):
+                    result["stockist_address"] = _clean_name(stripped)
+
+    # Product rows: numbered name + 4 qty (+ optional Days Last Sold / Exp Due).
+    _QTY = re.compile(r"^(?:-|\d+)$")
+    _NAME = re.compile(r"^[A-Za-z].*[A-Za-z].*")
+    _SERIAL_NAME = re.compile(r"^\d{1,3}\s+[A-Za-z]")
+    _STOP = re.compile(
+        r"(?i)^(Values?\b|Notes\b|Thanking\b|For,|S/w\s+Support|Opg\s+Qty\s+and|"
+        r"Item\s+Name|HIMALAYA\s+DRUG\s+ZANDRA\s+DIVISION\s*$)"
+    )
+    # Packing may be 30S / 200ML / 30*2*1 / 200'GM; optional trailing glued qty.
+    _PACK_TRAIL = re.compile(
+        r",\s*(\d[\w.'\"/*\-]*?(?:\s*[A-Za-z][\w.'\"/*\-]*)?)"
+        r"(?:\s+(\d{1,5}))?$"
+    )
+    lines = [ln.strip() for ln in full_text.splitlines() if ln.strip()]
+    # Start after header band containing Opg Qty.
+    start = 0
+    for i, ln in enumerate(lines):
+        if re.search(r"(?i)\bOpg\s*Qty\b", ln) and re.search(r"(?i)\bInw\s*Qty\b", ln):
+            start = i + 1
+            break
+        if re.fullmatch(r"(?i)Opg\s*Qty", ln):
+            # Multi-line headers — skip until past Clg Qty / Exp Due labels.
+            j = i + 1
+            while j < len(lines) and re.search(
+                r"(?i)^(Inw|Out|Clg)\s*Qty|Days\s+Last|as\s+on|Exp\s+Due|from\s+\d",
+                lines[j],
+            ):
+                j += 1
+            start = j
+            break
+
+    items: List[Dict[str, Any]] = []
+    i = start
+    while i < len(lines):
+        ln = lines[i]
+        if _STOP.match(ln):
+            break
+        # Skip lone serial numbers (next line is the product name).
+        if re.fullmatch(r"\d{1,3}", ln):
+            i += 1
+            if i >= len(lines):
+                break
+            ln = lines[i]
+        # Name may be "12 EVECARE SYRUP, 200ML" or plain "BONNISAN DROPS, 30ML".
+        name_m = re.match(r"^(?:\d{1,3}\s+)?(.+)$", ln)
+        name = (name_m.group(1) if name_m else ln).strip()
+        if not _NAME.match(name) or _STOP.match(name):
+            i += 1
+            continue
+        if re.search(r"(?i)^Values?\b|^Notes\b|GSTin|LicNo|Phone|EMail", name):
+            i += 1
+            continue
+        packing = None
+        glued_opening: Optional[float] = None
+        pack_m = _PACK_TRAIL.search(name)
+        if pack_m:
+            packing = pack_m.group(1).strip()
+            if pack_m.group(2):
+                glued_opening = float(pack_m.group(2))
+            name = name[: pack_m.start()].strip()
+        # Collect following qty tokens.
+        qtys: List[Optional[float]] = []
+        if glued_opening is not None:
+            qtys.append(glued_opening)
+        j = i + 1
+        while j < len(lines) and len(qtys) < 6:
+            tok = lines[j]
+            if _STOP.match(tok):
+                break
+            # "12 EVECARE SYRUP…" — next product with glued serial.
+            if _SERIAL_NAME.match(tok):
+                break
+            # Letter-leading product name (no serial on this line).
+            if _NAME.match(tok) and not _QTY.fullmatch(tok):
+                break
+            # Bare number: qty while <4. After 4 qtys:
+            # - next line is letter-starting name → this bare number is the
+            #   next product's lone serial (stop; do not consume as days).
+            # - next line is "N NAME" (glued serial) → this number is
+            #   Days Last Sold / Exp Due (consume), then stop at next product.
+            # - next line is another bare number → consume as days/exp.
+            if re.fullmatch(r"\d{1,3}", tok):
+                if len(qtys) >= 4 and j + 1 < len(lines):
+                    nxt = lines[j + 1]
+                    if _NAME.match(nxt) and not _QTY.fullmatch(nxt):
+                        # Lone serial for next product (name on following line).
+                        break
+                    if _SERIAL_NAME.match(nxt) or _STOP.match(nxt):
+                        # Days/Exp metadata before a glued-serial product / footer.
+                        qtys.append(float(tok))
+                        j += 1
+                        break
+                qtys.append(float(tok))
+                j += 1
+                continue
+            if tok == "-":
+                qtys.append(0.0)
+                j += 1
+                continue
+            break
+        if len(qtys) < 4:
+            i += 1
+            continue
+        opening, inward, outward, closing = qtys[0], qtys[1], qtys[2], qtys[3]
+        days_last_sold = qtys[4] if len(qtys) >= 5 else None
+        exp_due_days = qtys[5] if len(qtys) >= 6 else None
+        # When only 5 numbers: trailing is usually Days Last Sold OR Exp Due.
+        if len(qtys) == 5:
+            days_last_sold = qtys[4]
+            exp_due_days = None
+
+        item = empty_line_item()
+        item["product_name"] = _clean_name(name)
+        item["packing"] = packing
+        item["opening_qty"] = float(opening)
+        item["receipts_qty"] = float(inward)
+        item["sales_qty"] = float(outward)
+        item["closing_qty"] = float(closing)
+        item["sales_value"] = None
+        item["closing_value"] = None
+        item["opening_value"] = None
+        item["receipts_value"] = None
+        extra = item.setdefault("extra", {})
+        extra["layout"] = "opg_inw_out_clg_values"
+        if days_last_sold is not None:
+            extra["days_last_sold"] = float(days_last_sold)
+        if exp_due_days is not None:
+            extra["exp_due_days"] = float(exp_due_days)
+            extra["near_expiry_qty"] = None  # days metadata, not stock qty
+            extra["expiry_due"] = True
+        items.append(item)
+        i = j
+
+    if len(items) < 3:
+        return None
+
+    result["line_items"] = items
+    extra = result["totals"].setdefault("extra", {})
+    extra["extraction_method"] = "opg_inw_out_clg_values_pdf"
+    extra["qty_only"] = True
+    extra["no_sales_value"] = True
+    extra["no_closing_value"] = True
+    extra["column_roles"] = [
+        "opening_qty",
+        "receipts_qty",
+        "sales_qty",
+        "closing_qty",
+        "days_last_sold",
+        "exp_due_days",
+    ]
+    extra["source_columns_detected"] = [
+        "Opg Qty",
+        "Inw Qty",
+        "Out Qty",
+        "Clg Qty",
+    ]
+    if re.search(r"(?i)Days\s+Last\s+Sold", full_text):
+        extra["source_columns_detected"].append("Days Last Sold")
+    if re.search(r"(?i)Exp\s+Due", full_text):
+        extra["source_columns_detected"].append("Exp Due")
+        extra["expiry_metadata_present"] = True
+
+    # Expiry-related metadata (schema): never treat Exp Due days as money/qty.
+    exp_as_on = re.search(
+        r"(?i)Days\s+Last\s+Sold\s*\n?\s*as\s+on\s+(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})",
+        full_text,
+    )
+    exp_from = re.search(
+        r"(?i)Exp\s+Due\s*\n?\s*from\s+(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})",
+        full_text,
+    )
+    rows_with_exp = sum(
+        1
+        for it in items
+        if isinstance(it.get("extra"), dict)
+        and it["extra"].get("exp_due_days") is not None
+    )
+    rows_with_days_sold = sum(
+        1
+        for it in items
+        if isinstance(it.get("extra"), dict)
+        and it["extra"].get("days_last_sold") is not None
+    )
+    extra["expiry_metadata"] = {
+        "present": bool(extra.get("expiry_metadata_present")),
+        "exp_due_as_of": _normalize_date(exp_from.group(1)) if exp_from else None,
+        "days_last_sold_as_of": (
+            _normalize_date(exp_as_on.group(1)) if exp_as_on else None
+        ),
+        "rows_with_exp_due": rows_with_exp,
+        "rows_with_days_last_sold": rows_with_days_sold,
+        "fields": [
+            key
+            for key in ("days_last_sold", "exp_due_days", "expiry_due")
+            if any(
+                isinstance(it.get("extra"), dict) and it["extra"].get(key) is not None
+                for it in items
+            )
+        ],
+    }
+
+    # Aggregate Values: money footer via universal extractor.
+    try:
+        from services.stock_native_resolver import apply_universal_stock_footer_financials
+
+        result = apply_universal_stock_footer_financials(result, text=full_text)
+    except Exception:
+        logger.exception(
+            "OPG_INW_OUT_CLG footer financials failed file=%s", filename
+        )
+
+    logger.info(
+        "OPG_INW_OUT_CLG_VALUES file=%s items=%s sales_value=%s closing_value=%s "
+        "opening_value=%s inward_value=%s",
+        filename,
+        len(items),
+        (result.get("totals") or {}).get("sales_value"),
+        (result.get("totals") or {}).get("closing_value"),
+        (result.get("totals") or {}).get("opening_value"),
+        ((result.get("totals") or {}).get("extra") or {}).get("inward_value"),
+    )
+    return result
+
+
 def _is_zandra_opening_receipt_vertical_format(text: str) -> bool:
     """CHOPADA-style ZANDRA Stock Report: Opening/Receipt/Total/Sales/Closing per page."""
     if not text:
@@ -50566,6 +52365,14 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
         if balaji_hz and balaji_hz.get("line_items"):
             balaji_hz["totals"]["extra"]["statement_count"] = 1
             return balaji_hz
+
+        # Opg Qty | Inw Qty | Out Qty | Clg Qty (+ Values: money footer).
+        # Gmail-forwarded Data Spec / Melaram Zandra statements — qty-only
+        # product grid with aggregate Opening/Inward/Outward/Closing money.
+        opg_inw = _parse_opg_inw_out_clg_values_statement(doc, filename)
+        if opg_inw and opg_inw.get("line_items"):
+            opg_inw["totals"]["extra"]["statement_count"] = 1
+            return opg_inw
 
         # CHOPADA-style ZANDRA report: Opening/Receipt/Total/Sales/Closing with
         # the stockist in the footer. Must run before per-page splitting (which

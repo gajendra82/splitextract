@@ -315,6 +315,8 @@ ALIASES: Dict[str, List[str]] = {
         "opening bal qty",
         "openbal qty",
         "opening stock",
+        # HSN/SAC CODE WISE STOCK REPORT: OPENING STOCK-1 (series suffix).
+        "opening stock 1",
         # Vision/OCR often truncates the final letter(s) of "Opening stock".
         "opening stoc",
         # MR Report: OPENING STK QTY (two-line header).
@@ -451,6 +453,14 @@ ALIASES: Dict[str, List[str]] = {
         "nt sale",
         "nt sale qnty",
         "nt sale qty",
+        # HSN/SAC CODE WISE STOCK REPORT: NET SALE-1.
+        "net sale",
+        "net sale 1",
+        "net sales",
+        "net sale qty",
+        "net sale value",
+        "net sale value 1",
+
         # Secondary Qty Total (customer secondary-sale grids).
         "secondary qty total",
         "secondary qty tota",
@@ -618,6 +628,8 @@ ALIASES: Dict[str, List[str]] = {
         "ci stk",
         "cb",
         "closing stock",
+        # HSN/SAC CODE WISE STOCK REPORT: CLOSING STOCK-1.
+        "closing stock 1",
         "closing stoc",  # wrapped CLOSING STOC(K)
         "closing qty",
         "closing balance",
