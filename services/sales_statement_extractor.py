@@ -7341,8 +7341,10 @@ def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
         # Opg/Inw/Out/Clg Values: four-money band + labeled footers.
         "values_four_money_band",
         "labeled_stock_value_footer",
-        # Sales Total Value Recovery Fallback (TOTAL VALUE / GRAND TOTAL / …).
+        # Sales Total Value Recovery Fallback (TOTAL VALUE / GRAND TOTAL / ...).
         "sales_total_value_recovery",
+        # PRODUCT|OPEN|PUR.|RETURN|PUR.RET|SALES|CLOSE printed SALES/CLOSE money.
+        "open_pur_ret_sales_close_footer",
         # PharmAssist Opening Val / Purchase / Sales / Closing Val peel.
         "pharmassist_footer_ocr",
         # Marg ORIC OPENING|RECEIVE|ISSUE|CLOSING printed / Vision TOTAL peel.
@@ -8103,6 +8105,12 @@ def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
         totals["extra"]["stock_identity_formula"] = (
             "closing=opening+receipt-issue"
         )
+    elif kind == "open_pur_ret_sales_close":
+        # Layout-specific: PUR.RET is inward on PRODUCT|OPEN|PUR.|RETURN|PUR.RET|SALES|CLOSE.
+        totals["extra"]["stock_identity_formula"] = (
+            "closing=opening+purchase+sales_return+purchase_return-sales"
+        )
+        totals["extra"]["pur_ret_sign"] = "inward"
     else:
         totals["extra"]["stock_identity_formula"] = (
             "closing=opening+receipts-sales"
@@ -9452,6 +9460,11 @@ def _ensure_stock_qty_value_fields(result: Dict[str, Any]) -> Dict[str, Any]:
             if key in parse_errors:
                 continue
             if item.get(key) in (None, ""):
+                # Blank printed cell (field_source=missing) stays null — never
+                # fabricate 0 for an unread/empty qty on this row.
+                if fs.get(key) == "missing":
+                    item[key] = None
+                    continue
                 # Handwritten Vision: unreadable cells stay null (confidence low).
                 qty_conf = (
                     item_extra.get("qty_confidence")
@@ -38793,27 +38806,95 @@ def _stock_open_pur_ret_field_for_x(
     return ordered[-1][0]
 
 
+def _count_open_pur_ret_source_product_rows(text: str) -> int:
+    """Count printed product lines on OPEN|PUR.|RETURN|PUR.RET|SALES|CLOSE grids.
+
+    Includes blank-qty rows. Stops at the SALES/CLOSE money footer.
+    """
+    if not text:
+        return 0
+    count = 0
+    started = False
+    for ln in str(text).splitlines():
+        s = ln.strip()
+        if not s:
+            continue
+        if re.search(r"(?i)\bPRODUCT\b", s) and (
+            re.search(r"(?i)\bOPEN\b", s) or not started
+        ):
+            # Header band may be split across lines; wait for OPEN+CLOSE too.
+            if re.search(r"(?i)\bOPEN\b", s) or re.search(r"(?i)\bCLOSE\b", s):
+                started = True
+            continue
+        if re.fullmatch(r"(?i)PRODUCT", s):
+            continue
+        if not started:
+            if re.fullmatch(r"(?i)OPEN|PUR\.?|RETURN|PUR\.?RET|SALES|CLOSE", s):
+                started = True
+            continue
+        if re.fullmatch(r"(?i)OPEN|PUR\.?|RETURN|PUR\.?RET|SALES|CLOSE", s):
+            continue
+        # Footer money: decimals only, no product letters.
+        if re.search(r"\d+\.\d{2}", s) and not re.search(r"[A-Za-z]{3,}", s):
+            break
+        if re.search(r"(?i)^(Values?|Notes|Thanking|TOTAL|For,)\b", s):
+            break
+        if re.search(r"(?i)HIMALAYA|WELLNESS\s+CO|STOCK\s+STATEMENT", s):
+            continue
+        if re.search(r"[A-Za-z]{3,}", s):
+            count += 1
+    return count
+
+
 def _stock_open_pur_ret_split_name_pack(
     tokens: List[str],
 ) -> Tuple[str, Optional[str]]:
     """Trailing digit-bearing tokens sit before OPEN with no Pack header.
 
-    Letter-only words (Tab, Cap, Syp) stay in the product name — only tokens
-    that contain a digit (75gm, 30'S, 200m, 50) are peeled as packing.
+    Letter-only product words (Tab, Cap, Syp) stay in the name. Digit packs
+    (75gm, 30'S, 200m) peel as packing. Split unit tokens after a digit pack
+    — e.g. ``75 G``, ``60 M``, ``30 G`` — are packing, not product name.
     """
     if not tokens:
         return "", None
+    _UNIT = re.compile(
+        r"(?i)^(G|GM|GMS?|ML|M|MG|L|KG|TAB|TABS?|CAP|CAPS?|S|PCS?|NOS?)$"
+    )
     pack_idx = len(tokens)
-    for i in range(len(tokens) - 1, -1, -1):
+    i = len(tokens) - 1
+    # Optional trailing unit after a digit pack (75 G / 60 M).
+    if i >= 1 and _UNIT.fullmatch(tokens[i].strip()) and re.search(
+        r"\d", tokens[i - 1]
+    ):
+        pack_idx = i - 1
+        i = i - 2
+    while i >= 0:
         tok = tokens[i].strip()
         if re.search(r"\d", tok):
             pack_idx = i
+            i -= 1
             continue
         break
     if pack_idx >= len(tokens):
         return _clean_name(" ".join(tokens)), None
     name = _clean_name(" ".join(tokens[:pack_idx]))
     pack = _clean_name(" ".join(tokens[pack_idx:]))
+    # Deduplicate when the product name already ends with the same pack token
+    # (e.g. ``Him Baby Soap 50gm`` + pack ``50gm`` → packing stays one ``50gm``).
+    if pack and name:
+        pack_tokens = pack.split()
+        name_tokens = name.split()
+        while (
+            pack_tokens
+            and name_tokens
+            and pack_tokens[0].lower() == name_tokens[-1].lower()
+        ):
+            name_tokens.pop()
+            # keep a single copy in packing
+        name = _clean_name(" ".join(name_tokens)) or name
+        # Collapse identical repeated pack tokens: "50gm 50gm" → "50gm"
+        if len(pack_tokens) >= 2 and len(set(t.lower() for t in pack_tokens)) == 1:
+            pack = pack_tokens[0]
     return name, (pack or None)
 
 
@@ -38858,22 +38939,34 @@ def _parse_stock_statement_open_pur_ret_sales_close_words(
     )
     if title_m:
         result["company_name"] = _clean_name(title_m.group(1))
-    else:
-        # Letterhead form: stockist on first lines, company band under header.
-        for line in combined.splitlines()[:10]:
-            line = str(line or "").strip()
-            if not line:
-                continue
-            if re.search(
-                r"^(PRODUCT|OPEN|PUR\.?|RETURN|SALES|CLOSE)\b", line, re.I
-            ) or re.match(r"^\d{1,2}[-/]\d{1,2}[-/]\d{2,4}", line):
-                break
-            if result.get("stockist_name"):
-                break
+
+    # Letterhead: stockist / address above the STOCK STATEMENT title (always).
+    for line in combined.splitlines()[:12]:
+        line = str(line or "").strip()
+        if not line:
+            continue
+        if re.search(r"(?i)STOCK\s+STATEMENT\s*:", line):
+            break
+        if re.search(
+            r"^(PRODUCT|OPEN|PUR\.?|RETURN|SALES|CLOSE)\b", line, re.I
+        ) or re.match(r"^\d{1,2}[-/]\d{1,2}[-/]\d{2,4}", line):
+            break
+        if re.search(r"(?i)HIMALAYA|WELLNESS|DRUG\s+CO", line):
+            if not result.get("company_name"):
+                result["company_name"] = _clean_name(line)
+            continue
+        if not result.get("stockist_name"):
             if re.fullmatch(r"[A-Za-z]{2,}", line) and len(line) <= 16:
                 # City / area alone (e.g. RAIGARH) — keep scanning.
                 continue
             result["stockist_name"] = _clean_name(line)
+            continue
+        if not result.get("stockist_address"):
+            # Address / city line under stockist (e.g. JANJGIR (C.G.)).
+            if re.search(r"[A-Za-z]{2,}", line) and not re.search(
+                r"(?i)STOCK\s+STATEMENT|PRODUCT\b", line
+            ):
+                result["stockist_address"] = _clean_name(line)
 
     period_m = re.search(
         r"(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})\s*[-–]\s*(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})",
@@ -38935,7 +39028,9 @@ def _parse_stock_statement_open_pur_ret_sales_close_words(
             closing_qty = _num("closing_qty")
 
             # Footer money under SALES / CLOSE (no product name letters).
-            if not re.search(r"[A-Za-z]{2,}", blob) and sales_qty is not None:
+            if not re.search(r"[A-Za-z]{2,}", blob) and (
+                sales_qty is not None or closing_qty is not None
+            ):
                 money_tokens = [
                     tok
                     for tok in (cells.get("sales_qty") or [])
@@ -38951,38 +39046,43 @@ def _parse_stock_statement_open_pur_ret_sales_close_words(
                     footer_cv = _prompt_cell_number(
                         cells.get("closing_qty") or []
                     )
-                continue
-
-            if all(
-                v is None
-                for v in (
-                    opening_qty,
-                    receipts_qty,
-                    sales_return_qty,
-                    purchase_return_qty,
-                    sales_qty,
-                    closing_qty,
-                )
-            ):
-                # Company strip under header (HIMALAYA DRUG CO.(ZENRA) HI).
-                if (
-                    not result.get("company_name")
-                    and re.search(r"[A-Za-z]{3,}", blob)
-                    and re.search(
-                        r"\b(DRUG|CO\.|COMPANY|PHARMA|LABS?|LTD)\b", blob, re.I
-                    )
+                elif (
+                    len(money_tokens) >= 1
+                    and "." in "".join(money_tokens)
+                    and sales_qty is not None
+                    and closing_qty is not None
                 ):
-                    result["company_name"] = _clean_name(blob)
+                    footer_sv = sales_qty
+                    footer_cv = closing_qty
                 continue
 
             name, packing = _stock_open_pur_ret_split_name_pack(name_parts)
             if not name or not re.search(r"[A-Za-z]{3,}", name):
+                # Company strip under header when no product name.
+                if (
+                    not result.get("company_name")
+                    and re.search(r"[A-Za-z]{3,}", blob)
+                    and re.search(
+                        r"\b(DRUG|CO\.|COMPANY|PHARMA|LABS?|LTD|WELLNESS)\b",
+                        blob,
+                        re.I,
+                    )
+                ):
+                    result["company_name"] = _clean_name(blob)
                 continue
             if re.match(
                 r"^(PRODUCT|OPEN|PUR|RETURN|SALES|CLOSE|TOTAL)\b", name, re.I
             ):
                 continue
+            if re.search(
+                r"(?i)HIMALAYA|WELLNESS\s+CO|STOCK\s+STATEMENT", name
+            ):
+                if not result.get("company_name"):
+                    result["company_name"] = _clean_name(name)
+                continue
 
+            # Keep printed product rows even when every qty cell is blank.
+            # Blank → null (not fabricated 0).
             item = empty_line_item()
             item["product_name"] = name
             item["packing"] = packing
@@ -38992,6 +39092,8 @@ def _parse_stock_statement_open_pur_ret_sales_close_words(
             item["closing_qty"] = closing_qty
             item["sales_value"] = None
             item["closing_value"] = None
+            item["opening_value"] = None
+            item["receipts_value"] = None
             item["sales_return_qty"] = sales_return_qty
             item["purchase_return_qty"] = purchase_return_qty
             fs: Dict[str, str] = {
@@ -39011,6 +39113,10 @@ def _parse_stock_statement_open_pur_ret_sales_close_words(
             extra: Dict[str, Any] = {
                 "layout": "stock_statement_open_pur_ret_sales_close",
                 "field_source": fs,
+                # Layout identity: OPEN+PUR+RETURN+PUR.RET−SALES=CLOSE
+                # (PUR.RET contributes positively on this printed grid).
+                "stock_identity_kind": "open_pur_ret_sales_close",
+                "pur_ret_sign": "inward",
             }
             if sales_return_qty is not None:
                 extra["sales_return_qty"] = sales_return_qty
@@ -39025,13 +39131,64 @@ def _parse_stock_statement_open_pur_ret_sales_close_words(
     extra_t = result.setdefault("totals", {}).setdefault("extra", {})
     extra_t["extraction_method"] = "stock_statement_open_pur_ret_sales_close_words"
     extra_t["layout"] = "stock_statement_open_pur_ret_sales_close"
+    extra_t["qty_only"] = True
+    extra_t["no_sales_value"] = True
+    extra_t["no_closing_value"] = True
+    # Document-layout identity for this header family only.
+    extra_t["stock_identity_kind"] = "open_pur_ret_sales_close"
+    extra_t["stock_identity_formula"] = (
+        "closing=opening+purchase+sales_return+purchase_return-sales"
+    )
+    extra_t["pur_ret_sign"] = "inward"
+    source_rows = _count_open_pur_ret_source_product_rows(combined)
+    extra_t["source_product_row_count"] = source_rows or len(items)
+    extra_t["extracted_product_row_count"] = len(items)
+    extra_t["missing_source_rows"] = max(
+        0, int(extra_t["source_product_row_count"]) - len(items)
+    )
+    extra_t["source_columns_detected"] = [
+        "PRODUCT",
+        "OPEN",
+        "PUR.",
+        "RETURN",
+        "PUR.RET",
+        "SALES",
+        "CLOSE",
+    ]
     if footer_sv is not None:
         result["totals"]["sales_value"] = footer_sv
+        extra_t["sales_value_source"] = "open_pur_ret_sales_close_footer"
+        extra_t["has_printed_sales_value"] = True
+        extra_t["footer_sales_value"] = footer_sv
     if footer_cv is not None:
         result["totals"]["closing_value"] = footer_cv
+        extra_t["closing_value_source"] = "open_pur_ret_sales_close_footer"
+        extra_t["footer_closing_value"] = footer_cv
+    if footer_sv is not None or footer_cv is not None:
+        extra_t["total_row_source"] = "open_pur_ret_sales_close_footer"
+        extra_t["total_value_row_source"] = "open_pur_ret_sales_close_footer"
+        extra_t["footer_financial_source"] = "open_pur_ret_sales_close_footer"
+        extra_t["footer_detected_columns"] = [
+            key
+            for key, val in (
+                ("sales_value", footer_sv),
+                ("closing_value", footer_cv),
+            )
+            if val is not None
+        ]
+        extra_t["footer_financial_complete"] = footer_sv is not None and footer_cv is not None
+        extra_t["footer_financials"] = {
+            "sales_value": footer_sv,
+            "closing_value": footer_cv,
+            "source": "open_pur_ret_sales_close_footer",
+        }
     logger.info(
-        "STOCK_OPEN_PUR_RET_SALES_CLOSE accepted rows=%s file=%s",
+        "STOCK_OPEN_PUR_RET_SALES_CLOSE accepted rows=%s sales_value=%s "
+        "closing_value=%s stockist=%s file=%s",
         len(items),
+        footer_sv,
+        footer_cv,
+        result.get("stockist_name"),
         filename,
     )
     return result
@@ -52042,11 +52199,17 @@ def _stock_identity_kind(result: Dict[str, Any]) -> str:
         return STOCK_IDENTITY_SAMPLE
     if explicit in {STOCK_IDENTITY_ORDER_FORM_QTY, "order_form_qty"}:
         return STOCK_IDENTITY_ORDER_FORM_QTY
+    if explicit == "open_pur_ret_sales_close" or extra_t.get("layout") == (
+        "stock_statement_open_pur_ret_sales_close"
+    ):
+        return "open_pur_ret_sales_close"
     if _is_order_form_qty_result(result):
         return STOCK_IDENTITY_ORDER_FORM_QTY
     if explicit in {"zl_opening_primary_closing", "zl_secondary_xlsx"}:
         return str(explicit)
     method = str(extra_t.get("extraction_method") or "")
+    if method == "stock_statement_open_pur_ret_sales_close_words":
+        return "open_pur_ret_sales_close"
     if method in {
         "zl_opening_bal_pdf",
         "zl_opening_bal_sheet_vision",
@@ -52121,6 +52284,24 @@ def _stock_expected_closing(item: Dict[str, Any], kind: str) -> float:
         total = opening + receipts
     credit = _stock_printed_credit_return_qty(extra)
     adj_out = _stock_printed_adj_out_qty(extra)
+    # PRODUCT|OPEN|PUR.|RETURN|PUR.RET|SALES|CLOSE — PUR.RET is inward here.
+    if kind == "open_pur_ret_sales_close" or str(
+        extra.get("layout") or ""
+    ) == "stock_statement_open_pur_ret_sales_close":
+        sales_return = _item_extra_qty(
+            extra, "sales_return_qty", "sale_return", "sales_return"
+        )
+        if sales_return == 0.0 and item.get("sales_return_qty") not in (None, ""):
+            sales_return = _to_float(item.get("sales_return_qty"))
+        purchase_return = _item_extra_qty(
+            extra, "purchase_return_qty", "purchase_return"
+        )
+        if purchase_return == 0.0 and item.get("purchase_return_qty") not in (None, ""):
+            purchase_return = _to_float(item.get("purchase_return_qty"))
+        return round(
+            opening + receipts + sales_return + purchase_return - sales_qty - adj_out,
+            2,
+        )
     if kind == STOCK_IDENTITY_SALERET:
         # Prefer explicit sale_return keys; fall back to CR/credit aliases above.
         sale_return = _item_extra_qty(
