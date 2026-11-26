@@ -4746,12 +4746,22 @@ def apply_universal_stock_footer_financials(
         ]
         return result
 
+    extra0 = ((result.get("totals") or {}).get("extra") or {})
+    # Spreadsheet OP/PI/CLQty Total Value footers are already label-mapped
+    # (OPVal/PIVal/SI Value/CLValue). Do not re-parse parked text into
+    # unrelated aliases like outward_value or swap opening↔closing.
+    if (
+        str(extra0.get("extraction_method") or "") == "stock_sales_op_pi_clqty"
+        or str(extra0.get("total_value_row_source") or "") == "xls_op_pi_clqty_total_value"
+        or str(extra0.get("footer_financial_source") or "") == "xls_op_pi_clqty_total_value"
+    ):
+        return result
+
     blob = str(text or "").strip()
     if not blob:
         blob = _pdf_text_from_bytes(file_bytes, max_pages=8)
     if not blob:
         # Also accept OCR/page text already parked on the result.
-        extra0 = ((result.get("totals") or {}).get("extra") or {})
         for key in ("ocr_text", "page_text", "footer_text", "content_text"):
             val = extra0.get(key)
             if isinstance(val, str) and val.strip():

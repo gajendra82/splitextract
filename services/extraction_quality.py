@@ -404,22 +404,39 @@ def _score_financial_extraction(result: Dict[str, Any], extra: Dict[str, Any]) -
             or extra.get("opening_value") not in (None, "")
         ):
             present += 1
-        elif col in {"inward_value", "receipts_value"} and (
+        elif col in {"inward_value", "receipts_value", "purchase_value"} and (
             extra.get("inward_value") not in (None, "")
             or extra.get("receipts_value") not in (None, "")
             or extra.get("purchase_value") not in (None, "")
             or totals.get("receipts_value") not in (None, "")
         ):
             present += 1
-        elif col in {"outward_value", "sales_value"} and totals.get("sales_value") not in (
-            None,
-            "",
+        elif col in {"outward_value", "sales_value"} and (
+            totals.get("sales_value") not in (None, "")
+            or extra.get("outward_value") not in (None, "")
+            or extra.get("sales_value") not in (None, "")
         ):
             present += 1
-        elif col == "closing_value" and totals.get("closing_value") not in (None, ""):
+        elif col == "closing_value" and (
+            totals.get("closing_value") not in (None, "")
+            or extra.get("closing_value") not in (None, "")
+        ):
             present += 1
         elif col == "lms_value" and extra.get("lms_value") not in (None, ""):
             present += 1
+
+    # Prefer explicit footer completeness when the extractor stamped it.
+    if extra.get("footer_financial_complete") is True and not missing:
+        return {
+            "score": 100,
+            "detected_columns": detected
+            or list(extra.get("footer_detected_columns") or []),
+            "present_columns": present or len(detected),
+            "missing_columns": [],
+            "complete": True,
+            "qty_only": qty_only,
+            "source": extra.get("footer_financial_source") or footer.get("source"),
+        }
 
     if not detected:
         # Qty-only sheets without a Values footer: financial N/A, not a fail.
@@ -438,12 +455,16 @@ def _score_financial_extraction(result: Dict[str, Any], extra: Dict[str, Any]) -
         score = min(score, max(0, 100 - 20 * len(missing)))
     if extra.get("footer_financial_complete") is False:
         score = min(score, 70)
+    complete = bool(
+        (not missing and present >= len(detected))
+        or extra.get("footer_financial_complete") is True
+    )
     return {
         "score": max(0, min(100, score)),
         "detected_columns": detected,
         "present_columns": present,
         "missing_columns": missing,
-        "complete": not missing and present >= len(detected),
+        "complete": complete,
         "qty_only": qty_only,
         "source": extra.get("footer_financial_source") or footer.get("source"),
     }
@@ -500,8 +521,26 @@ def _score_identity_extraction(
 ) -> Dict[str, Any]:
     """Independent stock-identity score."""
     fail_count = extra.get("stock_identity_fail_count")
-    if fail_count is None or not items:
-        applies = _identity_applies(items, extra, veto_active=veto_active)
+    applies = _identity_applies(items, extra, veto_active=veto_active)
+    # Short OP/PI document-gap sheets record discrepancies separately; the
+    # OP+PI−Sale formula is not an extract identity gate.
+    if (
+        str(extra.get("extraction_method") or "") == "stock_sales_op_pi_clqty"
+        or extra.get("stock_document_gap")
+    ):
+        return {
+            "score": 100,
+            "applies": False,
+            "fail_count": int(fail_count or 0),
+            "fail_pct": 0.0,
+            "document_gap": True,
+            "discrepancy_count": int(
+                extra.get("stock_reconciliation_discrepancy_count")
+                or extra.get("stock_identity_discrepancy_count")
+                or 0
+            ),
+        }
+    if fail_count is None or not items or not applies:
         return {
             "score": 100 if not applies else 80,
             "applies": applies,
@@ -727,6 +766,10 @@ def evaluate_extraction_quality(
         # sheet itself; keep header-aligned Cr/Db columns, do not Gemini-overwrite.
         "stock_sales_detail_opval",
         "docx_stock_sales_detail",
+        # Short OP/PI/Sale/CLQty XLSX: printed CLQty often ≠ OP+PI−Sale
+        # (hidden transfers). Keep openpyxl rows; discrepancies are reported
+        # via recon counters, not as extract corruption.
+        "stock_sales_op_pi_clqty",
     } and os.getenv(
         "STOCK_OP_QTY_VAL_KEEP_ON_IDENTITY_FAIL", "true"
     ).strip().lower() in {"1", "true", "yes", "on"}
@@ -792,15 +835,37 @@ def evaluate_extraction_quality(
     }
 
     # Footer detected but incomplete → surface as reason (does not alone veto natives).
-    if financial_dim.get("detected_columns") and not financial_dim.get("complete"):
+    # Never claim missing_footer_financials when the extractor stamped complete=true.
+    footer_complete_flag = (
+        extra.get("footer_financial_complete")
+        if isinstance(extra, dict)
+        else None
+    )
+    if (
+        financial_dim.get("detected_columns")
+        and not financial_dim.get("complete")
+        and footer_complete_flag is not True
+    ):
         if "missing_footer_financials" not in reasons:
             reasons.append("missing_footer_financials")
+    elif footer_complete_flag is True and "missing_footer_financials" in reasons:
+        reasons = [r for r in reasons if r != "missing_footer_financials"]
 
     try:
         _fail_n = int(fail_count) if fail_count is not None else 0
     except (TypeError, ValueError):
         _fail_n = 0
-    if _fail_n > 0 and "stock_identity_failure" not in reasons:
+    _short_op_pi_doc_gap = (
+        method == "stock_sales_op_pi_clqty"
+        or bool(extra.get("stock_document_gap"))
+        if isinstance(extra, dict)
+        else method == "stock_sales_op_pi_clqty"
+    )
+    if (
+        _fail_n > 0
+        and "stock_identity_failure" not in reasons
+        and not _short_op_pi_doc_gap
+    ):
         reasons.append("stock_identity_failure")
     if int(row_dim.get("missing_source_rows") or 0) > 0:
         if "missing_source_rows" not in reasons:
