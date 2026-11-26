@@ -53640,6 +53640,35 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
             doc, file_bytes, filename, zoom=zoom
         )
         if early_vision and early_vision.get("line_items"):
+            # Quality gate: check for column-mapping issues before accepting
+            ev_remap_reason = _free_cols_needs_remap(early_vision)
+            if ev_remap_reason:
+                logger.info(
+                    "GEMINI_COLUMN_REMAP_TRIGGER_EARLY_VISION file=%s "
+                    "reason=%s items=%s",
+                    filename, ev_remap_reason,
+                    len(early_vision["line_items"]),
+                )
+                try:
+                    ev_remapped = _gemini_column_remap_stock_pdf(
+                        file_bytes, filename,
+                    )
+                    if (
+                        ev_remapped
+                        and ev_remapped.get("line_items")
+                        and not _free_cols_needs_remap(ev_remapped)
+                    ):
+                        for key in (
+                            "stockist_name", "stockist_address",
+                            "company_name", "period_from", "period_to",
+                            "report_title",
+                        ):
+                            if early_vision.get(key) and not ev_remapped.get(key):
+                                ev_remapped[key] = early_vision[key]
+                        ev_remapped["totals"]["extra"]["statement_count"] = 1
+                        return ev_remapped
+                except Exception:
+                    pass
             early_vision["totals"]["extra"]["statement_count"] = 1
             return early_vision
 
@@ -53685,6 +53714,49 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
         statements = [
             _extract_statement_from_pdf_group(group, filename) for group in groups
         ]
+
+        # Quality gate on OCR/image results: if any statement has column-
+        # mapping issues AND the PDF has word boxes, try Gemini remap.
+        for si, stmt in enumerate(statements):
+            remap_reason = _free_cols_needs_remap(stmt)
+            if not remap_reason:
+                continue
+            logger.info(
+                "GEMINI_COLUMN_REMAP_TRIGGER_OCR file=%s stmt=%s "
+                "reason=%s items=%s",
+                filename, si, remap_reason,
+                len(stmt.get("line_items") or []),
+            )
+            try:
+                remapped = _gemini_column_remap_stock_pdf(
+                    file_bytes, filename,
+                )
+                if (
+                    remapped
+                    and remapped.get("line_items")
+                    and not _free_cols_needs_remap(remapped)
+                ):
+                    logger.info(
+                        "GEMINI_COLUMN_REMAP_ACCEPTED_OCR file=%s "
+                        "stmt=%s reason=%s items=%s",
+                        filename, si, remap_reason,
+                        len(remapped["line_items"]),
+                    )
+                    # Preserve metadata from original OCR result
+                    for key in (
+                        "stockist_name", "stockist_address",
+                        "company_name", "period_from", "period_to",
+                        "report_title",
+                    ):
+                        if stmt.get(key) and not remapped.get(key):
+                            remapped[key] = stmt[key]
+                    statements[si] = remapped
+            except Exception as remap_exc:
+                logger.info(
+                    "GEMINI_COLUMN_REMAP_OCR file=%s stmt=%s "
+                    "status=fallback_failed error=%s",
+                    filename, si, type(remap_exc).__name__,
+                )
 
         # Single stockist → keep flat unified schema (backward compatible)
         if len(statements) == 1:
