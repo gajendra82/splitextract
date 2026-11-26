@@ -61614,6 +61614,28 @@ def _ssa_qty_value_result_usable(result: Optional[Dict[str, Any]]) -> bool:
             len(items),
         )
         return False
+    # Reconciliation sanity: opening + receipts - sales should ≈ closing.
+    # When most rows with actual data fail reconciliation, Gemini likely
+    # misaligned columns (e.g. reading a qty-only grid as qty+value).
+    recon_total = 0
+    recon_ok = 0
+    for it in items:
+        op = _to_float(it.get("opening_qty"))
+        rec = _to_float(it.get("receipts_qty"))
+        sl = _to_float(it.get("sales_qty"))
+        cl = _to_float(it.get("closing_qty"))
+        if abs(op) + abs(rec) + abs(sl) + abs(cl) < 0.01:
+            continue
+        recon_total += 1
+        expected = op + rec - sl
+        if abs(expected - cl) < 2.0:
+            recon_ok += 1
+    if recon_total >= 3 and recon_ok / recon_total < 0.3:
+        logger.info(
+            "SSA_QTY_VALUE_RECON_REJECT recon_ok=%s/%s — columns likely misaligned",
+            recon_ok, recon_total,
+        )
+        return False
     if _ssa_qty_value_opening_count(result) > 0:
         return True
 
@@ -77800,6 +77822,27 @@ def _maybe_early_vision_for_image(
                 len(ssa_early.get("line_items") or []),
             )
             return ssa_early, True
+        # SSA qty/value was rejected (likely qty-only format or misaligned).
+        # Try the qty-only handler before falling through to generic vision.
+        if ssa_early is None:
+            try:
+                ssa_qty_only = _extract_ssa_oric_qty_only_vision(
+                    file_bytes, filename, ext,
+                )
+                if ssa_qty_only and ssa_qty_only.get("line_items"):
+                    extra = ssa_qty_only.setdefault("totals", {}).setdefault("extra", {})
+                    extra["early_vision_reason"] = "ssa_qty_only_after_qtyvalue_reject"
+                    logger.info(
+                        "[SalesStatement] file=%s decision=SSA_QTY_ONLY_FALLBACK rows=%s",
+                        filename,
+                        len(ssa_qty_only.get("line_items") or []),
+                    )
+                    return ssa_qty_only, True
+            except Exception as exc:
+                logger.info(
+                    "[SalesStatement] file=%s SSA qty-only fallback failed: %s",
+                    filename, exc,
+                )
 
     # Poor OCR → skip the long format-probe cascade; try paid Vision early.
     try:
