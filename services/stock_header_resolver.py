@@ -687,14 +687,19 @@ ALIASES: Dict[str, List[str]] = {
         "goods in",
         "goods inward",
         # MR Report / Stock and Sales: PUR FREE QTY | SALE FREE QTY.
+        # Phone OCR often truncates FREE → Fre.
         "pur free",
         "pur free qty",
+        "pur fre",
         "purchase free",
         "purchase free qty",
+        "purchase fre",
         "sale free",
         "sale free qty",
+        "sale fre",
         "sales free",
         "sales free qty",
+        "sales fre",
         # Compact SFree beside Sale on Op|Pur|Sale|Stk|Rate grids.
         "sfree",
         "s free",
@@ -1357,11 +1362,11 @@ def _pick_group(norm: str) -> Tuple[Optional[str], float, str]:
                 or "opening" in compact_norm
             ):
                 continue
-        # "Receipt Free" / "Purchase Free" is free-in, not purchase.
-        if group == "purchase" and "free" in tokens:
+        # "Receipt Free" / "Purchase Free" / truncated "Purchase Fre" is free-in.
+        if group == "purchase" and (set(tokens) & {"free", "fre"}):
             continue
-        # "Sales Free" is free-out, not sales qty.
-        if group == "sales" and "free" in tokens:
+        # "Sales Free" / truncated "Sale Fre" is free-out, not sales qty.
+        if group == "sales" and (set(tokens) & {"free", "fre"}):
             continue
         # "Ins Sale" / institution sale is not period sales_qty.
         if group == "sales" and set(tokens) & {
