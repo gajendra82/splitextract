@@ -76859,13 +76859,21 @@ def _extract_sideways_rate_ssa_photo(
     # Guard: standard stock-and-sale tables (OP STK / SALE QTY / CL STOCK headers)
     # can trip the pixel-based full-width-grid detector.  OCR the top of the
     # upright image and bail out so the vision_table path handles them instead.
+    # Use 35% crop — phone photos have browser chrome / status bar above the
+    # document, pushing column headers well below the 20% line.
     try:
         _w, _h = image.size
-        _hdr_crop = image.crop((0, 0, _w, int(_h * 0.20)))
+        _hdr_crop = image.crop((0, 0, _w, int(_h * 0.35)))
         _hdr_text = _a2z_tesseract().image_to_string(_hdr_crop) or ""
+        logger.debug(
+            "SIDEWAYS_RATE_SSA header OCR snippet file=%s text=%.200s",
+            filename,
+            (_hdr_text or "").replace("\n", " "),
+        )
         if re.search(
             r"OP\s*STK|CL\s*STOCK|SALE\s*QTY|STOCK\s*&\s*SALE|PRODUCT\s*WISE|"
-            r"PUR\s*QTY|PUR\s*VALUE|CLOSING\s*VALUE|SALE\s*VALUE",
+            r"PUR\s*QTY|PUR\s*VALUE|CLOSING\s*VALUE|SALE\s*VALUE|"
+            r"ITEM\s*NAME|COMPANY\s*NAME|OP\s*VALUE",
             _hdr_text,
             re.I,
         ):
@@ -76874,8 +76882,12 @@ def _extract_sideways_rate_ssa_photo(
                 filename,
             )
             return None
-    except Exception:
-        pass
+    except Exception as _ocr_exc:
+        logger.warning(
+            "SIDEWAYS_RATE_SSA header OCR failed file=%s err=%s",
+            filename,
+            _ocr_exc,
+        )
 
     model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
     payload = {
@@ -76938,6 +76950,26 @@ def _extract_sideways_rate_ssa_photo(
             extra["unit_rate"] = _to_float(rate)
         extra["layout"] = "sideways_rate_ssa_photo"
     if not _phone_rate_ssa_rows_usable(result.get("line_items") or []):
+        return None
+    # Structural guard: when closing_value == sales_value for many rows the
+    # SSA prompt misread a standard stock table (CL-STOCK mapped to SALES).
+    _cv_eq_sv = 0
+    _cv_total = 0
+    for _it in result.get("line_items") or []:
+        _sv = _to_float(_it.get("sales_value"))
+        _cv = _to_float(_it.get("closing_value"))
+        if _cv > 0.01:
+            _cv_total += 1
+            if _sv > 0.01 and abs(_cv - _sv) < 0.02:
+                _cv_eq_sv += 1
+    if _cv_total >= 6 and _cv_eq_sv / _cv_total > 0.35:
+        logger.info(
+            "SIDEWAYS_RATE_SSA_REJECTED file=%s reason=closing_eq_sales_value "
+            "matches=%s/%s",
+            filename,
+            _cv_eq_sv,
+            _cv_total,
+        )
         return None
     extra_t = result.setdefault("totals", {}).setdefault("extra", {})
     extra_t["extraction_method"] = "sideways_rate_ssa_photo"
