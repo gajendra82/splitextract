@@ -10275,6 +10275,33 @@ def _repair_collapsed_sale_into_closing(item: Dict[str, Any]) -> bool:
         return False
     extra = item.setdefault("extra", {})
     fs = extra.setdefault("field_source", {})
+
+    # Guard: table with explicit separate SALE-QTY and CL-STOCK column headers.
+    # When the SALE cell is empty but the CL-STOCK cell has data, the closing
+    # values are genuine — empty sale columns mean no sales, not a collapse.
+    _hdrs = extra.get("vision_column_headers") or []
+    _pcells = extra.get("physical_cells") or {}
+    if isinstance(_hdrs, list) and isinstance(_pcells, dict) and len(_hdrs) >= 8:
+        _sq_idx = _cq_idx = None
+        for _i, _h in enumerate(_hdrs):
+            _hu = (_h or "").upper().strip()
+            if _sq_idx is None and re.search(
+                r"\bSALE\s*(QTY|QUANTITY)\b", _hu
+            ):
+                _sq_idx = _i
+            if _cq_idx is None and re.search(
+                r"\b(CL|CLOSING)\s*(STOCK|STK|QTY|QUANTITY)\b", _hu
+            ):
+                _cq_idx = _i
+        if (
+            _sq_idx is not None
+            and _cq_idx is not None
+            and _sq_idx != _cq_idx
+        ):
+            _sale_cell = (_pcells.get(str(_sq_idx)) or "").strip()
+            _cl_cell = (_pcells.get(str(_cq_idx)) or "").strip()
+            if not _sale_cell and _cl_cell:
+                return False
     if not isinstance(fs, dict):
         return False
     oq = _printed_float(item, "opening_qty")
