@@ -27421,6 +27421,93 @@ def _free_cols_opening_missing(result: Optional[Dict[str, Any]]) -> bool:
     return False
 
 
+def _free_cols_needs_remap(result: Optional[Dict[str, Any]]) -> Optional[str]:
+    """Check if free-column extraction has quality issues needing Gemini remap.
+
+    Returns a reason string if remap should be attempted, None if quality is OK.
+    Checks: (1) any qty column mostly missing, (2) sales/closing likely swapped,
+    (3) too few products vs expected data rows.
+    """
+    if not result:
+        return "no_result"
+    items = result.get("line_items") or []
+    if len(items) < 4:
+        return None
+
+    # Count items that have at least some numeric data
+    active_items: list = []
+    for it in items:
+        if not isinstance(it, dict):
+            continue
+        vals = [
+            _to_float(it.get("opening_qty")),
+            _to_float(it.get("receipts_qty")),
+            _to_float(it.get("sales_qty")),
+            _to_float(it.get("closing_qty")),
+            _to_float(it.get("closing_value")),
+            _to_float(it.get("sales_value")),
+        ]
+        if sum(vals) > 0.01:
+            active_items.append(it)
+
+    if len(active_items) < 4:
+        return None
+
+    total = len(active_items)
+    threshold = 0.15  # <15% present means column is mostly missing
+
+    # --- Check 1: any qty column mostly missing ---
+    for field, label in [
+        ("opening_qty", "opening"),
+        ("sales_qty", "sales"),
+        ("closing_qty", "closing"),
+    ]:
+        present = sum(1 for it in active_items if _to_float(it.get(field)) > 0.01)
+        ratio = present / total
+        if ratio < threshold:
+            logger.info(
+                "FREE_COLS_NEEDS_REMAP reason=%s_missing present=%s/%s ratio=%.2f",
+                label, present, total, ratio,
+            )
+            return f"{label}_missing"
+
+    # --- Check 2: sales/closing likely swapped ---
+    # If reconciliation fails badly but passes when we swap sales<->closing,
+    # the columns are probably swapped.
+    recon_ok = 0
+    recon_swapped_ok = 0
+    recon_total = 0
+    for it in active_items:
+        op = _to_float(it.get("opening_qty"))
+        rec = _to_float(it.get("receipts_qty"))
+        sl = _to_float(it.get("sales_qty"))
+        cl = _to_float(it.get("closing_qty"))
+        if op < 0.01 and rec < 0.01:
+            continue
+        if cl < 0.01 and sl < 0.01:
+            continue
+        recon_total += 1
+        expected = op + rec - sl
+        if abs(expected - cl) < 1.0:
+            recon_ok += 1
+        expected_swapped = op + rec - cl
+        if abs(expected_swapped - sl) < 1.0:
+            recon_swapped_ok += 1
+
+    if recon_total >= 3:
+        ok_ratio = recon_ok / recon_total
+        swapped_ratio = recon_swapped_ok / recon_total
+        if ok_ratio < 0.3 and swapped_ratio > 0.5:
+            logger.info(
+                "FREE_COLS_NEEDS_REMAP reason=sales_closing_swapped "
+                "recon_ok=%s/%s swapped_ok=%s/%s",
+                recon_ok, recon_total, recon_swapped_ok, recon_total,
+            )
+            return "sales_closing_swapped"
+
+    return None
+
+
 def _gemini_column_remap_stock_pdf(
     file_bytes: bytes,
     filename: str,
@@ -53505,13 +53592,15 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
 
                 free_cols = parse_pdf_free_column_statement(file_bytes, filename)
                 if free_cols and free_cols.get("line_items"):
-                    # Quality gate: if opening_qty is missing for most items,
-                    # try hybrid Gemini column-remap before accepting.
-                    if _free_cols_opening_missing(free_cols):
+                    # Quality gate: check for column-mapping issues
+                    # (missing qty columns, swapped sales/closing, etc.)
+                    remap_reason = _free_cols_needs_remap(free_cols)
+                    if remap_reason:
                         logger.info(
                             "GEMINI_COLUMN_REMAP_TRIGGER file=%s "
-                            "reason=opening_missing items=%s",
-                            filename, len(free_cols["line_items"]),
+                            "reason=%s items=%s",
+                            filename, remap_reason,
+                            len(free_cols["line_items"]),
                         )
                         try:
                             remapped = _gemini_column_remap_stock_pdf(
@@ -53520,12 +53609,13 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
                             if (
                                 remapped
                                 and remapped.get("line_items")
-                                and not _free_cols_opening_missing(remapped)
+                                and not _free_cols_needs_remap(remapped)
                             ):
                                 logger.info(
                                     "GEMINI_COLUMN_REMAP_ACCEPTED file=%s "
-                                    "items=%s",
-                                    filename, len(remapped["line_items"]),
+                                    "reason=%s items=%s",
+                                    filename, remap_reason,
+                                    len(remapped["line_items"]),
                                 )
                                 return remapped
                         except Exception as remap_exc:
