@@ -19,6 +19,7 @@ from services.stock_header_resolver import (
     assign_cells,
     normalize_header,
     parse_number,
+    parse_qty_with_stock_marker,
     resolve_columns,
 )
 from services.stock_row_classifier import (
@@ -52,6 +53,7 @@ _EXTRA_FIELDS = {
     "total_qty": "total_stock",
     "free_in_qty": "free_in_qty",
     "free_out_qty": "free_out_qty",
+    "other_outward_qty": "other_outward_qty",
     "order_qty": "order_qty",
     "rate": "unit_rate",
     "batch": "batch",
@@ -2194,9 +2196,21 @@ def build_table_prompt() -> str:
         "equal closing. When a pack token like 1X1/10S sits between the name and "
         "OPENING, emit a PACK column for it. "
         "Balance/Closing/Stock quantity cells must be plain numeric digits "
-        "(e.g. 63 or 0). Never invent placeholders like p2, p3, p19, or page "
+        "(e.g. 63 or 0). If a closing cell prints a digit plus status letter "
+        "(e.g. '16 N' non-moving or '3 E' short expiry), keep the full token "
+        "'16 N' in that cell — do not drop the row or emit null. "
+        "Never invent placeholders like p2, p3, p19, or page "
         "markers for quantity cells — if the Balance digit is unclear, set "
         "the cell to null and list it in unreadable_cells. "
+        "Product Name|Packing|Opening|Inward|Sales|Other|Closing qty grids: "
+        "map Other to other_outward_qty. A footer row labeled "
+        "'Total Values is based on PRate' (or Total Values / GRAND TOTAL) is a "
+        "TOTAL money row under those columns — emit it as is_total_row with "
+        "the printed decimals in the Opening/Inward/Sales/Other/Closing cells; "
+        "never put those money amounts onto a product SKU. Prefer the last "
+        "GRAND TOTAL when several TOTAL rows appear. "
+        "A standalone money amount printed below that Total Values row must "
+        "still be emitted (do not discard); leave its meaning unlabeled. "
         "Dense stock grids (Opening|Purchase|Goods Ret|Total In|Sale|Purc Ret|"
         "Balance): emit exactly column_count cells per row in left-to-right "
         "header order. Do not skip a blank Goods Ret or Purc Ret cell — use "
@@ -11129,6 +11143,67 @@ def _money_from_total_raw_cells(
     return found
 
 
+def _remap_total_values_money_parked_in_qty(printed: Dict[str, Any]) -> None:
+    """Qty-only Opening|Inward|Sales|Other|Closing footers park money in qty slots.
+
+    When a TOTAL / Total Values row has money-shaped opening/sales/closing qty
+    and empty paired value fields, move those printed amounts into *_value.
+    Never invents digits — only re-slots already-mapped cells.
+    """
+    if not isinstance(printed, dict):
+        return
+    name = str(printed.get("product_name") or "")
+    looks_values_footer = bool(
+        re.search(r"(?i)total\s+values?\b|based\s+on\s+prate|\bvalues?\b", name)
+    )
+    pairs = (
+        ("opening_qty", "opening_value"),
+        ("receipts_qty", "receipts_value"),
+        ("sales_qty", "sales_value"),
+        ("closing_qty", "closing_value"),
+    )
+    moved = False
+    for qty_k, val_k in pairs:
+        try:
+            q = float(printed[qty_k]) if printed.get(qty_k) not in (None, "") else None
+        except (TypeError, ValueError):
+            q = None
+        try:
+            v = float(printed[val_k]) if printed.get(val_k) not in (None, "") else None
+        except (TypeError, ValueError):
+            v = None
+        if q is None:
+            continue
+        # Money: has paisa or large whole rupees atypical for line qty totals.
+        money_like = abs(q - round(q)) > 0.001 or abs(q) >= 100.0
+        if not money_like and not looks_values_footer:
+            continue
+        if not money_like:
+            continue
+        if v is not None and abs(v) >= 0.005:
+            continue
+        printed[val_k] = float(q)
+        printed[qty_k] = None
+        moved = True
+        if val_k == "receipts_value":
+            ex = printed.setdefault("extra", {})
+            if isinstance(ex, dict) and ex.get("purchase_value") in (None, ""):
+                ex["purchase_value"] = float(q)
+            if isinstance(ex, dict) and ex.get("receipts_value") in (None, ""):
+                ex["receipts_value"] = float(q)
+        if val_k == "opening_value":
+            ex = printed.setdefault("extra", {})
+            if isinstance(ex, dict) and ex.get("opening_value") in (None, ""):
+                ex["opening_value"] = float(q)
+    if moved:
+        logger.info(
+            "VISION_TABLE TOTAL_VALUES_QTY_TO_VALUE name=%s sales_value=%s closing_value=%s",
+            name[:60],
+            printed.get("sales_value"),
+            printed.get("closing_value"),
+        )
+
+
 def _promote_printed_total_row_money(
     totals: Dict[str, Any],
     totals_rows: Sequence[Dict[str, Any]],
@@ -11137,6 +11212,7 @@ def _promote_printed_total_row_money(
 
     Only fills null top-level fields from an already-mapped TOTAL row
     (or from TOTAL raw cells when Rate omission shifted mapped slots).
+    Prefers the last TOTAL / GRAND TOTAL when multipage sheets reprint footers.
     """
     if not isinstance(totals, dict):
         return []
@@ -11146,21 +11222,33 @@ def _promote_printed_total_row_money(
         if isinstance(t, dict)
         and not _is_lstsl_footer_label_name(str(t.get("product_name") or ""))
     ]
-    # Prefer the last TOTAL when multipage sheets print a running footer
+    # Prefer the last TOTAL / GRAND TOTAL when multipage sheets print a running footer
     # (page-1 subtotal then page-2 cumulative).
     named = [
         t
         for t in usable
         if re.search(r"TOTAL", str(t.get("product_name") or ""), re.I)
     ]
-    printed = named[-1] if named else (usable[-1] if usable else None)
+    grand = [
+        t
+        for t in named
+        if re.search(r"(?i)grand\s+total", str(t.get("product_name") or ""))
+    ]
+    printed = (
+        grand[-1]
+        if grand
+        else (named[-1] if named else (usable[-1] if usable else None))
+    )
     if not isinstance(printed, dict):
         return []
+    _remap_total_values_money_parked_in_qty(printed)
     candidates: Dict[str, float] = {}
-    for key in ("sales_value", "closing_value"):
+    for key in ("sales_value", "closing_value", "opening_value", "receipts_value"):
         raw = printed.get(key)
         if raw is None and isinstance(printed.get("extra"), dict):
             raw = printed["extra"].get(key)
+            if raw is None and key == "receipts_value":
+                raw = printed["extra"].get("purchase_value")
         try:
             val = float(raw) if raw is not None else None
         except (TypeError, ValueError):
@@ -11200,6 +11288,10 @@ def _promote_printed_total_row_money(
                 continue
         candidates[key] = val
     promoted: List[str] = []
+    extra = totals.setdefault("extra", {})
+    if not isinstance(extra, dict):
+        extra = {}
+        totals["extra"] = extra
     for key, val in candidates.items():
         cur = totals.get(key)
         if cur is not None:
@@ -11227,6 +11319,16 @@ def _promote_printed_total_row_money(
             continue
         totals[key] = val
         promoted.append(key)
+        # Mirror opening/receipts into extras for UI / Laravel consumers.
+        if key == "opening_value" and extra.get("opening_value") in (None, ""):
+            extra["opening_value"] = float(val)
+        if key == "receipts_value":
+            if extra.get("receipts_value") in (None, ""):
+                extra["receipts_value"] = float(val)
+            if extra.get("purchase_value") in (None, ""):
+                extra["purchase_value"] = float(val)
+            if extra.get("inward_value") in (None, ""):
+                extra["inward_value"] = float(val)
     return promoted
 
 
@@ -11265,22 +11367,31 @@ def _compare_line_sums_to_printed_total(
             return 0.0
 
     # Prefer a real TOTAL row — never treat LstSL footer money labels as TOTAL.
+    # Prefer last GRAND TOTAL when several TOTAL rows exist.
     usable = [
         t
         for t in (totals_rows or [])
         if isinstance(t, dict)
         and not _is_lstsl_footer_label_name(str(t.get("product_name") or ""))
     ]
-    # Prefer the last TOTAL when multipage sheets print a running footer
-    # (page-1 subtotal then page-2 cumulative).
     named = [
         t
         for t in usable
         if re.search(r"TOTAL", str(t.get("product_name") or ""), re.I)
     ]
-    printed = named[-1] if named else (usable[-1] if usable else None)
+    grand = [
+        t
+        for t in named
+        if re.search(r"(?i)grand\s+total", str(t.get("product_name") or ""))
+    ]
+    printed = (
+        grand[-1]
+        if grand
+        else (named[-1] if named else (usable[-1] if usable else None))
+    )
     if not isinstance(printed, dict):
         return {"compared": False, "reason": "no_printed_total"}
+    _remap_total_values_money_parked_in_qty(printed)
 
     line_sums = {
         k: round(sum(_num(i, k) for i in line_items if isinstance(i, dict)), 2)
@@ -11355,17 +11466,166 @@ def _compare_line_sums_to_printed_total(
     ):
         source_footer_notes.append("printed_sales_qty_total_inconsistent_with_rows")
 
+    # Monetary discrepancies always make ok=false. Annotate when line money is
+    # missing on a qty-only grid vs actually mismatched product values.
+    value_only_diffs = {
+        k: v for k, v in diffs.items() if k.endswith("_value")
+    }
+    qty_diffs = {k: v for k, v in diffs.items() if k.endswith("_qty")}
+    qty_only_value_footer = bool(
+        remapped_value_fields
+        or re.search(
+            r"(?i)total\s+values?\b|based\s+on\s+prate",
+            str(printed.get("product_name") or ""),
+        )
+    )
+    ok = not diffs
+    line_value_status = "matched"
+    if value_only_diffs:
+        line_nonzero = any(
+            abs(float(line_sums.get(k) or 0.0)) >= 0.005 for k in value_only_diffs
+        )
+        if qty_only_value_footer and not line_nonzero:
+            line_value_status = "missing_on_qty_only_lines"
+            source_footer_notes.append("line_values_missing_qty_only_grid")
+        else:
+            line_value_status = "mismatch"
+            source_footer_notes.append("line_value_sum_mismatch")
+    if qty_diffs:
+        source_footer_notes.append("qty_sum_discrepancy")
+
     out: Dict[str, Any] = {
         "compared": True,
         "line_sums": line_sums,
         "printed_total": printed_vals,
         "discrepancies": diffs,
-        "ok": not diffs,
+        "ok": ok,
+        "line_value_status": line_value_status,
     }
     if source_footer_notes:
         out["source_footer_notes"] = source_footer_notes
         out["source_footer_inconsistent"] = True
     return out
+
+
+def _validate_final_totals_against_printed(
+    result: Dict[str, Any],
+    totals_rows: Sequence[Dict[str, Any]],
+) -> Dict[str, Any]:
+    """Ensure printed TOTAL money landed on final totals.* (not qty / missing).
+
+    Never invents amounts. Sets ok=false when final sales/closing value is
+    missing or still equals the line qty sum while printed money exists.
+    """
+    validation = (
+        ((result.get("totals") or {}).get("extra") or {}).get("printed_total_validation")
+        if isinstance(result.get("totals"), dict)
+        else None
+    )
+    if not isinstance(validation, dict):
+        validation = {"compared": False}
+    compare = _compare_line_sums_to_printed_total(
+        result.get("line_items") or [], totals_rows
+    )
+    validation.update(compare)
+    printed = compare.get("printed_total") or {}
+    totals = result.get("totals") if isinstance(result.get("totals"), dict) else {}
+    reasons: List[str] = list(validation.get("source_footer_notes") or [])
+
+    def _f(val: Any) -> Optional[float]:
+        try:
+            return float(val) if val not in (None, "") else None
+        except (TypeError, ValueError):
+            return None
+
+    printed_sv = _f(printed.get("sales_value"))
+    printed_cv = _f(printed.get("closing_value"))
+    final_sv = _f(totals.get("sales_value"))
+    final_cv = _f(totals.get("closing_value"))
+    qty_sum = 0.0
+    for it in result.get("line_items") or []:
+        if not isinstance(it, dict):
+            continue
+        try:
+            qty_sum += float(it.get("sales_qty") or 0)
+        except (TypeError, ValueError):
+            pass
+
+    # Monetary discrepancies from compare already force ok=false. Also fail when
+    # printed money never landed on final totals.
+    ok = bool(validation.get("ok"))
+    printed_totals_transferred = True
+    if printed_sv is not None and abs(printed_sv) >= 1.0:
+        if final_sv is None:
+            ok = False
+            printed_totals_transferred = False
+            reasons.append("final_sales_value_missing")
+        elif abs(final_sv - printed_sv) > 0.51:
+            ok = False
+            printed_totals_transferred = False
+            if abs(final_sv - qty_sum) < 0.51:
+                reasons.append("final_sales_value_is_qty_sum")
+            else:
+                reasons.append("final_sales_value_mismatch")
+    if printed_cv is not None and abs(printed_cv) >= 1.0:
+        if final_cv is None:
+            ok = False
+            printed_totals_transferred = False
+            reasons.append("final_closing_value_missing")
+        elif abs(final_cv - printed_cv) > 0.51:
+            ok = False
+            printed_totals_transferred = False
+            reasons.append("final_closing_value_mismatch")
+
+    # Opening / inward money must also land when printed on Total Values.
+    printed_ov = _f(printed.get("opening_value"))
+    printed_rv = _f(printed.get("receipts_value"))
+    final_ov = _f(totals.get("opening_value"))
+    if final_ov is None:
+        final_ov = _f((totals.get("extra") or {}).get("opening_value"))
+    final_rv = _f(totals.get("receipts_value"))
+    if final_rv is None:
+        tex = totals.get("extra") if isinstance(totals.get("extra"), dict) else {}
+        final_rv = _f(tex.get("receipts_value") or tex.get("inward_value"))
+    if printed_ov is not None and abs(printed_ov) >= 1.0 and (
+        final_ov is None or abs(final_ov - printed_ov) > 0.51
+    ):
+        ok = False
+        printed_totals_transferred = False
+        reasons.append("final_opening_value_missing_or_mismatch")
+    if printed_rv is not None and abs(printed_rv) >= 1.0 and (
+        final_rv is None or abs(final_rv - printed_rv) > 0.51
+    ):
+        ok = False
+        printed_totals_transferred = False
+        reasons.append("final_receipts_value_missing_or_mismatch")
+
+    if printed_totals_transferred and (
+        printed_sv is not None or printed_cv is not None
+    ):
+        reasons.append("printed_totals_extracted")
+
+    validation["ok"] = ok
+    validation["printed_totals_transferred"] = printed_totals_transferred
+    if reasons:
+        # Dedupe while preserving order.
+        seen = set()
+        ordered = []
+        for note in reasons:
+            if note in seen:
+                continue
+            seen.add(note)
+            ordered.append(note)
+        validation["source_footer_notes"] = ordered
+        if not ok:
+            validation["source_footer_inconsistent"] = True
+    validation["final_totals"] = {
+        "opening_value": final_ov,
+        "receipts_value": final_rv,
+        "sales_value": final_sv,
+        "closing_value": final_cv,
+    }
+    return validation
 
 
 def _maybe_repair_shifted_qty_row(
@@ -11715,7 +11975,19 @@ def _apply_fields_to_item(
                 item.setdefault("extra", {})[_EXTRA_FIELDS[canon]] = None
             continue
 
-        parsed = parse_number(raw, allow_internal_spaces=True)
+        marker: Optional[str] = None
+        if canon.endswith("_qty") or canon in {
+            "opening_qty",
+            "purchase_qty",
+            "sales_qty",
+            "closing_qty",
+            "other_outward_qty",
+        }:
+            parsed, marker = parse_qty_with_stock_marker(
+                raw, allow_internal_spaces=True
+            )
+        else:
+            parsed = parse_number(raw, allow_internal_spaces=True)
 
         if missing or parsed is None:
             src = "missing"
@@ -11738,6 +12010,18 @@ def _apply_fields_to_item(
                 item.setdefault("extra", {})["opening_value"] = value
         elif canon in _EXTRA_FIELDS:
             item.setdefault("extra", {})[_EXTRA_FIELDS[canon]] = value
+        # Preserve printed N/E stock-status markers (never discard as missing).
+        if marker:
+            ex = item.setdefault("extra", {})
+            if isinstance(ex, dict):
+                ex["stock_status_marker"] = marker
+                ex.setdefault("stock_status_markers", {})
+                if isinstance(ex["stock_status_markers"], dict):
+                    ex["stock_status_markers"][canon] = marker
+                if marker == "N":
+                    ex["non_moving_stock"] = True
+                elif marker == "E":
+                    ex["short_expiry_stock"] = True
 
     # Columns not printed on the document stay missing — never invent them.
     # purchase_qty maps onto top-level receipts_qty. Do not stamp receipts_* as
@@ -11873,7 +12157,9 @@ _VISION_TOTAL_ROW_NAME = re.compile(
     r"(?:[:.\-–—_=>*]*)\s*"
     r"(?:"
     r"\(.*\)"
-    r"|(?:qty\.?|value|amount|amt|in\s+rs\.?|rs\.?)\b.*"
+    # "Total Values is based on PRate" / TOTAL VALUE / TOTAL QTY
+    r"|(?:qty\.?|values?|amount|amt|in\s+rs\.?|rs\.?)\b.*"
+    r"|is\s+based\s+on\b.*"
     r")?"
     r"\s*(?:[-–—_=.*]{2,})?\s*$"
 )
@@ -13412,7 +13698,10 @@ def map_vision_table(
         for item in table_items:
             extra = item.setdefault("extra", {})
             extra["table_index"] = int(t.get("table_index") if t.get("table_index") is not None else t_idx)
-            key = _normalize_product_key(item.get("product_name"))
+            # Include packing so LIV 52 SYP 200ML vs 100ML are not false duplicates.
+            pack_key = _normalize_product_key(item.get("packing") or "")
+            name_key = _normalize_product_key(item.get("product_name"))
+            key = f"{name_key}|{pack_key}" if name_key else ""
             if key:
                 if key in seen_keys:
                     flags = list(extra.get("flags") or [])
@@ -15139,9 +15428,18 @@ def _stamp_vision_result(
                     "VISION_TABLE PRINTED_TOTAL_ROW_MONEY keys=%s",
                     sorted(promoted),
                 )
+            # Qty-only lines stamp sales_value=0.0 — mirror printed totals for UI.
             try:
-                extra["printed_total_validation"] = _compare_line_sums_to_printed_total(
-                    products, kept_totals
+                from services.stock_native_resolver import (
+                    _mirror_line_value_sums_from_totals,
+                )
+
+                _mirror_line_value_sums_from_totals(result)
+            except Exception:
+                pass
+            try:
+                extra["printed_total_validation"] = (
+                    _validate_final_totals_against_printed(result, kept_totals)
                 )
             except Exception as exc:
                 extra["printed_total_validation"] = {
