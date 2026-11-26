@@ -25942,7 +25942,7 @@ def _pdf_text_reconciliation_is_garbled(result: Optional[Dict[str, Any]]) -> boo
     if checked < 6:
         return False
     ratio = balanced / checked
-    if ratio < 0.25:
+    if ratio < 0.50:
         logger.info(
             "PDF_TEXT_RECONCILIATION_GARBLED balanced=%s/%s ratio=%.2f method=%s",
             balanced,
