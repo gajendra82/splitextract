@@ -207,7 +207,9 @@ class TestDhruviStockSalesOpPiClqty(unittest.TestCase):
                 self.assertTrue(recon.get("valid"))
             elif classification == "discrepancy":
                 discrepancy += 1
-                self.assertFalse(recon.get("valid"))
+                # Printed CLQty is document truth — discrepancy is informational.
+                self.assertTrue(recon.get("valid"))
+                self.assertTrue(recon.get("closing_ok"))
                 self.assertIsNotNone(recon.get("quantity_difference"))
                 self.assertGreater(abs(float(recon["quantity_difference"])), 0.05)
             elif classification == "skipped":
@@ -221,8 +223,9 @@ class TestDhruviStockSalesOpPiClqty(unittest.TestCase):
         self.assertEqual(discrepancy, 44)
         self.assertEqual(skipped, 0)
 
-        self.assertEqual(self.extra.get("stock_reconciliation_pass_count"), reconciled)
-        self.assertEqual(self.extra.get("stock_reconciliation_fail_count"), discrepancy)
+        # All printed rows pass; discrepancy_count still reports formula gaps.
+        self.assertEqual(self.extra.get("stock_reconciliation_pass_count"), 98)
+        self.assertEqual(self.extra.get("stock_reconciliation_fail_count"), 0)
         self.assertEqual(self.extra.get("stock_reconciliation_skip_count"), skipped)
         self.assertEqual(
             self.extra.get("stock_reconciliation_discrepancy_count"), discrepancy
@@ -230,7 +233,6 @@ class TestDhruviStockSalesOpPiClqty(unittest.TestCase):
         self.assertEqual(
             self.extra.get("stock_reconciliation_reconciled_count"), reconciled
         )
-        # Skipped rows must never inflate the pass counter.
         self.assertEqual(
             self.extra.get("stock_reconciliation_pass_count")
             + self.extra.get("stock_reconciliation_fail_count")
@@ -248,15 +250,31 @@ class TestDhruviStockSalesOpPiClqty(unittest.TestCase):
             validation.get("calculated_closing"),
             LINE_OPENING_QTY + LINE_RECEIPTS_QTY - LINE_SALES_QTY,
         )
-        self.assertFalse(validation.get("is_valid"))
+        # Printed document values are authoritative — formula gap is informational.
+        self.assertTrue(validation.get("is_valid"))
+        self.assertTrue(validation.get("printed_values_authoritative"))
         self.assertEqual(validation.get("row_discrepancy_count"), 44)
         self.assertEqual(validation.get("row_reconciled_count"), 54)
         self.assertEqual(validation.get("row_skipped_count"), 0)
         # Document-gap discrepancies live on recon counters; identity fail
-        # stays 0 so quality/Laravel do not treat the extract as empty.
+        # stays 0 so quality/Laravel do not drop products or recalculate.
         self.assertEqual(self.extra.get("stock_identity_fail_count"), 0)
         self.assertTrue(self.extra.get("stock_document_gap"))
-        self.assertEqual(self.extra.get("stock_reconciliation_fail_count"), 44)
+        self.assertTrue(self.extra.get("do_not_recalculate_totals"))
+        self.assertEqual(self.extra.get("stock_reconciliation_fail_count"), 0)
+        self.assertEqual(self.extra.get("stock_reconciliation_pass_count"), 98)
+        self.assertEqual(self.extra.get("stock_reconciliation_discrepancy_count"), 44)
+        # Every printed product stays displayable (not identity-failed).
+        for item in self.items:
+            self.assertTrue(
+                (item.get("extra") or {}).get("stock_identity_ok"),
+                item.get("product_name"),
+            )
+            self.assertNotEqual(
+                (item.get("extra") or {}).get("reconciliation_failed"), True
+            )
+            recon = (item.get("extra") or {}).get("reconciliation") or {}
+            self.assertTrue(recon.get("valid"), item.get("product_name"))
 
 
 class TestShortOpPiReconcileUnit(unittest.TestCase):
@@ -288,7 +306,10 @@ class TestShortOpPiReconcileUnit(unittest.TestCase):
         }
         recon = reconcile_row(item)
         self.assertEqual(recon.get("classification"), "discrepancy")
-        self.assertFalse(recon.get("valid"))
+        self.assertTrue(recon.get("valid"))
+        self.assertTrue(recon.get("closing_ok"))
+        self.assertTrue(recon.get("printed_values_authoritative"))
+        self.assertTrue(recon.get("document_qty_gap"))
         self.assertEqual(recon.get("extracted_closing_qty"), 49.0)
         self.assertEqual(recon.get("expected_closing_qty"), 59.0)
         self.assertEqual(recon.get("quantity_difference"), -10.0)

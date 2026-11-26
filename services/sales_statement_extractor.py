@@ -6951,9 +6951,39 @@ def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
         )
     )
 
+    # Printed Total Value footers (OP/PI/CLQty XLSX etc.) must never be replaced
+    # by sums of whatever product rows remain after downstream mapping.
+    _lock_printed_totals = bool(
+        totals["extra"].get("do_not_recalculate_totals")
+    ) or str(totals["extra"].get("total_value_row_source") or "") in {
+        "xls_op_pi_clqty_total_value",
+    }
+    if _lock_printed_totals:
+        printed = totals["extra"].get("printed_totals")
+        if isinstance(printed, dict):
+            if printed.get("sales_value") not in (None, ""):
+                totals["sales_value"] = printed["sales_value"]
+                totals["extra"]["sales_value_source"] = (
+                    totals["extra"].get("sales_value_source")
+                    or "xls_op_pi_clqty_total_value"
+                )
+            if printed.get("closing_value") not in (None, ""):
+                totals["closing_value"] = printed["closing_value"]
+                totals["extra"]["closing_value_source"] = (
+                    totals["extra"].get("closing_value_source")
+                    or "xls_op_pi_clqty_total_value"
+                )
+            for key in ("opening_value", "receipts_value", "purchase_value"):
+                if printed.get(key) not in (None, ""):
+                    totals["extra"][key] = printed[key]
+
     # When a printed Stock Value column exists on rows but no footer money total was
     # captured, surface the line sum at top-level so totals.closing_value is not null.
-    if _fill_null_value_totals_from_lines_enabled() and not _pharmassist_incomplete_lines:
+    if (
+        _fill_null_value_totals_from_lines_enabled()
+        and not _pharmassist_incomplete_lines
+        and not _lock_printed_totals
+    ):
         if totals.get("closing_value") is None and sum_closing_value > 0:
             totals["closing_value"] = round(sum_closing_value, 2)
             totals["extra"]["closing_value_source"] = "line_item_sum"
@@ -7192,7 +7222,7 @@ def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
         or _qty_only_sales_is_qty_sum
     )
 
-    if bogus_sales:
+    if bogus_sales and not _lock_printed_totals:
         new_sales = sum_sales_value if sum_sales_value > 0 else None
         totals["extra"]["rejected_sales_value"] = sales_total
         overrides = totals["extra"].setdefault("sanitize_top_level_overrides", [])
@@ -7210,8 +7240,11 @@ def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
         # Prefer real line-item money sum; else null for qty-only statements
         totals["sales_value"] = new_sales
 
-    if _is_implausible_money(
-        totals.get("closing_value"), allow_negative=allow_negative_money
+    if (
+        not _lock_printed_totals
+        and _is_implausible_money(
+            totals.get("closing_value"), allow_negative=allow_negative_money
+        )
     ):
         old_cv = totals.get("closing_value")
         new_cv = sum_closing_value if sum_closing_value > 0 else None
@@ -7230,7 +7263,8 @@ def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
         )
         totals["closing_value"] = new_cv
     elif (
-        qty_only
+        not _lock_printed_totals
+        and qty_only
         and totals.get("closing_value") is not None
         and sum_closing_value <= 0
         and float(totals.get("closing_value") or 0) > sum_closing_qty * 1000
@@ -7259,6 +7293,7 @@ def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
             "main_stock_vision_totals",
             "main_stock_total_row_item",
             "main_stock_total_contamination_peel",
+            "xls_op_pi_clqty_total_value",
         }
     ):
         # Closing "value" is likely a qty total mislabeled from OCR TOTAL
@@ -8731,16 +8766,20 @@ def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
             row_extra["expected_closing"] = expected
             if short_op_pi:
                 # Marker for recon short-grid path; classification is authoritative.
+                # Printed CLQty/SI Value/etc. are document truth — never mark the
+                # row as identity-failed or the UI drops it and recalculates
+                # totals from only the remaining "mapped" products.
                 row_extra["stock_identity_skipped"] = "short_op_pi_clqty_doc_gap"
+                row_extra["stock_identity_ok"] = True
+                row_extra["values_source"] = "printed"
                 if abs(gap) <= 0.05:
-                    row_extra["stock_identity_ok"] = True
                     row_extra["reconciliation_classification"] = "reconciled"
                     row_extra.pop("qty_reconcile_gap", None)
                     reconciled_n += 1
                 else:
-                    row_extra["stock_identity_ok"] = False
                     row_extra["reconciliation_classification"] = "discrepancy"
                     row_extra["qty_reconcile_gap"] = gap
+                    row_extra["document_qty_gap"] = True
                     discrepancy_n += 1
                     mismatch += 1
                 aggregate_variance += gap
@@ -8765,6 +8804,7 @@ def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
         )
         expected_closing_sum = round(opening_sum + receipt_sum - sales_sum, 2)
         aggregate_variance = round(aggregate_variance, 2)
+        # Qty rollups are sums of printed cells (not OP+PI−Sale recalculation).
         totals["extra"]["opening_qty"] = opening_sum
         totals["extra"]["receipts_qty"] = receipt_sum
         totals["extra"]["sales_qty"] = sales_sum
@@ -8773,12 +8813,13 @@ def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
         totals["extra"]["aggregate_qty_variance"] = aggregate_variance
         if short_op_pi:
             totals["extra"]["stock_identity_formula"] = (
-                "closing=CLQty printed; expected=OP+PI-Sale; "
-                "classify reconciled|discrepancy|skipped (no invented adjustments)"
+                "closing=CLQty printed (document); OP+PI-Sale gap recorded only"
             )
             totals["extra"]["stock_identity_reconciled_count"] = reconciled_n
             totals["extra"]["stock_identity_discrepancy_count"] = discrepancy_n
             totals["extra"]["stock_identity_skip_count"] = skipped_n
+            totals["extra"]["totals_source"] = "printed_total_value_row"
+            totals["extra"]["do_not_recalculate_totals"] = True
         else:
             totals["extra"]["stock_identity_formula"] = (
                 "closing=opening+PI+ST(In)+In-Out-Sale-ST(Out)+StockAdj; "
@@ -8803,7 +8844,11 @@ def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
             "row_discrepancy_count": discrepancy_n if short_op_pi else mismatch,
             "row_reconciled_count": reconciled_n if short_op_pi else max(0, len(items) - mismatch),
             "row_skipped_count": skipped_n if short_op_pi else 0,
-            "is_valid": mismatch == 0 and abs(aggregate_variance) < 0.05,
+            # Printed document values are authoritative; formula gap is informational.
+            "is_valid": True if short_op_pi else (
+                mismatch == 0 and abs(aggregate_variance) < 0.05
+            ),
+            "printed_values_authoritative": bool(short_op_pi),
         }
         return result
 
@@ -19581,11 +19626,17 @@ def _parse_stock_sales_op_pi_clqty_xls(
         return _to_float(cell(row, role))
 
     items: List[Dict[str, Any]] = []
+    current_division: Optional[str] = None
     for row in rows[header_idx + 1 :]:
         raw_name = str(cell(row, "product_name") or "").strip()
         if not raw_name:
             continue
         if re.match(r"^division\b", raw_name, re.I):
+            # Keep every division's products; stamp division for UI mapping.
+            div_m = re.search(r"division\s*:\s*(.+)$", raw_name, re.I)
+            current_division = (
+                _clean_name(div_m.group(1)) if div_m else _clean_name(raw_name)
+            )
             continue
         if re.match(r"^total\b", raw_name, re.I):
             # Prefer grand ``Total Value`` over division subtots like
@@ -19623,6 +19674,17 @@ def _parse_stock_sales_op_pi_clqty_xls(
             # opening/closing into outward_value or other unmapped fields.
             extra.pop("outward_value", None)
             extra.pop("inward_value", None)
+            # Authoritative printed Total Value — never replace with line sums
+            # of partially mapped products.
+            extra["printed_totals"] = {
+                "opening_value": opening_total,
+                "receipts_value": purchase_total,
+                "purchase_value": purchase_total,
+                "sales_value": sales_total,
+                "closing_value": closing_total,
+            }
+            extra["totals_source"] = "printed_total_value_row"
+            extra["do_not_recalculate_totals"] = True
             detected_footer = []
             footer_financials: Dict[str, Any] = {
                 "source": "xls_op_pi_clqty_total_value",
@@ -19685,10 +19747,13 @@ def _parse_stock_sales_op_pi_clqty_xls(
         item["closing_value"] = qty(row, "closing_value")
         extra_item = item.setdefault("extra", {})
         extra_item["layout"] = "stock_sales_op_pi_clqty"
+        extra_item["values_source"] = "printed"
         extra_item["opening_value"] = item["opening_value"]
         extra_item["purchase_qty"] = purchase
         extra_item["purchase_value"] = purchase_value
         extra_item["receipts_value"] = purchase_value
+        if current_division:
+            extra_item["division"] = current_division
         fs = {
             "opening_qty": "printed",
             "opening_value": "printed" if "opening_value" in roles else "missing",

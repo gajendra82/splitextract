@@ -781,9 +781,9 @@ def reconcile_row(item: Dict[str, Any]) -> Dict[str, Any]:
             "adjustments": formula.get("adjustments"),
         }
 
-    # Short OP/PI/Sale/CLQty (no ST In/Out): keep printed CLQty as source truth.
-    # Classify reconciled vs discrepancy from OP+PI−Sale vs CLQty — never invent
-    # adjustments, and never auto-pass every row as skipped/valid.
+    # Short OP/PI/Sale/CLQty (no ST In/Out): printed CLQty/SI Value are the
+    # document. Classify formula gap for reporting only — never fail a row that
+    # has printed closing (UI would drop products and recalculate totals).
     if _short_op_pi_clqty_row(item):
         closing_f = None if closing in (None, "") else _f(closing)
         # Short-grid expected close: opening + PI − Sale (ST columns absent).
@@ -800,13 +800,12 @@ def reconcile_row(item: Dict[str, Any]) -> Dict[str, Any]:
             if abs(qty_diff) <= tol:
                 classification = "reconciled"
                 closing_ok = True
-                valid = True
-                skip_reason = None
             else:
                 classification = "discrepancy"
-                closing_ok = False
-                valid = False
-                skip_reason = None
+                # Formula mismatch is informational; printed closing is accepted.
+                closing_ok = True
+            valid = True
+            skip_reason = None
         logger.info(
             "STOCK_RECONCILIATION_%s reason=short_op_pi_clqty "
             "product=%s opening_qty=%s purchase_qty=%s sales_qty=%s "
@@ -843,10 +842,13 @@ def reconcile_row(item: Dict[str, Any]) -> Dict[str, Any]:
                 "purchase_return_qty": 0.0,
                 "sales_return_qty": 0.0,
             },
-            "formula": "closing=opening+PI-Sale; printed CLQty preserved",
+            "formula": "printed CLQty is document truth; OP+PI-Sale gap informational only",
+            "printed_values_authoritative": True,
         }
         if skip_reason:
             out["skipped"] = skip_reason
+        if classification == "discrepancy":
+            out["document_qty_gap"] = True
         return out
 
     # SALE+CLOSING-only sheets: identity formula is not applicable.
@@ -1077,6 +1079,11 @@ def apply_stock_reconciliation(
         if classification:
             extra["reconciliation_classification"] = classification
         skipped = bool(recon.get("skipped"))
+        short_op_pi_doc = (
+            str(extra.get("layout") or "") == "stock_sales_op_pi_clqty"
+            or str(recon.get("base_source") or "") == "opening_plus_pi_minus_sale"
+            or extra.get("stock_identity_skipped") == "short_op_pi_clqty_doc_gap"
+        )
         # Explicit classification=skipped (e.g. missing CLQty on short OP/PI)
         # is never a pass. Legacy soft-skips that still set valid=True
         # (order_form / bal doc_gap) keep pass-compatible identity.
@@ -1087,6 +1094,15 @@ def apply_stock_reconciliation(
             extra["stock_identity_ok"] = False
             extra["reconciliation_skipped"] = True
             extra.pop("reconciliation_failed", None)
+        elif short_op_pi_doc and classification in {"reconciled", "discrepancy"}:
+            # Printed sheet values are authoritative. Never mark discrepancy
+            # rows identity-failed — downstream mapping would drop them and
+            # recalculate totals from the remaining products only.
+            extra["stock_identity_ok"] = True
+            extra["values_source"] = "printed"
+            extra.pop("reconciliation_skipped", None)
+            if classification == "discrepancy":
+                extra["document_qty_gap"] = True
         else:
             extra["stock_identity_ok"] = bool(recon.get("valid"))
             extra.pop("reconciliation_skipped", None)
@@ -1137,6 +1153,40 @@ def apply_stock_reconciliation(
                 idx,
                 name[:80],
                 recon.get("skipped") or classification,
+                recovery_attempt,
+            )
+        elif (
+            short_op_pi_doc
+            and classification == "discrepancy"
+            and recon.get("valid")
+        ):
+            # Printed CLQty accepted: count as pass + informational discrepancy.
+            pass_n += 1
+            discrepancy_n += 1
+            extra.pop("reconciliation_failed", None)
+            extra["document_qty_gap"] = True
+            if qty_diff is not None:
+                try:
+                    extra["qty_reconcile_gap"] = float(qty_diff)
+                except (TypeError, ValueError):
+                    pass
+            logger.info(
+                "STOCK_RECONCILIATION_PASS request_id=%s page=%s row=%s "
+                "product_name=%s opening_qty=%s purchase_qty=%s sales_qty=%s "
+                "extracted_closing_qty=%s expected_closing_qty=%s difference=%s "
+                "base_source=%s classification=%s recovery_attempt=%s",
+                request_id,
+                page,
+                idx,
+                name[:80],
+                recon.get("opening_qty"),
+                recon.get("purchase_qty"),
+                recon.get("sales_qty"),
+                recon.get("extracted_closing_qty"),
+                recon.get("expected_closing_qty"),
+                recon.get("quantity_difference"),
+                recon.get("base_source"),
+                classification,
                 recovery_attempt,
             )
         elif classification == "discrepancy" or not recon.get("valid"):
@@ -1306,6 +1356,11 @@ def apply_stock_reconciliation(
         )
         prev = extra_t.get("stock_validation")
         prev = dict(prev) if isinstance(prev, dict) else {}
+        short_op_pi_sheet = (
+            str(extra_t.get("extraction_method") or "") == "stock_sales_op_pi_clqty"
+            or extra_t.get("stock_document_gap")
+            or prev.get("printed_values_authoritative")
+        )
         prev.update(
             {
                 "opening_plus_purchase": expected_total,
@@ -1320,12 +1375,18 @@ def apply_stock_reconciliation(
                 "row_discrepancy_count": discrepancy_n,
                 "row_reconciled_count": reconciled_n,
                 "row_skipped_count": skip_n,
-                # Row-level and aggregate must agree: any discrepancy or
-                # non-zero aggregate variance fails validation.
-                "is_valid": fail == 0
-                and skip_n == 0
-                and abs(calculated_closing - float(extracted_closing)) < 0.05
-                and abs(aggregate_variance) < 0.05,
+                # Short OP/PI: printed document values win — formula variance is
+                # informational only (do not invalidate / trigger remapping).
+                "is_valid": True
+                if short_op_pi_sheet
+                else (
+                    fail == 0
+                    and skip_n == 0
+                    and abs(calculated_closing - float(extracted_closing)) < 0.05
+                    and abs(aggregate_variance) < 0.05
+                ),
+                "printed_values_authoritative": bool(short_op_pi_sheet)
+                or bool(prev.get("printed_values_authoritative")),
             }
         )
         extra_t["stock_validation"] = prev
