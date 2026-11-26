@@ -262,7 +262,8 @@ Do NOT copy the next product row's Cl.Qty/Cl.Val into this row.
 Column-shift traps (dense phone scans / continuation pages without header):
   Sl.No is NEVER opening_qty (row 3 → opening_qty is not 3).
   Never put Op.Qty into receipts_qty. If P.Qty cell is 0/blank, receipts_qty=0
-  even when Op.Qty is large.
+  even when Op.Qty is large — NEVER copy Op.Qty/Op.Val into P.Qty/P.val.
+  Never copy Op.Qty/Op.Val into Cl.Qty/Cl.Val when S.Qty (or P.Qty) moved stock.
   P.Sch is NEVER receipts_qty (e.g. P.Qty=297 P.Sch=3 → receipts_qty=297,
   purchase_scheme_qty=3 — NOT receipts_qty=3).
   When P.Val is non-zero, receipts_qty must not be 0/null — re-read P.Qty.
@@ -276,6 +277,7 @@ Column-shift traps (dense phone scans / continuation pages without header):
   If Cr.Val is non-zero, Cr.Qty must also be copied (never leave sales_return_qty
   null/0 while sales_return_value is printed).
   If Op.Val is non-zero, opening_qty must not be 0/null — re-read Op.Qty.
+  Copy the printed Sl.No into sl_no on every product row (row-count cross-check).
 
 Map EVERY core value column. opening_value and receipts_value are money
 (usually two decimal places). Never put Op.Val or S.Val into closing_value.
@@ -327,6 +329,13 @@ Examples when visible:
 - ASHWAGANDHA GUMMIES 60S: Op.Qty 316, Op.Val 189600.0, P 0, S.Qty 7,
   S.Val 4200.0, Cr.Qty 2, Cl.Qty 311, Cl.Val 186600.0
   (Op.Qty→opening_qty NOT receipts_qty; Cl.Val≠S.Val; Sl.No is not Op.Qty)
+- ARJUNA TAB.: Sl.No 1, Op.Qty 41, Op.Val 10152.42, P.Qty 0, P.val 0,
+  S.Qty 3, S.Val 742.86, Cl.Qty 38, Cl.Val 9409.56
+  → opening_qty=41, receipts_qty=0 (NOT 41), sales_qty=3, closing_qty=38
+    (NEVER copy Op into P or Cl)
+- BRESOL SYP. 200ML: Op.Qty 32, Op.Val 5191.23, P.Qty 28, P.val 3862.59,
+  S.Qty 24, S.Val 3931.2, Cl.Qty 39, Cl.Val 6337.83
+  → receipts_qty=28 (NOT Op 32), sales_qty=24, closing_qty=39
 - Idle row: Op.Qty 50, Op.Val 12381.0, P 0, S 0, Cl.Qty 50, Cl.Val 12381.0
   → opening_qty=50 (NOT Sl.No), receipts_qty=0, closing_qty=50
 - Scheme row: Op.Qty 188, P.Qty 100, S.Qty 180, S.Sch 2, Cl.Qty 106
@@ -338,10 +347,11 @@ Examples when visible:
 
 Stockist vs company (do not swap these):
   stockist_name = Seller: / letterhead distributor name only
-    (e.g. GANGA DISTRIBUTORS / RSM PHARMA PVT LTD). Never Himalaya.
+    (e.g. GANGA DISTRIBUTORS / RSM PHARMA PVT LTD / HARSH DRUG DISTRIBUTORS).
+    Never Himalaya.
   stockist_address = city/place in parentheses on Seller line
     (e.g. GULBARGA from Seller: GANGA DISTRIBUTORS(GULBARGA)).
-  company_name = HIMALAYA DRUG CO-ZENITH / ZEAL / Company line.
+  company_name = HIMALAYA DRUG CO-ZENITH / ZEAL / ZANDRA / Company line.
 Period from "From DD-Mon-YYYY To DD-Mon-YYYY" or "01-OCT-2026 to 31-OCT-2026".
 
 Return ONLY valid JSON:
@@ -356,6 +366,7 @@ Return ONLY valid JSON:
   "report_title": "STOCK AND SALES",
   "line_items": [
     {
+      "sl_no": number|null,
       "product_name": string,
       "packing": string|null,
       "opening_qty": number|null,
@@ -377,13 +388,16 @@ Return ONLY valid JSON:
   "totals": { "sales_value": null, "closing_value": null, "extra": {} }
 }
 
-Include every visible product row top to bottom across both page panels.
+Include every visible product row top to bottom across both page panels
+(Sl.No 1 … last printed Sl.No — e.g. 45). Never drop mid-table rows.
 Continuation pages may omit the header — keep the SAME column order as
 Op.Qty|Op.Val|P.Qty|P.Sch|P.Val|S.Qty|S.Sch|S.Val|…|Cl.Qty|Cl.Val.
-Do NOT emit the Total / header Total row as a line_item.
-Copy the printed Total-row S.Val into totals.sales_value and Total-row
-Cl.Val into totals.closing_value when those cells are visible
-(often a top "Total" row on page 1: e.g. S.Val 321247.52, Cl.Val 313133.42).
+Do NOT emit the Total / header Total / GRAND TOTAL row as a line_item.
+When several TOTAL / GRAND TOTAL money bands print, use ONLY the last
+GRAND TOTAL for totals.sales_value / totals.closing_value; else the last
+printed Total band (often a top "Total" row on page 1).
+Copy that band's S.Val into totals.sales_value and Cl.Val into
+totals.closing_value (e.g. S.Val 101044.53, Cl.Val 364776.27).
 Also copy Total-row Op.Val into totals.extra.opening_value and Total-row
 P.val into totals.extra.receipts_value when printed.
 Do NOT sum line sales_value yourself when the Total-row S.Val is printed.
@@ -1408,11 +1422,19 @@ def _looks_like_stock_sales_detail_report_title(text: str) -> bool:
     """
     if not (text or "").strip():
         return False
-    # Stock and S[ales] Detail [Report] — allow whitespace inside Sales.
+    # Stock and S[ales] Detail[l1] [Report] — allow whitespace inside Sales
+    # and OCR Detail→Detall / Detai1.
     if re.search(
-        r"Stock\s+and\s+S\s*ales?\s+Detail(?:\s+Report)?",
+        r"Stock\s+and\s+S\s*ales?\s+Detai[l1](?:\s+Report)?",
         text,
         re.I,
+    ):
+        return True
+    # Seller: + Op.Qty + Cl.Qty chrome without a clean title still fingerprints.
+    if (
+        re.search(r"\bSeller\s*:", text, re.I)
+        and re.search(r"\bOp\.?\s*Qty\b|\bOpQty\b", text, re.I)
+        and re.search(r"\bCl\.?\s*Qty\b|\bCl\.?\s*Val\b|\bCls?\.?\s*Qty\b", text, re.I)
     ):
         return True
     return False
@@ -2489,8 +2511,25 @@ def _coerce_vision_payload(parsed: Dict[str, Any]) -> Dict[str, Any]:
             extra["age_days"] = raw["extra"].get("age_days")
         if raw.get("total_stock") is not None and extra.get("total_stock") is None:
             extra["total_stock"] = raw.get("total_stock")
+        # Sl.No / serial — keep for Detail row-count vs max Sl.No cross-check.
+        sl_raw = raw.get("sl_no")
+        if sl_raw in (None, "") and isinstance(raw.get("extra"), dict):
+            sl_raw = raw["extra"].get("sl_no")
+        if sl_raw not in (None, "") and extra.get("sl_no") in (None, ""):
+            extra["sl_no"] = sl_raw
         raw["extra"] = extra
     return parsed
+
+
+def _detail_op_qty_val_alignment_gate_enabled() -> bool:
+    """STOCK_DETAIL_OP_QTY_ALIGNMENT_GATE — Op→P/Cl + Sl.No + Total soft-fail.
+
+    Default ON. Kill switch false restores pre-gate soft_ok (Excel still skipped
+    via excel_column_aligned).
+    """
+    return os.getenv(
+        "STOCK_DETAIL_OP_QTY_ALIGNMENT_GATE", "true"
+    ).strip().lower() not in {"0", "false", "no", "off"}
 
 
 def _detail_op_qty_val_alignment_signals(
@@ -2513,6 +2552,8 @@ def _detail_op_qty_val_alignment_signals(
         "soft_reasons": [],
     }
     if not isinstance(result, dict):
+        return empty
+    if not _detail_op_qty_val_alignment_gate_enabled():
         return empty
     totals = result.get("totals") if isinstance(result.get("totals"), dict) else {}
     extra_t = totals.get("extra") if isinstance(totals.get("extra"), dict) else {}
@@ -2558,7 +2599,9 @@ def _detail_op_qty_val_alignment_signals(
             closing_value = float(item.get("closing_value") or 0)
         except (TypeError, ValueError):
             closing_value = 0.0
-        sl_raw = extra.get("sl_no")
+        sl_raw = item.get("sl_no")
+        if sl_raw in (None, ""):
+            sl_raw = extra.get("sl_no")
         try:
             if sl_raw not in (None, ""):
                 max_sl = max(max_sl, int(float(str(sl_raw).strip())))
@@ -2605,7 +2648,7 @@ def _detail_op_qty_val_alignment_signals(
         empty["sl_no_mismatch"] = True
         soft.append("sl_no_row_count_mismatch")
 
-    # Printed Total-row S.Val / Cl.Val vs line sums (header Total or GRAND TOTAL).
+    # Printed Total-row / last GRAND TOTAL S.Val / Cl.Val vs line sums.
     try:
         printed_sv = float(totals.get("sales_value")) if totals.get("sales_value") not in (None, "") else None
     except (TypeError, ValueError):
@@ -2627,11 +2670,21 @@ def _detail_op_qty_val_alignment_signals(
     if printed_cv is not None and printed_cv > 100 and line_cv > 0:
         if abs(printed_cv - line_cv) > max(50.0, 0.08 * printed_cv):
             total_mismatch = True
+    # Strong money miss alone (dense Detail pages) OR with any column-shift signal.
+    strong_total_miss = False
+    if printed_sv is not None and printed_sv > 500 and line_sv > 0:
+        if abs(printed_sv - line_sv) > max(200.0, 0.15 * printed_sv):
+            strong_total_miss = True
+    if printed_cv is not None and printed_cv > 500 and line_cv > 0:
+        if abs(printed_cv - line_cv) > max(200.0, 0.15 * printed_cv):
+            strong_total_miss = True
     if total_mismatch and (
         op_into_receipts
         or op_into_closing
         or empty["sl_no_mismatch"]
         or soft
+        or strong_total_miss
+        or row_count >= 20
     ):
         empty["header_total_mismatch"] = True
         soft.append("header_total_mismatch")
@@ -3073,6 +3126,19 @@ def _call_psr_vision(
                 }
             }
         )
+    # Dense Detail Op.Qty grids (40–50 SKUs × many qty/val cols) truncate at
+    # 8192; reuse STOCK_VISION_MAX_OUTPUT_TOKENS (default 65535).
+    _max_out = 8192
+    if str(layout_label or "").startswith("stock_sales_op_qty_val") or str(
+        route or ""
+    ).startswith("stock_sales_op_qty_val"):
+        try:
+            _max_out = max(
+                8192,
+                int(os.getenv("STOCK_VISION_MAX_OUTPUT_TOKENS", "65535") or 65535),
+            )
+        except (TypeError, ValueError):
+            _max_out = 65535
     payload = {
         "contents": [
             {
@@ -3080,13 +3146,13 @@ def _call_psr_vision(
                 "parts": parts,
             }
         ],
-        "generationConfig": {"temperature": 0.0, "maxOutputTokens": 8192},
+        "generationConfig": {"temperature": 0.0, "maxOutputTokens": _max_out},
     }
     try:
         response = generate_content_via_vertex(
             model=model,
             payload=payload,
-            timeout=120,
+            timeout=180 if _max_out > 8192 else 120,
             label="stock_direct_vision",
         )
         parsed = _extract_json_object(_gemini_response_text(response))
@@ -4987,19 +5053,136 @@ def _clear_detail_closing_qty_copied_from_sales(result: Dict[str, Any]) -> int:
     return cleared
 
 
+def _peel_detail_header_total_money_from_text(
+    result: Dict[str, Any], text: str
+) -> bool:
+    """Copy printed Total / last GRAND TOTAL S.Val + Cl.Val from OCR chrome.
+
+    Detail Reports often print a top ``Total`` money band (Op.Val / P.val /
+    S.Val / Cr.Val / Cl.Val). Prefer last GRAND TOTAL when several bands exist.
+    Never invents — only copies money-scale numbers from a Total-labeled line.
+    """
+    if not isinstance(result, dict) or not (text or "").strip():
+        return False
+    candidates: List[Tuple[bool, List[float]]] = []
+    for ln in str(text).splitlines():
+        stripped = ln.strip()
+        if not re.search(r"(?:GRAND\s+)?TOTAL\b", stripped, re.I):
+            continue
+        if re.search(
+            r"Total\s+Stock|Stock\s+Total|Total\s+Qty|Page\s+Total", stripped, re.I
+        ):
+            continue
+        nums = re.findall(
+            r"\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+\.\d{1,2}|\d{4,}", stripped
+        )
+        money: List[float] = []
+        for raw in nums:
+            try:
+                val = float(str(raw).replace(",", ""))
+            except (TypeError, ValueError):
+                continue
+            if val >= 50:
+                money.append(val)
+        if len(money) >= 2:
+            is_grand = bool(re.search(r"\bGRAND\s+TOTAL\b", stripped, re.I))
+            candidates.append((is_grand, money))
+    if not candidates:
+        return False
+    grand = [m for is_g, m in candidates if is_g]
+    money = grand[-1] if grand else candidates[-1][1]
+    totals = result.setdefault("totals", {})
+    extra = totals.setdefault("extra", {}) if isinstance(totals, dict) else {}
+    if not isinstance(extra, dict):
+        return False
+    # Typical Detail Total band: … Op.Val, P.val, S.Val, Cr.Val, Cl.Val.
+    sales = money[-3] if len(money) >= 5 else money[-2]
+    closing = money[-1]
+    opening = money[-5] if len(money) >= 5 else (money[0] if len(money) >= 3 else None)
+    receipts = money[-4] if len(money) >= 5 else None
+    changed = False
+    try:
+        cur_sv = float(totals.get("sales_value")) if totals.get("sales_value") not in (None, "") else None
+    except (TypeError, ValueError):
+        cur_sv = None
+    try:
+        cur_cv = (
+            float(totals.get("closing_value"))
+            if totals.get("closing_value") not in (None, "")
+            else None
+        )
+    except (TypeError, ValueError):
+        cur_cv = None
+    if sales >= 100 and (cur_sv is None or abs(cur_sv - sales) > 0.51):
+        # Prefer printed Total when current is missing or is a lower line-sum.
+        if cur_sv is None or cur_sv + 0.51 < sales:
+            totals["sales_value"] = round(sales, 2)
+            changed = True
+    if closing >= 100 and (cur_cv is None or abs(cur_cv - closing) > 0.51):
+        if cur_cv is None or cur_cv + 0.51 < closing:
+            totals["closing_value"] = round(closing, 2)
+            changed = True
+    if opening is not None and opening >= 100 and extra.get("opening_value") in (None, ""):
+        extra["opening_value"] = round(opening, 2)
+        changed = True
+    if receipts is not None and receipts >= 50 and extra.get("receipts_value") in (None, ""):
+        extra["receipts_value"] = round(receipts, 2)
+        changed = True
+    if changed:
+        extra["total_row_source"] = (
+            "detail_ocr_grand_total" if grand else "detail_ocr_total"
+        )
+        _log(
+            "STOCK_SALES_DETAIL_OCR_TOTAL",
+            sales_value=totals.get("sales_value"),
+            closing_value=totals.get("closing_value"),
+            opening_value=extra.get("opening_value"),
+            source=extra.get("total_row_source"),
+        )
+    return changed
+
+
+def _drop_detail_total_named_line_items(result: Dict[str, Any]) -> int:
+    """Remove ----Total---->> / bare Total rows misfiled as products."""
+    items = result.get("line_items") if isinstance(result, dict) else None
+    if not isinstance(items, list):
+        return 0
+    kept: List[Dict[str, Any]] = []
+    dropped = 0
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("product_name") or "").strip()
+        if re.search(
+            r"^[-–—=\s>]*Total[-–—=\s>]*$|"
+            r"^[-–—=\s]*Total[-–—=\s>]+\s*$|"
+            r"--+\s*Total|--+\s*>?\s*$|"
+            r"^Grand\s*Total\b",
+            name,
+            re.I,
+        ):
+            dropped += 1
+            continue
+        kept.append(item)
+    if dropped:
+        result["line_items"] = kept
+        _log("STOCK_SALES_DETAIL_DROP_TOTAL_PRODUCTS", dropped=dropped, kept=len(kept))
+    return dropped
+
+
 def _finalize_detail_op_qty_val_result(
     result: Optional[Dict[str, Any]], file_bytes: bytes = b""
 ) -> Optional[Dict[str, Any]]:
     """Enrich Seller:/Himalaya headers and swap confused company/stockist."""
     if not isinstance(result, dict):
         return result
+    peek = ""
     try:
         from services.sales_statement_extractor import (
             _enrich_stock_statement_header_from_ocr,
             _clear_company_confused_stockist,
         )
 
-        peek = ""
         try:
             peek = _layout_header_text(file_bytes) if file_bytes else ""
         except Exception:
@@ -5010,7 +5193,17 @@ def _finalize_detail_op_qty_val_result(
     except Exception:
         pass
     try:
+        _drop_detail_total_named_line_items(result)
+    except Exception:
+        pass
+    try:
         _clear_detail_closing_qty_copied_from_sales(result)
+    except Exception:
+        pass
+    # Printed top Total / last GRAND TOTAL money from OCR before line-sum fill.
+    try:
+        if peek:
+            _peel_detail_header_total_money_from_text(result, peek)
     except Exception:
         pass
     # CONSOLIDATED Total Op.Val|P.Val|S.Val|Cls.Val before line-sum sanitize.
@@ -5020,7 +5213,7 @@ def _finalize_detail_op_qty_val_result(
         )
 
         result = _apply_consolidated_op_qty_val_printed_total(
-            result, file_bytes=file_bytes or b"", ocr_hint=""
+            result, file_bytes=file_bytes or b"", ocr_hint=peek or ""
         )
     except Exception:
         pass
@@ -5040,6 +5233,27 @@ def _finalize_detail_op_qty_val_result(
             cv = sum(float(i.get("closing_value") or 0) for i in items)
             if cv > 0:
                 totals["closing_value"] = round(cv, 2)
+    # Re-stamp printed Total after sanitize when line sums under-shot it.
+    try:
+        if peek:
+            _peel_detail_header_total_money_from_text(result, peek)
+    except Exception:
+        pass
+    # Keep line_*_value_sum aligned with remaining line_items (no stale pre-filter).
+    try:
+        totals = result.setdefault("totals", {})
+        extra = totals.setdefault("extra", {})
+        items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+        if isinstance(extra, dict):
+            extra["line_sales_value_sum"] = round(
+                sum(float(i.get("sales_value") or 0) for i in items), 2
+            )
+            extra["line_closing_value_sum"] = round(
+                sum(float(i.get("closing_value") or 0) for i in items), 2
+            )
+            extra["rows_detected"] = len(items)
+    except Exception:
+        pass
     return result
 
 

@@ -7073,17 +7073,31 @@ def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
     sum_closing_value = sum(_to_float(i.get("closing_value")) for i in items if isinstance(i, dict))
     sum_sales_qty = sum(_to_float(i.get("sales_qty")) for i in items if isinstance(i, dict))
     sum_closing_qty = sum(_to_float(i.get("closing_qty")) for i in items if isinstance(i, dict))
+    # Printed line money present? Keep sums null (not 0) when no product row
+    # carries a sales/closing value cell — qty-only grids must not fake 0.0.
+    _has_line_sales_value = any(
+        isinstance(i, dict) and i.get("sales_value") not in (None, "")
+        for i in items
+    )
+    _has_line_closing_value = any(
+        isinstance(i, dict) and i.get("closing_value") not in (None, "")
+        for i in items
+    )
 
     totals = result.setdefault("totals", {"sales_value": None, "closing_value": None, "extra": {}})
     if not isinstance(totals.get("extra"), dict):
         totals["extra"] = {}
 
-    totals["extra"]["line_sales_value_sum"] = sum_sales_value
-    totals["extra"]["line_closing_value_sum"] = sum_closing_value
+    totals["extra"]["line_sales_value_sum"] = (
+        sum_sales_value if _has_line_sales_value else None
+    )
+    totals["extra"]["line_closing_value_sum"] = (
+        sum_closing_value if _has_line_closing_value else None
+    )
     # Qty-only product rows have no money cells, so line sums stay 0 even when
     # the printed TOTAL ISSUE/CLOSING money was mapped to totals.sales_value /
-    # closing_value. UI often reads line_*_value_sum — mirror footer money so
-    # those fields are not blank/zero for ORIC / Grand Total Amt layouts.
+    # closing_value. UI often reads line_*_value_sum — mirror after sanitize
+    # rejects so rejected totals do not leave a stale sum.
     _footer_money = (
         bool(totals["extra"].get("has_printed_sales_value"))
         or str(totals["extra"].get("total_value_row_source") or "")
@@ -7100,32 +7114,6 @@ def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
             "xls_total_amt",
         }
     )
-    if _footer_money and abs(sum_sales_value) < 0.001 and abs(sum_closing_value) < 0.001:
-        totals["extra"]["product_line_sales_value_sum"] = sum_sales_value
-        totals["extra"]["product_line_closing_value_sum"] = sum_closing_value
-        try:
-            _sv = float(totals["sales_value"]) if totals.get("sales_value") not in (None, "") else None
-        except (TypeError, ValueError):
-            _sv = None
-        try:
-            _cv = (
-                float(totals["closing_value"])
-                if totals.get("closing_value") not in (None, "")
-                else None
-            )
-        except (TypeError, ValueError):
-            _cv = None
-        if _sv is not None:
-            totals["extra"]["line_sales_value_sum"] = _sv
-            totals["extra"]["line_sales_value_sum_source"] = "footer_total_as_value"
-        if _cv is not None:
-            totals["extra"]["line_closing_value_sum"] = _cv
-            totals["extra"]["line_closing_value_sum_source"] = "footer_total_as_value"
-        logger.info(
-            "STOCK_LINE_VALUE_SUM_FROM_FOOTER sales=%s closing=%s",
-            totals["extra"].get("line_sales_value_sum"),
-            totals["extra"].get("line_closing_value_sum"),
-        )
 
     # PharmAssist composites often miss page-1 rows: BVal/SVal line sums then
     # under-shoot Opening Val. Never invent footer money from those incomplete
@@ -7345,6 +7333,8 @@ def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
         # Opg/Inw/Out/Clg Values: four-money band + labeled footers.
         "values_four_money_band",
         "labeled_stock_value_footer",
+        # Sales Total Value Recovery Fallback (TOTAL VALUE / GRAND TOTAL / …).
+        "sales_total_value_recovery",
         # PharmAssist Opening Val / Purchase / Sales / Closing Val peel.
         "pharmassist_footer_ocr",
         # Marg ORIC OPENING|RECEIVE|ISSUE|CLOSING printed / Vision TOTAL peel.
@@ -7396,6 +7386,20 @@ def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
         or str(totals.get("extra", {}).get("sales_value_source") or "")
         == "footer_total_as_value"
     )
+    # Qty-only product grids still print a TOTAL VALUE / GRAND TOTAL money
+    # footer. Reject only when the "sales_value" collapsed to the qty sum —
+    # never wipe verified money merely because line value cells are absent.
+    _qty_only_sales_is_qty_sum = (
+        qty_only
+        and sales_total is not None
+        and float(sales_total) > 0
+        and not _total_row_trusted
+        and not _printed_value_footer
+        and not _ostk_qoh_layout
+        and not _keep_oric_footer_sales
+        and sum_sales_qty > 0
+        and abs(float(sales_total) - float(sum_sales_qty)) < 0.51
+    )
     bogus_sales = (
         _is_implausible_money(sales_total, allow_negative=allow_negative_money)
         or _looks_like_concatenated_totals(sales_total, closing_total)
@@ -7404,15 +7408,7 @@ def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
             and sum_sales_value > 0
             and float(sales_total) > max(sum_sales_value * 50, sum_sales_value + 100000)
         )
-        or (
-            qty_only
-            and sales_total is not None
-            and float(sales_total) > 0
-            and not _total_row_trusted
-            and not _printed_value_footer
-            and not _ostk_qoh_layout
-            and not _keep_oric_footer_sales
-        )
+        or _qty_only_sales_is_qty_sum
     )
 
     if bogus_sales and not _keep_oric_footer_sales:
@@ -7505,6 +7501,65 @@ def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
             }
         )
         totals["closing_value"] = None
+
+    # After sanitize rejects: if product rows still have no printed money but
+    # totals.sales_value / closing_value survived, mirror into line_*_value_sum
+    # for UI (never leave 0.0 / null while calculated totals exist).
+    if not _has_line_sales_value or not _has_line_closing_value:
+        try:
+            _sv = (
+                float(totals["sales_value"])
+                if totals.get("sales_value") not in (None, "")
+                else None
+            )
+        except (TypeError, ValueError):
+            _sv = None
+        try:
+            _cv = (
+                float(totals["closing_value"])
+                if totals.get("closing_value") not in (None, "")
+                else None
+            )
+        except (TypeError, ValueError):
+            _cv = None
+        if _footer_money or _sv is not None or _cv is not None:
+            totals["extra"]["product_line_sales_value_sum"] = (
+                sum_sales_value if _has_line_sales_value else None
+            )
+            totals["extra"]["product_line_closing_value_sum"] = (
+                sum_closing_value if _has_line_closing_value else None
+            )
+        if not _has_line_sales_value and _sv is not None:
+            totals["extra"]["line_sales_value_sum"] = _sv
+            totals["extra"]["line_sales_value_sum_source"] = (
+                "footer_total_as_value"
+                if _footer_money
+                else str(
+                    totals["extra"].get("sales_value_source") or "totals_sales_value"
+                )
+            )
+        elif not _has_line_sales_value:
+            totals["extra"]["line_sales_value_sum"] = None
+        if not _has_line_closing_value and _cv is not None:
+            totals["extra"]["line_closing_value_sum"] = _cv
+            totals["extra"]["line_closing_value_sum_source"] = (
+                "footer_total_as_value"
+                if _footer_money
+                else str(
+                    totals["extra"].get("closing_value_source")
+                    or "totals_closing_value"
+                )
+            )
+        elif not _has_line_closing_value:
+            totals["extra"]["line_closing_value_sum"] = None
+        if (not _has_line_sales_value and _sv is not None) or (
+            not _has_line_closing_value and _cv is not None
+        ):
+            logger.info(
+                "STOCK_LINE_VALUE_SUM_FROM_TOTALS sales=%s closing=%s",
+                totals["extra"].get("line_sales_value_sum"),
+                totals["extra"].get("line_closing_value_sum"),
+            )
 
     return _apply_period_from_fallback(result)
 
@@ -9864,9 +9919,13 @@ def extract_sales_statement(file_bytes: bytes, filename: str) -> Dict[str, Any]:
         try:
             from services.stock_native_resolver import (
                 apply_universal_stock_footer_financials,
+                apply_sales_total_value_recovery_fallback,
             )
 
             result = apply_universal_stock_footer_financials(
+                result, file_bytes=file_bytes
+            )
+            result = apply_sales_total_value_recovery_fallback(
                 result, file_bytes=file_bytes
             )
         except Exception:
@@ -9874,15 +9933,23 @@ def extract_sales_statement(file_bytes: bytes, filename: str) -> Dict[str, Any]:
                 "STOCK_FOOTER_FINANCIALS failed file=%s", name
             )
     else:
-        # Non-PDF: still try footer money from any parked OCR/page text.
+        # Non-PDF: footer money from parked OCR/page text only (never feed
+        # XLSX/ZIP bytes to the PDF text reader). Sales Total Value Recovery
+        # still scans Excel sheets via file_bytes.
         try:
             from services.stock_native_resolver import (
                 apply_universal_stock_footer_financials,
+                apply_sales_total_value_recovery_fallback,
             )
 
             result = apply_universal_stock_footer_financials(result)
+            result = apply_sales_total_value_recovery_fallback(
+                result, file_bytes=file_bytes
+            )
         except Exception:
-            pass
+            logger.exception(
+                "STOCK_SALES_TOTAL_VALUE_RECOVERY failed file=%s", name
+            )
     return _group_statements_by_stockist_month(result)
 
 
@@ -17804,6 +17871,9 @@ _XLS_HEADER_ALIASES = {
     "openingval": "opval",
     "opvalue": "opval",
     "opval": "opval",
+    # Stock and Sales Detail Report Excel: Op.Val / Op Val.
+    "op.val": "opval",
+    "op.val.": "opval",
     # Saleable Stock Report: Opn Amt(Q+F).
     "opnamtqf": "opval",
     "opnamt": "opval",
@@ -17828,6 +17898,9 @@ _XLS_HEADER_ALIASES = {
     "p.sch": "ignore",
     "ssch": "ignore",
     "s.sch": "ignore",
+    # Stock and Sales Detail Report Excel: S.Val / S Val (before alnum peel).
+    "s.val": "sval",
+    "s.val.": "sval",
     "qtyopening": "op",
     "quantityopening": "op",
     "stockopening": "op",
@@ -28168,8 +28241,9 @@ def _enrich_stock_statement_header_from_ocr(
         result["stockist_name"] = sn_norm
 
     # Seller: NAME(CITY) on Stock and Sales Detail — fill name + city address.
+    # Capture to end-of-line / From / Stock (never non-greedy min-3 "HAR").
     m_seller = re.search(
-        r"Seller\s*:\s*([A-Z0-9][A-Z0-9 .,&'\-/]{2,80}?)(?:\(([^)]{2,40})\))?",
+        r"Seller\s*:\s*([^\n(]+?)(?:\(([^)\n]{2,40})\))?(?=\s*(?:From\b|Stock\b|Report\b|Company\b|$|\n))",
         blob,
         re.I,
     )
@@ -28182,7 +28256,7 @@ def _enrich_stock_statement_header_from_ocr(
             sn_now = str(result.get("stockist_name") or "").strip()
             sn_weak = (
                 not sn_now
-                or len(sn_now) < 6
+                or len(sn_now) < 8
                 or vision_looks_like_company
                 or vision_looks_like_title
                 or vision_looks_like_headers
@@ -30534,10 +30608,8 @@ def _prefer_pack_op_pur_bal_stock_sale(
             is_stock_vision_locked,
         )
 
-        if _looks_like_stock_sales_detail_report_title(detail_chrome):
-            return current
         # Sideways EXIF often blanks sample; re-peek upright header before pack.
-        if not _looks_like_stock_sales_detail_report_title(detail_chrome):
+        if not _has_stock_sales_op_qty_val_headers(detail_chrome):
             try:
                 detail_chrome = "\n".join(
                     t
@@ -30561,6 +30633,7 @@ def _prefer_pack_op_pur_bal_stock_sale(
                 )
                 return pharm
             return current
+        # Detail Op.Qty|Op.Val — never return current early (that skipped Vision).
         if _looks_like_stock_sales_detail_report_title(
             detail_chrome
         ) or _has_stock_sales_op_qty_val_headers(detail_chrome):
@@ -57059,7 +57132,13 @@ def _apply_parsed_sales_json(
         item["closing_qty"] = _to_float(raw.get("closing_qty"))
         item["closing_value"] = _to_float(raw.get("closing_value"))
         if isinstance(raw.get("extra"), dict):
-            item["extra"] = raw["extra"]
+            item["extra"] = dict(raw["extra"])
+        # Detail Sl.No — preserve for row-count vs max Sl.No alignment gate.
+        sl_no = raw.get("sl_no")
+        if sl_no in (None, "") and isinstance(item.get("extra"), dict):
+            sl_no = item["extra"].get("sl_no")
+        if sl_no not in (None, ""):
+            item.setdefault("extra", {})["sl_no"] = sl_no
         opening_value = raw.get("opening_value")
         if opening_value in (None, "") and isinstance(item.get("extra"), dict):
             opening_value = item["extra"].get("opening_value")
@@ -58616,10 +58695,14 @@ STOCK REPORT with Op.Qnt/Op.Value/Pur.Qnt/Pur.Value/Sl.Qnt/Sl.Value/Cl.Qnt/Cl.Va
 It is NOT a Product Stock Report qty-only sheet, NOT ZANDRA Stock and Sale, and NOT an OpBal sheet.
 If headers are Op.Qty|Op.Val|P.Qty|P.Sch|P.Val|S.Qty|…|Cl.Qty|Cl.Val (Stock and
 Sales Detail Report), return line_items=[] — that layout is a different reader.
+If the title is "Stock and Sales Detail Report" (Seller: / Report Date), also
+return line_items=[] — Op.Qty/P.Qty/S.Qty/Cl.Qty belongs to that reader.
 
 Columns LEFT TO RIGHT. A dash or blank cell is 0. NEVER shift a later number left.
 NEVER copy OPENING QTY/VALUE into RECEIPT or CLOSING. Map each printed cell
 only under its own header.
+Op.Qty/Op.Val → opening only. P.Qty/P.Val → receipts only. S.Qty/S.Val → sales
+only. Cl.Qty/Cl.Val → closing only. Never park Op into receipts or closing.
 
 1 ITEM DESCRIPTION / Particular -> product_name
 2 pack / unit (75G, 60, Pcs, 1 PIC, 1 TUB) -> packing
@@ -58673,6 +58756,8 @@ Rules:
   do not swap them because DUMP matches CLOSING.
 - Period range like 01-10-2026 - 31-10-2026 → period_to day is 31, never 11.
 - Skip the HIMALAYA ZEAL banner row and the TOTAL footer row as products.
+- When several TOTAL / GRAND TOTAL bands print, use ONLY the last GRAND TOTAL
+  (else the last TOTAL) for totals.sales_value / totals.closing_value.
 - Example: AACTARIL SOAP 75G opening 37 / 2648.83, receipt 0 / 0, issue 0 / 0, closing 37 / 2648.83.
 - Example: ABANA TABS 60 opening 63 / 9361.80, receipt 200 / value, issue 30 / 4700.06, closing 233 / 34623.80.
 - Example: BLEMINOR … Op.Qnt 90 / Op.Value 13195, Sl.Qnt 5 / Sl.Value 824.50, Cl.Qnt 85 / Cl.Value 12370.50.
@@ -59369,6 +59454,9 @@ def _extract_ssa_qty_value_vision(
     result = _apply_ssa_qty_value_fields(result, parsed)
     if _ssa_qty_value_opening_count(result) == 0:
         return None
+    # Op→P/Cl / Sl.No / Total mismatch: not a usable SSA qty/value lock.
+    if not _ssa_qty_value_result_usable(result):
+        return None
     return result
 
 
@@ -59559,12 +59647,41 @@ def _crop_bright_spreadsheet_region(file_bytes: bytes) -> Optional[bytes]:
     return buf.getvalue()
 
 
+def _ssa_qty_value_alignment_rejects(result: Optional[Dict[str, Any]]) -> bool:
+    """True when Op→P/Cl majority misalignment makes SSA qty/value unusable."""
+    if not isinstance(result, dict):
+        return False
+    try:
+        from services.stock_direct_vision import _detail_op_qty_val_alignment_signals
+
+        align = _detail_op_qty_val_alignment_signals(result)
+    except Exception:
+        return False
+    soft = set(align.get("soft_reasons") or [])
+    return bool(
+        soft
+        & {
+            "op_copied_into_receipts_majority",
+            "op_copied_into_closing_majority",
+            "sl_no_row_count_mismatch",
+            "header_total_mismatch",
+        }
+    )
+
+
 def _ssa_qty_value_result_usable(result: Optional[Dict[str, Any]]) -> bool:
     """True when vision returned a usable qty/value grid (values and/or qtys)."""
     if not isinstance(result, dict):
         return False
     items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
     if len(items) < 1:
+        return False
+    # Detail-style Op→receipts/closing copies must not lock as SSA qty/value.
+    if _ssa_qty_value_alignment_rejects(result):
+        logger.info(
+            "SSA_QTY_VALUE_ALIGNMENT_REJECT rows=%s",
+            len(items),
+        )
         return False
     if _ssa_qty_value_opening_count(result) > 0:
         return True
@@ -78088,6 +78205,63 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                 type(_pharm_vt_exc).__name__,
             )
             _skip_vt_for_pharmassist = False
+        # Stock and Sales Detail Op.Qty|Op.Val BEFORE vision_table.
+        # VT drops ~10 SKUs, truncates Seller to "HAR", and renames last row
+        # to --Total-->> while leaving the printed Total money blank.
+        _skip_vt_for_detail = False
+        try:
+            from services.stock_direct_vision import (
+                _has_stock_sales_op_qty_val_headers as _detail_hdrs_vt,
+                _looks_like_stock_sales_detail_report_title as _detail_title_vt,
+                _layout_header_text as _detail_layout_hdr,
+                extract_stock_sales_op_qty_val_direct_vision,
+                is_stock_vision_locked,
+            )
+
+            _detail_peek = _op_stk_peek or ""
+            if not _detail_hdrs_vt(_detail_peek) and not _detail_title_vt(
+                _detail_peek
+            ):
+                try:
+                    _hdr_extra = _detail_layout_hdr(file_bytes) or ""
+                except Exception:
+                    _hdr_extra = ""
+                if _hdr_extra:
+                    _detail_peek = f"{_detail_peek}\n{_hdr_extra}".strip()
+            _skip_vt_for_detail = bool(
+                _detail_title_vt(_detail_peek) or _detail_hdrs_vt(_detail_peek)
+            )
+            if _skip_vt_for_detail:
+                logger.info(
+                    "[SalesStatement] file=%s VISION_TABLE skipped "
+                    "reason=stock_sales_detail_op_qty_val",
+                    filename,
+                )
+                detail_before_vt = extract_stock_sales_op_qty_val_direct_vision(
+                    file_bytes,
+                    filename,
+                    ext,
+                    reason="stock_sales_detail_before_vision_table",
+                )
+                if (
+                    detail_before_vt
+                    and detail_before_vt.get("line_items")
+                    and is_stock_vision_locked(detail_before_vt)
+                ):
+                    logger.info(
+                        "[STOCK_EXTRACTION_PATH] stage=stock_sales_detail_before_vt "
+                        "file=%s line_items=%s",
+                        filename,
+                        len(detail_before_vt.get("line_items") or []),
+                    )
+                    return detail_before_vt
+        except Exception as _detail_vt_exc:
+            logger.info(
+                "[SalesStatement] file=%s detail-before-VT failed: %s",
+                filename,
+                type(_detail_vt_exc).__name__,
+            )
+            _skip_vt_for_detail = False
         if _skip_vt_for_op_stk:
             logger.info(
                 "[SalesStatement] file=%s VISION_TABLE skipped reason=op_stk_rcpts_grid",
@@ -79155,6 +79329,7 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
             and not _skip_vt_for_op_stk
             and not _skip_vt_for_medica
             and not _skip_vt_for_pharmassist
+            and not _skip_vt_for_detail
             and (not _ssa_sheets_qty_value or _force_vt_ssa_rescue)
             and (
                 not _ssa_portrait_noise_early
