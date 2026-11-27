@@ -6103,6 +6103,7 @@ def apply_sales_total_value_recovery_fallback(
 
     # Qty-only OPENING|RECEIPT|ISSUE|CLOSING: printed TOTAL digits stay in qty
     # columns — unless a value-scale TOTAL was already remapped to money.
+    # Derived Opening_bal|Primary|Closing sales (Mrp×qty) must keep totals.
     _method = str(extra.get("extraction_method") or "")
     _layout = str(extra.get("layout") or "")
     _value_scale_footer = (
@@ -6110,7 +6111,9 @@ def apply_sales_total_value_recovery_fallback(
         or str(extra.get("total_value_row_source") or "") == "footer_total_as_value"
         or bool(extra.get("oric_footer_qty_remapped"))
     )
-    if (
+    if extra.get("derived_sales"):
+        pass
+    elif (
         not _value_scale_footer
         and (
             extra.get("qty_only")
@@ -7101,6 +7104,15 @@ def result_looks_like_opbal_qty_only(result: Dict[str, Any]) -> bool:
     extra = totals.get("extra") if isinstance(totals.get("extra"), dict) else {}
     layout = str(extra.get("layout") or "")
     method = str(extra.get("extraction_method") or "")
+    # Opening_bal_qty|Primary_qty|Closing_bal_qty (+ Mrp/Secondaryrate) is a
+    # different family — may carry derived Mrp×sales_qty. Never stamp as Op.Bal.
+    if layout == "zl_opening_primary_closing" or method in {
+        "zl_secondary_xlsx",
+        "zl_opening_bal_pdf",
+        "zl_opening_bal_sheet_vision",
+        "zl_opening_bal_scan_vision",
+    } or extra.get("derived_sales"):
+        return False
     if layout in {"opbal_issue_closing", "opening_receive_issue_closing"}:
         return True
     if "opbal" in method or method.startswith("swilerp"):
