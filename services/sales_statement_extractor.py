@@ -17565,7 +17565,7 @@ def _find_marg_erp_xls_header(
                 roles.setdefault("opening_qty", ci)
             elif lab == "OPENING VALUE":
                 roles["opening_value"] = ci
-            elif lab in {"PURCHASE QUANTITY", "PURCHASE QTY", "PURCHASE"}:
+            elif lab in {"PURCHASE QUANTITY", "PURCHASE QTY", "PURCHASE", "PRIMARY"}:
                 roles["purchase_qty"] = ci
             elif "SALE RETURN" in lab:
                 roles["sale_return_qty"] = ci
@@ -17575,7 +17575,7 @@ def _find_marg_erp_xls_header(
                 roles["receive_qty"] = ci
             elif lab == "RECEIVE VALUE":
                 roles["receive_value"] = ci
-            elif lab in {"SALE QUANTITY", "SALE QTY", "SALES QUANTITY", "SALES QTY"}:
+            elif lab in {"SALE QUANTITY", "SALE QTY", "SALES QUANTITY", "SALES QTY", "SALE", "SALES"}:
                 roles["sales_qty"] = ci
             elif lab in {"P/R QUANTITY", "P/R QTY", "PR QUANTITY", "PR QTY"}:
                 roles["pr_qty"] = ci
@@ -53957,6 +53957,35 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
             doc, file_bytes, filename, zoom=zoom
         )
         if early_vision and early_vision.get("line_items"):
+            # Quality gate: check for column-mapping issues before accepting
+            ev_remap_reason = _free_cols_needs_remap(early_vision)
+            if ev_remap_reason:
+                logger.info(
+                    "GEMINI_COLUMN_REMAP_TRIGGER_EARLY_VISION file=%s "
+                    "reason=%s items=%s",
+                    filename, ev_remap_reason,
+                    len(early_vision["line_items"]),
+                )
+                try:
+                    ev_remapped = _gemini_column_remap_stock_pdf(
+                        file_bytes, filename,
+                    )
+                    if (
+                        ev_remapped
+                        and ev_remapped.get("line_items")
+                        and not _free_cols_needs_remap(ev_remapped)
+                    ):
+                        for key in (
+                            "stockist_name", "stockist_address",
+                            "company_name", "period_from", "period_to",
+                            "report_title",
+                        ):
+                            if early_vision.get(key) and not ev_remapped.get(key):
+                                ev_remapped[key] = early_vision[key]
+                        ev_remapped["totals"]["extra"]["statement_count"] = 1
+                        return ev_remapped
+                except Exception:
+                    pass
             early_vision["totals"]["extra"]["statement_count"] = 1
             return early_vision
 
@@ -54002,6 +54031,49 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
         statements = [
             _extract_statement_from_pdf_group(group, filename) for group in groups
         ]
+
+        # Quality gate on OCR/image results: if any statement has column-
+        # mapping issues AND the PDF has word boxes, try Gemini remap.
+        for si, stmt in enumerate(statements):
+            remap_reason = _free_cols_needs_remap(stmt)
+            if not remap_reason:
+                continue
+            logger.info(
+                "GEMINI_COLUMN_REMAP_TRIGGER_OCR file=%s stmt=%s "
+                "reason=%s items=%s",
+                filename, si, remap_reason,
+                len(stmt.get("line_items") or []),
+            )
+            try:
+                remapped = _gemini_column_remap_stock_pdf(
+                    file_bytes, filename,
+                )
+                if (
+                    remapped
+                    and remapped.get("line_items")
+                    and not _free_cols_needs_remap(remapped)
+                ):
+                    logger.info(
+                        "GEMINI_COLUMN_REMAP_ACCEPTED_OCR file=%s "
+                        "stmt=%s reason=%s items=%s",
+                        filename, si, remap_reason,
+                        len(remapped["line_items"]),
+                    )
+                    # Preserve metadata from original OCR result
+                    for key in (
+                        "stockist_name", "stockist_address",
+                        "company_name", "period_from", "period_to",
+                        "report_title",
+                    ):
+                        if stmt.get(key) and not remapped.get(key):
+                            remapped[key] = stmt[key]
+                    statements[si] = remapped
+            except Exception as remap_exc:
+                logger.info(
+                    "GEMINI_COLUMN_REMAP_OCR file=%s stmt=%s "
+                    "status=fallback_failed error=%s",
+                    filename, si, type(remap_exc).__name__,
+                )
 
         # Single stockist → keep flat unified schema (backward compatible)
         if len(statements) == 1:
@@ -61877,6 +61949,28 @@ def _ssa_qty_value_result_usable(result: Optional[Dict[str, Any]]) -> bool:
         logger.info(
             "SSA_QTY_VALUE_ALIGNMENT_REJECT rows=%s",
             len(items),
+        )
+        return False
+    # Reconciliation sanity: opening + receipts - sales should ≈ closing.
+    # When most rows with actual data fail reconciliation, Gemini likely
+    # misaligned columns (e.g. reading a qty-only grid as qty+value).
+    recon_total = 0
+    recon_ok = 0
+    for it in items:
+        op = _to_float(it.get("opening_qty"))
+        rec = _to_float(it.get("receipts_qty"))
+        sl = _to_float(it.get("sales_qty"))
+        cl = _to_float(it.get("closing_qty"))
+        if abs(op) + abs(rec) + abs(sl) + abs(cl) < 0.01:
+            continue
+        recon_total += 1
+        expected = op + rec - sl
+        if abs(expected - cl) < 2.0:
+            recon_ok += 1
+    if recon_total >= 3 and recon_ok / recon_total < 0.3:
+        logger.info(
+            "SSA_QTY_VALUE_RECON_REJECT recon_ok=%s/%s — columns likely misaligned",
+            recon_ok, recon_total,
         )
         return False
     # SALE PURCHASES qty grid misread as OPENING/RECEIPT/ISSUE (TOTAL→sales).
@@ -79007,6 +79101,27 @@ def _maybe_early_vision_for_image(
                 len(ssa_early.get("line_items") or []),
             )
             return ssa_early, True
+        # SSA qty/value was rejected (likely qty-only format or misaligned).
+        # Try the qty-only handler before falling through to generic vision.
+        if ssa_early is None:
+            try:
+                ssa_qty_only = _extract_ssa_oric_qty_only_vision(
+                    file_bytes, filename, ext,
+                )
+                if ssa_qty_only and ssa_qty_only.get("line_items"):
+                    extra = ssa_qty_only.setdefault("totals", {}).setdefault("extra", {})
+                    extra["early_vision_reason"] = "ssa_qty_only_after_qtyvalue_reject"
+                    logger.info(
+                        "[SalesStatement] file=%s decision=SSA_QTY_ONLY_FALLBACK rows=%s",
+                        filename,
+                        len(ssa_qty_only.get("line_items") or []),
+                    )
+                    return ssa_qty_only, True
+            except Exception as exc:
+                logger.info(
+                    "[SalesStatement] file=%s SSA qty-only fallback failed: %s",
+                    filename, exc,
+                )
 
     # Poor OCR → skip the long format-probe cascade; try paid Vision early.
     try:
