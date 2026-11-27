@@ -4771,7 +4771,6 @@ def _extract_ssa_oric_qty_only_vision(
     extra = result.setdefault("totals", {}).setdefault("extra", {})
     extra["extraction_method"] = "ssa_oric_qty_only_vision"
     extra["layout"] = "opening_receipt_issue_closing_qty"
-    extra["qty_only"] = True
     extra["numeric_source"] = "gemini_vision"
     extra["oric_vision_bands"] = len(payloads)
     if printed and _oric_qty_keep_printed_totals_on_mismatch_enabled():
@@ -4788,13 +4787,23 @@ def _extract_ssa_oric_qty_only_vision(
             **printed,
         }
         reject = _footer_qty_totals_implausible(parsed_footer, line_sums)
-        _stamp_oric_qty_printed_totals_with_mismatch(
-            result,
-            parsed_footer,
-            line_sums,
-            mismatch_reason=reject,
-        )
+        if reject and _oric_footer_looks_value_scale(parsed_footer, line_sums):
+            _apply_oric_value_scale_footer_totals(
+                result,
+                parsed_footer,
+                line_sums,
+                reject_reason=reject,
+            )
+        else:
+            extra["qty_only"] = True
+            _stamp_oric_qty_printed_totals_with_mismatch(
+                result,
+                parsed_footer,
+                line_sums,
+                mismatch_reason=reject,
+            )
     else:
+        extra["qty_only"] = True
         result["totals"]["opening_qty"] = sum_open
         result["totals"]["receipts_qty"] = sum_rec
         result["totals"]["sales_qty"] = sum_sales
@@ -5048,19 +5057,29 @@ def _extract_ssa_oric_qty_only_photo(
                 "closing_qty": tot.get("closing_qty"),
             }
             reject = _footer_qty_totals_implausible(parsed_footer, line_sums)
-            _stamp_oric_qty_printed_totals_with_mismatch(
-                result,
-                parsed_footer,
-                line_sums,
-                mismatch_reason=reject,
-            )
+            if reject and _oric_footer_looks_value_scale(parsed_footer, line_sums):
+                _apply_oric_value_scale_footer_totals(
+                    result,
+                    parsed_footer,
+                    line_sums,
+                    reject_reason=reject,
+                )
+            else:
+                _stamp_oric_qty_printed_totals_with_mismatch(
+                    result,
+                    parsed_footer,
+                    line_sums,
+                    mismatch_reason=reject,
+                )
     except Exception:
         pass
     result["source_format"] = source_fmt
     extra = result.setdefault("totals", {}).setdefault("extra", {})
     extra["extraction_method"] = "ssa_oric_qty_only_ocr"
     extra["layout"] = "opening_receipt_issue_closing_qty"
-    extra["qty_only"] = True
+    # Keep qty_only=False when value-scale TOTAL was remapped to money fields.
+    if not extra.get("has_printed_sales_value"):
+        extra["qty_only"] = True
     if parsed_variants:
         extra["oric_ocr_passes"] = [label for label, _ in parsed_variants]
     logger.info(
@@ -7093,12 +7112,18 @@ def _parse_statement_total_row(text: str) -> Optional[Dict[str, Any]]:
 
 
 def _reject_implausible_footer_qty_totals_enabled() -> bool:
-    """STOCK_REJECT_IMPLAUSIBLE_FOOTER_QTY_TOTALS — default OFF until enabled."""
-    return os.getenv("STOCK_REJECT_IMPLAUSIBLE_FOOTER_QTY_TOTALS", "").strip().lower() in {
-        "1",
-        "true",
-        "yes",
-        "on",
+    """STOCK_REJECT_IMPLAUSIBLE_FOOTER_QTY_TOTALS — default ON.
+
+    Kill switch: false. Value-scale TOTAL footers under OPENING|RECEIPT|ISSUE|
+    CLOSING must not stay as qty totals.
+    """
+    return os.getenv(
+        "STOCK_REJECT_IMPLAUSIBLE_FOOTER_QTY_TOTALS", "true"
+    ).strip().lower() not in {
+        "0",
+        "false",
+        "no",
+        "off",
     }
 
 
@@ -7331,6 +7356,128 @@ def _apply_oric_footer_to_universal_totals(
     return applied
 
 
+def _oric_footer_money_scale(
+    footer: Any, line_qty: float
+) -> Optional[float]:
+    """Return footer as money when it is far above the matching line qty sum."""
+    if footer is None:
+        return None
+    try:
+        f = float(footer)
+    except (TypeError, ValueError):
+        return None
+    if abs(f) < 1.0:
+        return None
+    if line_qty > 0 and abs(f) <= max(abs(line_qty) * 5.0, abs(line_qty) + 50.0):
+        return None
+    # Empty/near-zero lines still reject huge footer digits as qty.
+    if line_qty <= 0 and abs(f) < 1000.0:
+        return None
+    return f
+
+
+def _oric_footer_looks_value_scale(
+    parsed: Dict[str, Any], line_sums: Dict[str, float]
+) -> bool:
+    """True when TOTAL digits under ORIC headers are money-scale, not qty."""
+    if not isinstance(parsed, dict) or not isinstance(line_sums, dict):
+        return False
+    sales_money = _oric_footer_money_scale(
+        parsed.get("sales_qty"), float(line_sums.get("sales_qty") or 0)
+    )
+    closing_money = _oric_footer_money_scale(
+        parsed.get("closing_qty"), float(line_sums.get("closing_qty") or 0)
+    )
+    opening_money = _oric_footer_money_scale(
+        parsed.get("opening_qty"), float(line_sums.get("opening_qty") or 0)
+    )
+    return sales_money is not None or closing_money is not None or (
+        opening_money is not None
+        and (
+            _oric_footer_money_scale(
+                parsed.get("receipts_qty"), float(line_sums.get("receipts_qty") or 0)
+            )
+            is not None
+        )
+    )
+
+
+def _apply_oric_value_scale_footer_totals(
+    result: Dict[str, Any],
+    parsed: Dict[str, Any],
+    line_sums: Dict[str, float],
+    *,
+    reject_reason: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Universal ORIC fix: line qty sums + printed TOTAL → money fields.
+
+    Never keeps value-scale TOTAL digits as opening_qty/sales_qty/closing_qty.
+    Never invents money — only remaps printed footer digits.
+    """
+    totals = result.setdefault(
+        "totals", {"sales_value": None, "closing_value": None, "extra": {}}
+    )
+    if not isinstance(totals.get("extra"), dict):
+        totals["extra"] = {}
+    for key, value in line_sums.items():
+        totals[key] = value
+    totals["extra"]["total_row_raw"] = parsed.get("total_row_raw")
+    totals["extra"]["total_row_numbers"] = parsed.get("total_row_numbers")
+    totals["extra"]["total_row_format"] = parsed.get("total_row_format")
+    totals["extra"]["total_row_labels"] = parsed.get("total_row_labels")
+    totals["extra"]["total_row_source"] = "line_item_sum"
+    totals["extra"]["line_item_qty_sums"] = dict(line_sums)
+    totals["extra"]["total_row_rejected_footer"] = {
+        k: parsed.get(k)
+        for k in ("opening_qty", "receipts_qty", "sales_qty", "closing_qty")
+        if k in parsed
+    }
+    promoted = _promote_rejected_footer_qty_as_values(totals, parsed, line_sums)
+    if promoted:
+        totals["extra"].pop("total_row_rejected", None)
+        totals["extra"]["oric_footer_qty_remapped"] = (
+            reject_reason or "value_scale_footer"
+        )
+        totals["extra"]["product_rows_qty_only"] = True
+        totals["extra"]["qty_only"] = False
+        totals["extra"]["has_printed_sales_value"] = True
+        totals["extra"]["total_value_row_source"] = "footer_total_as_value"
+        if totals.get("sales_value") in (None, ""):
+            try:
+                issue_fallback = float(
+                    (totals["extra"].get("total_row_rejected_footer") or {}).get(
+                        "sales_qty"
+                    )
+                )
+            except (TypeError, ValueError):
+                issue_fallback = None
+            if issue_fallback is not None and abs(issue_fallback) >= 1.0:
+                totals["sales_value"] = issue_fallback
+                totals["extra"]["sales_value_source"] = "footer_total_as_value"
+        logger.info(
+            "STOCK_ORIC_VALUE_SCALE_FOOTER reason=%s sales_value=%s "
+            "closing_value=%s line_sales_qty=%s",
+            reject_reason or "value_scale_footer",
+            totals.get("sales_value"),
+            totals.get("closing_value"),
+            line_sums.get("sales_qty"),
+        )
+    else:
+        if not totals["extra"].get("has_printed_sales_value"):
+            totals["extra"]["total_row_rejected"] = (
+                reject_reason or "value_scale_footer"
+            )
+            totals["sales_value"] = None
+            totals["closing_value"] = None
+        logger.info(
+            "STOCK_ORIC_VALUE_SCALE_FOOTER reason=%s promoted=false "
+            "line_sales_qty=%s",
+            reject_reason or "value_scale_footer",
+            line_sums.get("sales_qty"),
+        )
+    return result
+
+
 def _promote_rejected_footer_qty_as_values(
     totals: Dict[str, Any],
     parsed: Dict[str, Any],
@@ -7357,29 +7504,16 @@ def _promote_rejected_footer_qty_as_values(
             totals["closing_value"] = None
         return False
 
-    def _money_scale(footer: Any, line_qty: float) -> Optional[float]:
-        if footer is None:
-            return None
-        try:
-            f = float(footer)
-        except (TypeError, ValueError):
-            return None
-        if abs(f) < 1.0:
-            return None
-        if line_qty > 0 and abs(f) <= max(abs(line_qty) * 5.0, abs(line_qty) + 50.0):
-            return None
-        return f
-
-    sales_money = _money_scale(
+    sales_money = _oric_footer_money_scale(
         parsed.get("sales_qty"), float(line_sums.get("sales_qty") or 0)
     )
-    closing_money = _money_scale(
+    closing_money = _oric_footer_money_scale(
         parsed.get("closing_qty"), float(line_sums.get("closing_qty") or 0)
     )
-    opening_money = _money_scale(
+    opening_money = _oric_footer_money_scale(
         parsed.get("opening_qty"), float(line_sums.get("opening_qty") or 0)
     )
-    receipts_money = _money_scale(
+    receipts_money = _oric_footer_money_scale(
         parsed.get("receipts_qty"), float(line_sums.get("receipts_qty") or 0)
     )
     if sales_money is None and closing_money is None:
@@ -7450,7 +7584,9 @@ def _apply_total_row_to_result(result: Dict[str, Any], text: str) -> Dict[str, A
         and oric_qty_fmt
         and qty_only_result
         and _oric_qty_keep_printed_totals_on_mismatch_enabled()
+        and not _oric_footer_looks_value_scale(parsed, line_sums)
     ):
+        # Near-scale qty mismatch (partial page): keep printed qty + flag.
         return _stamp_oric_qty_printed_totals_with_mismatch(
             result,
             parsed,
@@ -7459,72 +7595,13 @@ def _apply_total_row_to_result(result: Dict[str, Any], text: str) -> Dict[str, A
         )
 
     if reject_reason:
-        # Keep OCR debug fields; replace qty totals with line sums.
-        for key, value in line_sums.items():
-            totals[key] = value
-        totals["extra"]["total_row_raw"] = parsed.get("total_row_raw")
-        totals["extra"]["total_row_numbers"] = parsed.get("total_row_numbers")
-        totals["extra"]["total_row_format"] = parsed.get("total_row_format")
-        totals["extra"]["total_row_labels"] = parsed.get("total_row_labels")
-        totals["extra"]["total_row_source"] = "line_item_sum"
-        totals["extra"]["total_row_rejected_footer"] = {
-            k: parsed.get(k)
-            for k in (
-                "opening_qty",
-                "receipts_qty",
-                "sales_qty",
-                "closing_qty",
-            )
-            if k in parsed
-        }
-        # Footer digits were VALUE-scale (sale total / closing total), not qty.
-        # Park them on universal totals.sales_value / closing_value so this
-        # OPENING|RECEIPT|ISSUE|CLOSING money footer is not discarded.
-        promoted = _promote_rejected_footer_qty_as_values(
-            totals, parsed, line_sums
+        # Value-scale / implausible footer: line qty sums + money remap.
+        return _apply_oric_value_scale_footer_totals(
+            result,
+            parsed,
+            line_sums,
+            reject_reason=reject_reason,
         )
-        if promoted:
-            # Success path for UI: keep ISSUE sales total on totals.sales_value.
-            totals["extra"].pop("total_row_rejected", None)
-            totals["extra"]["oric_footer_qty_remapped"] = reject_reason
-            totals["extra"]["product_rows_qty_only"] = True
-            totals["extra"]["qty_only"] = False
-            totals["extra"]["has_printed_sales_value"] = True
-            totals["extra"]["total_value_row_source"] = "footer_total_as_value"
-            # Never leave sales total blank after a successful ORIC remap.
-            if totals.get("sales_value") in (None, ""):
-                try:
-                    issue_fallback = float(
-                        (totals["extra"].get("total_row_rejected_footer") or {}).get(
-                            "sales_qty"
-                        )
-                    )
-                except (TypeError, ValueError):
-                    issue_fallback = None
-                if issue_fallback is not None and abs(issue_fallback) >= 1.0:
-                    totals["sales_value"] = issue_fallback
-                    totals["extra"]["sales_value_source"] = "footer_total_as_value"
-        else:
-            # Only mark rejected when we did not already map a printed sale total.
-            if not totals["extra"].get("has_printed_sales_value"):
-                totals["extra"]["total_row_rejected"] = reject_reason
-                if totals.get("sales_value") in (None, ""):
-                    totals["sales_value"] = None
-                if totals.get("closing_value") in (None, ""):
-                    totals["closing_value"] = None
-        logger.info(
-            "STOCK_FOOTER_QTY_TOTALS_REJECTED reason=%s method=%s "
-            "footer_closing=%s line_closing=%s footer_opening=%s line_opening=%s "
-            "promoted_values=%s",
-            reject_reason,
-            portrait_method or None,
-            parsed.get("closing_qty"),
-            line_sums.get("closing_qty"),
-            parsed.get("opening_qty"),
-            line_sums.get("opening_qty"),
-            promoted,
-        )
-        return result
 
     # Authoritative qty totals from footer row (do not treat as money)
     for key in (
@@ -20308,6 +20385,115 @@ def _xls_delimited_text_rows(file_bytes: bytes) -> Optional[List[List[Any]]]:
     return rows or None
 
 
+# OOXML allows font family 0–14. Some ERP exports write 18 (Windows pitch
+# family) and openpyxl aborts the whole workbook before any cell is read.
+_OOXML_MINIMAL_STYLESHEET = (
+    b'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    b'<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+    b'<fonts count="1"><font><sz val="11"/><name val="Calibri"/>'
+    b'<family val="2"/></font></fonts>'
+    b'<fills count="2"><fill><patternFill patternType="none"/></fill>'
+    b'<fill><patternFill patternType="gray125"/></fill></fills>'
+    b'<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>'
+    b'<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
+    b'<cellXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/></cellXfs>'
+    b'<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>'
+    b"</styleSheet>"
+)
+
+
+def _ooxml_clamp_font_family(styles_xml: bytes) -> bytes:
+    """Clamp out-of-range <family val="N"/> so openpyxl can read the sheet."""
+    text = styles_xml.decode("utf-8", errors="replace")
+
+    def _clamp(match: re.Match) -> str:
+        try:
+            n = int(match.group(2))
+        except (TypeError, ValueError):
+            return match.group(0)
+        if 0 <= n <= 14:
+            return match.group(0)
+        return match.group(1) + "2" + match.group(3)
+
+    text = re.sub(
+        r'(<(?:[\w]+:)?family\b[^>]*\bval=")(-?\d+)(")',
+        _clamp,
+        text,
+        flags=re.I,
+    )
+    text = re.sub(
+        r"(<(?:[\w]+:)?family\b[^>]*\bval=')(-?\d+)(')",
+        _clamp,
+        text,
+        flags=re.I,
+    )
+    return text.encode("utf-8")
+
+
+def _ooxml_bytes_with_styles(file_bytes: bytes, styles: bytes) -> bytes:
+    import zipfile
+
+    src = zipfile.ZipFile(io.BytesIO(file_bytes))
+    out = io.BytesIO()
+    with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED) as dst:
+        replaced = False
+        for item in src.infolist():
+            name = item.filename.replace("\\", "/")
+            if name == "xl/styles.xml":
+                dst.writestr(name, styles)
+                replaced = True
+            else:
+                dst.writestr(name, src.read(item.filename))
+        if not replaced:
+            dst.writestr("xl/styles.xml", styles)
+    return out.getvalue()
+
+
+def _load_ooxml_workbook(file_bytes: bytes, **kwargs: Any):
+    """openpyxl load with a stylesheet fallback.
+
+    Valid workbooks load as before. When styles.xml is rejected (font family
+    outside 0–14, or other invalid style XML), clamp the family and retry.
+    If that still fails, swap in a minimal stylesheet so cell values still load.
+    """
+    from openpyxl import load_workbook
+
+    def _open(payload: bytes):
+        return load_workbook(io.BytesIO(payload), **kwargs)
+
+    try:
+        return _open(file_bytes)
+    except Exception as exc:
+        msg = str(exc).lower()
+        if "stylesheet" not in msg and "max value is" not in msg:
+            raise
+        logger.info(
+            "OOXML_STYLESHEET_FALLBACK action=clamp_font_family error=%s",
+            type(exc).__name__,
+        )
+        try:
+            import zipfile
+
+            raw_styles = zipfile.ZipFile(io.BytesIO(file_bytes)).read("xl/styles.xml")
+            repaired = _ooxml_bytes_with_styles(
+                file_bytes, _ooxml_clamp_font_family(raw_styles)
+            )
+        except Exception:
+            logger.info("OOXML_STYLESHEET_FALLBACK action=minimal_styles reason=no_styles")
+            repaired = None
+        if repaired is not None:
+            try:
+                return _open(repaired)
+            except Exception as exc2:
+                logger.info(
+                    "OOXML_STYLESHEET_FALLBACK action=minimal_styles error=%s",
+                    type(exc2).__name__,
+                )
+        else:
+            logger.info("OOXML_STYLESHEET_FALLBACK action=minimal_styles")
+        return _open(_ooxml_bytes_with_styles(file_bytes, _OOXML_MINIMAL_STYLESHEET))
+
+
 def _xls_iter_sheets(
     file_bytes: bytes, ext: str
 ) -> List[Tuple[str, List[List[Any]], List[List[Optional[str]]], bool]]:
@@ -20353,10 +20539,8 @@ def _xls_iter_sheets(
             sheets.append((sh.name or f"Sheet{idx + 1}", rows, formats, hidden))
         return sheets
 
-    from openpyxl import load_workbook
-
-    wb = load_workbook(io.BytesIO(file_bytes), data_only=True, read_only=False)
-    formulas = load_workbook(io.BytesIO(file_bytes), data_only=False, read_only=False)
+    wb = _load_ooxml_workbook(file_bytes, data_only=True, read_only=False)
+    formulas = _load_ooxml_workbook(file_bytes, data_only=False, read_only=False)
     try:
         for sh, sh_formula in zip(wb.worksheets, formulas.worksheets):
             rows = []
@@ -23065,9 +23249,7 @@ def _parse_xls(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
 
     if ext != ".xls":
         try:
-            from openpyxl import load_workbook
-
-            pod_wb = load_workbook(io.BytesIO(file_bytes), data_only=True, read_only=True)
+            pod_wb = _load_ooxml_workbook(file_bytes, data_only=True, read_only=True)
             try:
                 pod_result = _parse_pod_hospital_sales_xlsx(pod_wb, filename)
             finally:
@@ -24731,6 +24913,250 @@ _ITEM_PACK_PRETURN_SALE_QTY = (
     ("closing_qty", "closing"),
 )
 
+# ITEM | PACK | SALE | CLOSING — qty-only; money only on TOTAL VALUE footer.
+_ITEM_PACK_SALE_CLOSING_HEADER = ("item", "pack", "sale", "closing")
+_ITEM_PACK_SALE_CLOSING_BLOCKED = frozenset(
+    {
+        "opening",
+        "op",
+        "opstk",
+        "purchase",
+        "purch",
+        "receipt",
+        "receipts",
+        "recd",
+        "sreturn",
+        "preturn",
+        "others",
+        "free",
+        "subtotal",
+        "rate",
+        "mrp",
+        "value",
+    }
+)
+
+
+def _xls_item_pack_sale_closing_enabled() -> bool:
+    """Default ON. Qty-only ITEM/PACK/SALE/CLOSING Excel grids."""
+    return True
+
+
+def _xls_item_pack_sale_closing_indexes(row: List[Any]) -> Optional[Dict[str, int]]:
+    """Column indexes for ITEM|PACK|SALE|CLOSING (no opening/receipt/value cols)."""
+    if not _xls_item_pack_sale_closing_enabled():
+        return None
+    labels = [
+        (idx, _xls_header_compact(cell))
+        for idx, cell in enumerate(row or [])
+        if _xls_header_compact(cell)
+    ]
+    if len(labels) < 4:
+        return None
+    head = [label for _idx, label in labels[:4]]
+    sale_ok = head[2] in {"sale", "sales"}
+    if head[0] != "item" or head[1] != "pack" or not sale_ok or head[3] != "closing":
+        return None
+    for _idx, label in labels[4:]:
+        if label in _ITEM_PACK_SALE_CLOSING_BLOCKED:
+            return None
+        if label in {"openingvalue", "closingvalue", "salevalue", "salesvalue"}:
+            return None
+    return {
+        "item": labels[0][0],
+        "pack": labels[1][0],
+        "sale": labels[2][0],
+        "closing": labels[3][0],
+    }
+
+
+def _xls_sale_closing_is_total_value_label(label: str) -> bool:
+    """TOTAL VALUE / GRAND TOTAL, or division Total Value (… ) money footers."""
+    text = str(label or "").strip()
+    if _xls_preturn_sale_is_sheet_total_label(text):
+        return True
+    return bool(re.fullmatch(r"total\s+value\s*\([^)]*\)", text, re.I))
+
+
+def _xls_fill_item_pack_sale_closing_rows(
+    result: Dict[str, Any],
+    rows: List[List[Any]],
+    header_idx: int,
+    sheet_name: str,
+    header_score: float,
+) -> Dict[str, Any]:
+    """ITEM|PACK|SALE|CLOSING qty grid. Dash qty → 0. TOTAL VALUE → money only."""
+    indexes = _xls_item_pack_sale_closing_indexes(rows[header_idx])
+    if not indexes:
+        return result
+
+    def cell(row: List[Any], key: str) -> Any:
+        idx = indexes.get(key)
+        if idx is None or idx >= len(row):
+            return None
+        return row[idx]
+
+    def _apply_total_value_row(row: List[Any], label: str) -> None:
+        sale_n, sale_err = _xls_sreturn_qty_cell(cell(row, "sale"))
+        close_n, close_err = _xls_sreturn_qty_cell(cell(row, "closing"))
+        if not sale_err and sale_n is not None:
+            result["totals"]["sales_value"] = round(float(sale_n), 2)
+        if not close_err and close_n is not None:
+            result["totals"]["closing_value"] = round(float(close_n), 2)
+        # Never keep footer money as qty totals.
+        result["totals"].pop("sales_qty", None)
+        result["totals"].pop("closing_qty", None)
+        extra_totals = result.setdefault("totals", {}).setdefault("extra", {})
+        exact = _xls_preturn_sale_is_sheet_total_label(label)
+        extra_totals["total_row_source"] = (
+            "item_pack_sale_closing_total_value"
+            if exact
+            else "item_pack_sale_closing_division_total_value"
+        )
+        extra_totals["total_row_label"] = label
+        logger.info(
+            "ITEM_PACK_SALE_CLOSING_TOTAL_VALUE label=%s sales_value=%s "
+            "closing_value=%s",
+            label,
+            result["totals"].get("sales_value"),
+            result["totals"].get("closing_value"),
+        )
+
+    items: List[Dict[str, Any]] = []
+    zero_rows = 0
+    total_candidates: List[Tuple[str, List[Any]]] = []
+    for row in rows[header_idx + 1 :]:
+        if not isinstance(row, list):
+            continue
+        raw_name = cell(row, "item")
+        if raw_name in (None, ""):
+            continue
+        product_name = _clean_name(str(raw_name).replace("\u00a0", " "))
+        if not product_name:
+            continue
+        if re.match(r"^company\s*:", product_name, re.I):
+            company = re.search(r"Company\s*:\s*(.+)", str(raw_name), re.I)
+            if company and not result.get("company_name"):
+                result["company_name"] = _clean_name(company.group(1))
+            continue
+        if _xls_sale_closing_is_total_value_label(product_name):
+            total_candidates.append((product_name, row))
+            continue
+        if re.match(
+            r"^(?:total\b|grand\s*total|sub\s*total|net\s*total)\b",
+            product_name,
+            re.I,
+        ):
+            continue
+        if re.match(
+            r"^(?:item|pack|sale|sales|closing|stock\s*&\s*sales)\b",
+            product_name,
+            re.I,
+        ):
+            continue
+
+        sale_n, sale_err = _xls_sreturn_qty_cell(cell(row, "sale"))
+        close_n, close_err = _xls_sreturn_qty_cell(cell(row, "closing"))
+        if sale_err or close_err:
+            continue
+        sales_qty = 0.0 if sale_n is None else float(sale_n)
+        closing_qty = 0.0 if close_n is None else float(close_n)
+
+        pack_raw = cell(row, "pack")
+        packing = None
+        if pack_raw not in (None, ""):
+            pack_text = str(pack_raw).replace("\u00a0", " ").strip()
+            if pack_text and pack_text not in {"-", "—", "--", "–"}:
+                packing = pack_text
+
+        item = empty_line_item()
+        item["product_name"] = product_name
+        item["packing"] = packing
+        item["opening_qty"] = None
+        item["opening_value"] = None
+        item["receipts_qty"] = None
+        item["purchase_qty"] = None
+        item["sales_qty"] = sales_qty
+        item["closing_qty"] = closing_qty
+        item["sales_value"] = None
+        item["closing_value"] = None
+        extra_i = item.setdefault("extra", {})
+        extra_i["layout"] = "item_pack_sale_closing"
+        fs = {
+            "opening_qty": "missing",
+            "opening_value": "missing",
+            "receipts_qty": "missing",
+            "receipts_value": "missing",
+            "purchase_qty": "missing",
+            "sales_qty": "printed",
+            "closing_qty": "printed",
+            "sales_value": "missing",
+            "closing_value": "missing",
+        }
+        extra_i["field_source"] = fs
+        if sales_qty == 0.0 and closing_qty == 0.0:
+            zero_rows += 1
+        items.append(item)
+
+    if not items:
+        return result
+
+    # Prefer last exact TOTAL VALUE / GRAND TOTAL; else last division Total Value.
+    exact = [
+        c
+        for c in total_candidates
+        if _xls_preturn_sale_is_sheet_total_label(c[0])
+    ]
+    chosen = exact[-1] if exact else (total_candidates[-1] if total_candidates else None)
+    if chosen:
+        _apply_total_value_row(chosen[1], chosen[0])
+
+    result["line_items"] = items
+    result = _stamp_sale_closing_only_result(result)
+    extra = result.setdefault("totals", {}).setdefault("extra", {})
+    sales_sum = sum(_to_float(i.get("sales_qty")) for i in items)
+    closing_sum = sum(_to_float(i.get("closing_qty")) for i in items)
+    extra["sales_qty"] = sales_sum
+    extra["closing_qty"] = closing_sum
+    extra["extraction_method"] = "item_pack_sale_closing"
+    extra["layout"] = "item_pack_sale_closing"
+    # No per-line Sale Value column — stop money↔qty remaps on decimal qtys.
+    # Do not set qty_only: STVR treats that as ORIC and wipes TOTAL VALUE money.
+    extra["no_sales_value"] = True
+    if result.get("totals", {}).get("sales_value") not in (None, ""):
+        extra["has_printed_sales_value"] = True
+    extra["sheet"] = sheet_name
+    extra["header_row"] = header_idx
+    extra["header_detection_confidence"] = float(header_score or 0.0)
+    extra["zero_qty_rows"] = zero_rows
+    extra["stock_identity_kind"] = "sale_closing_only"
+    extra["stock_identity_formula"] = (
+        "sales=SALE; closing=CLOSING; no opening or receipt columns"
+    )
+    extra["stock_identity_fail_count"] = 0
+    extra.setdefault(
+        "extraction_metadata",
+        {
+            "source_type": result.get("source_format"),
+            "sheet": sheet_name,
+            "header_row": header_idx,
+            "detected_fields": ["item", "pack", "sale", "closing"],
+        },
+    )
+    logger.info(
+        "ITEM_PACK_SALE_CLOSING file=%s sheet=%s items=%s zero_rows=%s "
+        "sales_qty=%s closing_qty=%s sales_value=%s closing_value=%s",
+        result.get("source_file"),
+        sheet_name,
+        len(items),
+        zero_rows,
+        sales_sum,
+        closing_sum,
+        result.get("totals", {}).get("sales_value"),
+        result.get("totals", {}).get("closing_value"),
+    )
+    return result
+
 
 def _xls_item_pack_preturn_sale_enabled() -> bool:
     """Default ON. Excel ITEM/PACK/P.RETURN/SALE grids with trailing value cols."""
@@ -25611,6 +26037,10 @@ def _xls_fill_from_rows(
         )
     if _xls_item_pack_preturn_sale_indexes(rows[header_idx]):
         return _xls_fill_item_pack_preturn_sale_rows(
+            result, rows, header_idx, sheet_name, header_score
+        )
+    if _xls_item_pack_sale_closing_indexes(rows[header_idx]):
+        return _xls_fill_item_pack_sale_closing_rows(
             result, rows, header_idx, sheet_name, header_score
         )
     if _xls_zenith_opstk_indexes(rows[header_idx]):
@@ -28670,17 +29100,18 @@ Return a JSON array ordered LEFT-TO-RIGHT across the page:
   free_qty, rate, ignore
 
 Rules:
-- "OPENING STOCK" / "Op. Stk" / "OP BAL" / "OPENING STOCK-1" → opening_qty
-- "PURCHASE" / "RECEIPT" / "REC" / "PURCHASE-1" → purchase_qty
-- "SALE" / "ISSUE" / "SALES" / "SALE-1" → sales_qty
-- "CLOSING STOCK" / "CL STK" / "CL.QTY" / "BAL QTY" → closing_qty
-- "CLOSING VALUE" / "CL VAL" / "VALUE" (after closing) → closing_value
+- "OPENING STOCK" / "Op. Stk" / "OP BAL" / "OPENING STOCK-1" / "Opening" → opening_qty
+- "PURCHASE" / "RECEIPT" / "REC" / "PURCHASE-1" / "In" / "Inward" → purchase_qty
+- "SALE" / "ISSUE" / "SALES" / "SALE-1" / "Out" / "Outward" → sales_qty
+- "CLOSING STOCK" / "CL STK" / "CL.QTY" / "BAL QTY" / "Balance" → closing_qty
+- "CLOSING VALUE" / "CL VAL" / "VALUE" (after Balance/Rate/Unit) → closing_value
 - "OPENING VALUE" / "OP VAL" → opening_value
 - Ignore LMS, dump, near-expiry, sample, return columns → ignore
 - SNO / SR / S.NO → serial
 - ITEM / PRODUCT / PARTICULARS / DESCRIPTION → product_name
-- PACK / PACKING → packing
+- PACK / PACKING / UNIT → packing
 - BATCH / LOT → batch
+- CODE (item code, not qty) → ignore
 - MRP / RATE / PTR → rate
 
 Return ONLY the JSON array.
@@ -28755,11 +29186,14 @@ def _free_cols_needs_remap(result: Optional[Dict[str, Any]]) -> Optional[str]:
     total = len(active_items)
     threshold = 0.15  # <15% present means column is mostly missing
 
-    # --- Check 1: any qty column mostly missing ---
+    # --- Check 1: any qty/value column mostly missing ---
     for field, label in [
         ("opening_qty", "opening"),
         ("sales_qty", "sales"),
         ("closing_qty", "closing"),
+        # Opening|In|Out|Balance|Unit|Rate|Value: bare Value orphaned as
+        # ignore leaves closing_value empty while qty identity still passes.
+        ("closing_value", "closing_value"),
     ]:
         present = sum(1 for it in active_items if _to_float(it.get(field)) > 0.01)
         ratio = present / total
