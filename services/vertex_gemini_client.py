@@ -13,9 +13,15 @@ from typing import Any, Dict, Optional
 from pathlib import Path
 
 from dotenv import load_dotenv
-from google import genai
-from google.genai import errors as genai_errors
-from google.genai import types
+
+try:
+    from google import genai
+    from google.genai import errors as genai_errors
+    from google.genai import types
+except ImportError:  # pragma: no cover - optional runtime dependency
+    genai = None  # type: ignore[assignment]
+    genai_errors = None  # type: ignore[assignment]
+    types = None  # type: ignore[assignment]
 
 # Root .env first; tests/.env fills local gaps (STOCK_VISION_TABLE, Vertex creds)
 # without overriding an already-exported production environment.
@@ -48,9 +54,9 @@ _VERTEX_HTTP_TIMEOUT_CAP = int(
     os.getenv("VERTEX_GEMINI_HTTP_TIMEOUT_SECONDS", "180") or "180"
 )
 
-_vertex_client: Optional[genai.Client] = None
+_vertex_client: Optional[Any] = None
 _vertex_client_initialized = False
-_api_key_client: Optional[genai.Client] = None
+_api_key_client: Optional[Any] = None
 
 
 def _env_flag(name: str, default: bool = True) -> bool:
@@ -80,10 +86,12 @@ def _vertex_credentials_missing() -> bool:
     return not os.path.exists(GOOGLE_APPLICATION_CREDENTIALS)
 
 
-def _get_api_key_gemini_client() -> genai.Client:
+def _get_api_key_gemini_client() -> Any:
     global _api_key_client
     if _api_key_client is not None:
         return _api_key_client
+    if genai is None:
+        raise RuntimeError("google.genai is not installed")
     api_key = os.getenv("GEMINI_API_KEY", "").strip()
     if not api_key:
         raise FileNotFoundError(
@@ -161,12 +169,17 @@ class GeminiRestResponse:
         return self._data
 
 
-def initialize_vertex_gemini_client() -> genai.Client:
+def initialize_vertex_gemini_client() -> Any:
     """Create (or return cached) Vertex AI Gemini client."""
     global _vertex_client, _vertex_client_initialized
 
     if _vertex_client is not None:
         return _vertex_client
+
+    if genai is None:
+        raise RuntimeError(
+            "google.genai is not installed; cannot initialize Vertex Gemini client"
+        )
 
     if not _env_flag("GOOGLE_GENAI_USE_VERTEXAI", True):
         logger.warning(
@@ -195,7 +208,7 @@ def initialize_vertex_gemini_client() -> genai.Client:
     return _vertex_client
 
 
-def get_vertex_gemini_client() -> genai.Client:
+def get_vertex_gemini_client() -> Any:
     if _vertex_client is None:
         return initialize_vertex_gemini_client()
     return _vertex_client
