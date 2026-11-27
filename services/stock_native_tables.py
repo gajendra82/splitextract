@@ -1780,6 +1780,182 @@ def _merge_split_stock_headers_enabled() -> bool:
     ).strip().lower() in {"1", "true", "yes", "on"}
 
 
+def _sale_star_free_return_headers_enabled() -> bool:
+    """STOCK_PDF_SALE_STAR_FREE_RETURN_HEADERS — coalesce Sale*|Free|Retu|Others.
+
+    Default ON. Tight SALE AND STOCK ANALYSIS headers glue App→Sale and
+    Retu→Others, so Sale* money collides, Sale Return is ignored, and
+    recovery can park Return/Others as sales_value. Kill switch:
+    STOCK_PDF_SALE_STAR_FREE_RETURN_HEADERS=false.
+    """
+    return os.getenv(
+        "STOCK_PDF_SALE_STAR_FREE_RETURN_HEADERS", "true"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
+
+_SALE_STAR_APP_FRAG_RE = re.compile(r"(?i)^(?:approx(?:imate)?|app\.?|ap)$")
+_SALE_RET_FRAG_RE = re.compile(
+    r"(?i)^(?:retu|retr|rtn|ret\.?|return|retrn)$"
+)
+_APP_SALE_CLUSTER_RE = re.compile(
+    r"(?i)^(approx(?:imate)?|app\.?|ap)\s+(sale|sales)$"
+)
+_RETU_OTHERS_CLUSTER_RE = re.compile(
+    r"(?i)^(retu|retr|rtn|ret\.?|return|retrn)\s+(others?)$"
+)
+
+
+def _join_header_cell_pair(
+    left: Dict[str, Any], right: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Merge two adjacent header word boxes into one label cell."""
+    out = dict(left)
+    left_text = str(left.get("text") or "").strip()
+    right_text = str(right.get("text") or "").strip()
+    out["text"] = f"{left_text} {right_text}".strip()
+    out["x0"] = min(float(left.get("x0") or 0), float(right.get("x0") or 0))
+    out["x1"] = max(float(left.get("x1") or 0), float(right.get("x1") or 0))
+    return out
+
+
+def _split_misclustered_sale_analysis_cell(
+    cell: Dict[str, Any],
+) -> List[Dict[str, Any]]:
+    """Undo App+Sale / Retu+Others clusters from tight inter-column gaps."""
+    text = str(cell.get("text") or "").strip()
+    if not text:
+        return [cell]
+    x0 = float(cell.get("x0") or 0)
+    x1 = float(cell.get("x1") or x0)
+    span = max(x1 - x0, 1.0)
+
+    def _bisect(left_text: str, right_text: str) -> List[Dict[str, Any]]:
+        left_w = max(len(left_text), 1)
+        right_w = max(len(right_text), 1)
+        mid = x0 + span * left_w / (left_w + right_w)
+        left = dict(cell)
+        right = dict(cell)
+        left["text"] = left_text
+        right["text"] = right_text
+        left["x0"] = x0
+        left["x1"] = mid
+        right["x0"] = mid
+        right["x1"] = x1
+        return [left, right]
+
+    m = _APP_SALE_CLUSTER_RE.match(text)
+    if m:
+        return _bisect(m.group(1), m.group(2))
+    m = _RETU_OTHERS_CLUSTER_RE.match(text)
+    if m:
+        return _bisect(m.group(1), m.group(2))
+    return [cell]
+
+
+def _coalesce_sale_star_free_return_headers(
+    header: List[Dict[str, Any]],
+    page_width: Optional[float] = None,
+) -> List[Dict[str, Any]]:
+    """Sale|*|App|Sale|Free|Sale|Retu|Others → Sale*App|Sale Free|Sale Retu|Others.
+
+    Only fires when Free + Return-fragment + Others all print beside Sale, so
+    other Sale/Free grids stay unchanged.
+    """
+    if not _sale_star_free_return_headers_enabled() or len(header) < 5:
+        return header
+
+    expanded: List[Dict[str, Any]] = []
+    for cell in header:
+        if not isinstance(cell, dict):
+            continue
+        expanded.extend(_split_misclustered_sale_analysis_cell(dict(cell)))
+
+    norms = [normalize_header(c.get("text")) for c in expanded]
+    has_sale = any(
+        n == "sale"
+        or n == "sales"
+        or n.startswith("sale ")
+        or n.startswith("sales ")
+        for n in norms
+    )
+    has_free = any(
+        n == "free"
+        or n.endswith(" free")
+        or n == "sale free"
+        or n == "sales free"
+        for n in norms
+    )
+    has_ret = any(
+        _SALE_RET_FRAG_RE.match(n or "")
+        or bool(re.search(r"(?i)\bsale(?:s)?\s*ret", n or ""))
+        for n in norms
+    )
+    has_others = any(n in {"other", "others"} for n in norms)
+    if not (has_sale and has_free and has_ret and has_others):
+        return header
+
+    out: List[Dict[str, Any]] = []
+    i = 0
+    while i < len(expanded):
+        cur = dict(expanded[i])
+        t = normalize_header(cur.get("text"))
+        if t in {"sale", "sales"} and i + 1 < len(expanded):
+            nxt = normalize_header(expanded[i + 1].get("text"))
+            if nxt in {"*", "∗", "x"}:
+                cur = _join_header_cell_pair(cur, expanded[i + 1])
+                i += 2
+                if i < len(expanded) and _SALE_STAR_APP_FRAG_RE.match(
+                    normalize_header(expanded[i].get("text"))
+                ):
+                    cur = _join_header_cell_pair(cur, expanded[i])
+                    i += 1
+                out.append(cur)
+                continue
+            if _SALE_STAR_APP_FRAG_RE.match(nxt or ""):
+                cur = _join_header_cell_pair(cur, expanded[i + 1])
+                i += 2
+                out.append(cur)
+                continue
+            if nxt in {"free", "fre"}:
+                cur = _join_header_cell_pair(cur, expanded[i + 1])
+                i += 2
+                out.append(cur)
+                continue
+            if _SALE_RET_FRAG_RE.match(nxt or ""):
+                cur = _join_header_cell_pair(cur, expanded[i + 1])
+                i += 2
+                out.append(cur)
+                continue
+        out.append(cur)
+        i += 1
+
+    width = float(page_width or 0) or None
+    if width is None:
+        for cell in out:
+            xc = cell.get("x_center")
+            if xc not in (None, 0, 0.0):
+                mid = (float(cell.get("x0") or 0) + float(cell.get("x1") or 0)) / 2.0
+                if mid and float(xc):
+                    width = mid / float(xc)
+                    break
+    if not width or width <= 0:
+        width = 1.0
+    for idx, cell in enumerate(out):
+        cell["col_index"] = idx
+        mid = (float(cell.get("x0") or 0) + float(cell.get("x1") or 0)) / 2.0
+        cell["x_center"] = mid / width
+
+    before = [str(c.get("text") or "") for c in header]
+    after = [str(c.get("text") or "") for c in out]
+    if before != after:
+        logger.info(
+            "STOCK_PDF_SALE_STAR_FREE_RETURN_HEADERS before=%s after=%s",
+            before,
+            after,
+        )
+    return out
+
+
 def _merge_split_stock_header_cells(
     header: List[Dict[str, Any]],
     page_width: Optional[float] = None,
@@ -2984,6 +3160,9 @@ def _extract_pdf_page_rows(
 
     if best_header:
         best_header = _merge_split_stock_header_cells(best_header, width)
+        best_header = _coalesce_sale_star_free_return_headers(
+            best_header, width
+        )
 
     group_qty_value = False
     expanded = _expand_group_qty_value_header(

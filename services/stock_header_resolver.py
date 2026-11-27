@@ -480,11 +480,20 @@ ALIASES: Dict[str, List[str]] = {
         "cur.sales",
         "current sls",
         "current sales",
+        # SALE AND STOCK ANALYSIS: Sale * App / Sale * Ap (approx sale qty).
+        "sale *",
+        "sale * app",
+        "sale * ap",
+        "sale*app",
+        "sale*ap",
+        "sale app",
+        "sale ap",
     ],
     "sales_return": [
         "saleret",
         "saleref",  # common OCR of SaleRet
         "sale ret",
+        "sale retu",  # truncated Sale Retu header
         "sale ref",
         "s ret",
         "s return",
@@ -496,6 +505,7 @@ ALIASES: Dict[str, List[str]] = {
         "sale rtn",
         "sales rtn",
         "sales rtn qty",
+        "retu",  # truncated Return beside Sale
         # COMPANY STOCK STATEMENT (SR): RQNTY / RTN-AMT return pair.
         "rqnty",
         "r qnty",
@@ -3511,7 +3521,7 @@ def _assign_cells_by_column_bands(
             continue
         _finalize_qty_bucket(bucket.get(idx) or [], canon, fields, errors, idx)
 
-    _rehome_shifted_sale_free_return(fields)
+    _rehome_shifted_sale_free_return(fields, columns=bands)
 
     logger.info(
         "HEADER_COLUMN_BANDS mode=bands assigned=%s ambiguous=%s unassigned=%s "
@@ -4427,7 +4437,7 @@ def assign_cells(
                 )
             else:
                 fields[canon] = raw_s
-        _rehome_shifted_sale_free_return(fields)
+        _rehome_shifted_sale_free_return(fields, columns=columns)
         return {"fields": fields, "errors": errors}
 
     # Geometry assignment.
@@ -4595,7 +4605,7 @@ def assign_cells(
             continue
         _finalize_qty_bucket(bucket.get(idx) or [], canon, fields, errors, idx)
 
-    _rehome_shifted_sale_free_return(fields)
+    _rehome_shifted_sale_free_return(fields, columns=columns)
     return {"fields": fields, "errors": errors}
 
 
@@ -4611,14 +4621,52 @@ def _sale_shift_from_free_return_enabled() -> bool:
     ).strip().lower() in {"1", "true", "yes", "on"}
 
 
-def _rehome_shifted_sale_free_return(fields: Dict[str, Optional[str]]) -> bool:
-    """Move free_out→sales_qty and sales_return→sales_value when sale cols empty."""
+# Analysis-grid chrome that coexists with real Sale Free / Sale Return slots.
+# Months SS Report shift (Sale F.Qty|Sale Ret only) does not print these.
+_SALE_FREE_RETURN_ANALYSIS_CANONS = frozenset(
+    {
+        "purchase_return_qty",
+        "other_outward_qty",
+        "free_in_qty",
+    }
+)
+
+
+def _rehome_shifted_sale_free_return(
+    fields: Dict[str, Optional[str]],
+    columns: Optional[Sequence[Dict[str, Any]]] = None,
+) -> bool:
+    """Move free_out→sales_qty and sales_return→sales_value when sale cols empty.
+
+    Skip when a real sales_qty column exists (Sale / Sale *), or when the sheet
+    is a Sale*|Sale Free|Sale Return analysis grid (Purchase Free / Purchase
+    Return / Others chrome). Blank Sale cells on those grids must not promote
+    Sale Return into sales_value — even if Vision dropped the Sale* header.
+    """
     if not _sale_shift_from_free_return_enabled() or not isinstance(fields, dict):
         return False
     if fields.get("sales_qty") not in (None, ""):
         return False
     if fields.get("sales_value") not in (None, ""):
         return False
+    if columns:
+        canons = {
+            col.get("canonical")
+            for col in columns
+            if isinstance(col, dict)
+        }
+        if "sales_qty" in canons:
+            logger.info(
+                "STOCK_HEADER_SALE_SHIFT_FROM_FREE_RET skipped "
+                "reason=explicit_sales_qty_column"
+            )
+            return False
+        if canons & _SALE_FREE_RETURN_ANALYSIS_CANONS:
+            logger.info(
+                "STOCK_HEADER_SALE_SHIFT_FROM_FREE_RET skipped "
+                "reason=analysis_grid_free_return_chrome"
+            )
+            return False
     free = fields.get("free_out_qty")
     sret = fields.get("sales_return_qty")
     if free in (None, "") or sret in (None, ""):

@@ -237,12 +237,26 @@ def _footer_totals_from_page_results(
                     val = _footer_num(extra_item.get(src))
                 if val is not None:
                     printed_values[src] = val
-            has_paired_value_cols = bool(
-                printed_values.get("sales_value") is not None
-                or printed_values.get("closing_value") is not None
-                or printed_values.get("opening_value") is not None
-                or printed_values.get("receipts_value") is not None
-            )
+            # Ignore trivial 0.0 from Purchase|Purchase|Purchase qty chrome
+            # remapped as purchase_value — that must not block Sale* money
+            # under qty headers from becoming sales_value on TOTAL VALUE.
+            has_paired_value_cols = False
+            for _pkey in (
+                "sales_value",
+                "closing_value",
+                "opening_value",
+                "receipts_value",
+            ):
+                _pval = printed_values.get(_pkey)
+                if _pval is None:
+                    continue
+                try:
+                    if abs(float(_pval)) < 1.0:
+                        continue
+                except (TypeError, ValueError):
+                    continue
+                has_paired_value_cols = True
+                break
 
             # Qty columns always keep qty identity when value columns exist.
             # Pure money-under-qty-header footers (no value canons) still remap.
@@ -5042,8 +5056,11 @@ _SALES_TOTAL_LABEL_RE = re.compile(
     r"|total\s+sales?(?:\s+value)?"
     r"|sales?\s+totals?(?:\s+value)?"
     r"|g\.?\s*totals?"
+    # Division / section money bands: "Total (HM3)" with amounts on later lines.
+    r"|totals?\s*\([^)]{0,32}\)"
     r")"
-    r"\b"
+    # ")" from Total (HM3) is non-word; allow end/space/digit after label.
+    r"(?:\b|(?=\s|$)|(?=[\d\-]))"
 )
 
 _SALES_TOTAL_QTY_LABEL_RE = re.compile(
@@ -5237,32 +5254,198 @@ def _stvr_pick_sales_closing_from_amounts(
         cand = amounts[close_idx]
         if _accept(cand):
             closing = float(cand)
-    if sales is not None or closing is not None:
+    if sales is not None and closing is not None:
         return sales, closing
-    # No header geometry: prefer last two money-like amounts (sales, closing).
+    # No / partial header geometry: prefer last two money-like amounts.
+    # Keep any header-resolved side and only fill the missing one.
     money = [a for a in amounts if _stvr_money_like(a)]
     if len(money) >= 2:
-        return float(money[-2]), float(money[-1])
+        sales_cand = float(money[-2])
+        closing_cand = float(money[-1])
+        # Sale|Free|Return|Others|Closing money footers print signed Others
+        # immediately before Closing. money[-2] must not become sales_value.
+        if len(money) >= 3 and sales_cand < 0:
+            mid = [float(a) for a in money[:-2]]
+            picked: Optional[float] = None
+            if mid:
+                positives_mid = [a for a in mid if a > 0]
+                # PyMuPDF often splits TOTAL so the band already starts at
+                # Sale|Free|Return (no Opening/Purchase). Sale dwarfs Free.
+                if (
+                    len(positives_mid) >= 2
+                    and len(mid) <= 4
+                    and positives_mid[0]
+                    >= max(positives_mid[1] * 5.0, positives_mid[1] + 100.0)
+                ):
+                    picked = float(positives_mid[0])
+                elif len(mid) >= 3:
+                    # Drop opening + purchase; Sale is first outward money.
+                    band = mid[2:]
+                    positives = [a for a in band if a > 0]
+                    if positives:
+                        picked = float(positives[0])
+                elif len(mid) >= 2:
+                    band = mid[1:]
+                    positives = [a for a in band if a > 0]
+                    if positives:
+                        picked = float(positives[0])
+                else:
+                    positives = [a for a in mid if a > 0]
+                    if positives:
+                        picked = float(positives[0])
+            if picked is not None:
+                sales_cand = picked
+        if sales is None:
+            sales = sales_cand
+        if closing is None:
+            closing = closing_cand
+        return sales, closing
     if len(money) == 1:
-        return float(money[0]), None
+        if sales is None:
+            sales = float(money[0])
+        return sales, closing
     # Never fall back to raw whole qty cells as rupees.
     if require_money:
-        return None, None
+        return sales, closing
     if len(amounts) >= 2:
-        return float(amounts[-2]), float(amounts[-1])
+        if sales is None:
+            sales = float(amounts[-2])
+        if closing is None:
+            closing = float(amounts[-1])
+        return sales, closing
     if len(amounts) == 1:
-        return float(amounts[0]), None
-    return None, None
+        if sales is None:
+            sales = float(amounts[0])
+        return sales, closing
+    return sales, closing
+
+
+def _stvr_header_is_sale_free_or_return(text: str) -> bool:
+    """True for Sale Free / Approx Sale Free / Sale Return — not primary Sale."""
+    key = str(text or "").replace("\n", " ").strip()
+    if not key:
+        return False
+    if re.search(
+        r"(?i)\bsales?\s*(?:free|fre)\b|\bapprox(?:imate)?\s*sales?\s*free\b|"
+        r"\bp\s*sales?\s*free\b|\bsfree\b",
+        key,
+    ):
+        return True
+    if re.search(
+        r"(?i)\bsales?\s*ret|\bsales?\s*rtn|\bsale\s*retu|\bsaleret\b|"
+        r"\breturn\b|\bretrn\b",
+        key,
+    ):
+        return True
+    return False
+
+
+def _stvr_header_is_primary_sale(text: str) -> bool:
+    """Primary Sale / Sale* / Sale Qty / Sale Value — not Free/Return."""
+    key = str(text or "").replace("\n", " ").strip()
+    if not key or _stvr_header_is_sale_free_or_return(key):
+        return False
+    return bool(
+        re.search(
+            r"(?i)^(?:sale|sales)(?:\s*\*)?(?:\s*(?:qty|quantity|value|amt|ap\w*))?$|"
+            r"\bsale\s*quantity\b|\bsales?\s*qty\b|"
+            r"\bsales?\s*(?:value|amt|amount)\b|"
+            r"\bissue\s*(?:qty|value|amt|amount)?\b",
+            key,
+        )
+    )
+
+
+def _stvr_coalesce_header_tokens(header_cells: List[Any]) -> List[str]:
+    """Rejoin space-split Sale/Purchase Free|Return phrases into header cells.
+
+    OCR/text paths often flatten ``Sale * | Sale Free | Sale Return`` into
+    ``Sale * Sale Free Sale Return`` tokens; counting each word as a numeric
+    column shifts sale_idx onto Sale Return money.
+    """
+    tokens = [
+        str(cell or "").replace("\n", " ").strip()
+        for cell in (header_cells or [])
+        if str(cell or "").replace("\n", " ").strip()
+    ]
+    if not tokens:
+        return []
+    out: List[str] = []
+    i = 0
+    while i < len(tokens):
+        cur = tokens[i]
+        low = cur.lower()
+        nxt = tokens[i + 1].lower() if i + 1 < len(tokens) else ""
+        nxt2 = tokens[i + 2].lower() if i + 2 < len(tokens) else ""
+        if low == "item" and nxt == "name":
+            out.append(f"{cur} {tokens[i + 1]}")
+            i += 2
+            continue
+        if low in {"purchase", "pur", "purc", "purch"} and nxt in {
+            "free",
+            "fre",
+            "return",
+            "ret",
+            "re",
+            "retu",
+            "rtn",
+        }:
+            out.append(f"{cur} {tokens[i + 1]}")
+            i += 2
+            continue
+        if low.startswith("appro") and nxt in {"sale", "sales"} and nxt2 in {
+            "free",
+            "fre",
+        }:
+            out.append(f"{cur} {tokens[i + 1]} {tokens[i + 2]}")
+            i += 3
+            continue
+        if low in {"p", "p."} and nxt in {"sale", "sales"} and nxt2 in {
+            "free",
+            "fre",
+        }:
+            out.append(f"{cur} {tokens[i + 1]} {tokens[i + 2]}")
+            i += 3
+            continue
+        if low in {"sale", "sales"} and nxt in {"*", "∗", "x"}:
+            chunk = f"{cur} *"
+            i += 2
+            if i < len(tokens) and re.match(r"(?i)^ap\w*$", tokens[i]):
+                chunk = f"{chunk} {tokens[i]}"
+                i += 1
+            out.append(chunk)
+            continue
+        if low in {"sale", "sales"} and nxt in {
+            "free",
+            "fre",
+            "return",
+            "ret",
+            "retu",
+            "rtn",
+            "retrn",
+        }:
+            out.append(f"{cur} {tokens[i + 1]}")
+            i += 2
+            continue
+        out.append(cur)
+        i += 1
+    return out
 
 
 def _stvr_header_sale_close_indices(header_cells: List[Any]) -> Tuple[Optional[int], Optional[int]]:
-    """Numeric-column indices for SALE / CLOSING *value* when present, else qty."""
+    """Numeric-column indices for SALE / CLOSING *value* when present, else qty.
+
+    Qty-chrome Sale|…|Others|Closing grids print money only on TOTAL under the
+    qty headers. When Free/Return/Others sit between Sale and Closing, use those
+    qty indices so recovery does not treat Others as sales_value.
+    """
     sale_idx: Optional[int] = None
     close_idx: Optional[int] = None
     sale_qty_idx: Optional[int] = None
     close_qty_idx: Optional[int] = None
+    has_mid_movement = False
     num_i = 0
-    for cell in header_cells:
+    for cell in _stvr_coalesce_header_tokens(header_cells):
         text = str(cell or "").replace("\n", " ").strip()
         if not text:
             continue
@@ -5282,7 +5465,8 @@ def _stvr_header_sale_close_indices(header_cells: List[Any]) -> Tuple[Optional[i
         looks_numeric_col = bool(
             re.search(
                 r"(?i)qty|quantity|stock|value|amt|amount|sale|sales|closing|"
-                r"open|purchase|receive|receipt|issue|rate|free|return|balance",
+                r"open|purchase|receive|receipt|issue|rate|free|return|balance|"
+                r"others?|\badj\b",
                 text,
             )
         )
@@ -5292,14 +5476,13 @@ def _stvr_header_sale_close_indices(header_cells: List[Any]) -> Tuple[Optional[i
         is_qty_col = bool(
             re.search(r"(?i)\b(?:qty|quantity|qnt|balance)\b", text)
         ) and not is_value_col
-        if re.search(
-            r"^(?:sale|sales)(?:\s*(?:qty|quantity|value|amt))?$|"
-            r"\bsale\s*quantity\b|\bsales?\s*qty\b|"
-            r"\bsales?\s*(?:value|amt|amount)\b|"
-            r"\bissue\s*(?:qty|value|amt|amount)?\b",
-            text,
-            re.I,
+        if re.search(r"(?i)^others?\b|\badj(?:ustment)?\b", text) or (
+            _stvr_header_is_sale_free_or_return(text)
+            and sale_qty_idx is not None
+            and close_qty_idx is None
         ):
+            has_mid_movement = True
+        if _stvr_header_is_primary_sale(text):
             if is_value_col and sale_idx is None:
                 sale_idx = num_i
             elif is_qty_col and sale_qty_idx is None:
@@ -5320,12 +5503,13 @@ def _stvr_header_sale_close_indices(header_cells: List[Any]) -> Tuple[Optional[i
             elif close_qty_idx is None and close_idx is None:
                 close_qty_idx = num_i
         num_i += 1
-    # Prefer Value/Amt columns when the sheet prints them; qty indices alone
-    # must not drive sales_value / closing_value recovery.
-    if sale_idx is None:
-        sale_idx = None  # do not use sale_qty_idx for money recovery
-    if close_idx is None:
-        close_idx = None
+    # Prefer Value/Amt columns when the sheet prints them. Qty indices alone
+    # stay off unless Free/Return/Others sit between Sale and Closing — those
+    # TOTAL rows print money under qty chrome and money[-2] hits Others.
+    if sale_idx is None and has_mid_movement:
+        sale_idx = sale_qty_idx
+    if close_idx is None and has_mid_movement:
+        close_idx = close_qty_idx
     return sale_idx, close_idx
 
 
@@ -5351,17 +5535,50 @@ def extract_sales_total_value_from_text(text: str) -> Dict[str, Any]:
     candidates: List[Tuple[int, int, Dict[str, Any]]] = []
     sale_idx: Optional[int] = None
     close_idx: Optional[int] = None
-    # Track a recent header for column geometry.
-    for ln in lines:
-        if re.search(
-            r"(?i)\b(?:product|item)\b.*\b(?:sale|sales|closing|open)",
-            ln,
-        ) or re.search(r"(?i)\bSALE\s*QUANTITY\b|\bCLOSING\s*STOCK\b", ln):
-            # Split header tokens loosely.
-            parts = re.split(r"[\t|]+|\s{2,}", ln)
-            if len(parts) < 3:
-                parts = ln.split()
-            sale_idx, close_idx = _stvr_header_sale_close_indices(parts)
+    # Track a recent header for column geometry (PyMuPDF often splits Closing).
+    for i, ln in enumerate(lines):
+        headerish = bool(
+            re.search(
+                r"(?i)\b(?:product|item)\b.*\b(?:sale|sales|closing|open)",
+                ln,
+            )
+            or re.search(r"(?i)\bSALE\s*QUANTITY\b|\bCLOSING\s*STOCK\b", ln)
+            or (
+                re.search(r"(?i)\b(?:opening|purchase|sale\s*\*)\b", ln)
+                and re.search(r"(?i)\b(?:others?|sale\s*ret)", ln)
+            )
+        )
+        if not headerish:
+            continue
+        parts = re.split(r"[\t|]+|\s{2,}", ln)
+        if len(parts) < 3:
+            parts = ln.split()
+        # Closing often lands on the next text line.
+        if i + 1 < len(lines) and re.match(
+            r"(?i)^closing(?:\s*(?:qty|stock|value|bal))?$",
+            lines[i + 1],
+        ):
+            parts = list(parts) + [lines[i + 1]]
+        sale_idx, close_idx = _stvr_header_sale_close_indices(parts)
+
+    def _stvr_absorb_amount_continuations(
+        start_order: int, seed: List[float]
+    ) -> List[float]:
+        """Pull numeric-only lines after a TOTAL label (split PDF text)."""
+        amounts = list(seed)
+        j = start_order + 1
+        while j < len(lines) and len(amounts) < 16:
+            nxt = lines[j]
+            if _SALES_TOTAL_LABEL_RE.match(nxt) or _SALES_TOTAL_QTY_LABEL_RE.match(nxt):
+                break
+            if re.search(r"[A-Za-z]{3,}", nxt):
+                break
+            more = _stvr_parse_numbers(re.split(r"[\t|]+|\s+", nxt))
+            if not more:
+                break
+            amounts.extend(more)
+            j += 1
+        return amounts
 
     seen_pairs: set = set()
     for order, ln in enumerate(lines):
@@ -5392,6 +5609,9 @@ def extract_sales_total_value_from_text(text: str) -> Dict[str, Any]:
         # Numbers on the same line (label stripped).
         rest = _SALES_TOTAL_LABEL_RE.sub("", ln, count=1) if not unlabeled else ln
         amounts = _stvr_parse_numbers(re.split(r"[\t|]+|\s+", rest))
+        # Labeled TOTAL / Grand Total often print amounts on following lines.
+        if not unlabeled:
+            amounts = _stvr_absorb_amount_continuations(order, amounts)
         if len(amounts) < 1:
             continue
         sales, closing = _stvr_pick_sales_closing_from_amounts(
@@ -5403,27 +5623,37 @@ def extract_sales_total_value_from_text(text: str) -> Dict[str, Any]:
             round(sales, 2) if sales is not None else None,
             round(closing, 2) if closing is not None else None,
         )
+        payload = {
+            "sales_value": sales,
+            "closing_value": closing,
+            "label": label,
+            "raw_amounts": amounts,
+            "method": (
+                "unlabeled_trailing_summary"
+                if unlabeled
+                else "labeled_total_value_row"
+            ),
+        }
         if pair in seen_pairs:
-            # Identical ERP reprint — keep one (last wins via overwrite below).
+            # Identical ERP reprint (Total (HM3) == Grand Total): keep the
+            # higher-priority / later label instead of dropping Grand Total.
+            for idx, (pri, _ord, prev) in enumerate(candidates):
+                prev_pair = (
+                    round(prev["sales_value"], 2)
+                    if prev.get("sales_value") is not None
+                    else None,
+                    round(prev["closing_value"], 2)
+                    if prev.get("closing_value") is not None
+                    else None,
+                )
+                if prev_pair != pair:
+                    continue
+                if (priority, order) >= (pri, _ord):
+                    candidates[idx] = (priority, order, payload)
+                break
             continue
         seen_pairs.add(pair)
-        candidates.append(
-            (
-                priority,
-                order,
-                {
-                    "sales_value": sales,
-                    "closing_value": closing,
-                    "label": label,
-                    "raw_amounts": amounts,
-                    "method": (
-                        "unlabeled_trailing_summary"
-                        if unlabeled
-                        else "labeled_total_value_row"
-                    ),
-                },
-            )
-        )
+        candidates.append((priority, order, payload))
 
     if not candidates:
         return out

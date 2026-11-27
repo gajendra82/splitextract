@@ -10340,6 +10340,19 @@ def extract_sales_statement(file_bytes: bytes, filename: str) -> Dict[str, Any]:
             logger.exception(
                 "STOCK_SALES_TOTAL_VALUE_RECOVERY failed file=%s", name
             )
+        try:
+            # FREE/P.RETURN: peel Total Value rows from line_items; image
+            # uploads may also get a focused Total Value Vision reread.
+            if ext in IMAGE_EXTENSIONS:
+                result = _maybe_fill_free_return_total_value_from_vision(
+                    result, file_bytes or b"", name, ext
+                )
+            else:
+                result = _recover_item_pack_free_return_sales_value(result)
+        except Exception:
+            logger.exception(
+                "FREE_RETURN_TOTAL_VALUE_RECOVER failed file=%s", name
+            )
     return _group_statements_by_stockist_month(result)
 
 
@@ -23478,6 +23491,437 @@ _ITEM_PACK_FREE_RETURN_QTY = (
     ("closing_qty", "closing"),
 )
 
+# Exact TOTAL VALUE / Total Value (no division parenthetical).
+_FREE_RETURN_TOTAL_VALUE_NAME = re.compile(
+    r"(?is)^\s*total\s+values?\s*$"
+)
+_FREE_RETURN_DIVISION_TOTAL_VALUE_NAME = re.compile(
+    r"(?is)^\s*total\s+values?\s*\("
+)
+
+
+def _resolve_free_return_total_value_money(
+    candidates: List[Dict[str, float]],
+) -> Dict[str, float]:
+    """Pick statement money from one or more plain Total Value rows.
+
+    A single row or a cumulative last row (≈ sum of priors) wins. Independent
+    per-division Total Value rows (no grand) are summed — never invent digits.
+    """
+    usable = [c for c in (candidates or []) if isinstance(c, dict) and c]
+    if not usable:
+        return {}
+    if len(usable) == 1:
+        return dict(usable[0])
+    sales = []
+    for cand in usable:
+        try:
+            sv = float(cand["sales_qty"]) if cand.get("sales_qty") is not None else None
+        except (TypeError, ValueError):
+            sv = None
+        if sv is not None:
+            sales.append(sv)
+    if len(sales) >= 2:
+        prior = sum(sales[:-1])
+        last = sales[-1]
+        if prior > 0 and abs(last - prior) <= 1.0:
+            return dict(usable[-1])
+        if prior > 0 and last + 1.0 >= prior and last >= max(sales[:-1]):
+            return dict(usable[-1])
+    summed: Dict[str, float] = {}
+    for cand in usable:
+        for key, raw in cand.items():
+            try:
+                num = float(raw)
+            except (TypeError, ValueError):
+                continue
+            summed[key] = round(summed.get(key, 0.0) + num, 2)
+    return summed
+
+
+def _apply_free_return_total_value_money(
+    result: Dict[str, Any], money: Dict[str, float]
+) -> None:
+    """Copy remapped Total Value qty-slot money onto statement totals."""
+    if not isinstance(result, dict) or not money:
+        return
+    totals = result.setdefault("totals", {})
+    extra = totals.setdefault("extra", {})
+    if "sales_qty" in money:
+        totals["sales_value"] = money["sales_qty"]
+    if "closing_qty" in money:
+        totals["closing_value"] = money["closing_qty"]
+    if "opening_qty" in money:
+        extra["opening_value"] = money["opening_qty"]
+    if "purchase_qty" in money:
+        extra["purchase_value"] = money["purchase_qty"]
+    if "sales_return_qty" in money:
+        extra["sales_return_value"] = money["sales_return_qty"]
+    if "purchase_return_qty" in money:
+        extra["purchase_return_value"] = money["purchase_return_qty"]
+    extra["total_row_source"] = "free_return_total_value"
+    extra.setdefault("layout", "item_pack_free_return")
+
+
+def _result_looks_like_item_pack_free_return(result: Dict[str, Any]) -> bool:
+    """Heuristic for ITEM|PACK|…|FREE|P.RETURN|SALE|…|CLOSING qty-only photos."""
+    if not isinstance(result, dict):
+        return False
+    extra = (result.get("totals") or {}).get("extra") or {}
+    if str(extra.get("layout") or "") == "item_pack_free_return":
+        return True
+    if str(extra.get("extraction_method") or "") == "item_pack_free_return":
+        return True
+    if str(extra.get("stock_identity_kind") or "") == "item_pack_free_return":
+        return True
+    items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+    if len(items) < 5:
+        return False
+    one_x = sum(
+        1
+        for i in items
+        if re.match(r"(?i)^\s*\d+\s*[xX×]", str(i.get("packing") or ""))
+    )
+    if one_x < max(3, len(items) // 5):
+        return False
+    money_lines = sum(1 for i in items if _to_float(i.get("sales_value")) > 0.05)
+    if money_lines > max(2, len(items) // 10):
+        return False
+    title = " ".join(
+        str(x or "")
+        for x in (
+            result.get("report_title"),
+            result.get("company_name"),
+            result.get("stockist_name"),
+        )
+    )
+    return bool(
+        re.search(r"STOCK\s*&\s*SALES|STOCK\s+AND\s+SALES|HIMALAYA|WELLNESS", title, re.I)
+        or one_x >= max(5, len(items) // 3)
+    )
+
+
+def _free_return_total_value_vision_enabled() -> bool:
+    """Default ON. Kill switch for focused Total Value image reread."""
+    return os.getenv("STOCK_FREE_RETURN_TOTAL_VALUE_VISION", "true").strip().lower() not in {
+        "0",
+        "false",
+        "no",
+        "off",
+    }
+
+
+_FREE_RETURN_TOTAL_VALUE_VISION_PROMPT = """
+This is a STOCK & SALES spreadsheet photo with columns:
+ITEM | PACK | OPENING | PURCHASE | FREE | P.RETURN | FREE | SALE | FREE | S.RETURN | FREE | OTHERS | CLOSING.
+
+Product rows are QUANTITY only — there is no per-line sales value column.
+Yellow/highlighted "Total Value" rows print MONEY under those same columns
+(SALE cell = sales value, CLOSING cell = closing value, OPENING/PURCHASE = money).
+
+Return ONLY JSON:
+{
+  "total_value_rows": [
+    {"label": "Total Value", "opening_value": number|null, "purchase_value": number|null,
+     "sales_value": number|null, "closing_value": number|null}
+  ],
+  "totals": {
+    "sales_value": number|null,
+    "closing_value": number|null,
+    "opening_value": number|null,
+    "purchase_value": number|null
+  }
+}
+
+Rules:
+- Scan the FULL sheet top to bottom. There is usually one yellow Total Value
+  row after EACH Division block (Division : 00, HI1, HI2, …). List EVERY plain
+  "Total Value" / "TOTAL VALUE" money row in total_value_rows — do not stop after
+  the first or second division.
+- Skip only labels that include a parenthetical division code like
+  "Total Value (00)".
+- Put each row's SALE-column money in sales_value and CLOSING-column money in closing_value.
+- totals.* MUST equal the SUM of all total_value_rows when there is no single
+  grand TOTAL VALUE larger than each division row.
+- Never invent amounts. Null when unreadable.
+- Do not return product line items.
+""".strip()
+
+
+def _extract_free_return_total_value_vision(
+    file_bytes: bytes,
+    filename: str,
+    ext: str,
+) -> Optional[Dict[str, float]]:
+    """Second Gemini call: read only Total Value footer money (layout-family)."""
+    if not _free_return_total_value_vision_enabled():
+        return None
+    try:
+        from services.sales_extraction_runtime import (
+            check_sales_deadline,
+            gemini_call_slot,
+            sales_gemini_timeout_seconds,
+            sales_generate_content_via_vertex as generate_content_via_vertex,
+        )
+    except Exception:
+        return None
+    mime = _image_mime(ext)
+    b64 = base64.b64encode(file_bytes).decode("ascii")
+    parts: List[Dict[str, Any]] = [
+        {"text": _FREE_RETURN_TOTAL_VALUE_VISION_PROMPT},
+        {"inline_data": {"mime_type": mime, "data": b64}},
+    ]
+    # Same call: also send the lower half so the last division Total Value
+    # (often near the bottom of a tall phone screenshot) is not dropped.
+    try:
+        from PIL import Image
+        import io as _io
+
+        with Image.open(_io.BytesIO(file_bytes)) as im:
+            im = im.convert("RGB")
+            w, h = im.size
+            if h >= 900:
+                lower = im.crop((0, int(h * 0.45), w, h))
+                buf = _io.BytesIO()
+                lower.save(buf, format="JPEG", quality=85)
+                parts.append(
+                    {
+                        "text": (
+                            "Lower portion of the same sheet — include every "
+                            "Total Value row visible here as well."
+                        )
+                    }
+                )
+                parts.append(
+                    {
+                        "inline_data": {
+                            "mime_type": "image/jpeg",
+                            "data": base64.b64encode(buf.getvalue()).decode("ascii"),
+                        }
+                    }
+                )
+    except Exception:
+        pass
+    model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
+    payload = {
+        "contents": [
+            {
+                "role": "user",
+                "parts": parts,
+            }
+        ],
+        "generationConfig": {"temperature": 0.0, "maxOutputTokens": 2048},
+    }
+    try:
+        check_sales_deadline("gemini_request")
+        timeout = sales_gemini_timeout_seconds(90)
+        with gemini_call_slot("free_return_total_value_vision"):
+            response = generate_content_via_vertex(
+                model=model, payload=payload, timeout=timeout
+            )
+        parsed = _extract_json_object(_gemini_response_text(response))
+    except Exception as exc:
+        logger.info(
+            "FREE_RETURN_TOTAL_VALUE_VISION file=%s skipped error=%s",
+            filename,
+            type(exc).__name__,
+        )
+        return None
+    if not isinstance(parsed, dict):
+        return None
+    # Prefer summing explicit total_value_rows (catches missed grand totals).
+    rows = parsed.get("total_value_rows") if isinstance(parsed.get("total_value_rows"), list) else []
+    candidates: List[Dict[str, float]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        label = str(row.get("label") or "Total Value")
+        if _FREE_RETURN_DIVISION_TOTAL_VALUE_NAME.match(label):
+            continue
+        cand: Dict[str, float] = {}
+        for qty_k, val_k in (
+            ("opening_qty", "opening_value"),
+            ("purchase_qty", "purchase_value"),
+            ("sales_qty", "sales_value"),
+            ("closing_qty", "closing_value"),
+        ):
+            try:
+                num = float(row[val_k]) if row.get(val_k) not in (None, "") else None
+            except (TypeError, ValueError):
+                num = None
+            if num is not None and abs(num) >= 0.005:
+                cand[qty_k] = round(num, 2)
+        if cand:
+            candidates.append(cand)
+    # Full-page + lower-crop may repeat the same Total Value — dedupe by sales.
+    deduped: List[Dict[str, float]] = []
+    seen_sales: List[float] = []
+    for cand in candidates:
+        try:
+            sv = float(cand["sales_qty"]) if cand.get("sales_qty") is not None else None
+        except (TypeError, ValueError):
+            sv = None
+        if sv is not None and any(abs(sv - prev) <= 0.05 for prev in seen_sales):
+            continue
+        if sv is not None:
+            seen_sales.append(sv)
+        deduped.append(cand)
+    resolved = _resolve_free_return_total_value_money(deduped)
+    if resolved.get("sales_qty") is not None:
+        logger.info(
+            "FREE_RETURN_TOTAL_VALUE_VISION file=%s rows=%s sales_value=%s closing_value=%s",
+            filename,
+            len(deduped),
+            resolved.get("sales_qty"),
+            resolved.get("closing_qty"),
+        )
+        return resolved
+    money: Dict[str, float] = {}
+    totals = parsed.get("totals") if isinstance(parsed.get("totals"), dict) else {}
+    for out_key, src_keys in (
+        ("sales_qty", ("sales_value",)),
+        ("closing_qty", ("closing_value",)),
+        ("opening_qty", ("opening_value",)),
+        ("purchase_qty", ("purchase_value",)),
+    ):
+        raw = None
+        for sk in src_keys:
+            if totals.get(sk) not in (None, ""):
+                raw = totals.get(sk)
+                break
+        try:
+            num = float(raw) if raw not in (None, "") else None
+        except (TypeError, ValueError):
+            num = None
+        if num is not None and abs(num) >= 0.005:
+            money[out_key] = round(num, 2)
+    if "sales_qty" in money:
+        logger.info(
+            "FREE_RETURN_TOTAL_VALUE_VISION file=%s sales_value=%s closing_value=%s",
+            filename,
+            money.get("sales_qty"),
+            money.get("closing_qty"),
+        )
+        return money
+    return None
+
+
+def _maybe_fill_free_return_total_value_from_vision(
+    result: Dict[str, Any],
+    file_bytes: bytes,
+    filename: str,
+    ext: str,
+) -> Dict[str, Any]:
+    """When FREE/P.RETURN qty extract lacks totals.sales_value, reread Total Value."""
+    if not isinstance(result, dict):
+        return result
+    result = _recover_item_pack_free_return_sales_value(result)
+    try:
+        cur = float(result.get("totals", {}).get("sales_value"))
+    except (TypeError, ValueError):
+        cur = None
+    if cur is not None and abs(cur) >= 0.05:
+        return result
+    if not _result_looks_like_item_pack_free_return(result):
+        return result
+    money = _extract_free_return_total_value_vision(file_bytes, filename, ext)
+    if not money:
+        return result
+    _apply_free_return_total_value_money(result, money)
+    extra = result.setdefault("totals", {}).setdefault("extra", {})
+    extra["layout"] = "item_pack_free_return"
+    extra["stock_identity_kind"] = "item_pack_free_return"
+    extra["no_sales_value"] = True
+    extra["qty_only"] = True
+    extra["free_return_total_value_vision"] = True
+    return result
+
+
+def _recover_item_pack_free_return_sales_value(
+    result: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Peel plain Total Value rows into totals for FREE/P.RETURN qty-only grids.
+
+    Line items have no sales value column — money lives only on Total Value
+    footers (SALE/CLOSING cells). Division ``Total Value (…)`` banners are dropped.
+    """
+    if not isinstance(result, dict):
+        return result
+    items = result.get("line_items")
+    if not isinstance(items, list) or not items:
+        return result
+
+    kept: List[Dict[str, Any]] = []
+    money_candidates: List[Dict[str, float]] = []
+    dropped_division = 0
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("product_name") or "").strip()
+        if _FREE_RETURN_DIVISION_TOTAL_VALUE_NAME.match(name):
+            dropped_division += 1
+            continue
+        if _FREE_RETURN_TOTAL_VALUE_NAME.match(name):
+            money: Dict[str, float] = {}
+            # Prefer already-mapped *_value; else money parked in qty slots.
+            # Vision often stamps sales_value=0 on qty-only grids — treat 0 as
+            # empty so SALE-column money in sales_qty still promotes.
+            pairs = (
+                ("opening_qty", "opening_value"),
+                ("purchase_qty", "purchase_value"),
+                ("sales_qty", "sales_value"),
+                ("closing_qty", "closing_value"),
+                ("sales_return_qty", "sales_return_value"),
+                ("purchase_return_qty", "purchase_return_value"),
+            )
+            for qty_k, val_k in pairs:
+                raw_v = item.get(val_k)
+                raw_q = item.get(qty_k)
+                row_extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+                if raw_v in (None, "") and isinstance(row_extra, dict):
+                    raw_v = row_extra.get(val_k)
+                try:
+                    val_f = float(raw_v) if raw_v not in (None, "") else None
+                except (TypeError, ValueError):
+                    val_f = None
+                try:
+                    qty_f = float(raw_q) if raw_q not in (None, "") else None
+                except (TypeError, ValueError):
+                    qty_f = None
+                if val_f is not None and abs(val_f) >= 0.005:
+                    num = val_f
+                else:
+                    num = qty_f
+                if num is None:
+                    continue
+                money_like = abs(num - round(num)) > 0.001 or abs(num) >= 100.0
+                if not money_like and qty_k not in {"sales_qty", "closing_qty"}:
+                    # Small whole numbers on opening/purchase may be qty footers.
+                    continue
+                if money_like or qty_k in {"sales_qty", "closing_qty"}:
+                    money[qty_k] = round(num, 2)
+            if money:
+                money_candidates.append(money)
+            continue
+        kept.append(item)
+
+    if not money_candidates and not dropped_division:
+        return result
+
+    if money_candidates or dropped_division:
+        result["line_items"] = kept
+
+    resolved = _resolve_free_return_total_value_money(money_candidates)
+    if resolved:
+        _apply_free_return_total_value_money(result, resolved)
+        logger.info(
+            "FREE_RETURN_TOTAL_VALUE_RECOVER candidates=%s sales_value=%s closing_value=%s",
+            len(money_candidates),
+            result.get("totals", {}).get("sales_value"),
+            result.get("totals", {}).get("closing_value"),
+        )
+    return result
+
 
 def _xls_item_pack_free_return_indexes(row: List[Any]) -> Optional[Dict[str, int]]:
     """Column indexes for ITEM/PACK/OPENING/PURCHASE/FREE/P.RETURN/FREE/SALE/FREE/S.RETURN/FREE/OTHERS/CLOSING.
@@ -23545,6 +23989,7 @@ def _xls_fill_item_pack_free_return_rows(
     items: List[Dict[str, Any]] = []
     zero_rows = 0
     parse_error_rows = 0
+    total_value_candidates: List[Dict[str, float]] = []
     for row in rows[header_idx + 1 :]:
         if not isinstance(row, list):
             continue
@@ -23561,27 +24006,18 @@ def _xls_fill_item_pack_free_return_rows(
             if company and not result.get("company_name"):
                 result["company_name"] = _clean_name(company.group(1))
             continue
-        if re.fullmatch(r"total\s+value", product_name, re.I):
-            money = {}
+        # Division banners "Total Value (00)" are not statement totals.
+        if _FREE_RETURN_DIVISION_TOTAL_VALUE_NAME.match(product_name):
+            continue
+        if _FREE_RETURN_TOTAL_VALUE_NAME.match(product_name):
+            money: Dict[str, float] = {}
             for field, key in _ITEM_PACK_FREE_RETURN_QTY:
                 number, error = _xls_sreturn_qty_cell(cell(row, key))
                 if error or number is None:
                     continue
                 money[field] = round(number, 2)
-            if "sales_qty" in money:
-                result["totals"]["sales_value"] = money["sales_qty"]
-            if "closing_qty" in money:
-                result["totals"]["closing_value"] = money["closing_qty"]
-            extra_totals = result.setdefault("totals", {}).setdefault("extra", {})
-            if "opening_qty" in money:
-                extra_totals["opening_value"] = money["opening_qty"]
-            if "purchase_qty" in money:
-                extra_totals["purchase_value"] = money["purchase_qty"]
-            if "sales_return_qty" in money:
-                extra_totals["sales_return_value"] = money["sales_return_qty"]
-            if "purchase_return_qty" in money:
-                extra_totals["purchase_return_value"] = money["purchase_return_qty"]
-            extra_totals["total_row_source"] = "free_return_total_value"
+            if money:
+                total_value_candidates.append(money)
             continue
         if re.match(
             r"^(?:total\b|grand\s*total|sub\s*total|net\s*total)\b",
@@ -23641,6 +24077,15 @@ def _xls_fill_item_pack_free_return_rows(
         items.append(item)
 
     result["line_items"] = items
+    resolved_money = _resolve_free_return_total_value_money(total_value_candidates)
+    if resolved_money:
+        _apply_free_return_total_value_money(result, resolved_money)
+        logger.info(
+            "FREE_RETURN_TOTAL_VALUE_XLS candidates=%s sales_value=%s closing_value=%s",
+            len(total_value_candidates),
+            result.get("totals", {}).get("sales_value"),
+            result.get("totals", {}).get("closing_value"),
+        )
     extra = result.setdefault("totals", {}).setdefault("extra", {})
     extra["sheet"] = sheet_name
     extra["header_row"] = header_idx
@@ -59033,7 +59478,13 @@ Rules:
   Example: BONNISAN DROPS pack=30ML, opening=57, purchase=50, sale=73, sale free=1, closing=33.
   Period "01-Apr-26 To 30-Apr-26" is period_from=2026-04-01, period_to=2026-04-30.
   Do not put the period line or the PRODUCT/PACK header into stockist_name.
-  Qty-only: sales_value=0, closing_value=0 unless a value column is printed.
+  Qty-only product rows: sales_value=null, closing_value=null (no per-line value columns).
+  Printed "Total Value" / "TOTAL VALUE" rows are NOT products. Put the SALE-column
+  money into totals.sales_value and the CLOSING-column money into totals.closing_value;
+  put OPENING/PURCHASE money into totals.extra.opening_value / purchase_value.
+  Division labels like "Total Value (00)" are skipped. When several plain
+  "Total Value" rows appear (one per division) with no single grand TOTAL VALUE,
+  SUM their SALE and CLOSING money into totals. Never invent line sales_value.
 - Use 0 only for a cell that is actually blank.
 - Include every printed product row.
 """.strip()
@@ -83550,6 +84001,9 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
         except Exception as exc:
             logger.warning("pack/Op/Pur/Bal stock-sale vision probe skipped: %s", exc)
 
+    # Always defined — later Gemini post-checks read peek_ocr even when OCR
+    # probes were skipped (missing Tesseract / early Vision lock).
+    peek_ocr = ""
     if not skip_ocr_probes:
         # These probes need a local Tesseract binary. A missing install must not
         # stop Gemini Vision, which is the path used when Tesseract is absent.
@@ -83830,6 +84284,9 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                     )
                     return result
                 result["totals"]["extra"]["extraction_method"] = "gemini_vision"
+                result = _maybe_fill_free_return_total_value_from_vision(
+                    result, file_bytes, filename, ext
+                )
                 sale_closing_only = False
                 if not qty_ssa_tried and _is_qty_only_issue_ssa(result):
                     qty_ssa = _try_qty_only_ssa()

@@ -11335,6 +11335,10 @@ def _promote_printed_total_row_money(
     Only fills null top-level fields from an already-mapped TOTAL row
     (or from TOTAL raw cells when Rate omission shifted mapped slots).
     Prefers the last TOTAL / GRAND TOTAL when multipage sheets reprint footers.
+
+    FREE/P.RETURN qty-only sheets print plain ``Total Value`` once per division
+    (no grand). Those independent money rows are summed when the last row is
+    not a cumulative reprint; ``Total Value (…)`` division banners stay ignored.
     """
     if not isinstance(totals, dict):
         return []
@@ -11356,11 +11360,89 @@ def _promote_printed_total_row_money(
         for t in named
         if re.search(r"(?i)grand\s+total", str(t.get("product_name") or ""))
     ]
-    printed = (
-        grand[-1]
-        if grand
-        else (named[-1] if named else (usable[-1] if usable else None))
-    )
+    # Plain Total Value rows (no parenthetical division) on FREE/P.RETURN grids.
+    plain_total_value = [
+        t
+        for t in named
+        if re.fullmatch(
+            r"(?is)\s*total\s+values?\s*",
+            str(t.get("product_name") or "").strip(),
+        )
+    ]
+    if not grand and len(plain_total_value) >= 2:
+        for row in plain_total_value:
+            _remap_total_values_money_parked_in_qty(row)
+        sales_vals: List[float] = []
+        for row in plain_total_value:
+            try:
+                sv = (
+                    float(row["sales_value"])
+                    if row.get("sales_value") not in (None, "")
+                    else (
+                        float(row["sales_qty"])
+                        if row.get("sales_qty") not in (None, "")
+                        else None
+                    )
+                )
+            except (TypeError, ValueError):
+                sv = None
+            if sv is not None:
+                sales_vals.append(sv)
+        use_sum = True
+        if len(sales_vals) >= 2:
+            prior = sum(sales_vals[:-1])
+            last = sales_vals[-1]
+            if prior > 0 and (
+                abs(last - prior) <= 1.0
+                or (last + 1.0 >= prior and last >= max(sales_vals[:-1]))
+            ):
+                use_sum = False
+        if use_sum:
+            summed = {
+                "product_name": "Total Value",
+                "sales_value": None,
+                "closing_value": None,
+                "opening_value": None,
+                "receipts_value": None,
+            }
+            for key in ("sales_value", "closing_value", "opening_value", "receipts_value"):
+                total = 0.0
+                hit = False
+                for row in plain_total_value:
+                    raw = row.get(key)
+                    if raw in (None, "") and key == "sales_value":
+                        raw = row.get("sales_qty")
+                    if raw in (None, "") and key == "closing_value":
+                        raw = row.get("closing_qty")
+                    if raw in (None, "") and key == "opening_value":
+                        raw = row.get("opening_qty")
+                    if raw in (None, "") and key == "receipts_value":
+                        raw = row.get("receipts_qty") or row.get("purchase_qty")
+                    try:
+                        num = float(raw) if raw not in (None, "") else None
+                    except (TypeError, ValueError):
+                        num = None
+                    if num is None:
+                        continue
+                    total = round(total + num, 2)
+                    hit = True
+                if hit:
+                    summed[key] = total
+            printed = summed
+            logger.info(
+                "VISION_TABLE FREE_RETURN_TOTAL_VALUE_SUM rows=%s sales_value=%s",
+                len(plain_total_value),
+                summed.get("sales_value"),
+            )
+        else:
+            printed = plain_total_value[-1]
+    elif grand:
+        printed = grand[-1]
+    elif plain_total_value:
+        # Prefer exact Total Value / TOTAL VALUE over ``Total Value (div)``.
+        printed = plain_total_value[-1]
+    else:
+        printed = named[-1] if named else (usable[-1] if usable else None)
     if not isinstance(printed, dict):
         return []
     _remap_total_values_money_parked_in_qty(printed)
