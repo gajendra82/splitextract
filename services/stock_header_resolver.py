@@ -446,6 +446,11 @@ ALIASES: Dict[str, List[str]] = {
         "sale total",
         "sales tot",
         "sales total",
+        # TOTAL SALES / TOTAL SALE — reversed word order (Lucky Pharma style).
+        "total sale",
+        "total sales",
+        "totalsale",
+        "totalsales",
         "sales bill qty",
         "sale bill qty",
         "salesbillqty",
