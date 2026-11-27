@@ -63617,6 +63617,23 @@ def _ssa_dump_result_looks_like_item_pack_free_misfile(
     return False
 
 
+def _ssa_dump_result_looks_like_sale_and_stock_analysis_misfile(
+    result: Optional[Dict[str, Any]],
+) -> bool:
+    """Phone Excel SALE AND STOCK ANALYSIS claimed as SSA Opening/Receipt/Issue.
+
+    #26989: opening wiped, Sale* stored as receipts, closing = receipts.
+    Hand off to the sale_and_stock_analysis_grid prompt. Other SSA titles stay.
+    """
+    try:
+        from services.sale_and_stock_analysis_grid import (
+            ssa_dump_result_is_sale_and_stock_analysis_misfile,
+        )
+    except Exception:
+        return False
+    return ssa_dump_result_is_sale_and_stock_analysis_misfile(result)
+
+
 def _op_stk_result_should_defer_stock_and_sale_to_vt(
     result: Optional[Dict[str, Any]],
 ) -> bool:
@@ -81471,6 +81488,8 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
     _defer_item_pack_free_vt = False
     # OPENING STOCK|PURCHASES|TOTAL STOCK|SALES qty grid misfiled by dump.
     _defer_sale_purchase_vt = False
+    # SALE AND STOCK ANALYSIS phone Excel misread as Opening/Receipt/Issue.
+    _defer_sale_and_stock_analysis_vt = False
     _diag = {
         "geometry_called": False,
         "vision_called": False,
@@ -81814,6 +81833,17 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                         filename,
                         len(ssa_first.get("line_items") or []),
                     )
+                elif ssa_first and _ssa_dump_result_looks_like_sale_and_stock_analysis_misfile(
+                    ssa_first
+                ):
+                    _defer_sale_and_stock_analysis_vt = True
+                    logger.info(
+                        "SALE_AND_STOCK_ANALYSIS_GRID "
+                        "layout=sale_and_stock_analysis_grid "
+                        "stage=reject_ssa_dump file=%s rows=%s",
+                        filename,
+                        len(ssa_first.get("line_items") or []),
+                    )
                 elif ssa_first is None and _lstsl_empty_ocr:
                     # Dump burned call #1 and returned unusable (FREE/P.RETURN
                     # Excel phone grids, etc.). Do not spend call #2 on LstSL.
@@ -81846,6 +81876,7 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                     or _defer_sale_closing_vt
                     or _defer_item_pack_free_vt
                     or _defer_sale_purchase_vt
+                    or _defer_sale_and_stock_analysis_vt
                 ) and _lstsl_empty_ocr:
                     lstsl_vis = None
                 else:
@@ -82392,6 +82423,12 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                 "reason=ssa_purchase_qty_defer_vt",
                 filename,
             )
+        elif _defer_sale_and_stock_analysis_vt:
+            logger.info(
+                "[SalesStatement] file=%s Op_Stk before SSA skipped "
+                "reason=sale_and_stock_analysis_grid_defer_vt",
+                filename,
+            )
         elif (
             _op_stk_before_ssa_phone_enabled()
             and not _skip_vt_for_op_stk
@@ -82712,6 +82749,7 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
             and not _defer_sale_closing_vt
             and not _defer_item_pack_free_vt
             and not _defer_sale_purchase_vt
+            and not _defer_sale_and_stock_analysis_vt
             and not _skip_vt_for_op_stk
             and not _opbal_excess_peek
             and not _main_stock_oric_peek
@@ -82789,6 +82827,17 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                             "[SalesStatement] file=%s SSA dump unreadable-OCR "
                             "rejected reason=sale_closing_only rows=%s "
                             "continuing",
+                            filename,
+                            rows_u,
+                        )
+                    elif _ssa_dump_result_looks_like_sale_and_stock_analysis_misfile(
+                        ssa_unread
+                    ):
+                        _defer_sale_and_stock_analysis_vt = True
+                        logger.info(
+                            "SALE_AND_STOCK_ANALYSIS_GRID "
+                            "layout=sale_and_stock_analysis_grid "
+                            "stage=reject_ssa_dump file=%s rows=%s",
                             filename,
                             rows_u,
                         )
@@ -83162,12 +83211,14 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
         _force_vt_sale_closing = bool(_defer_sale_closing_vt)
         _force_vt_item_pack_free = bool(_defer_item_pack_free_vt)
         _force_vt_sale_purchase = bool(_defer_sale_purchase_vt)
+        _force_vt_sale_and_stock = bool(_defer_sale_and_stock_analysis_vt)
         _force_vt_ssa_rescue = bool(
             _force_vt_stock_and_sale
             or _force_vt_ssa_unit_sale
             or _force_vt_sale_closing
             or _force_vt_item_pack_free
             or _force_vt_sale_purchase
+            or _force_vt_sale_and_stock
         )
         if (
             vision_table_active_for("image")
@@ -83212,6 +83263,12 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                     "reason=ssa_purchase_qty_grid_rescue",
                     filename,
                 )
+            elif _force_vt_sale_and_stock:
+                logger.info(
+                    "[SalesStatement] file=%s VISION_TABLE force "
+                    "reason=sale_and_stock_analysis_grid",
+                    filename,
+                )
             elif _ssa_portrait_noise_early and _stacked_force_vt:
                 logger.info(
                     "[SalesStatement] file=%s VISION_TABLE force "
@@ -83237,7 +83294,9 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                     text_looks_like_sale_and_stock_analysis_grid,
                 )
 
-                if text_looks_like_sale_and_stock_analysis_grid(_op_stk_peek or ""):
+                if _defer_sale_and_stock_analysis_vt or text_looks_like_sale_and_stock_analysis_grid(
+                    _op_stk_peek or ""
+                ):
                     _vt_ctx["prompt"] = build_sale_and_stock_analysis_grid_prompt()
                     _vt_ctx["sale_and_stock_analysis_grid"] = True
                     logger.info(
@@ -83344,6 +83403,7 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                         and not _defer_sale_closing_vt
                         and not _defer_item_pack_free_vt
                         and not _defer_sale_purchase_vt
+                        and not _defer_sale_and_stock_analysis_vt
                         and not _ssa_dump_text_is_group_wise(_op_stk_peek or "")
                         and _ssa_dump_vision_table_needs_rescue(result)
                     ):
@@ -83369,6 +83429,9 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                             ssa_rescue
                             and ssa_rescue.get("line_items")
                             and not _ssa_dump_result_looks_like_unit_sale_slide(
+                                ssa_rescue
+                            )
+                            and not _ssa_dump_result_looks_like_sale_and_stock_analysis_misfile(
                                 ssa_rescue
                             )
                         ):
@@ -83556,6 +83619,7 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                 and not _defer_sale_closing_vt
                 and not _defer_item_pack_free_vt
                 and not _defer_sale_purchase_vt
+                and not _defer_sale_and_stock_analysis_vt
                 and not _ssa_dump_text_is_group_wise(_op_stk_peek or "")
                 and (
                     _ssa_dump_vision_table_needs_rescue(_vt_fb)
@@ -83583,6 +83647,9 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                     and ssa_fb.get("line_items")
                     and not _ssa_dump_result_looks_like_unit_sale_slide(ssa_fb)
                     and not _ssa_dump_result_looks_like_sale_closing_only(ssa_fb)
+                    and not _ssa_dump_result_looks_like_sale_and_stock_analysis_misfile(
+                        ssa_fb
+                    )
                 ):
                     fb_money = _ssa_dump_money_in_qty_row_count(ssa_fb)
                     vt_money = _ssa_dump_money_in_qty_row_count(_vt_fb)

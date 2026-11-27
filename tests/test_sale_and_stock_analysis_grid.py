@@ -16,6 +16,7 @@ from services.sale_and_stock_analysis_grid import (
     opening_sale_receipt_failure,
     prefer_grid_read,
     restore_clipped_leading_name,
+    ssa_dump_result_is_sale_and_stock_analysis_misfile,
     text_looks_like_sale_and_stock_analysis_grid,
 )
 from services.stock_vision_table import build_table_prompt
@@ -241,6 +242,102 @@ class NormalizeGroundTruthTests(unittest.TestCase):
         )
         self.assertTrue(prefer_grid_read(bad, good))
         self.assertFalse(prefer_grid_read(good, bad))
+
+
+def _server_dump_row(name, pack, receipts, sales, closing):
+    """API shape: no vision cells, opening wiped, identity still balances."""
+    return {
+        "product_name": name,
+        "packing": pack,
+        "opening_qty": 0.0,
+        "receipts_qty": receipts,
+        "sales_qty": sales,
+        "closing_qty": closing,
+        "extra": {"field_source": {}},
+    }
+
+
+class SsaDumpMisfileTests(unittest.TestCase):
+    def test_server_json_is_rejected(self):
+        """#26989 dump: title SALE AND STOCK ANALYSIS, Sale* parked in receipts."""
+        items = [
+            _server_dump_row("ACTARIL SOAP", "75GM", 144, 27, 117),
+            _server_dump_row("JANA TAB", "60'S", 97, 0, 97),
+            _server_dump_row("MALAKI TAB", "60'S", 18, 0, 18),
+            _server_dump_row("ONFIDO TAB*", "60'S", 164, 0, 164),
+            _server_dump_row("ABECON TAB", "60'S", 118, 0, 118),
+            _server_dump_row("V-52 SYP 200ML", "200ML", 0, 0, 0),
+            _server_dump_row("ERBOLAX TAB (100'S)", "100'S", 0, 0, 0),
+            _server_dump_row("tal (HM4)", None, 0, 0, 0),
+        ]
+        result = {
+            "report_title": "SALE AND STOCK ANALYSIS",
+            "line_items": items,
+            "totals": {
+                "extra": {
+                    "extraction_method": "ssa_qty_value_vision",
+                    "layout": "ssa_opening_receipt_issue_value",
+                    "early_vision_reason": "ssa_dump_unreadable_ocr_skip",
+                }
+            },
+        }
+        self.assertTrue(ssa_dump_result_is_sale_and_stock_analysis_misfile(result))
+        self.assertTrue(opening_sale_receipt_failure(result))
+
+    def test_stock_and_sales_title_is_not_this_misfile(self):
+        items = [
+            _server_dump_row("ABANA TAB", "60'S", 97, 0, 97),
+            _server_dump_row("CONFIDO TAB", "60'S", 164, 0, 164),
+            _server_dump_row("LIV-52 SYP", "200ML", 50, 0, 50),
+            _server_dump_row("HERBOLAX TAB", "100'S", 78, 0, 78),
+            _server_dump_row("ACTARIL SOAP", "75GM", 144, 27, 117),
+        ]
+        result = {
+            "report_title": "STOCK & SALES ANALYSIS",
+            "line_items": items,
+            "totals": {"extra": {}},
+        }
+        self.assertFalse(ssa_dump_result_is_sale_and_stock_analysis_misfile(result))
+
+    def test_kept_opening_and_sale_is_not_a_misfile(self):
+        items = []
+        for name, pack, opening, purchase, sales, closing in (
+            ("ACTARIL SOAP", "75GM", 47, 144, 27, 164),
+            ("ABANA TAB", "60'S", 190, 0, 97, 99),
+            ("CONFIDO TAB", "60'S", 514, 200, 164, 550),
+            ("LIV-52 SYP", "200ML", 1876, 0, 1255, 623),
+            ("HERBOLAX TAB", "100'S", 188, 200, 78, 310),
+        ):
+            items.append(
+                {
+                    "product_name": name,
+                    "packing": pack,
+                    "opening_qty": opening,
+                    "receipts_qty": purchase,
+                    "sales_qty": sales,
+                    "closing_qty": closing,
+                    "extra": {},
+                }
+            )
+        result = {
+            "report_title": "SALE AND STOCK ANALYSIS",
+            "line_items": items,
+            "totals": {"extra": {}},
+        }
+        self.assertFalse(ssa_dump_result_is_sale_and_stock_analysis_misfile(result))
+
+    def test_real_dump_qty_column_is_not_this_misfile(self):
+        items = [
+            _server_dump_row(f"ITEM {i}", "60'S", 10, 0, 10) for i in range(6)
+        ]
+        for item in items[:2]:
+            item["extra"]["dump_qty"] = 4
+        result = {
+            "report_title": "SALE AND STOCK ANALYSIS",
+            "line_items": items,
+            "totals": {"extra": {}},
+        }
+        self.assertFalse(ssa_dump_result_is_sale_and_stock_analysis_misfile(result))
 
 
 if __name__ == "__main__":
