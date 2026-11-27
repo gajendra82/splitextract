@@ -82775,10 +82775,35 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
             except Exception:
                 request_id = "-"
             _diag["vision_called"] = True
+            _vt_ctx: Dict[str, Any] = {
+                "filename": filename,
+                "ext": ext,
+                "request_id": request_id,
+            }
+            try:
+                from services.sale_and_stock_analysis_grid import (
+                    build_sale_and_stock_analysis_grid_prompt,
+                    text_looks_like_sale_and_stock_analysis_grid,
+                )
+
+                if text_looks_like_sale_and_stock_analysis_grid(_op_stk_peek or ""):
+                    _vt_ctx["prompt"] = build_sale_and_stock_analysis_grid_prompt()
+                    _vt_ctx["sale_and_stock_analysis_grid"] = True
+                    logger.info(
+                        "SALE_AND_STOCK_ANALYSIS_GRID "
+                        "layout=sale_and_stock_analysis_grid "
+                        "stage=dedicated_prompt file=%s",
+                        filename,
+                    )
+            except Exception:
+                logger.info(
+                    "SALE_AND_STOCK_ANALYSIS_GRID stage=prompt_skip file=%s",
+                    filename,
+                )
             outcome = run_vision_table_path(
                 file_bytes,
                 "image",
-                {"filename": filename, "ext": ext, "request_id": request_id},
+                _vt_ctx,
             )
             if outcome.get("status") == "ok" and isinstance(outcome.get("result"), dict):
                 result = outcome["result"]
