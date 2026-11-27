@@ -113,7 +113,7 @@ class TestIssueQtyParkedInSalesValue(unittest.TestCase):
         )
 
     def test_missing_issue_derived_from_closing_identity(self):
-        """Issue dropped to 0 while Closing stays printed — restore Issue."""
+        """Blank Issue stays unread. Identity is only a candidate."""
         from services.stock_native_resolver import repair_opbal_qty_only_fields
 
         result = empty_result("ashish.jpg", "jpg")
@@ -131,8 +131,16 @@ class TestIssueQtyParkedInSalesValue(unittest.TestCase):
         result["totals"]["extra"]["qty_only"] = True
         repair_opbal_qty_only_fields(result)
         item = result["line_items"][0]
-        self.assertEqual(item["sales_qty"], 422.0)
+        self.assertEqual(item["sales_qty"], 0.0)
         self.assertEqual(item["closing_qty"], 688.0)
+        cands = item["extra"]["candidates"]
+        self.assertTrue(
+            any(
+                c.get("source") == "opbal_missing_issue"
+                and c.get("fields", {}).get("sales_qty") == 422.0
+                for c in cands
+            )
+        )
 
     def test_missing_monetary_value_stays_null(self):
         item = {

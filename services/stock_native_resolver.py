@@ -7010,12 +7010,10 @@ def stamp_opbal_qty_only_if_detected(result: Dict[str, Any]) -> bool:
 
 
 def _repair_missing_issue_from_printed_closing(item: Dict[str, Any]) -> bool:
-    """Fill Issue Qty when it was dropped but Opening/Closing are printed.
+    """Record a candidate Issue when Opening and Closing are printed and Issue is blank.
 
-    On Op.Bal / Issue / Closing sheets, Vision sometimes zeroes Issue while
-    Closing remains correct (e.g. Opening=1110, Issue blank, Closing=688 →
-    Issue=422). Only fills when the derived Issue is a positive whole number
-    that restores stock identity — never fabricates Closing or Opening.
+    Identity may classify the row only. Opening+Receipt−Closing is stored on
+    extra["candidates"] and is not written into sales_qty.
     """
     if not isinstance(item, dict):
         return False
@@ -7047,22 +7045,30 @@ def _repair_missing_issue_from_printed_closing(item: Dict[str, Any]) -> bool:
             total = _guard_as_float(extra.get("total_stock"))
     if total is not None and abs(total - (float(opening) + receipt)) > 0.51:
         return False
-    item["sales_qty"] = float(round(candidate))
+    printed_sales_qty = item.get("sales_qty")
+    from services.stock_row_classifier import record_candidate
+
+    record_candidate(
+        item,
+        {"sales_qty": float(round(candidate))},
+        "opbal_missing_issue",
+        "opening_receipt_minus_closing",
+    )
+    # record_candidate must not become a write of an unprinted Issue.
+    item["sales_qty"] = printed_sales_qty
     extra = item.setdefault("extra", {})
-    if not isinstance(extra, dict):
-        item["extra"] = {}
-        extra = item["extra"]
-    fs = extra.setdefault("field_source", {})
-    if isinstance(fs, dict):
-        fs["sales_qty"] = "derived_from_closing_identity"
-    flags = list(extra.get("flags") or [])
-    if "MISSING_ISSUE_FROM_CLOSING_IDENTITY" not in flags:
-        flags.append("MISSING_ISSUE_FROM_CLOSING_IDENTITY")
-    extra["flags"] = flags
+    if isinstance(extra, dict):
+        fs = extra.get("field_source")
+        if isinstance(fs, dict) and fs.get("sales_qty") == "derived":
+            fs["sales_qty"] = "missing"
+        flags = list(extra.get("flags") or [])
+        if "MISSING_ISSUE_CANDIDATE_ONLY" not in flags:
+            flags.append("MISSING_ISSUE_CANDIDATE_ONLY")
+        extra["flags"] = flags
     logger.info(
-        "STOCK_MISSING_ISSUE_FROM_CLOSING product=%s sales_qty=%s",
+        "STOCK_MISSING_ISSUE_CANDIDATE product=%s candidate=%s",
         str(item.get("product_name") or "")[:60],
-        item["sales_qty"],
+        float(round(candidate)),
     )
     return True
 
@@ -7074,8 +7080,7 @@ def repair_opbal_qty_only_fields(result: Dict[str, Any]) -> Dict[str, Any]:
     2) Move Issue Qty out of sales_value.
     3) Swap Issue↔Closing when rates disagree.
     4) Clear residual qty copies from sales_value.
-    5) Derive missing Issue from Opening/Closing identity when Issue was dropped.
-    Never invents digits or fabricates money.
+    5) Record a missing-Issue candidate from Opening/Closing. Do not write it.
     """
     if not isinstance(result, dict):
         return result
