@@ -67602,10 +67602,22 @@ A sparse / all-zero row next to a dense neighbour must stay sparse — do not pu
 neighbour's OPENING/ISSUE/CLOSING onto it.
 LAST MONTH SALE is a trailing history qty after CLOSING VALUE — copy it to extra.lms and
 never use it as closing_qty or closing_value.
+Some sheets print TWO LAST MONTH SALE columns (qty + value), often both 0. Keep the
+eight OPENING/RECEIVE/ISSUE/CLOSING qty|value cells on the product row; do not left-shift
+OPENING VALUE into opening_qty when those trailing LMS zeros are present.
+Visual grid: each qty sits under its STOCK/QUANTITY header; each rupee amount sits under
+the VALUE header immediately to its right. Align digits to those vertical columns —
+never pull OPENING VALUE into OPENING STOCK or ISSUE VALUE into ISSUE QUANTITY.
+Examples (printed row → fields):
+- BONNISAN DROPS 30ML: opening_qty=66 opening_value=4150 sales_qty=5 sales_value=314 closing_qty=61 closing_value=3836 lms=0
+- EVECARE SYRUP-200ML: opening_qty=173 opening_value=23865 sales_qty=120 sales_value=16554 closing_qty=53 closing_value=7311
+- HIORA GA GEL-15ML: opening_qty=24 receipts_qty=50 sales_qty=30 sales_value=1983 closing_qty=44
 Skip phone bars, stamps, and Excel row numbers.
 Read the printed TOTAL / TOTALS footer row into totals (NOT into line_items). Copy the
 eight OPENING/RECEIVE/ISSUE/CLOSING qty|value cells exactly; optional LMS is
 totals.last_month_sale. Never glue TOTAL numbers onto the last product row.
+Never copy a product row (e.g. EVECARE SYRUP) into totals — TOTAL is the dark footer bar
+with statement-scale qty (opening≈1472 receive≈413 issue≈683 closing≈1202), not a SKU.
 
 Return ONLY JSON:
 {
@@ -67877,6 +67889,29 @@ def _main_stock_result_is_all_zero_shell(result: Optional[Dict[str, Any]]) -> bo
     if len(items) >= 10 and nonzero <= max(2, int(0.2 * len(items))):
         return True
     return nonzero == 0 and len(items) >= 8
+
+
+def _main_stock_result_has_printed_opening_value(
+    result: Optional[Dict[str, Any]],
+) -> bool:
+    """True when several rows keep OPENING VALUE money beside opening_qty."""
+    if not isinstance(result, dict):
+        return False
+    hits = 0
+    for item in result.get("line_items") or []:
+        if not isinstance(item, dict):
+            continue
+        oq = _to_float(item.get("opening_qty"))
+        extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        ov_raw = item.get("opening_value")
+        if ov_raw in (None, ""):
+            ov_raw = extra.get("opening_value")
+        ov = _to_float(ov_raw)
+        if oq > 0 and ov > 0 and ov >= oq:
+            hits += 1
+            if hits >= 3:
+                return True
+    return False
 
 
 def _is_opening_receive_issue_closing_stock_text(text: str) -> bool:
@@ -68430,6 +68465,378 @@ def _main_stock_lms_force_vision_enabled() -> bool:
     }
 
 
+def _main_stock_oric_qv_geometry_enabled() -> bool:
+    """STOCK_MAIN_ORIC_QV_GEOMETRY — header x-centre grid for qty|value + dual LMS.
+
+    Default ON. Aligns OPENING/RECEIVE/ISSUE/CLOSING qty|value (and trailing
+    LAST MONTH SALE pair) by printed header centres — same family as the SSA
+    ORIC geometry path, with VALUE columns kept.
+    """
+    return os.getenv("STOCK_MAIN_ORIC_QV_GEOMETRY", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _main_stock_oric_qv_col_order() -> Tuple[str, ...]:
+    return (
+        "opening_qty",
+        "opening_value",
+        "receipts_qty",
+        "receipts_value",
+        "sales_qty",
+        "sales_value",
+        "closing_qty",
+        "closing_value",
+        "lms",
+        "lms_value",
+    )
+
+
+def _main_stock_oric_qv_phrase_role(phrase: str) -> Optional[str]:
+    """Map a header phrase onto an ORIC qty|value / LMS column role."""
+    norm = re.sub(r"[^A-Z0-9]+", " ", str(phrase or "").upper()).strip()
+    norm = re.sub(r"\s+", " ", norm)
+    if not norm:
+        return None
+    table = (
+        ("OPENING STOCK", "opening_qty"),
+        ("OPENING QTY", "opening_qty"),
+        ("OPENING VALUE", "opening_value"),
+        ("RECEIVE QUANTITY", "receipts_qty"),
+        ("RECEIVE QTY", "receipts_qty"),
+        ("RECEIVE VALUE", "receipts_value"),
+        ("ISSUE QUANTITY", "sales_qty"),
+        ("ISSUE QTY", "sales_qty"),
+        ("ISSUE VALUE", "sales_value"),
+        ("CLOSING STOCK", "closing_qty"),
+        ("CLOSING QTY", "closing_qty"),
+        ("CLOSING VALUE", "closing_value"),
+        ("LAST MONTH SALE", "lms"),
+        ("LAST MONTH SALES", "lms"),
+    )
+    for key, role in table:
+        if norm == key or norm.startswith(key + " "):
+            return role
+    return None
+
+
+def _main_stock_oric_qv_header_centres(
+    words: Sequence[Dict[str, Any]],
+) -> Optional[Dict[str, float]]:
+    """Build column x-centres from OPENING STOCK|VALUE … LAST MONTH SALE headers."""
+    if not words:
+        return None
+    # Prefer the densest header y-band in the upper third of the page.
+    page_h = max(float(w.get("cy") or w.get("y") or 0) for w in words) or 1.0
+    upper = [
+        w
+        for w in words
+        if float(w.get("cy") or w.get("y") or 0) <= page_h * 0.42
+    ]
+    pool = upper if len(upper) >= 8 else list(words)
+    sorted_w = sorted(
+        pool,
+        key=lambda w: (float(w.get("cy") or w.get("y") or 0), float(w.get("cx") or w.get("x") or w.get("left") or 0)),
+    )
+    # Slide a 3-token window for multi-word headers.
+    hits: List[Tuple[str, float, float]] = []
+    n = len(sorted_w)
+    for i in range(n):
+        parts = [str(sorted_w[i].get("text") or "")]
+        cxs = [float(sorted_w[i].get("cx") or sorted_w[i].get("x") or 0)]
+        cys = [float(sorted_w[i].get("cy") or sorted_w[i].get("y") or 0)]
+        for j in range(i + 1, min(i + 4, n)):
+            cy_j = float(sorted_w[j].get("cy") or sorted_w[j].get("y") or 0)
+            if abs(cy_j - cys[0]) > 55:
+                break
+            parts.append(str(sorted_w[j].get("text") or ""))
+            cxs.append(float(sorted_w[j].get("cx") or sorted_w[j].get("x") or 0))
+            cys.append(cy_j)
+            phrase = " ".join(parts)
+            role = _main_stock_oric_qv_phrase_role(phrase)
+            if role:
+                hits.append((role, sum(cxs) / len(cxs), sum(cys) / len(cys)))
+                break
+        # Single-token VALUE under OPENING/RECEIVE/ISSUE/CLOSING is handled via
+        # adjacent STOCK/QUANTITY already; bare VALUE alone is ambiguous.
+    if len(hits) < 4:
+        return None
+    # Keep the densest y-band of hits.
+    hits.sort(key=lambda h: h[2])
+    med_cy = hits[len(hits) // 2][2]
+    band = [h for h in hits if abs(h[2] - med_cy) <= 70] or hits
+    centres: Dict[str, float] = {}
+    lms_xs: List[float] = []
+    for role, cx, _cy in sorted(band, key=lambda h: h[1]):
+        if role == "lms":
+            lms_xs.append(cx)
+            continue
+        # Prefer leftmost hit for each role (STOCK before a glued VALUE OCR).
+        if role not in centres:
+            centres[role] = cx
+    if lms_xs:
+        lms_xs = sorted(lms_xs)
+        centres["lms"] = lms_xs[0]
+        if len(lms_xs) >= 2:
+            centres["lms_value"] = lms_xs[1]
+        elif _main_stock_lms_trail_enabled():
+            # Dual LMS headers share the same label — place the second trail
+            # just right of the first when OCR only kept one centre.
+            centres.setdefault("lms_value", lms_xs[0] + 55.0)
+    need = {"opening_qty", "receipts_qty", "sales_qty", "closing_qty"}
+    if not need.issubset(centres):
+        # Allow ISSUE interpolated between RECEIVE and CLOSING when OCR drops it.
+        if (
+            "sales_qty" not in centres
+            and "receipts_qty" in centres
+            and "closing_qty" in centres
+        ):
+            centres["sales_qty"] = (centres["receipts_qty"] + centres["closing_qty"]) / 2.0
+        if not {"opening_qty", "receipts_qty", "closing_qty"}.issubset(centres):
+            return None
+    # Interpolate missing VALUE centres between flanking qty headers.
+    order = list(_main_stock_oric_qv_col_order())
+    for idx, role in enumerate(order):
+        if role in centres or role in {"lms", "lms_value"}:
+            continue
+        if not role.endswith("_value"):
+            continue
+        left = None
+        right = None
+        for j in range(idx - 1, -1, -1):
+            if order[j] in centres:
+                left = centres[order[j]]
+                break
+        for j in range(idx + 1, len(order)):
+            if order[j] in centres:
+                right = centres[order[j]]
+                break
+        if left is not None and right is not None and right > left + 8:
+            centres[role] = (left + right) / 2.0
+    if len([k for k in centres if k.endswith("_qty") or k.endswith("_value")]) < 6:
+        return None
+    return centres
+
+
+def _main_stock_assign_oric_qv_row_by_centres(
+    name: str,
+    num_words: Sequence[Dict[str, Any]],
+    centres: Dict[str, float],
+) -> Optional[Dict[str, Any]]:
+    """Assign numeric tokens on one row to nearest ORIC qty|value header centres."""
+    if not name or not centres or not num_words:
+        return None
+    order = [c for c in _main_stock_oric_qv_col_order() if c in centres]
+    if len(order) < 6:
+        return None
+    slots: Dict[str, Optional[float]] = {c: None for c in order}
+    for w in num_words:
+        tok = str(w.get("text") or "").strip().replace(",", "")
+        if not re.fullmatch(r"-?\d+(?:\.\d+)?", tok):
+            continue
+        cx = float(w.get("cx") or w.get("x") or 0)
+        nearest = min(order, key=lambda role: abs(cx - float(centres[role])))
+        # Prefer the first fill; later overwrite only when closer.
+        prev = slots.get(nearest)
+        if prev is None:
+            slots[nearest] = _to_float(tok)
+            continue
+        # Keep existing unless this token is clearly nearer than a competing fill.
+        slots[nearest] = _to_float(tok)
+    oq = float(slots.get("opening_qty") or 0.0)
+    rq = float(slots.get("receipts_qty") or 0.0)
+    sq = float(slots.get("sales_qty") or 0.0)
+    cq = float(slots.get("closing_qty") or 0.0)
+    ov = slots.get("opening_value")
+    rv = slots.get("receipts_value")
+    sv = slots.get("sales_value")
+    cv = slots.get("closing_value")
+    # Dual LMS trail: never let LMS digits sit in CLOSING VALUE.
+    if slots.get("lms") is not None or slots.get("lms_value") is not None:
+        if cv is not None and float(cv) <= 0.05 and cq > 0 and ov is not None:
+            pass
+    item = empty_line_item()
+    item["product_name"] = _clean_name(name)
+    item["opening_qty"] = oq
+    item["receipts_qty"] = rq
+    item["sales_qty"] = sq
+    item["closing_qty"] = cq
+    item["sales_value"] = float(sv or 0.0)
+    item["closing_value"] = float(cv or 0.0)
+    item["opening_value"] = float(ov) if ov is not None else None
+    item["receipts_value"] = float(rv) if rv is not None else None
+    extra = item.setdefault("extra", {})
+    if not isinstance(extra, dict):
+        extra = {}
+        item["extra"] = extra
+    if ov is not None:
+        extra["opening_value"] = float(ov)
+    if rv is not None:
+        extra["receipts_value"] = float(rv)
+        extra["purchase_value"] = float(rv)
+    if slots.get("lms") is not None:
+        extra["lms"] = float(slots["lms"] or 0.0)
+    if slots.get("lms_value") is not None:
+        extra["lms_value"] = float(slots["lms_value"] or 0.0)
+    extra["layout"] = "opening_receive_issue_closing"
+    extra["oric_qv_geometry"] = True
+    return item
+
+
+def _main_stock_oric_qv_geometry_parse(
+    file_bytes: bytes, filename: str, ext: str = "jpg"
+) -> Optional[Dict[str, Any]]:
+    """Header-x ORIC qty|value (+ dual LMS) grid — printed numbers only."""
+    if not _main_stock_oric_qv_geometry_enabled() or not file_bytes:
+        return None
+    try:
+        from PIL import Image, ImageEnhance, ImageOps
+        from services.stock_ocr_policy import stock_ocr_context
+    except Exception:
+        return None
+    try:
+        image = ImageOps.exif_transpose(Image.open(io.BytesIO(file_bytes))).convert(
+            "RGB"
+        )
+    except Exception:
+        return None
+    gray = ImageOps.autocontrast(image.convert("L"))
+    up = gray.resize(
+        (max(1, gray.width * 2), max(1, gray.height * 2)),
+        Image.Resampling.LANCZOS,
+    )
+    up = ImageEnhance.Sharpness(up).enhance(2.0)
+    try:
+        pytesseract = _a2z_tesseract()
+        with stock_ocr_context(region="main_stock_oric_qv_geom", page="1", scope="page"):
+            data = pytesseract.image_to_data(
+                up, config="--psm 6", output_type=pytesseract.Output.DICT
+            )
+    except Exception as exc:
+        logger.info(
+            "MAIN_STOCK_ORIC_QV_GEOM file=%s status=ocr_failed error=%s",
+            filename,
+            type(exc).__name__,
+        )
+        return None
+    words: List[Dict[str, Any]] = []
+    for i, raw in enumerate(data.get("text") or []):
+        text = str(raw or "").strip()
+        if not text:
+            continue
+        try:
+            conf = float(data["conf"][i])
+        except Exception:
+            conf = -1.0
+        if conf < 0:
+            continue
+        left = float(data["left"][i])
+        top = float(data["top"][i])
+        width = float(data["width"][i])
+        height = float(data["height"][i])
+        words.append(
+            {
+                "text": text,
+                "left": left,
+                "cx": left + width / 2.0,
+                "cy": top + height / 2.0,
+                "x": left + width / 2.0,
+                "y": top + height / 2.0,
+            }
+        )
+    if len(words) < 30:
+        return None
+    centres = _main_stock_oric_qv_header_centres(words)
+    if not centres:
+        logger.info(
+            "MAIN_STOCK_ORIC_QV_GEOM file=%s status=no_header_centres", filename
+        )
+        return None
+    qty_centres = [centres[k] for k in centres if k.endswith("_qty") or k.endswith("_value") or k.startswith("lms")]
+    name_right = min(qty_centres) - 35.0
+    words_sorted = sorted(words, key=lambda w: (w["cy"], w["left"]))
+    rows: List[List[Dict[str, Any]]] = []
+    for w in words_sorted:
+        if not rows or abs(w["cy"] - rows[-1][0]["cy"]) > 26:
+            rows.append([w])
+        else:
+            rows[-1].append(w)
+    items: List[Dict[str, Any]] = []
+    for row in rows:
+        name_parts = [
+            w["text"]
+            for w in sorted(row, key=lambda x: x["left"])
+            if w["cx"] < name_right and re.search(r"[A-Za-z]", w["text"])
+        ]
+        name_blob = _clean_name(" ".join(name_parts))
+        if len(name_blob) < 4:
+            continue
+        if re.search(
+            r"^(PRODUCT|OPENING|RECEIVE|ISSUE|CLOSING|TOTAL|LAST|MONTH|STOCK|"
+            r"DESCRIPTION|STATEMENT|PHONE|PAGE)\b",
+            name_blob,
+            re.I,
+        ):
+            continue
+        if re.search(
+            r"\bOPENING\b|\bRECEIVE\b|\bISSUE\b|\bCLOSING\b|\bLAST\s*MONTH\b",
+            name_blob,
+            re.I,
+        ):
+            continue
+        nums = [w for w in row if w["cx"] >= name_right]
+        item = _main_stock_assign_oric_qv_row_by_centres(name_blob, nums, centres)
+        if not item:
+            continue
+        if not _main_stock_name_ok(str(item.get("product_name") or "")):
+            continue
+        items.append(item)
+    if len(items) < 8:
+        logger.info(
+            "MAIN_STOCK_ORIC_QV_GEOM file=%s status=too_few items=%s centres=%s",
+            filename,
+            len(items),
+            sorted(centres.keys()),
+        )
+        return None
+    balanced = sum(
+        1
+        for it in items
+        if _main_stock_oric_qty_balances(
+            float(it.get("opening_qty") or 0),
+            float(it.get("receipts_qty") or 0),
+            float(it.get("sales_qty") or 0),
+            float(it.get("closing_qty") or 0),
+        )
+    )
+    if balanced < max(5, int(0.45 * len(items))):
+        logger.info(
+            "MAIN_STOCK_ORIC_QV_GEOM file=%s status=weak_identity items=%s balanced=%s",
+            filename,
+            len(items),
+            balanced,
+        )
+        return None
+    result = empty_result(filename, (ext or "jpg").lstrip(".") or "jpg")
+    result["report_title"] = "STOCK & SALES STATEMENT"
+    result["line_items"] = items
+    extra = result.setdefault("totals", {}).setdefault("extra", {})
+    extra["extraction_method"] = "main_stock_oric_qv_geometry"
+    extra["layout"] = "opening_receive_issue_closing"
+    extra["oric_qv_geometry_cols"] = sorted(centres.keys())
+    logger.info(
+        "MAIN_STOCK_ORIC_QV_GEOM file=%s items=%s balanced=%s cols=%s",
+        filename,
+        len(items),
+        balanced,
+        sorted(centres.keys()),
+    )
+    return result
+
+
 def _main_stock_printed_totals_enabled() -> bool:
     """STOCK_MAIN_ORIC_PRINTED_TOTALS — copy TOTALS footer into totals.
 
@@ -68837,7 +69244,11 @@ def _main_stock_oric_totals_identity_ok(vals: Sequence[float]) -> bool:
 
 
 def _main_stock_extract_oric_totals_vals(footer: str) -> Optional[List[float]]:
-    """Pull 8/9 ORIC TOTAL cells from footer OCR (TOTAL label or identity window)."""
+    """Pull 8/10 ORIC TOTAL cells from footer OCR (TOTAL label or identity window).
+
+    Dual LAST MONTH SALE footers print 10 trailing numbers; peel the first 8
+    ORIC qty|value cells when identity holds.
+    """
     text = str(footer or "")
     if not text.strip():
         return None
@@ -68851,6 +69262,7 @@ def _main_stock_extract_oric_totals_vals(footer: str) -> Optional[List[float]]:
         r"(-?\d[\d,]*(?:\.\d+)?)\D+"
         r"(-?\d[\d,]*(?:\.\d+)?)\D+"
         r"(-?\d[\d,]*(?:\.\d+)?)"
+        r"(?:\D+(-?\d[\d,]*(?:\.\d+)?))?"
         r"(?:\D+(-?\d[\d,]*(?:\.\d+)?))?",
         text,
     )
@@ -68865,7 +69277,7 @@ def _main_stock_extract_oric_totals_vals(footer: str) -> Optional[List[float]]:
                 break
             vals.append(parsed)
         if len(vals) >= 8 and _main_stock_oric_totals_identity_ok(vals):
-            return vals
+            return vals[:10] if len(vals) >= 10 else vals
     tokens = re.findall(
         r"-?\d[\d,]*(?:\.\d+)?|[OoIlSsZzBbGgAa|]{2,}",
         text,
@@ -68877,15 +69289,264 @@ def _main_stock_extract_oric_totals_vals(footer: str) -> Optional[List[float]]:
             parsed_tokens.append(parsed)
     best: Optional[List[float]] = None
     for i in range(0, max(0, len(parsed_tokens) - 7)):
-        window = parsed_tokens[i : i + 9]
-        if len(window) < 8:
-            continue
-        if not _main_stock_oric_totals_identity_ok(window):
-            continue
-        if float(window[0]) < 200 and float(window[1]) < 20000:
-            continue
-        best = list(window[:9] if len(window) >= 9 else window[:8])
+        # Prefer dual-LMS 10-cell windows, then 9/8.
+        for width in (10, 9, 8):
+            if i + width > len(parsed_tokens):
+                continue
+            window = parsed_tokens[i : i + width]
+            if not _main_stock_oric_totals_identity_ok(window):
+                continue
+            if float(window[0]) < 200 and float(window[1]) < 20000:
+                continue
+            best = list(window[:10] if len(window) >= 10 else window)
+            break
+        if best is not None:
+            break
     return best
+
+
+def _main_stock_totals_match_product_row(result: Dict[str, Any]) -> bool:
+    """True when statement totals are a single product row (Vision glue)."""
+    if not isinstance(result, dict):
+        return False
+    totals = result.get("totals") if isinstance(result.get("totals"), dict) else {}
+    try:
+        t_oq = float(totals.get("opening_qty") or 0.0)
+        t_sq = float(totals.get("sales_qty") or 0.0)
+        t_cq = float(totals.get("closing_qty") or 0.0)
+        t_sv = float(totals.get("sales_value") or 0.0)
+    except (TypeError, ValueError):
+        return False
+    if t_oq <= 0 or t_cq <= 0:
+        return False
+    # Statement-scale footers are hundreds/thousands of units.
+    if t_oq >= 500 and t_cq >= 400:
+        return False
+    hits = 0
+    for item in result.get("line_items") or []:
+        if not isinstance(item, dict):
+            continue
+        try:
+            oq = float(item.get("opening_qty") or 0.0)
+            sq = float(item.get("sales_qty") or 0.0)
+            cq = float(item.get("closing_qty") or 0.0)
+            sv = float(item.get("sales_value") or 0.0)
+        except (TypeError, ValueError):
+            continue
+        if (
+            abs(oq - t_oq) <= 0.05
+            and abs(cq - t_cq) <= 0.05
+            and abs(sq - t_sq) <= 0.05
+            and (t_sv <= 0.05 or abs(sv - t_sv) <= 0.51)
+        ):
+            hits += 1
+            if hits >= 1:
+                return True
+    return False
+
+
+def _main_stock_scrub_misaligned_oric_rows(result: Dict[str, Any]) -> int:
+    """Clear impossible ISSUE/OPENING cells when grid alignment collapsed.
+
+    Layout family: OPENING|RECEIVE|ISSUE|CLOSING qty|value (+ dual LMS). Does not
+    invent replacements — only drops garbled cells that break identity and would
+    poison statement sales totals (e.g. sales_qty 71907 on a 36-unit SKU).
+    """
+    if not isinstance(result, dict):
+        return 0
+    fixed = 0
+    for item in result.get("line_items") or []:
+        if not isinstance(item, dict):
+            continue
+        extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        try:
+            oq = float(item.get("opening_qty") or 0.0)
+            rq = float(item.get("receipts_qty") or 0.0)
+            sq = float(item.get("sales_qty") or 0.0)
+            cq = float(item.get("closing_qty") or 0.0)
+            ov = float(
+                item.get("opening_value")
+                if item.get("opening_value") not in (None, "")
+                else (extra.get("opening_value") or 0.0)
+            )
+            sv = float(item.get("sales_value") or 0.0)
+            cv = float(item.get("closing_value") or 0.0)
+        except (TypeError, ValueError):
+            continue
+        if _main_stock_oric_qty_balances(oq, rq, sq, cq):
+            continue
+        stock_scale = max(oq, rq, cq, 1.0)
+        absurd_sales = sq >= max(2000.0, stock_scale * 20.0)
+        value_in_qty = ov < 0.01 and oq >= 200 and cq >= 10 and abs(oq - cq) > 0.05
+        if not (absurd_sales or value_in_qty):
+            continue
+        # Drop garbled movement; keep readable closing when it looks like stock.
+        prev = (oq, rq, sq, sv, ov)
+        # Clear garbled cells only — never rewrite from arithmetic.
+        item["sales_qty"] = 0.0
+        item["sales_value"] = 0.0
+        if value_in_qty:
+            item["opening_qty"] = 0.0
+            item["opening_value"] = None
+            extra["opening_value"] = None
+        fs = extra.get("field_source") if isinstance(extra.get("field_source"), dict) else {}
+        fs["sales_qty"] = "missing"
+        if value_in_qty:
+            fs["opening_qty"] = "missing"
+            fs["opening_value"] = "missing"
+        extra["field_source"] = fs
+        extra["oric_grid_scrub"] = {
+            "reason": "misaligned_issue_or_value_in_qty",
+            "from": {
+                "opening_qty": prev[0],
+                "receipts_qty": prev[1],
+                "sales_qty": prev[2],
+                "sales_value": prev[3],
+                "opening_value": prev[4],
+            },
+        }
+        item["extra"] = extra
+        fixed += 1
+        logger.info(
+            "MAIN_STOCK_ORIC_GRID_SCRUB product=%s sales_qty=%s opening_qty=%s "
+            "closing_qty=%s",
+            str(item.get("product_name") or "")[:40],
+            prev[2],
+            prev[0],
+            cq,
+        )
+    return fixed
+
+
+def _main_stock_apply_balanced_line_qty_totals(result: Dict[str, Any]) -> bool:
+    """Park OPENING/RECEIVE/ISSUE/CLOSING qty totals from identity-ok rows.
+
+    Used when the printed TOTAL bar is unreadable and Vision totals look like a
+    product row. Money totals stay on line sums already present when available.
+    """
+    if not isinstance(result, dict):
+        return False
+    items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+    if len(items) < 8:
+        return False
+    oq = rq = sq = cq = 0.0
+    ov = rv = sv = cv = 0.0
+    used = 0
+    for item in items:
+        try:
+            ioq = float(item.get("opening_qty") or 0.0)
+            irq = float(item.get("receipts_qty") or 0.0)
+            isq = float(item.get("sales_qty") or 0.0)
+            icq = float(item.get("closing_qty") or 0.0)
+        except (TypeError, ValueError):
+            continue
+        if not _main_stock_oric_qty_balances(ioq, irq, isq, icq):
+            continue
+        extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        try:
+            iov = float(
+                item.get("opening_value")
+                if item.get("opening_value") not in (None, "")
+                else (extra.get("opening_value") or 0.0)
+            )
+            irv = float(
+                item.get("receipts_value")
+                if item.get("receipts_value") not in (None, "")
+                else (extra.get("receipts_value") or 0.0)
+            )
+            isv = float(item.get("sales_value") or 0.0)
+            icv = float(item.get("closing_value") or 0.0)
+        except (TypeError, ValueError):
+            iov = irv = isv = icv = 0.0
+        oq += ioq
+        rq += irq
+        sq += isq
+        cq += icq
+        ov += iov
+        rv += irv
+        sv += isv
+        cv += icv
+        used += 1
+    if used < max(8, int(0.55 * len(items))):
+        return False
+    if cq < 10 or oq < 10:
+        return False
+    vals = [oq, ov, rq, rv, sq, sv, cq, cv]
+    ok = _main_stock_apply_totals_values(
+        result, vals, source="main_stock_balanced_line_qty_totals"
+    )
+    if ok:
+        extra = (result.get("totals") or {}).setdefault("extra", {})
+        if isinstance(extra, dict):
+            extra["balanced_line_rows_used"] = used
+        logger.info(
+            "MAIN_STOCK_BALANCED_LINE_TOTALS rows=%s opening_qty=%s receive_qty=%s "
+            "issue_qty=%s closing_qty=%s",
+            used,
+            oq,
+            rq,
+            sq,
+            cq,
+        )
+    return ok
+
+
+def _main_stock_finalize_oric_grid_totals(
+    result: Dict[str, Any], file_bytes: Optional[bytes] = None
+) -> None:
+    """Scrub shifted rows, then prefer printed TOTAL / balanced line qty totals."""
+    if not isinstance(result, dict):
+        return
+    _main_stock_scrub_misaligned_oric_rows(result)
+    extra_now = (
+        (result.get("totals") or {}).get("extra")
+        if isinstance(result.get("totals"), dict)
+        else None
+    )
+    if isinstance(extra_now, dict) and _main_stock_totals_match_product_row(result):
+        logger.info(
+            "MAIN_STOCK_TOTALS_REJECT reason=matches_product_row opening_qty=%s "
+            "sales_qty=%s closing_qty=%s",
+            (result.get("totals") or {}).get("opening_qty"),
+            (result.get("totals") or {}).get("sales_qty"),
+            (result.get("totals") or {}).get("closing_qty"),
+        )
+        for key in (
+            "opening_qty",
+            "receipts_qty",
+            "sales_qty",
+            "closing_qty",
+            "sales_value",
+            "closing_value",
+        ):
+            if key in (result.get("totals") or {}):
+                result["totals"][key] = None
+        for key in (
+            "opening_value",
+            "receipts_value",
+            "purchase_value",
+            "opening_qty",
+            "receipts_qty",
+            "sales_qty",
+            "closing_qty",
+            "total_row_source",
+            "closing_value_source",
+            "sales_value_source",
+        ):
+            extra_now.pop(key, None)
+    if file_bytes:
+        _main_stock_apply_printed_totals_footer(result, file_bytes)
+    totals = result.get("totals") if isinstance(result.get("totals"), dict) else {}
+    extra = totals.get("extra") if isinstance(totals.get("extra"), dict) else {}
+    src = str((extra or {}).get("total_row_source") or "")
+    need_line = (
+        not src
+        or src in {"main_stock_vision_totals"}
+        or _main_stock_totals_match_product_row(result)
+        or float(totals.get("sales_qty") or 0.0) >= 5000
+    )
+    if need_line:
+        _main_stock_apply_balanced_line_qty_totals(result)
 
 
 def _main_stock_apply_printed_totals_footer(
@@ -68896,16 +69557,20 @@ def _main_stock_apply_printed_totals_footer(
         return
     if not file_bytes:
         return
-    # Keep a Vision/contamination peel already parked on totals.
+    # Keep a trusted Vision/contamination peel already parked on totals —
+    # unless it is clearly a product row glued into totals.
     extra_now = (
         (result.get("totals") or {}).get("extra")
         if isinstance(result.get("totals"), dict)
         else None
     )
     src_now = str((extra_now or {}).get("total_row_source") or "")
-    if src_now.startswith("main_stock") and (result.get("totals") or {}).get(
-        "closing_value"
-    ) not in (None, ""):
+    if (
+        src_now.startswith("main_stock")
+        and (result.get("totals") or {}).get("closing_value") not in (None, "")
+        and not _main_stock_totals_match_product_row(result)
+        and src_now != "main_stock_vision_totals"
+    ):
         return
     footer = _main_stock_footer_ocr_text(file_bytes)
     if not footer.strip():
@@ -69194,16 +69859,28 @@ def _main_stock_parse_ocr_line(line: str) -> Optional[Dict[str, Any]]:
             tokens = tokens[:-1]
 
     def _zero_like(token: str) -> bool:
+        raw = str(token or "")
+        # Pack / form cues stay in the product name — never soft-zero ORIC cells.
+        # With dual LAST MONTH SALE trail (10 cells) these used to be consumed
+        # as 0 and left only a bare brand in name_tokens (ARJUNA without TAB).
+        if re.fullmatch(
+            r"(?i)TAB(?:S|LET(?:S)?)?|CAP(?:S|SULE(?:S)?)?|SYP|SYR(?:UP)?|"
+            r"DROP(?:S)?|ML|GM|GEL|LIQ|LOTION|WASH|CREAM|OIL|NS|S",
+            raw,
+        ):
+            return False
         return bool(
-            re.fullmatch(r"[\(\)\[\]\{\}CceosS\.\'\`\*oO+\-~]+", token or "")
-            or re.fullmatch(r"[+\-~]*[\(\)\[\]\{\}]+[+\-~]*", token or "")
-            or re.fullmatch(r"\d{1,2}[\(\)\[\]\{\}]+", token or "")
-            or re.fullmatch(r"[A-Za-z]{1,3}[\(\)\[\]\{\}]*", token or "")
-            or token in {"0", "0.0", "0.00", "--", "-", "—", "+)", ")+", "(+", "+("}
+            re.fullmatch(r"[\(\)\[\]\{\}CceosS\.\'\`\*oO+\-~]+", raw)
+            or re.fullmatch(r"[+\-~]*[\(\)\[\]\{\}]+[+\-~]*", raw)
+            or re.fullmatch(r"\d{1,2}[\(\)\[\]\{\}]+", raw)
+            or re.fullmatch(r"[A-Za-z]{1,3}[\(\)\[\]\{\}]*", raw)
+            or raw in {"0", "0.0", "0.00", "--", "-", "—", "+)", ")+", "(+", "+("}
         )
 
     # Walk from the right collecting up to 8 ORIC cells (+ optional LMS).
-    max_cells = 9 if _main_stock_lms_trail_enabled() else 8
+    # Some Marg STOCK & SALES STATEMENT prints two LAST MONTH SALE columns
+    # (qty + value) after CLOSING VALUE — allow 8 + 2 trail cells.
+    max_cells = 10 if _main_stock_lms_trail_enabled() else 8
     values: List[float] = []
     consumed = 0
     soft_zeros = 0
@@ -69260,7 +69937,39 @@ def _main_stock_parse_ocr_line(line: str) -> Optional[Dict[str, Any]]:
         return None
     lms_qty: Optional[float] = None
     # values are right-first: [rightmost, ..., leftmost].
-    if len(values) >= 9 and _main_stock_lms_trail_enabled():
+    peeled = False
+    if len(values) >= 10 and _main_stock_lms_trail_enabled():
+        # Dual LAST MONTH SALE (qty + value) after CLOSING VALUE. Peeling only
+        # one trail cell parks OPENING VALUE in opening_qty and leaves the
+        # real opening stock glued to the product name.
+        dual_body = list(reversed(values[2:10]))
+        dual_ok = _main_stock_oric_qty_balances(
+            dual_body[0], dual_body[2], dual_body[4], dual_body[6]
+        )
+        single_body = list(reversed(values[1:9]))
+        single_ok = _main_stock_oric_qty_balances(
+            single_body[0], single_body[2], single_body[4], single_body[6]
+        )
+        if dual_ok and (
+            not single_ok
+            or abs(dual_body[0] - single_body[0]) > 0.05
+            or dual_body[1] > single_body[1]
+        ):
+            lms_qty = values[1]
+            lms_value_trail = values[0]
+            values = dual_body
+            peeled = True
+            logger.info(
+                "MAIN_STOCK_LMS_TRAIL_DUAL product_line=%r lms=%s lms_value=%s",
+                " ".join(tokens[:6])[:60],
+                lms_qty,
+                lms_value_trail,
+            )
+    if (
+        not peeled
+        and len(values) >= 9
+        and _main_stock_lms_trail_enabled()
+    ):
         lms_candidate = values[0]
         body_right_first = values[1:9]
         body = list(reversed(body_right_first))
@@ -69275,6 +69984,7 @@ def _main_stock_parse_ocr_line(line: str) -> Optional[Dict[str, Any]]:
         if body_ok or (lms_whole and not keep8_ok):
             lms_qty = lms_candidate
             values = body
+            peeled = True
             logger.info(
                 "MAIN_STOCK_LMS_TRAIL product_line=%r lms=%s",
                 " ".join(tokens[:6])[:60],
@@ -69282,7 +69992,8 @@ def _main_stock_parse_ocr_line(line: str) -> Optional[Dict[str, Any]]:
             )
         else:
             values = keep8
-    else:
+            peeled = True
+    if not peeled:
         values = list(reversed(values[:8]))
     # Zero-movement rows: closing value equals opening value. OCR sometimes
     # truncates the closing money token (e.g. "@.1" for 60.1).
@@ -69590,6 +70301,48 @@ def _extract_opening_receive_issue_closing_ocr(
     result["totals"]["extra"]["keep_zero_qty_rows"] = True
     result["totals"]["extra"]["zero_qty_row_count"] = zero_rows
     result["totals"]["extra"]["issue_qty_row_count"] = issue_rows
+    # Prefer header-x ORIC qty|value geometry when line OCR left-shifts VALUE
+    # into qty (dual LAST MONTH SALE trail) or fails identity on many rows.
+    try:
+        geom = _main_stock_oric_qv_geometry_parse(file_bytes, filename, ext)
+    except Exception as exc:
+        logger.info("MAIN_STOCK_ORIC_QV_GEOM merge skipped: %s", exc)
+        geom = None
+    if geom and geom.get("line_items"):
+        line_fails = _main_stock_identity_fail_count(items)
+        geom_items = [i for i in (geom.get("line_items") or []) if isinstance(i, dict)]
+        geom_fails = _main_stock_identity_fail_count(geom_items)
+        geom_has_ov = _main_stock_result_has_printed_opening_value(geom)
+        line_has_ov = _main_stock_result_has_printed_opening_value(result)
+        prefer_geom = (
+            geom_has_ov
+            and len(geom_items) >= 8
+            and (
+                geom_fails < line_fails
+                or (not line_has_ov and geom_has_ov)
+                or (
+                    line_fails >= max(3, int(0.25 * len(items)))
+                    and geom_fails <= max(2, int(0.2 * len(geom_items)))
+                )
+            )
+        )
+        if prefer_geom:
+            result["line_items"] = geom_items
+            result["totals"]["extra"]["extraction_method"] = (
+                "main_stock_oric_qv_geometry"
+            )
+            result["totals"]["extra"]["oric_qv_geometry_preferred"] = True
+            result["totals"]["extra"]["oric_qv_geometry_cols"] = (
+                (geom.get("totals") or {}).get("extra") or {}
+            ).get("oric_qv_geometry_cols")
+            logger.info(
+                "MAIN_STOCK_ORIC_QV_GEOM file=%s action=prefer_geometry "
+                "line_fails=%s geom_fails=%s items=%s",
+                filename,
+                line_fails,
+                geom_fails,
+                len(geom_items),
+            )
     return result
 
 
@@ -70107,6 +70860,7 @@ def _extract_main_stock_sales_vision(
         _main_stock_apply_vision_totals_blob(
             result, vision_totals_blob, source="main_stock_vision_totals"
         )
+    _main_stock_finalize_oric_grid_totals(result, file_bytes)
     return result
 
 
@@ -70851,7 +71605,7 @@ def _extract_opening_receive_issue_closing_photo(
             and not _main_stock_result_is_all_zero_shell(ocr_result)
             and not _main_stock_result_is_op_stk_misfiled(ocr_result, probe)
         ):
-            _main_stock_apply_printed_totals_footer(ocr_result, file_bytes)
+            _main_stock_finalize_oric_grid_totals(ocr_result, file_bytes)
             return ocr_result
         if ocr_result and _main_stock_ocr_looks_misaligned(ocr_result):
             logger.info(
@@ -70910,7 +71664,7 @@ def _extract_opening_receive_issue_closing_photo(
                 )
                 vision["totals"]["extra"]["capture"] = "numbered_oric_lms_grid"
             vision["totals"]["extra"]["layout"] = "opening_receive_issue_closing"
-            _main_stock_apply_printed_totals_footer(vision, file_bytes)
+            _main_stock_finalize_oric_grid_totals(vision, file_bytes)
             logger.info(
                 "Opening/receive/issue Vision grid used for %s items=%s capture=%s",
                 filename,
@@ -70921,13 +71675,13 @@ def _extract_opening_receive_issue_closing_photo(
         elif len(vision.get("line_items") or []) >= len(
             (ocr_result or {}).get("line_items") or []
         ):
-            _main_stock_apply_printed_totals_footer(vision, file_bytes)
+            _main_stock_finalize_oric_grid_totals(vision, file_bytes)
             return vision
     if spreadsheet_shot and ocr_result and ocr_result.get("line_items"):
         # Last resort: OCR numbers may still be usable after name repair.
         _main_stock_enrich_spreadsheet_meta(ocr_result, full_text or text)
         _main_stock_repair_clipped_himalaya_names(ocr_result, full_text or text)
-        _main_stock_apply_printed_totals_footer(ocr_result, file_bytes)
+        _main_stock_finalize_oric_grid_totals(ocr_result, file_bytes)
         return ocr_result
     if ocr_result and _main_stock_result_is_all_zero_shell(ocr_result):
         logger.info(
@@ -70945,7 +71699,7 @@ def _extract_opening_receive_issue_closing_photo(
     # Numbered ORIC+LMS grids must not fall into Op_Stk (zeros + column shift).
     if numbered_oric_grid:
         if vision:
-            _main_stock_apply_printed_totals_footer(vision, file_bytes)
+            _main_stock_finalize_oric_grid_totals(vision, file_bytes)
         return vision or ocr_result
     if not vision and not ocr_result:
         op_stk = _extract_op_stk_rcpts_stock_sale_vision(
@@ -75719,6 +76473,50 @@ def _header_driven_stock_qty_blank(result: Optional[Dict[str, Any]]) -> bool:
     return blank / len(items) >= 0.9
 
 
+def _header_driven_oric_money_parked_in_qty(result: Optional[Dict[str, Any]]) -> bool:
+    """VALUE headers present but rupee amounts landed in qty slots.
+
+    OPENING STOCK|OPENING VALUE sheets fail this way when the model copies
+    OPENING VALUE into opening_qty and leaves opening_value empty. Identity
+    still balances on the money-scale numbers, so rows_ok cannot see it.
+    """
+    if not isinstance(result, dict):
+        return False
+    extra = ((result.get("totals") or {}).get("extra") or {})
+    if str(extra.get("extraction_method") or "") != "header_driven_stock_photo":
+        return False
+    roles = set(extra.get("column_roles") or [])
+    if "opening_value" not in roles or "opening_qty" not in roles:
+        return False
+    if "closing_qty" not in roles:
+        return False
+    items = [item for item in (result.get("line_items") or []) if isinstance(item, dict)]
+    if len(items) < 8:
+        return False
+    parked = 0
+    moved = 0
+    for item in items:
+        oq = _to_float(item.get("opening_qty"))
+        cq = _to_float(item.get("closing_qty"))
+        sq = _to_float(item.get("sales_qty"))
+        rq = _to_float(item.get("receipts_qty"))
+        ov = item.get("opening_value")
+        sv = item.get("sales_value")
+        cv = item.get("closing_value")
+        if oq <= 0 and cq <= 0 and sq <= 0:
+            continue
+        moved += 1
+        money_empty = all(
+            v in (None, "", 0, 0.0) or abs(_to_float(v)) < 0.01 for v in (ov, sv, cv)
+        )
+        # Money-scale qty with empty VALUE fields → VALUE was parked in qty.
+        if money_empty and (oq >= 200 or cq >= 200) and abs((oq + rq - sq) - cq) <= 0.05:
+            parked += 1
+    if moved < 5:
+        return False
+    return parked >= max(4, int(0.55 * moved))
+
+
 def _header_driven_lacks_qty_value_money(result: Optional[Dict[str, Any]]) -> bool:
     """True when header-driven kept qty columns but dropped OPENING/…/CLOSING VALUE.
 
@@ -79389,6 +80187,39 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                 logger.info(
                     "[SalesStatement] file=%s decision=HEADER_DRIVEN_SKIP_NO_VALUE "
                     "rows=%s",
+                    filename,
+                    len(driven.get("line_items") or []),
+                )
+                driven = None
+            # OPENING STOCK|VALUE … LAST MONTH SALE: VALUE amounts parked in qty.
+            # Prefer Marg ORIC reader (dual-LMS peel) over locking money-as-qty.
+            if driven and _header_driven_oric_money_parked_in_qty(driven):
+                try:
+                    oric_fix = _extract_opening_receive_issue_closing_photo(
+                        file_bytes, filename, ext
+                    )
+                except Exception as exc:
+                    logger.warning(
+                        "ORIC after header-driven money-in-qty skipped: %s", exc
+                    )
+                    oric_fix = None
+                if (
+                    oric_fix
+                    and oric_fix.get("line_items")
+                    and not _main_stock_result_is_all_zero_shell(oric_fix)
+                    and not _main_stock_ocr_looks_misaligned(oric_fix)
+                    and _main_stock_result_has_printed_opening_value(oric_fix)
+                ):
+                    logger.info(
+                        "[SalesStatement] file=%s decision=HEADER_DRIVEN_DEFER_ORIC "
+                        "reason=money_parked_in_qty rows=%s",
+                        filename,
+                        len(oric_fix.get("line_items") or []),
+                    )
+                    return oric_fix
+                logger.info(
+                    "[SalesStatement] file=%s decision=HEADER_DRIVEN_SKIP "
+                    "reason=oric_money_in_qty rows=%s",
                     filename,
                     len(driven.get("line_items") or []),
                 )
