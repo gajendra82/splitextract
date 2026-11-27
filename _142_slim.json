@@ -1,0 +1,553 @@
+{
+  "n": 76,
+  "method": "vision_table",
+  "layout": null,
+  "kind": "opening_purchase_sale_saleret_expdmg",
+  "totals": {
+    "sales_qty": null,
+    "sales_value": 0.0,
+    "closing_qty": null,
+    "closing_value": 1288.0,
+    "opening_value": null
+  },
+  "extra_focus": {
+    "sales_qty": 21769.0,
+    "sales_value": 0.0,
+    "line_sales_qty_sum": 21769.0,
+    "line_sales_value_sum": 5398.94,
+    "total_row_source": "vision_total_values_row",
+    "qty_only": null,
+    "no_sales_value": null,
+    "opening_value": null,
+    "purchase_value": 1343.0
+  },
+  "column_map": [
+    {
+      "i": 0,
+      "h": "ITEM DESCRIPTION",
+      "c": "product_name",
+      "src": "resolver"
+    },
+    {
+      "i": 1,
+      "h": "OPENING",
+      "c": "opening_qty",
+      "src": "resolver"
+    },
+    {
+      "i": 2,
+      "h": "PURCHASES",
+      "c": "purchase_qty",
+      "src": "resolver"
+    },
+    {
+      "i": 3,
+      "h": "SALE",
+      "c": "sales_return_qty",
+      "src": "resolver"
+    },
+    {
+      "i": 4,
+      "h": "REPL./",
+      "c": "other_outward_qty",
+      "src": "resolver"
+    },
+    {
+      "i": 5,
+      "h": "TOTAL",
+      "c": "total_qty",
+      "src": "resolver"
+    },
+    {
+      "i": 6,
+      "h": "SALES",
+      "c": "sales_qty",
+      "src": "resolver"
+    },
+    {
+      "i": 7,
+      "h": "PURCHASE",
+      "c": "ignore",
+      "src": "resolver"
+    },
+    {
+      "i": 8,
+      "h": "REPL./",
+      "c": "other_outward_qty",
+      "src": "model"
+    },
+    {
+      "i": 9,
+      "h": "CLOSING",
+      "c": "closing_qty",
+      "src": "resolver"
+    },
+    {
+      "i": 10,
+      "h": "RATE",
+      "c": "rate",
+      "src": "resolver"
+    }
+  ],
+  "samples": [
+    {
+      "product_name": "ARJUNA CAP.",
+      "oq": 0.0,
+      "pq": 0.0,
+      "sq": null,
+      "sv": 720.0,
+      "cq": null,
+      "cv": null,
+      "flags": [
+        "SALES_VALUE_PARKED_IN_QTY",
+        "PACK_RATE_ORPHAN_CLOSING_CLEARED"
+      ],
+      "fs": {
+        "opening_qty": "printed",
+        "purchase_qty": "printed",
+        "sales_qty": "missing",
+        "closing_qty": "missing",
+        "sales_value": "printed"
+      }
+    },
+    {
+      "product_name": "ARJUNA TAB",
+      "oq": 0.0,
+      "pq": 0.0,
+      "sq": 720.0,
+      "sv": 720.0,
+      "cq": 0.0,
+      "cv": null,
+      "flags": [
+        "SALES_VALUE_PARKED_IN_CLOSING"
+      ],
+      "fs": {
+        "opening_qty": "printed",
+        "purchase_qty": "printed",
+        "closing_qty": "printed",
+        "sales_value": "printed",
+        "sales_qty": "printed"
+      }
+    },
+    {
+      "product_name": "BONNISAN DROP",
+      "oq": 95.0,
+      "pq": 0.0,
+      "sq": 20.0,
+      "sv": 0.0,
+      "cq": 75.0,
+      "cv": 0.0,
+      "flags": null,
+      "fs": {
+        "opening_qty": "printed",
+        "purchase_qty": "printed",
+        "closing_qty": "derived",
+        "sales_qty": "printed"
+      }
+    },
+    {
+      "product_name": "BONNISAN LIQUID 200ML",
+      "oq": 28.0,
+      "pq": 56.0,
+      "sq": 84.0,
+      "sv": 96.24,
+      "cq": 0.0,
+      "cv": null,
+      "flags": [
+        "SALES_VALUE_PARKED_IN_CLOSING"
+      ],
+      "fs": {
+        "opening_qty": "printed",
+        "purchase_qty": "printed",
+        "sales_qty": "printed",
+        "closing_qty": "printed",
+        "sales_value": "printed"
+      }
+    },
+    {
+      "product_name": "BONNISAN SYP",
+      "oq": 41.0,
+      "pq": 56.0,
+      "sq": 97.0,
+      "sv": 0.0,
+      "cq": 56.74,
+      "cv": 0.0,
+      "flags": [
+        "REREAD_FILL_ZERO"
+      ],
+      "fs": {
+        "opening_qty": "printed",
+        "purchase_qty": "printed",
+        "sales_qty": "printed",
+        "closing_qty": "printed"
+      }
+    },
+    {
+      "product_name": "CYSTONE FORTE TAB",
+      "oq": 0.0,
+      "pq": 0.0,
+      "sq": 0.0,
+      "sv": 60.94,
+      "cq": 60.94,
+      "cv": null,
+      "flags": [
+        "SALES_VALUE_PARKED_IN_CLOSING",
+        "REREAD_FILL_ZERO"
+      ],
+      "fs": {
+        "opening_qty": "printed",
+        "purchase_qty": "printed",
+        "sales_qty": "printed",
+        "closing_qty": "printed",
+        "sales_value": "printed"
+      }
+    },
+    {
+      "product_name": "CYSTONE SYP.",
+      "oq": 0.0,
+      "pq": 0.0,
+      "sq": 0.0,
+      "sv": 0.0,
+      "cq": 0.0,
+      "cv": 0.0,
+      "flags": null,
+      "fs": {
+        "opening_qty": "printed",
+        "purchase_qty": "printed",
+        "closing_qty": "printed"
+      }
+    },
+    {
+      "product_name": "CYSTONE SYP.",
+      "oq": 143.0,
+      "pq": 1000.0,
+      "sq": 1055.0,
+      "sv": 164.13,
+      "cq": 88.0,
+      "cv": null,
+      "flags": [
+        "SALES_VALUE_PARKED_IN_CLOSING"
+      ],
+      "fs": {
+        "opening_qty": "printed",
+        "purchase_qty": "printed",
+        "sales_qty": "printed",
+        "closing_qty": "printed",
+        "sales_value": "printed"
+      }
+    },
+    {
+      "product_name": "LIV 52 DROP",
+      "oq": 45.0,
+      "pq": 0.0,
+      "sq": 3.0,
+      "sv": 131.69,
+      "cq": 42.0,
+      "cv": null,
+      "flags": [
+        "SALES_VALUE_PARKED_IN_CLOSING"
+      ],
+      "fs": {
+        "opening_qty": "printed",
+        "purchase_qty": "printed",
+        "sales_qty": "printed",
+        "closing_qty": "printed",
+        "sales_value": "printed"
+      }
+    },
+    {
+      "product_name": "LIV 52 DROP",
+      "oq": 12.0,
+      "pq": 2100.0,
+      "sq": 2026.0,
+      "sv": 97.94,
+      "cq": 86.0,
+      "cv": null,
+      "flags": [
+        "SALES_VALUE_PARKED_IN_CLOSING"
+      ],
+      "fs": {
+        "opening_qty": "printed",
+        "purchase_qty": "printed",
+        "sales_qty": "printed",
+        "closing_qty": "printed",
+        "sales_value": "printed"
+      }
+    },
+    {
+      "product_name": "LIV-52 DS 200ML",
+      "oq": 0.0,
+      "pq": 3570.0,
+      "sq": 3570.0,
+      "sv": 189.8,
+      "cq": 0.0,
+      "cv": null,
+      "flags": [
+        "SALES_VALUE_PARKED_IN_CLOSING"
+      ],
+      "fs": {
+        "opening_qty": "printed",
+        "purchase_qty": "printed",
+        "sales_qty": "printed",
+        "closing_qty": "printed",
+        "sales_value": "printed"
+      }
+    },
+    {
+      "product_name": "LIV-52 DS",
+      "oq": 0.0,
+      "pq": 5900.0,
+      "sq": 5900.0,
+      "sv": 216.4,
+      "cq": 0.0,
+      "cv": null,
+      "flags": [
+        "SALES_VALUE_PARKED_IN_CLOSING"
+      ],
+      "fs": {
+        "opening_qty": "printed",
+        "purchase_qty": "printed",
+        "sales_qty": "printed",
+        "closing_qty": "printed",
+        "sales_value": "printed"
+      }
+    },
+    {
+      "product_name": "LIV-52 DS SF SYP",
+      "oq": 200.0,
+      "pq": 0.0,
+      "sq": 0.0,
+      "sv": 0.0,
+      "cq": 154.0,
+      "cv": null,
+      "flags": [
+        "PACK_RATE_ORPHAN_CLOSING_CLEARED"
+      ],
+      "fs": {
+        "opening_qty": "printed",
+        "purchase_qty": "printed",
+        "sales_qty": "printed",
+        "closing_qty": "printed"
+      }
+    },
+    {
+      "product_name": "LIV-52 DS SYP.",
+      "oq": 19.0,
+      "pq": 8960.0,
+      "sq": null,
+      "sv": 8979.0,
+      "cq": 0.0,
+      "cv": 0.0,
+      "flags": [
+        "CLOSING_QTY_FROM_HEADER",
+        "UNIVERSAL_SALES_QTY_VALUE_GUARD"
+      ],
+      "fs": {
+        "opening_qty": "printed",
+        "purchase_qty": "printed",
+        "sales_qty": "missing",
+        "closing_qty": "printed",
+        "sales_value": "printed"
+      }
+    }
+  ],
+  "wrongish": [
+    {
+      "product_name": "ARJUNA CAP.",
+      "oq": 0.0,
+      "pq": 0.0,
+      "sq": null,
+      "sv": 720.0,
+      "cq": null,
+      "cv": null,
+      "flags": [
+        "SALES_VALUE_PARKED_IN_QTY",
+        "PACK_RATE_ORPHAN_CLOSING_CLEARED"
+      ],
+      "fs": {
+        "opening_qty": "printed",
+        "purchase_qty": "printed",
+        "sales_qty": "missing",
+        "closing_qty": "missing",
+        "sales_value": "printed"
+      },
+      "why": "missing_sales_qty"
+    },
+    {
+      "product_name": "ARJUNA TAB",
+      "oq": 0.0,
+      "pq": 0.0,
+      "sq": 720.0,
+      "sv": 720.0,
+      "cq": 0.0,
+      "cv": null,
+      "flags": [
+        "SALES_VALUE_PARKED_IN_CLOSING"
+      ],
+      "fs": {
+        "opening_qty": "printed",
+        "purchase_qty": "printed",
+        "closing_qty": "printed",
+        "sales_value": "printed",
+        "sales_qty": "printed"
+      },
+      "why": "qty_eq_value"
+    },
+    {
+      "product_name": "LIV-52 DS SYP.",
+      "oq": 19.0,
+      "pq": 8960.0,
+      "sq": null,
+      "sv": 8979.0,
+      "cq": 0.0,
+      "cv": 0.0,
+      "flags": [
+        "CLOSING_QTY_FROM_HEADER",
+        "UNIVERSAL_SALES_QTY_VALUE_GUARD"
+      ],
+      "fs": {
+        "opening_qty": "printed",
+        "purchase_qty": "printed",
+        "sales_qty": "missing",
+        "closing_qty": "printed",
+        "sales_value": "printed"
+      },
+      "why": "missing_sales_qty"
+    },
+    {
+      "product_name": "MENTAT TAB.",
+      "oq": 83.0,
+      "pq": 1000.0,
+      "sq": null,
+      "sv": 1041.0,
+      "cq": 42.0,
+      "cv": 0.0,
+      "flags": [
+        "UNIVERSAL_SALES_QTY_VALUE_GUARD"
+      ],
+      "fs": {
+        "opening_qty": "printed",
+        "purchase_qty": "printed",
+        "sales_qty": "missing",
+        "closing_qty": "printed",
+        "sales_value": "printed"
+      },
+      "why": "missing_sales_qty"
+    }
+  ],
+  "first10": [
+    {
+      "n": "HIMALYA ZENDRA",
+      "oq": 0.0,
+      "pq": 0.0,
+      "sq": 0.0,
+      "sv": 0.0,
+      "cq": null,
+      "cv": 0.0
+    },
+    {
+      "n": "ARJUNA CAP.",
+      "oq": 0.0,
+      "pq": 0.0,
+      "sq": null,
+      "sv": 720.0,
+      "cq": null,
+      "cv": null
+    },
+    {
+      "n": "ARJUNA TAB",
+      "oq": 0.0,
+      "pq": 0.0,
+      "sq": 720.0,
+      "sv": 720.0,
+      "cq": 0.0,
+      "cv": null
+    },
+    {
+      "n": "BONNISAN DROP",
+      "oq": 95.0,
+      "pq": 0.0,
+      "sq": 20.0,
+      "sv": 0.0,
+      "cq": 75.0,
+      "cv": 0.0
+    },
+    {
+      "n": "BONNISAN LIQUID 200ML",
+      "oq": 28.0,
+      "pq": 56.0,
+      "sq": 84.0,
+      "sv": 96.24,
+      "cq": 0.0,
+      "cv": null
+    },
+    {
+      "n": "BONNISAN SYP",
+      "oq": 41.0,
+      "pq": 56.0,
+      "sq": 97.0,
+      "sv": 0.0,
+      "cq": 56.74,
+      "cv": 0.0
+    },
+    {
+      "n": "BONNISPAZ DROP",
+      "oq": 0.0,
+      "pq": 0.0,
+      "sq": 0.0,
+      "sv": 0.0,
+      "cq": 0.0,
+      "cv": 0.0
+    },
+    {
+      "n": "BRESOL NS SALINE NASAL SOLU",
+      "oq": 10.0,
+      "pq": 0.0,
+      "sq": 0.0,
+      "sv": 0.0,
+      "cq": 0.0,
+      "cv": 0.0
+    },
+    {
+      "n": "BRESOL SYP.",
+      "oq": 200.0,
+      "pq": 16.0,
+      "sq": 0.0,
+      "sv": 0.0,
+      "cq": 0.0,
+      "cv": 0.0
+    },
+    {
+      "n": "BRESOL SYP.",
+      "oq": 0.0,
+      "pq": 0.0,
+      "sq": 0.0,
+      "sv": 0.0,
+      "cq": 0.0,
+      "cv": 0.0
+    }
+  ],
+  "anchor_check": [
+    {
+      "want": "LIV 52 DROP",
+      "got_name": "LIV 52 DROP",
+      "sq": 2026.0,
+      "cq": 86.0,
+      "sv": 97.94,
+      "exp": {
+        "sq": 2026,
+        "cq": 86
+      },
+      "ok_sq": true,
+      "ok_cq": true
+    },
+    {
+      "want": "CYSTONE TAB",
+      "status": "MISSING"
+    },
+    {
+      "want": "SEPTILIN TAB",
+      "status": "MISSING"
+    }
+  ]
+}

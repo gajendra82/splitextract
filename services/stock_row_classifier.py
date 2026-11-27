@@ -658,7 +658,54 @@ def _adjacent_swap_candidates(
                     "reason": f"swap_{left}_{right}",
                 }
             )
+    # Issue Qty ↔ Closing Balance: identity holds either way after a pure swap,
+    # so this pair is excluded above. When the current closing fails, still
+    # propose swapping sales↔closing if that restores the formula.
+    sales = fields.get("sales")
+    if sales is not None and abs(float(sales) - float(closing)) > valid_tol:
+        trial = dict(fields)
+        trial["sales"], trial["closing"] = float(closing), float(sales)
+        expected = expected_closing(trial)
+        if expected is not None and _diff_ok(expected, float(trial["closing"]), valid_tol):
+            candidates.append(
+                {
+                    "source": "adjacent_swap",
+                    "fields": {
+                        "sales": trial["sales"],
+                        "closing": trial["closing"],
+                    },
+                    "reason": "swap_sales_closing",
+                }
+            )
     return candidates
+
+
+def identity_ambiguous_sales_closing_swap(
+    fields: Dict[str, Optional[float]],
+) -> bool:
+    """True when swapping sales↔closing still satisfies stock identity.
+
+    Formula validation alone cannot detect this column-assignment error.
+    """
+    opening = fields.get("opening")
+    sales = fields.get("sales")
+    closing = fields.get("closing")
+    if opening is None or sales is None or closing is None:
+        return False
+    if abs(float(sales) - float(closing)) <= 0.05:
+        return False
+    expected = expected_closing(fields)
+    if expected is None:
+        return False
+    valid_tol = _valid_tolerance(float(opening), float(closing))
+    if not _diff_ok(expected, float(closing), valid_tol):
+        return False
+    trial = dict(fields)
+    trial["sales"], trial["closing"] = float(closing), float(sales)
+    expected_swap = expected_closing(trial)
+    if expected_swap is None:
+        return False
+    return _diff_ok(expected_swap, float(trial["closing"]), valid_tol)
 
 
 def _format_qty(value: float) -> str:
@@ -1293,6 +1340,33 @@ def classify_result(result: Dict[str, Any]) -> Dict[str, Any]:
             status, info = classify_row(fields)
             status = _soften_document_qty_gap(item, status, info)
             status = _honor_reconciliation_gate(item, status, info)
+            # Qty identity alone accepts Issue↔Closing swaps. When printed
+            # money rates prefer the swapped assignment, this is a confirmed
+            # column-assignment error even though the formula still balances.
+            if status == RowStatus.VALID and identity_ambiguous_sales_closing_swap(
+                fields
+            ):
+                info["identity_ambiguous_issue_closing"] = True
+                try:
+                    from services.stock_native_resolver import (
+                        issue_closing_rate_prefers_swap,
+                    )
+
+                    if issue_closing_rate_prefers_swap(item):
+                        status = RowStatus.COLUMN_ASSIGNMENT_SUSPECTED
+                        info["reason"] = "issue_closing_rate_mismatch"
+                        info["candidates"] = list(info.get("candidates") or []) + [
+                            {
+                                "source": "rate_evidence",
+                                "reason": "swap_sales_closing",
+                                "fields": {
+                                    "sales": fields.get("closing"),
+                                    "closing": fields.get("sales"),
+                                },
+                            }
+                        ]
+                except Exception:
+                    pass
         counts[status.value] = counts.get(status.value, 0) + 1
         row_details.append(
             {

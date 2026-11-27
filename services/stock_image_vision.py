@@ -1808,7 +1808,47 @@ def apply_direct_stock_image_gemini(
             return oric_vision
 
     if not force_gemini:
+        # Structured keep must still run Op.Bal qty/money repairs — early Gemini
+        # often parks Issue in sales_value and swaps Issue↔Closing while identity
+        # still passes. Do not let those defects freeze as final_selected=structured.
+        try:
+            from services.stock_native_resolver import repair_opbal_qty_only_fields
+
+            result = repair_opbal_qty_only_fields(result)
+        except Exception:
+            pass
+        try:
+            from services.sales_statement_extractor import (
+                _merge_opbal_ocr_issue_closing_into_vision,
+                _ocr_image_to_text,
+                _parse_opbal_receipt_issue_statement,
+                _is_opbal_issue_closing_format,
+                _is_swilerp_sales_stock_statement,
+                _repair_swilerp_vision_item,
+            )
+
+            for _it in result.get("line_items") or []:
+                if isinstance(_it, dict):
+                    _repair_swilerp_vision_item(_it)
+            if peek_text and (
+                _is_opbal_issue_closing_format(peek_text)
+                or _is_swilerp_sales_stock_statement(peek_text)
+            ):
+                opbal_ocr = _parse_opbal_receipt_issue_statement(
+                    peek_text, filename, (ext or ".jpg").lstrip(".") or "jpg"
+                )
+                if opbal_ocr and opbal_ocr.get("line_items"):
+                    _merge_opbal_ocr_issue_closing_into_vision(result, opbal_ocr)
+                    from services.stock_native_resolver import (
+                        repair_opbal_qty_only_fields as _repair_opbal_again,
+                    )
+
+                    result = _repair_opbal_again(result)
+        except Exception:
+            pass
+        extra = result.setdefault("totals", {}).setdefault("extra", {})
         extra["final_selected_extraction"] = "structured"
+        extra["stock_image_vision_decided"] = True
         return result
     if not _enabled():
         extra["final_selected_extraction"] = "structured"

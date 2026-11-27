@@ -11,8 +11,11 @@ import unittest
 from unittest.mock import patch
 
 from services.stock_vision_table import (
+    _align_item_pack_free_sale_left_shift_cells,
     _apply_item_pack_free_opening_in_purchase_pass,
+    _apply_item_pack_free_sale_in_free_pass,
     _column_map_item_pack_free_return,
+    _repair_sale_parked_in_free_in,
     _stamp_vision_result,
     _vision_table_quality_fallback_reason,
 )
@@ -159,6 +162,88 @@ class ItemPackFreeMissingValueKeepTests(unittest.TestCase):
                 _vision_table_quality_fallback_reason(result),
                 "missing_value_ratio_high",
             )
+
+
+def _sale_in_free_row(name: str, opening: float, purchase: float, sale: float) -> dict:
+    """Vision parked SALE under FREE (free_in); SALE/CLOSING unread."""
+    return {
+        "product_name": name,
+        "opening_qty": opening,
+        "purchase_qty": purchase,
+        "receipts_qty": purchase,
+        "sales_qty": 0.0,
+        "closing_qty": None,
+        "extra": {
+            "free_in_qty": sale,
+            "field_source": {
+                "opening_qty": "printed",
+                "purchase_qty": "printed",
+                "receipts_qty": "printed",
+                "sales_qty": "missing",
+                "closing_qty": "missing",
+                "free_in_qty": "printed",
+                "purchase_return_qty": "missing",
+                "sales_return_qty": "missing",
+                "free_out_qty": "missing",
+            },
+            "vision_column_headers": [
+                c["header_text"] for c in _ITEM_PACK_FREE_MAP
+            ],
+            "flags": [],
+        },
+    }
+
+
+class ItemPackFreeSaleInFreeRepairTests(unittest.TestCase):
+    def test_align_moves_free_cell_to_sale(self):
+        cells = [
+            "ARJUNA TABLET",
+            "60",
+            "49",
+            "60",
+            "69",
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        ]
+        cols = [
+            {**c, "col_index": i} for i, c in enumerate(_ITEM_PACK_FREE_MAP)
+        ]
+        out, _ = _align_item_pack_free_sale_left_shift_cells(cells, cols, 13)
+        self.assertIsNone(out[4])
+        self.assertEqual(out[7], "69")
+        self.assertEqual(out[2], "49")
+        self.assertEqual(out[3], "60")
+
+    def test_repair_moves_free_in_to_sales_qty(self):
+        item = _sale_in_free_row("ARJUNA TABLET", 49, 60, 69)
+        self.assertTrue(_repair_sale_parked_in_free_in(item))
+        self.assertEqual(item["sales_qty"], 69.0)
+        self.assertIsNone(item["extra"]["free_in_qty"])
+        self.assertEqual(item["extra"]["field_source"]["sales_qty"], "printed")
+        self.assertIn("SALE_PARKED_IN_FREE_IN", item["extra"]["flags"])
+
+    def test_pass_repairs_on_item_pack_free_map(self):
+        items = [
+            _sale_in_free_row("ARJUNA TABLET", 49, 60, 69),
+            _sale_in_free_row("EVE GEL", 36, 56, 61),
+        ]
+        repaired = _apply_item_pack_free_sale_in_free_pass(items, _ITEM_PACK_FREE_MAP)
+        self.assertEqual(repaired, 2)
+        self.assertEqual(items[0]["sales_qty"], 69.0)
+        self.assertEqual(items[1]["sales_qty"], 61.0)
+
+    def test_skips_when_purchase_return_also_printed(self):
+        item = _sale_in_free_row("REAL FREE", 10, 5, 2)
+        item["extra"]["purchase_return"] = 1.0
+        item["extra"]["field_source"]["purchase_return_qty"] = "printed"
+        self.assertFalse(_repair_sale_parked_in_free_in(item))
+        self.assertEqual(item["extra"]["free_in_qty"], 2)
 
 
 class ItemPackFreeOpeningInPurchaseRepairTests(unittest.TestCase):
