@@ -1276,6 +1276,72 @@ def _maybe_stamp_vision_first_snapshot(item: Dict[str, Any]) -> None:
     )
 
 
+def _headers_look_like_medica_opstk_grid(columns: Sequence[Dict[str, Any]]) -> bool:
+    """Medica Ultimate: OPSTK|PURCH|SALE|SALE VAL|IN/OT|STOCK|STK VAL.
+
+    Not the compact OPSTK|OPV|PURC|PURCV qty|value pair grid. Used to keep
+    continuation pages from forcing cell_layout_qty_value (which parks SALE
+    under purchase and STK VAL under closing_qty).
+    """
+    blob = " ".join(
+        str(c.get("header_text") or "")
+        for c in (columns or [])
+        if isinstance(c, dict)
+    ).upper()
+    if not blob.strip():
+        return False
+    compact = re.sub(r"[\s.]+", "", blob)
+    has_opstk = "OPSTK" in compact
+    has_purch = "PURCH" in compact
+    has_sale_val = "SALEVAL" in compact or "SALESVALUE" in compact
+    has_in_ot = "IN/OT" in blob or "INOT" in compact or "IN/OUT" in blob
+    has_stk_val = "STKVAL" in compact or "STOCKVALUE" in compact or "STKVA" in compact
+    has_sale = bool(re.search(r"\bSALE\b", blob))
+    has_stock = bool(re.search(r"\bSTOCK\b", blob))
+    # Compact OPSTK/OPV grids have OPV/PURCV/SALEV — leave those to BOX repair.
+    if re.search(r"\bOPV\b|\bPURCV\b|\bSALEV\b|\bSTOCKV\b", blob):
+        return False
+    return bool(
+        has_opstk
+        and has_purch
+        and has_sale
+        and has_sale_val
+        and has_in_ot
+        and (has_stock or has_stk_val)
+    )
+
+
+def _fit_carry_columns_to_count(
+    carry_cols: Sequence[Dict[str, Any]],
+    column_count: int,
+) -> List[Dict[str, Any]]:
+    """Left-align prior-page columns onto this page's column_count."""
+    by_idx = {
+        int(c.get("col_index") or 0): dict(c)
+        for c in (carry_cols or [])
+        if isinstance(c, dict)
+    }
+    out: List[Dict[str, Any]] = []
+    for i in range(max(0, int(column_count or 0))):
+        if i in by_idx:
+            item = dict(by_idx[i])
+            item["col_index"] = i
+            out.append(item)
+        else:
+            out.append(
+                {
+                    "col_index": i,
+                    "header_text": "",
+                    "canonical": "ignore",
+                    "confidence": 0.0,
+                    "is_value": False,
+                    "reason": "medica_carry_pad",
+                    "source": "carry",
+                }
+            )
+    return out
+
+
 def _headers_look_like_ssa_purchase_qty_grid(columns: Sequence[Dict[str, Any]]) -> bool:
     """OPENING/PURCHASES/…/TOTAL/SALES/CLOSING qty grid (no PACKING header).
 
@@ -2012,6 +2078,13 @@ def _apply_cell_layout_qty_value_repair(
         logger.info(
             "VISION_TABLE cell_layout_qty_value_repair skipped "
             "reason=ssa_purchase_qty_grid"
+        )
+        return columns
+    # Medica OPSTK|PURCH|SALE|SALE VAL|IN/OT|STOCK|STK VAL — not qty|value pairs.
+    if _headers_look_like_medica_opstk_grid(columns):
+        logger.info(
+            "VISION_TABLE cell_layout_qty_value_repair skipped "
+            "reason=medica_opstk_sale_val"
         )
         return columns
     # Group Wise Sales Free/Ret columns: free_in_qty would otherwise force a
@@ -8416,6 +8489,28 @@ def _repair_pur_free_sale_closing_left_shift(item: Dict[str, Any]) -> bool:
     cq = item.get("closing_qty")
     cv = item.get("closing_value")
 
+    # Qty-only Sale|Approx Sale Free|…|Closing (no VALUE band): Sale Free is a
+    # real column. Large SALE/CLOSING qtys look like money (≥500) and case_d
+    # would park free_out into closing — skip on this layout family.
+    hdrs = [
+        str(h or "").strip().lower()
+        for h in (extra.get("vision_column_headers") or [])
+        if str(h or "").strip()
+    ]
+    if hdrs:
+        has_value_band = any(re.search(r"\bval(?:ue)?\b", h) for h in hdrs)
+        has_sale = any(
+            re.search(r"(?i)\bsale\b", h)
+            and not re.search(r"(?i)free|return|ret", h)
+            for h in hdrs
+        )
+        has_sale_free = any(
+            re.search(r"(?i)sale\s*fre|approx", h) for h in hdrs
+        )
+        has_closing = any(re.search(r"(?i)clos", h) for h in hdrs)
+        if has_sale and has_sale_free and has_closing and not has_value_band:
+            return False
+
     # Case A: PUR FREE blank dropped — sale parked in free_in, closing in free_out.
     case_a = (
         fs.get("free_in_qty") == "printed"
@@ -10275,6 +10370,33 @@ def _repair_collapsed_sale_into_closing(item: Dict[str, Any]) -> bool:
         return False
     extra = item.setdefault("extra", {})
     fs = extra.setdefault("field_source", {})
+
+    # Guard: table with explicit separate SALE-QTY and CL-STOCK column headers.
+    # When the SALE cell is empty but the CL-STOCK cell has data, the closing
+    # values are genuine — empty sale columns mean no sales, not a collapse.
+    _hdrs = extra.get("vision_column_headers") or []
+    _pcells = extra.get("physical_cells") or {}
+    if isinstance(_hdrs, list) and isinstance(_pcells, dict) and len(_hdrs) >= 8:
+        _sq_idx = _cq_idx = None
+        for _i, _h in enumerate(_hdrs):
+            _hu = (_h or "").upper().strip()
+            if _sq_idx is None and re.search(
+                r"\bSALE\s*(QTY|QUANTITY)\b", _hu
+            ):
+                _sq_idx = _i
+            if _cq_idx is None and re.search(
+                r"\b(CL|CLOSING)\s*(STOCK|STK|QTY|QUANTITY)\b", _hu
+            ):
+                _cq_idx = _i
+        if (
+            _sq_idx is not None
+            and _cq_idx is not None
+            and _sq_idx != _cq_idx
+        ):
+            _sale_cell = (_pcells.get(str(_sq_idx)) or "").strip()
+            _cl_cell = (_pcells.get(str(_cq_idx)) or "").strip()
+            if not _sale_cell and _cl_cell:
+                return False
     if not isinstance(fs, dict):
         return False
     oq = _printed_float(item, "opening_qty")
@@ -11213,6 +11335,10 @@ def _promote_printed_total_row_money(
     Only fills null top-level fields from an already-mapped TOTAL row
     (or from TOTAL raw cells when Rate omission shifted mapped slots).
     Prefers the last TOTAL / GRAND TOTAL when multipage sheets reprint footers.
+
+    FREE/P.RETURN qty-only sheets print plain ``Total Value`` once per division
+    (no grand). Those independent money rows are summed when the last row is
+    not a cumulative reprint; ``Total Value (…)`` division banners stay ignored.
     """
     if not isinstance(totals, dict):
         return []
@@ -11234,11 +11360,89 @@ def _promote_printed_total_row_money(
         for t in named
         if re.search(r"(?i)grand\s+total", str(t.get("product_name") or ""))
     ]
-    printed = (
-        grand[-1]
-        if grand
-        else (named[-1] if named else (usable[-1] if usable else None))
-    )
+    # Plain Total Value rows (no parenthetical division) on FREE/P.RETURN grids.
+    plain_total_value = [
+        t
+        for t in named
+        if re.fullmatch(
+            r"(?is)\s*total\s+values?\s*",
+            str(t.get("product_name") or "").strip(),
+        )
+    ]
+    if not grand and len(plain_total_value) >= 2:
+        for row in plain_total_value:
+            _remap_total_values_money_parked_in_qty(row)
+        sales_vals: List[float] = []
+        for row in plain_total_value:
+            try:
+                sv = (
+                    float(row["sales_value"])
+                    if row.get("sales_value") not in (None, "")
+                    else (
+                        float(row["sales_qty"])
+                        if row.get("sales_qty") not in (None, "")
+                        else None
+                    )
+                )
+            except (TypeError, ValueError):
+                sv = None
+            if sv is not None:
+                sales_vals.append(sv)
+        use_sum = True
+        if len(sales_vals) >= 2:
+            prior = sum(sales_vals[:-1])
+            last = sales_vals[-1]
+            if prior > 0 and (
+                abs(last - prior) <= 1.0
+                or (last + 1.0 >= prior and last >= max(sales_vals[:-1]))
+            ):
+                use_sum = False
+        if use_sum:
+            summed = {
+                "product_name": "Total Value",
+                "sales_value": None,
+                "closing_value": None,
+                "opening_value": None,
+                "receipts_value": None,
+            }
+            for key in ("sales_value", "closing_value", "opening_value", "receipts_value"):
+                total = 0.0
+                hit = False
+                for row in plain_total_value:
+                    raw = row.get(key)
+                    if raw in (None, "") and key == "sales_value":
+                        raw = row.get("sales_qty")
+                    if raw in (None, "") and key == "closing_value":
+                        raw = row.get("closing_qty")
+                    if raw in (None, "") and key == "opening_value":
+                        raw = row.get("opening_qty")
+                    if raw in (None, "") and key == "receipts_value":
+                        raw = row.get("receipts_qty") or row.get("purchase_qty")
+                    try:
+                        num = float(raw) if raw not in (None, "") else None
+                    except (TypeError, ValueError):
+                        num = None
+                    if num is None:
+                        continue
+                    total = round(total + num, 2)
+                    hit = True
+                if hit:
+                    summed[key] = total
+            printed = summed
+            logger.info(
+                "VISION_TABLE FREE_RETURN_TOTAL_VALUE_SUM rows=%s sales_value=%s",
+                len(plain_total_value),
+                summed.get("sales_value"),
+            )
+        else:
+            printed = plain_total_value[-1]
+    elif grand:
+        printed = grand[-1]
+    elif plain_total_value:
+        # Prefer exact Total Value / TOTAL VALUE over ``Total Value (div)``.
+        printed = plain_total_value[-1]
+    else:
+        printed = named[-1] if named else (usable[-1] if usable else None)
     if not isinstance(printed, dict):
         return []
     _remap_total_values_money_parked_in_qty(printed)
@@ -11319,9 +11523,16 @@ def _promote_printed_total_row_money(
             continue
         totals[key] = val
         promoted.append(key)
-        # Mirror opening/receipts into extras for UI / Laravel consumers.
+        # Mirror opening/receipts/sales/closing into extras for UI / Laravel.
+        # Qty-only Sale*|Approx Sale Free grids print money only on TOTAL;
+        # consumers often read totals.extra.sales_value (same as opening_value).
         if key == "opening_value" and extra.get("opening_value") in (None, ""):
             extra["opening_value"] = float(val)
+        if key == "sales_value" and extra.get("sales_value") in (None, ""):
+            extra["sales_value"] = float(val)
+            extra["has_printed_sales_value"] = True
+        if key == "closing_value" and extra.get("closing_value") in (None, ""):
+            extra["closing_value"] = float(val)
         if key == "receipts_value":
             if extra.get("receipts_value") in (None, ""):
                 extra["receipts_value"] = float(val)
@@ -13114,20 +13325,46 @@ def _map_single_table(
         data_as_headers = _vision_header_cells_look_like_data(header_cells)
         # Continuation page: Vision copied a data row into headers — prefer
         # prior-page carry when column counts match (never invent columns).
+        # Medica OPSTK|…|STK VAL: page-2 often drops SEP/AUG/STK120/EXP3M so
+        # counts differ (13→10); still reuse the Medica map — cell_layout
+        # qty|value pairs would park SALE under purchase_qty.
         if (
             data_as_headers
             and _prefer_carry_on_data_headers_enabled()
             and isinstance(carry_header, dict)
         ):
             carried_count = int(carry_header.get("column_count") or 0)
-            if carried_count == column_count and carry_header.get("columns"):
+            carry_cols = list(carry_header.get("columns") or [])
+            if carried_count == column_count and carry_cols:
                 use_carry = True
-                columns = list(carry_header.get("columns") or [])
+                columns = carry_cols
                 header_used = carry_header
                 errors.append("PREFER_CARRY_ON_DATA_HEADERS")
                 logger.info(
                     "VISION_TABLE PREFER_CARRY_ON_DATA_HEADERS "
                     "column_count=%s request_id=%s",
+                    column_count,
+                    request_id,
+                )
+            elif (
+                carry_cols
+                and _headers_look_like_medica_opstk_grid(carry_cols)
+                and column_count >= 8
+            ):
+                use_carry = True
+                columns = _fit_carry_columns_to_count(carry_cols, column_count)
+                header_used = {
+                    "column_count": column_count,
+                    "columns": columns,
+                    "header_cells": header_cells,
+                    "carried_from_column_count": carried_count,
+                    "medica_opstk_carry_fit": True,
+                }
+                errors.append("PREFER_CARRY_ON_DATA_HEADERS")
+                logger.info(
+                    "VISION_TABLE PREFER_CARRY_ON_DATA_HEADERS "
+                    "reason=medica_opstk_fit carried=%s page=%s request_id=%s",
+                    carried_count,
                     column_count,
                     request_id,
                 )
@@ -13224,10 +13461,9 @@ def _map_single_table(
                 "columns": columns,
                 "header_cells": header_cells,
             }
-            # Never poison later pages with data-as-header maps.
-            if data_as_headers and "CELL_LAYOUT_QTY_VALUE_REPAIR" not in errors:
-                # Layout failed (e.g. <2 product rows) — still mark so callers
-                # know not to treat this as a trusted header carry source.
+            # Never poison later pages / final stamp with data-as-header maps
+            # (including forced cell_layout qty|value guesses from product rows).
+            if data_as_headers:
                 header_used = {
                     **header_used,
                     "data_as_headers": True,
@@ -15936,9 +16172,14 @@ def run_vision_table_path(
 
         for start in range(0, len(page_images), pages_per):
             batch = page_images[start : start + pages_per]
-            raw = extract_stock_table_vision(
-                batch, {"label": "stock_vision_table", "request_id": request_id}
-            )
+            _vision_ctx: Dict[str, Any] = {
+                "label": "stock_vision_table",
+                "request_id": request_id,
+            }
+            _grid_prompt = str(ctx.get("prompt") or "")
+            if _grid_prompt:
+                _vision_ctx["prompt"] = _grid_prompt
+            raw = extract_stock_table_vision(batch, _vision_ctx)
             calls += 1
             _log_vision_boundary(
                 "raw_vision_response",
@@ -16464,6 +16705,35 @@ def run_vision_table_path(
             logger.info(
                 "VISION_TABLE TOTAL_ROW_NAME post_merge_peeled=%s",
                 len(peeled),
+            )
+
+        try:
+            from services.sale_and_stock_analysis_grid import (
+                apply_sale_and_stock_analysis_grid,
+                maybe_retry_sale_and_stock_analysis_grid,
+            )
+
+            result = apply_sale_and_stock_analysis_grid(result)
+            if kind == "image":
+                _grid_image = original_image_for_reread or (
+                    page_images[0] if page_images else b""
+                )
+                result, _grid_extra_calls = maybe_retry_sale_and_stock_analysis_grid(
+                    result,
+                    _grid_image,
+                    request_id=request_id,
+                    calls=calls,
+                    budget=int(gemini_budget),
+                    used_dedicated_prompt=bool(
+                        ctx.get("sale_and_stock_analysis_grid")
+                    ),
+                )
+                calls += int(_grid_extra_calls or 0)
+        except Exception:
+            logger.info(
+                "SALE_AND_STOCK_ANALYSIS_GRID layout=sale_and_stock_analysis_grid "
+                "stage=skip request_id=%s",
+                request_id,
             )
 
         classified = classify_result(result)

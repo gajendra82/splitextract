@@ -1380,6 +1380,12 @@ def apply_stock_reconciliation(
             str(extra_t.get("extraction_method") or "") == "stock_sales_op_pi_clqty"
             or extra_t.get("stock_document_gap")
             or prev.get("printed_values_authoritative")
+            # FREE/P.RETURN qty grids: row identity includes free/return columns;
+            # simple open+purchase-sale aggregate is informational only. Printed
+            # Total Value money is authoritative when present.
+            or str(extra_t.get("stock_identity_kind") or "") == "item_pack_free_return"
+            or str(extra_t.get("layout") or "") == "item_pack_free_return"
+            or str(extra_t.get("total_row_source") or "") == "free_return_total_value"
         )
         prev.update(
             {
