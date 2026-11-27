@@ -4162,9 +4162,35 @@ def resolve_columns(
                 col["confidence"] = 0.8
                 col["reason"] = "inherit_left_qty"
             else:
-                col["canonical"] = "ignore"
-                col["reason"] = "orphan_value"
-                col["confidence"] = 0.0
+                # Opening|In|Out|Balance|Unit|Rate|Value — bare Value sits
+                # after Rate/Unit, not beside Balance. Walk left past
+                # rate/pack/ignore to the closing qty band.
+                closing_anchor = False
+                for j in range(i - 1, -1, -1):
+                    prev = prelim[j]
+                    pc = str(prev.get("canonical") or "")
+                    pg = prev.get("group")
+                    if pc in {"rate", "pack", "ignore", ""}:
+                        continue
+                    if pg == "closing" or pc == "closing_qty":
+                        closing_anchor = True
+                    break
+                if closing_anchor:
+                    col["canonical"] = "closing_value"
+                    col["group"] = "closing"
+                    col["is_value"] = True
+                    col["confidence"] = 0.85
+                    col["reason"] = "trailing_value_after_closing"
+                    logger.info(
+                        "STOCK_HEADER_TRAILING_VALUE_AFTER_CLOSING "
+                        "col_index=%s left=%r -> closing_value",
+                        col.get("col_index"),
+                        left.get("header_text"),
+                    )
+                else:
+                    col["canonical"] = "ignore"
+                    col["reason"] = "orphan_value"
+                    col["confidence"] = 0.0
 
     # Repeated bare STOCK → first opening, last closing (before free/dedupe).
     _apply_multi_stock_sequence(prelim, errors)

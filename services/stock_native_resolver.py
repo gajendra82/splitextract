@@ -5967,9 +5967,9 @@ def _stvr_excel_sheets_from_bytes(
     # OOXML xlsx
     if head.startswith(b"PK"):
         try:
-            from openpyxl import load_workbook
+            from services.sales_statement_extractor import _load_ooxml_workbook
 
-            wb = load_workbook(filename=__import__("io").BytesIO(file_bytes), data_only=True, read_only=True)
+            wb = _load_ooxml_workbook(file_bytes, data_only=True, read_only=True)
             for name in wb.sheetnames:
                 ws = wb[name]
                 rows: List[List[Any]] = []
@@ -6092,7 +6092,6 @@ def apply_sales_total_value_recovery_fallback(
         ]
         return result
 
-    need = _stvr_needs_recovery(result)
     totals = result.setdefault("totals", {})
     if not isinstance(totals, dict):
         totals = {}
@@ -6101,6 +6100,47 @@ def apply_sales_total_value_recovery_fallback(
     if not isinstance(extra, dict):
         extra = {}
         totals["extra"] = extra
+
+    # Qty-only OPENING|RECEIPT|ISSUE|CLOSING: printed TOTAL digits stay in qty
+    # columns — unless a value-scale TOTAL was already remapped to money.
+    _method = str(extra.get("extraction_method") or "")
+    _layout = str(extra.get("layout") or "")
+    _value_scale_footer = (
+        bool(extra.get("has_printed_sales_value"))
+        or str(extra.get("total_value_row_source") or "") == "footer_total_as_value"
+        or bool(extra.get("oric_footer_qty_remapped"))
+    )
+    if (
+        not _value_scale_footer
+        and (
+            extra.get("qty_only")
+            or _method.startswith("ssa_oric_qty_only")
+            or "opening_receipt_issue_closing" in _layout
+        )
+    ):
+        totals["sales_value"] = None
+        if (
+            _method.startswith("ssa_oric_qty_only")
+            or "opening_receipt_issue_closing" in _layout
+            or extra.get("qty_only")
+        ):
+            # Keep closing_value only when a money layout stamped it earlier.
+            if str(extra.get("total_row_format") or "") == (
+                "opening_receipt_issue_closing"
+            ) or _method.startswith("ssa_oric_qty_only"):
+                totals["closing_value"] = None
+        extra["sales_total_value_recovery"] = {
+            "status": "skipped",
+            "reason": "qty_only_oric",
+        }
+        logger.info(
+            "STOCK_SALES_TOTAL_VALUE_RECOVERY status=skipped reason=qty_only "
+            "method=%s",
+            _method or _layout or "qty_only",
+        )
+        return result
+
+    need = _stvr_needs_recovery(result)
 
     source_format = str(result.get("source_format") or extra.get("source_format") or "")
     log_base = {
@@ -7133,6 +7173,15 @@ def stamp_opbal_qty_only_if_detected(result: Dict[str, Any]) -> bool:
         return False
     extra = totals.setdefault("extra", {})
     if not isinstance(extra, dict):
+        return False
+    # Value-scale ORIC TOTAL already remapped to money — do not wipe it.
+    if (
+        extra.get("has_printed_sales_value")
+        or str(extra.get("total_value_row_source") or "") == "footer_total_as_value"
+        or extra.get("oric_footer_qty_remapped")
+    ):
+        if not extra.get("product_rows_qty_only"):
+            extra["product_rows_qty_only"] = True
         return False
     changed = False
     if not extra.get("qty_only"):

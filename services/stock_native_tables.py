@@ -1047,20 +1047,27 @@ def _sheet_total_row_kind(tokens: List[Dict[str, Any]]) -> Optional[str]:
     if is_software_price_ad_name(joined):
         return None
     numeric = sum(1 for t in texts if parse_number(t) is not None)
-    if numeric < 3:
+    has_grand_total = bool(re.search(r"(?i)\bgrand\s+total\b", joined))
+    has_group_total = bool(re.search(r"(?i)\bgroup\s*totals?\b", joined))
+    # Labeled Grand/Group Total may print only 1–2 movement numbers (sparse
+    # In/Out) — still a sheet footer, not a product row.
+    if numeric < 3 and not (has_grand_total or has_group_total):
+        return None
+    if numeric < 1:
         return None
     # GroupTotal under Opening/Received/Issued/Closing prints money, not qty.
-    if re.search(r"(?i)\bgroup\s*totals?\b", joined):
+    if has_group_total:
         return "value"
-    if re.search(r"(?i)\bgrand\s+total\b", joined):
+    if has_grand_total:
         # Qty+Value under Opening/Inwards/Outwards/Closing (Tally category).
         # Money-looking .xx strips under qty headers are still value totals.
         if _is_nameless_money_footer_tokens(tokens) or sum(
             1
             for t in texts
             if parse_number(t) is not None
-            and re.search(r"\.\d{2}$", str(t).replace(",", ""))
-        ) >= 2:
+            and re.search(r"\.\d{2,}$", str(t).replace(",", ""))
+            and not re.search(r"\.0+$", str(t).replace(",", ""))
+        ) >= 1:
             return "value"
         return "quantity"
     if re.search(
@@ -2240,6 +2247,9 @@ def _is_nameless_money_footer_tokens(tokens: List[Dict[str, Any]]) -> bool:
     Op Qty|Pur Qty|Sale Qty|Bal Qty grids print a nameless value band under the
     last SKU (e.g. ``0 57166.34 19995.03 …``). That must never LOT_CONTINUATION
     into the prior product.
+
+    Also catches sparse Opening|In|Out|Balance|Value Grand Total continuations
+    like ``1.000 7265.000 851944.720`` (3 tokens, one real money amount).
     """
     texts = [
         str(t.get("text") or "").strip()
@@ -2247,7 +2257,7 @@ def _is_nameless_money_footer_tokens(tokens: List[Dict[str, Any]]) -> bool:
         if isinstance(t, dict)
     ]
     texts = [t for t in texts if t]
-    if len(texts) < 4:
+    if len(texts) < 3:
         return False
     if any(re.search(r"[A-Za-z]", t) for t in texts):
         return False
@@ -2260,9 +2270,15 @@ def _is_nameless_money_footer_tokens(tokens: List[Dict[str, Any]]) -> bool:
         if parse_number(text) is None:
             return False
         numeric += 1
-        if re.search(r"\.\d{2}$", raw):
+        # Money footers use .xx / .xxx that are not pure qty .000 pads.
+        if re.search(r"\.\d{2,}$", raw) and not re.search(r"\.0+$", raw):
             moneyish += 1
-    return numeric >= 4 and moneyish >= 2
+        elif re.search(r"\.\d{2}$", raw):
+            moneyish += 1
+    if numeric >= 4 and moneyish >= 2:
+        return True
+    # Grand Total value line under Balance/Value: 3 numbers, ≥1 money cell.
+    return numeric >= 3 and moneyish >= 1
 
 
 def _is_footer_or_total_tokens(tokens: List[Dict[str, Any]]) -> bool:
