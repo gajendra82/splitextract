@@ -23491,9 +23491,9 @@ _ITEM_PACK_FREE_RETURN_QTY = (
     ("closing_qty", "closing"),
 )
 
-# Exact TOTAL VALUE / Total Value (no division parenthetical).
+# Exact TOTAL VALUE / Total Value / bare TOTAL: (phone ANALYSIS money footer).
 _FREE_RETURN_TOTAL_VALUE_NAME = re.compile(
-    r"(?is)^\s*total\s+values?\s*$"
+    r"(?is)^\s*total(?:\s+values?)?\s*:?\s*$"
 )
 _FREE_RETURN_DIVISION_TOTAL_VALUE_NAME = re.compile(
     r"(?is)^\s*total\s+values?\s*\("
@@ -62599,6 +62599,24 @@ def _extract_ssa_opening_receipt_issue_dump_image(
             skip_ocr_gate,
         )
         return None
+    # Soft-reject PRODUCT|PACK|OPENING|PURCHASE|FREE|P.RETURN|…|SALE|CLOSING
+    # ANALYSIS photos so SSA dump does not burn the Gemini budget before VT.
+    _item_pack_free_preview = "\n".join(
+        x for x in (soft_preview or "", upright_preview or "") if x
+    )
+    if _text_looks_like_item_pack_free_return_chrome(_item_pack_free_preview):
+        logger.info(
+            "SSA_DUMP_SKIP reason=item_pack_free_return file=%s "
+            "skip_ocr_gate=%s",
+            filename,
+            skip_ocr_gate,
+        )
+        stub = empty_result(filename, ext.lstrip(".") or "jpg")
+        extra_stub = stub.setdefault("totals", {}).setdefault("extra", {})
+        if isinstance(extra_stub, dict):
+            extra_stub["ssa_dump_item_pack_free_return"] = True
+            extra_stub["extraction_method"] = "ssa_dump_item_pack_free_reject"
+        return stub
     # Soft-reject Stock and Sale Op|Pur|Gd.In|Purchase|Sale|Stock (trailing money).
     # SSA OPENING/RECEIPT/ISSUE schema parks Tot In as closing and zeros sales.
     if _text_looks_like_stock_and_sale_op_pur_gd_chrome(soft_preview):
@@ -63565,6 +63583,44 @@ def _ssa_dump_result_looks_like_stock_and_sale_misfile(
     return False
 
 
+def _text_looks_like_item_pack_free_return_chrome(text: str) -> bool:
+    """PRODUCT|PACK|OPENING|PURCHASE|FREE|P.RETURN|…|SALE|CLOSING ANALYSIS chrome."""
+    if not (text or "").strip():
+        return False
+    # Op|Pur|Gd.In money grids are a different family — do not steal them.
+    if _text_looks_like_stock_and_sale_op_pur_gd_chrome(text):
+        return False
+    has_analysis = bool(
+        re.search(
+            r"STOCK\s+AND\s+SALES\s+ANALYSIS|STOCK\s*&\s*SALES\s+ANALYSIS",
+            text,
+            re.I,
+        )
+    )
+    has_pack = bool(re.search(r"\bPACK(?:ING)?\b", text, re.I))
+    has_open = bool(re.search(r"\bOPENING\b", text, re.I))
+    has_pur = bool(re.search(r"\bPURCHASE\b", text, re.I))
+    has_free = bool(re.search(r"\bFREE\b", text, re.I))
+    has_pret = bool(re.search(r"P\.?\s*RETURN", text, re.I))
+    has_sale = bool(re.search(r"\bSALE\b", text, re.I))
+    has_close = bool(re.search(r"\bCLOSING\b", text, re.I))
+    # Full header strip (phone OCR often gets most of these).
+    if has_pack and has_open and has_pur and has_free and has_pret and has_sale and has_close:
+        if has_analysis:
+            return True
+        return bool(
+            re.search(r"\b(?:PRODUCT|ITEM)\b", text, re.I)
+            and re.search(r"\bOTHERS\b", text, re.I)
+        )
+    # Soft OCR may only catch the ANALYSIS title + a few qty headers — still
+    # skip SSA dump so VISION_TABLE keeps the Gemini budget.
+    if has_analysis and has_pack and has_sale and (has_open or has_pur) and (
+        has_free or has_pret
+    ):
+        return True
+    return False
+
+
 def _ssa_dump_result_looks_like_item_pack_free_misfile(
     result: Optional[Dict[str, Any]],
 ) -> bool:
@@ -63575,6 +63631,9 @@ def _ssa_dump_result_looks_like_item_pack_free_misfile(
     """
     if not isinstance(result, dict):
         return False
+    extra = (result.get("totals") or {}).get("extra") or {}
+    if isinstance(extra, dict) and extra.get("ssa_dump_item_pack_free_return"):
+        return True
     title = str(result.get("report_title") or "")
     title_hint = bool(
         re.search(r"STOCK\s+AND\s+SALES\s+ANALYSIS|STOCK\s*&\s*SALES", title, re.I)
@@ -81780,7 +81839,20 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                         ssa_first
                     )
                 )
-                if _ssa_stock_sale_misfile:
+                if ssa_first and _ssa_dump_result_looks_like_item_pack_free_misfile(
+                    ssa_first
+                ):
+                    # Prefer FREE|P.RETURN ANALYSIS over Op|Pur misfile when both
+                    # heuristics could fire on the same dump.
+                    _defer_item_pack_free_vt = True
+                    logger.info(
+                        "[STOCK_EXTRACTION_PATH] stage=ssa_dump_before_lstsl "
+                        "file=%s status=rejected reason=item_pack_free_return "
+                        "line_items=%s",
+                        filename,
+                        len(ssa_first.get("line_items") or []),
+                    )
+                elif _ssa_stock_sale_misfile:
                     _defer_stock_and_sale_vt = True
                     logger.info(
                         "[STOCK_EXTRACTION_PATH] stage=ssa_dump_before_lstsl "
@@ -81818,17 +81890,6 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                     logger.info(
                         "[STOCK_EXTRACTION_PATH] stage=ssa_dump_before_lstsl "
                         "file=%s status=rejected reason=ssa_purchase_qty_grid "
-                        "line_items=%s",
-                        filename,
-                        len(ssa_first.get("line_items") or []),
-                    )
-                elif ssa_first and _ssa_dump_result_looks_like_item_pack_free_misfile(
-                    ssa_first
-                ):
-                    _defer_item_pack_free_vt = True
-                    logger.info(
-                        "[STOCK_EXTRACTION_PATH] stage=ssa_dump_before_lstsl "
-                        "file=%s status=rejected reason=item_pack_free_return "
                         "line_items=%s",
                         filename,
                         len(ssa_first.get("line_items") or []),
