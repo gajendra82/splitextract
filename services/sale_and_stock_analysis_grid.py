@@ -450,6 +450,38 @@ def _restore_names(items: Sequence[Dict[str, Any]]) -> int:
     return restored
 
 
+def ssa_dump_result_is_sale_and_stock_analysis_misfile(
+    result: Optional[Dict[str, Any]],
+) -> bool:
+    """SSA Opening/Receipt/Issue read of a SALE AND STOCK ANALYSIS phone grid.
+
+    Opening is wiped and Sale* sits in receipts, but 0 + receipts − 0 still
+    equals closing, so the dump path treats the sheet as valid. Real SSA
+    sheets titled STOCK & SALES ANALYSIS, and reads that kept Opening and
+    Sale*, do not match.
+    """
+    if not sale_and_stock_analysis_grid_enabled():
+        return False
+    if not isinstance(result, dict):
+        return False
+    title = str(result.get("report_title") or "")
+    if not re.search(r"SALE\s+(?:AND|&)\s+STOCK\s+ANALYSIS", title, re.I):
+        return False
+    dump_hits = 0
+    for item in result.get("line_items") or []:
+        if not isinstance(item, dict):
+            continue
+        extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        try:
+            if abs(float(extra.get("dump_qty") or 0)) > 0.05:
+                dump_hits += 1
+        except (TypeError, ValueError):
+            continue
+    if dump_hits >= 2:
+        return False
+    return opening_sale_receipt_failure(result)
+
+
 def opening_sale_receipt_failure(result: Dict[str, Any]) -> bool:
     """#26989 signature: openings and sales wiped, Sale parked in receipts."""
     items = [
