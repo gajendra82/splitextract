@@ -76,6 +76,23 @@ Stk|Rate|Sh.E (Stock and Sales Report):
   NetSal (GVal) are totals only. When multiple TOTAL / GRAND TOTAL bands
   print, use ONLY the last GRAND TOTAL (else the last TOTAL).
 
+When headers are Op.Bal / Receipt / Total / Issue / Closing (qty-only Sales & Stock,
+optional Dump / Near Expiry / Remain Day — no Sale Value column):
+- opening_qty = Op.Bal Qty, receipts_qty = Receipt Qty.
+- extra.total_stock_qty = Total Qty ONLY (never sales_qty / never closing_qty).
+- sales_qty = Issue Qty (positional; copy even when non-zero).
+- closing_qty = Closing Balance (positional; do NOT swap with Issue).
+- sales_value = null and closing_value = null on every line. Never put Issue Qty
+  digits into sales_value. Never invent money.
+- Example pattern: Op.Bal=22, Receipt=0, Total=22, Issue=1, Closing=21
+  → sales_qty=1, closing_qty=21 (NOT 21/1). A balanced row can still be wrong
+  if Issue/Closing were swapped — trust left→right column order.
+- Example pattern: Op.Bal=2640, Issue=2551, Closing=89 → sales_qty=2551,
+  sales_value=null (2551 is Issue Qty, not money).
+- Total Qty must equal opening_qty + receipts_qty when printed.
+- Closing Qty must equal Total Qty − Issue Qty when those columns are printed.
+- Period "MONTH-OCT 2026" → period_from=2026-10-01, period_to=2026-10-31.
+
 Return JSON only:
 {
   "stockist_name": string|null,
@@ -483,6 +500,8 @@ def _call_gemini(
     file_bytes: bytes,
     ext: str,
     document_parts: Optional[List[Dict[str, Any]]] = None,
+    *,
+    prompt: Optional[str] = None,
 ) -> Optional[Dict[str, Any]]:
     """One vision read through the same quota client as /split-and-extract."""
     from services.extraction_logger import log_extraction_event
@@ -494,7 +513,7 @@ def _call_gemini(
     # Imported lazily so this module does not load the invoice pipeline at import time.
     from app import call_gemini_with_quota, get_current_model_config
 
-    parts = [{"text": _FALLBACK_PROMPT}]
+    parts = [{"text": prompt or _FALLBACK_PROMPT}]
     parts.extend(
         document_parts if document_parts is not None else _document_parts(file_bytes, ext)
     )
@@ -541,6 +560,7 @@ def _finish_gemini_result(
         empty_result,
     )
     from services.stock_image_vision import repair_op_pur_sale_stk_rate_misfile
+    from services.stock_native_resolver import repair_opbal_qty_only_fields
 
     result = empty_result(filename, (ext or "").lstrip("."))
     result = _apply_parsed_sales_json(result, parsed)
@@ -571,6 +591,11 @@ def _finish_gemini_result(
                     "sep_qty",
                     "institution_sale_qty",
                     "free_out_qty",
+                    "total_stock_qty",
+                    "total_stock",
+                    "dump_qty",
+                    "near_expiry_qty",
+                    "remain_day_stock",
                 ):
                     if src_extra.get(key) not in (None, "") and dst_extra.get(key) in (
                         None,
@@ -584,6 +609,9 @@ def _finish_gemini_result(
             if isinstance(ex, dict):
                 ex.pop("cells", None)
     result = _sanitize_statement_financials(result)
+    # Op.Bal qty-only: stamp qty_only + unpark Issue from sales_value BEFORE
+    # identity/recon so money_from_qty cannot steal large Issue counts.
+    result = repair_opbal_qty_only_fields(result)
     result = _apply_stock_identity_validation(result)
     result = _ensure_stock_qty_value_fields(result)
     return _product_wise_drop_banner_items(result)
