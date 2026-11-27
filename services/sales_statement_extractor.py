@@ -7680,6 +7680,17 @@ def _apply_total_row_to_result(result: Dict[str, Any], text: str) -> Dict[str, A
             mismatch_reason=reject_reason,
         )
 
+    # Op.Bal / Near Expiry TOTAL rows are printed qty. A short line list must
+    # not replace them with a sum. Value-scale remap is only for money-scale
+    # footers (paisa or far above the lines on a plain ORIC qty header).
+    printed_qty_formats = {
+        "opbal_receipt_total_issue_closing",
+        "opbal_receipt_total_issue_closing_near",
+        "opbal_receipt_total_issue_expiry_closing",
+    }
+    if reject_reason and str(parsed.get("total_row_format") or "") in printed_qty_formats:
+        reject_reason = None
+
     if reject_reason:
         # Value-scale / implausible footer: line qty sums + money remap.
         return _apply_oric_value_scale_footer_totals(

@@ -6110,19 +6110,14 @@ def apply_sales_total_value_recovery_fallback(
         or str(extra.get("total_value_row_source") or "") == "footer_total_as_value"
         or bool(extra.get("oric_footer_qty_remapped"))
     )
-    if (
-        not _value_scale_footer
-        and (
-            extra.get("qty_only")
-            or _method.startswith("ssa_oric_qty_only")
-            or "opening_receipt_issue_closing" in _layout
-        )
-    ):
+    oric_qty_sheet = _method.startswith("ssa_oric_qty_only") or (
+        "opening_receipt_issue_closing" in _layout
+    )
+    if not _value_scale_footer and oric_qty_sheet:
         totals["sales_value"] = None
         if (
             _method.startswith("ssa_oric_qty_only")
             or "opening_receipt_issue_closing" in _layout
-            or extra.get("qty_only")
         ):
             # Keep closing_value only when a money layout stamped it earlier.
             if str(extra.get("total_row_format") or "") == (
