@@ -16172,9 +16172,14 @@ def run_vision_table_path(
 
         for start in range(0, len(page_images), pages_per):
             batch = page_images[start : start + pages_per]
-            raw = extract_stock_table_vision(
-                batch, {"label": "stock_vision_table", "request_id": request_id}
-            )
+            _vision_ctx: Dict[str, Any] = {
+                "label": "stock_vision_table",
+                "request_id": request_id,
+            }
+            _grid_prompt = str(ctx.get("prompt") or "")
+            if _grid_prompt:
+                _vision_ctx["prompt"] = _grid_prompt
+            raw = extract_stock_table_vision(batch, _vision_ctx)
             calls += 1
             _log_vision_boundary(
                 "raw_vision_response",
@@ -16700,6 +16705,35 @@ def run_vision_table_path(
             logger.info(
                 "VISION_TABLE TOTAL_ROW_NAME post_merge_peeled=%s",
                 len(peeled),
+            )
+
+        try:
+            from services.sale_and_stock_analysis_grid import (
+                apply_sale_and_stock_analysis_grid,
+                maybe_retry_sale_and_stock_analysis_grid,
+            )
+
+            result = apply_sale_and_stock_analysis_grid(result)
+            if kind == "image":
+                _grid_image = original_image_for_reread or (
+                    page_images[0] if page_images else b""
+                )
+                result, _grid_extra_calls = maybe_retry_sale_and_stock_analysis_grid(
+                    result,
+                    _grid_image,
+                    request_id=request_id,
+                    calls=calls,
+                    budget=int(gemini_budget),
+                    used_dedicated_prompt=bool(
+                        ctx.get("sale_and_stock_analysis_grid")
+                    ),
+                )
+                calls += int(_grid_extra_calls or 0)
+        except Exception:
+            logger.info(
+                "SALE_AND_STOCK_ANALYSIS_GRID layout=sale_and_stock_analysis_grid "
+                "stage=skip request_id=%s",
+                request_id,
             )
 
         classified = classify_result(result)
