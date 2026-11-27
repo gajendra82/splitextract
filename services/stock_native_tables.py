@@ -1054,6 +1054,13 @@ def _sheet_total_row_kind(tokens: List[Dict[str, Any]]) -> Optional[str]:
         joined,
     ):
         return "quantity"
+    # Busy / Marg STOCK & SALES ANALYSIS division subtotals (HHH-style).
+    name_texts = [t for t in texts if parse_number(t) is None]
+    label_joined = " ".join(name_texts).strip()
+    if re.search(r"(?i)^value\s+in\s+rs\.?$", label_joined):
+        return "value"
+    if re.search(r"(?i)^(?:total\s+)?quantity$", label_joined):
+        return "quantity"
     # "Total For: All Items" — qty under the movement columns, money under value.
     if re.search(r"(?i)total\s+for\b", joined):
         return "quantity"

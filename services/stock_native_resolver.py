@@ -92,7 +92,9 @@ _SHEET_TOTAL_NAME = re.compile(
     r"|^\s*group\s*totals?\b"
     r"|total\s+for\b"
     r"|^\s*total\s*count\b"
-    r"|^\s*total\s*:-",
+    r"|^\s*total\s*:-"
+    r"|^\s*value\s+in\s+rs\.?\s*$"
+    r"|^\s*(?:total\s+)?quantity\s*$",
     re.I,
 )
 
@@ -195,6 +197,7 @@ def _footer_totals_from_page_results(
     # (priority, order, fragment) — higher priority wins; last among equals.
     # GRAND TOTAL = 2, GroupTotal / TOTAL VALUE = 1, qty TOTAL = 0.
     candidates: List[Tuple[int, int, Dict[str, float]]] = []
+    saw_busy_value_rs = False
     order = 0
     for page in page_results or []:
         ready = resolver_ready(page.get("header_cells") or [])
@@ -209,6 +212,10 @@ def _footer_totals_from_page_results(
             item = fields_to_line_item(assigned.get("fields") or {})
             frag: Dict[str, float] = {}
             label = _footer_row_label_blob(row)
+            if kind == "value" and re.search(
+                r"(?i)\bvalue\s+in\s+rs\.?\b", label
+            ):
+                saw_busy_value_rs = True
             is_group_total = bool(re.search(r"(?i)\bgroup\s*totals?\b", label))
 
             def _footer_num(raw: Any) -> Optional[float]:
@@ -323,12 +330,53 @@ def _footer_totals_from_page_results(
     if not candidates:
         return {}
     best_priority = max(c[0] for c in candidates)
-    chosen = next(
-        frag
-        for pri, _ord, frag in reversed(candidates)
-        if pri == best_priority
+    value_keys = (
+        "opening_value",
+        "receipts_value",
+        "sales_value",
+        "closing_value",
+        "sales_issue_value",
+        "last_month_sales_value",
     )
-    out = dict(chosen)
+    qty_keys = ("opening_qty", "receipts_qty", "sales_qty", "closing_qty")
+
+    def _frag_has_value(frag: Dict[str, float]) -> bool:
+        return any(frag.get(k) is not None for k in value_keys)
+
+    def _frag_has_qty(frag: Dict[str, float]) -> bool:
+        return any(frag.get(k) is not None for k in qty_keys)
+
+    out: Dict[str, float] = {}
+    for pri, _ord, frag in candidates:
+        if pri != best_priority:
+            continue
+        for key, val in frag.items():
+            if val is not None:
+                out[key] = val
+    # Value footers remap money onto *_value — drop stray qty slots on that row.
+    if _frag_has_value(out):
+        for key in qty_keys:
+            out.pop(key, None)
+    # Busy SSA: Grand Total Quantity + Value in Rs. split across two rows.
+
+    if saw_busy_value_rs and not any(
+        out.get(k) is not None for k in qty_keys
+    ):
+        for _pri, _ord, frag in reversed(candidates):
+            if not _frag_has_qty(frag) or _frag_has_value(frag):
+                continue
+            for key in qty_keys:
+                if out.get(key) is None and frag.get(key) is not None:
+                    out[key] = frag[key]
+    if saw_busy_value_rs and not any(
+        out.get(k) is not None for k in value_keys
+    ):
+        for _pri, _ord, frag in reversed(candidates):
+            if not _frag_has_value(frag):
+                continue
+            for key in value_keys:
+                if out.get(key) is None and frag.get(key) is not None:
+                    out[key] = frag[key]
     # Promote issue-band money only when Sales Value On prate was absent.
     if out.get("sales_value") is None and out.get("sales_issue_value") is not None:
         out["sales_value"] = out["sales_issue_value"]
@@ -802,6 +850,23 @@ def build_line_items_from_tokens(
                 token_blob[:60],
             )
             continue
+        try:
+            from services.stock_native_tables import (
+                _is_nameless_money_footer_tokens,
+                _looks_like_legend_or_footer_header,
+                _sheet_total_row_kind,
+            )
+
+            footer_kind = _sheet_total_row_kind(tokens)
+            if footer_kind:
+                logger.info(
+                    "STOCK_PDF_WORDS_TOTAL_SKIP footer_kind=%s blob=%s",
+                    footer_kind,
+                    token_blob[:60],
+                )
+                continue
+        except Exception:
+            pass
         try:
             from services.stock_native_tables import (
                 _is_nameless_money_footer_tokens,
@@ -5100,6 +5165,36 @@ def _stvr_money_like(value: Any) -> bool:
     return abs(num) >= 100.0
 
 
+def _stvr_ssa_qty_footer_blocks_shift(
+    result: Dict[str, Any], totals_sales_qty: Any
+) -> bool:
+    """True when totals.sales_qty is a printed SSA sales-qty footer, not rupees."""
+    if not isinstance(result, dict):
+        return False
+    num = _stvr_as_float(totals_sales_qty)
+    if num is None:
+        return False
+    if abs(num - round(num)) > 0.001:
+        return False
+    title = str(result.get("report_title") or "")
+    extra = {}
+    totals = result.get("totals")
+    if isinstance(totals, dict):
+        extra = totals.get("extra") if isinstance(totals.get("extra"), dict) else {}
+    if not (
+        re.search(r"STOCK\s*&\s*SALES\s+ANALYSIS", title, re.I)
+        or extra.get("qty_only")
+        or str(extra.get("extraction_method") or "") in {
+            "stock_sales_analysis_geometry",
+            "stock_sales_analysis",
+            "ssa_sales_free_columns",
+        }
+        or extra.get("total_row_source") == "printed_footer"
+    ):
+        return False
+    return True
+
+
 def _stvr_has_decimal_money(amounts: List[float]) -> bool:
     """True when at least one amount has a non-zero paisa fraction (rupees)."""
     for amount in amounts or []:
@@ -6010,6 +6105,7 @@ def apply_sales_total_value_recovery_fallback(
             and totals_sq is not None
             and _stvr_money_like(totals_sq)
             and abs(totals_sq - float(need.get("qty_sum") or 0)) > 0.51
+            and not _stvr_ssa_qty_footer_blocks_shift(result, totals_sq)
         ):
             totals["sales_value"] = float(totals_sq)
             if "sales_qty" in totals:
@@ -7299,6 +7395,68 @@ def _apply_pdf_words_letterhead_meta(result: Dict[str, Any], peek: str) -> bool:
     return changed
 
 
+def _ssa_geometry_pages_from_pdf_bytes(file_bytes: bytes) -> List[Dict[str, Any]]:
+    import io
+
+    import pdfplumber
+
+    pages: List[Dict[str, Any]] = []
+    with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
+        for page_index, page in enumerate(pdf.pages):
+            words = page.extract_words(x_tolerance=1, y_tolerance=3) or []
+            tuples = [
+                (w["x0"], w["top"], w["x1"], w["bottom"], w["text"])
+                for w in words
+                if isinstance(w, dict) and w.get("text")
+            ]
+            pages.append({"words": tuples, "page_index": page_index})
+    return pages
+
+
+def _maybe_upgrade_ssa_purchase_qty_grid_geometry(
+    result: Dict[str, Any],
+    peek: str,
+    file_bytes: bytes,
+    filename: str,
+) -> None:
+    """Prefer word-geometry SSA rows when the Busy qty-only grid drops lines."""
+    try:
+        from services.sales_statement_extractor import (
+            _parse_stock_sales_analysis_words,
+            _text_looks_like_ssa_purchase_qty_grid,
+        )
+    except Exception:
+        return
+    if not _text_looks_like_ssa_purchase_qty_grid(peek):
+        return
+    try:
+        geo = _parse_stock_sales_analysis_words(
+            _ssa_geometry_pages_from_pdf_bytes(file_bytes), filename
+        )
+    except Exception:
+        return
+    if not geo or not geo.get("line_items"):
+        return
+    native_n = len(result.get("line_items") or [])
+    geo_n = len(geo.get("line_items") or [])
+    if geo_n <= native_n:
+        return
+    result["line_items"] = list(geo["line_items"])
+    extra = result.setdefault("totals", {}).setdefault("extra", {})
+    if not isinstance(extra, dict):
+        extra = {}
+        result["totals"]["extra"] = extra
+    extra["extraction_method"] = "stock_sales_analysis_geometry"
+    extra["layout"] = "stock_sales_analysis"
+    extra["ssa_geometry_upgrade"] = f"native={native_n} geometry={geo_n}"
+    logger.info(
+        "STOCK_PDF_WORDS_SSA_GEOMETRY_UPGRADE file=%s native=%s geometry=%s",
+        filename,
+        native_n,
+        geo_n,
+    )
+
+
 def parse_pdf_free_column_statement(
     file_bytes: bytes, filename: str
 ) -> Optional[Dict[str, Any]]:
@@ -7786,6 +7944,9 @@ def parse_pdf_free_column_statement(
                 parsed.get("value_summary") or {}
             ):
                 it["closing_value"] = None
+    _maybe_upgrade_ssa_purchase_qty_grid_geometry(
+        result, peek, file_bytes, filename
+    )
     if parsed.get("closing_value") is not None:
         result["totals"]["closing_value"] = parsed["closing_value"]
     if parsed.get("sales_value") is not None:
