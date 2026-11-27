@@ -949,7 +949,11 @@ def _glue_adjacent_qualifier_cells(cells: List[Dict[str, Any]]) -> None:
     """Join SALE+RETURN / REPLACE++OTHERS that sat just apart in the header row.
 
     Does not glue RATE/AMT/VALUE — those are their own columns.
+    Does not glue FREE+OTHERS — on OPENING/PURCHASE/FREE/P.RETURN/…/FREE/OTHERS
+    /CLOSING grids those are separate qty columns (OTHERS is not a FREE qualifier).
     """
+    from services.stock_header_resolver import _pick_group
+
     i = 1
     while i < len(cells):
         right = cells[i]
@@ -957,6 +961,17 @@ def _glue_adjacent_qualifier_cells(cells: List[Dict[str, Any]]) -> None:
             i += 1
             continue
         left = cells[i - 1]
+        left_g, _, _ = _pick_group(normalize_header(str(left.get("text") or "")))
+        right_norm = normalize_header(str(right.get("text") or ""))
+        # FREE | OTHERS stay two columns on FREE/P.RETURN qty-only sheets.
+        if left_g == "free" and right_norm == "others":
+            logger.info(
+                "STOCK_PDF_HEADER_KEEP_FREE_OTHERS left=%r right=%r",
+                left.get("text"),
+                right.get("text"),
+            )
+            i += 1
+            continue
         gap = float(right.get("x0") or 0) - float(left.get("x1") or 0)
         left_w = max(1.0, float(left.get("x1") or 0) - float(left.get("x0") or 0))
         if gap > max(14.0, 0.55 * left_w):
@@ -1071,6 +1086,22 @@ def _sheet_total_row_kind(tokens: List[Dict[str, Any]]) -> Optional[str]:
         if re.match(r"(?i)^(quantity|qty|qnt)$", second):
             return "quantity"
         if re.match(r"(?i)^value$", second):
+            return "value"
+    # Bare TOTAL: / TOTAL with several .xx amounts under qty-only
+    # OPENING|…|CLOSING grids — printed value footer, not a product lot total.
+    if re.match(r"(?i)^(?:grand\s+|page\s+|sub\s+)?totals?\s*:?\s*$", texts[0]):
+        moneyish = sum(
+            1
+            for t in texts
+            if parse_number(t) is not None
+            and re.search(r"\.\d{2}$", str(t).replace(",", ""))
+        )
+        if moneyish >= 2:
+            logger.info(
+                "STOCK_PDF_WORDS_FOOTER_TOTALS kind=value bare_total_colon "
+                "moneyish=%s",
+                moneyish,
+            )
             return "value"
     # Nameless .xx strip under Op/Pur/Sale/Bal qty headers is printed money.
     if _is_nameless_money_footer_tokens(tokens):
@@ -2928,13 +2959,28 @@ def _extract_pdf_page_rows(
                             text,
                             combined_value,
                         )
+                    # FREE|OTHERS are distinct movement columns; OTHERS is a
+                    # qualifier of REPLACE, never of FREE.
+                    keep_free_others = (
+                        g_prev == "free"
+                        and g_new == "others"
+                        and normalize_header(text) == "others"
+                    )
                     if (
                         g_prev
                         and g_new
                         and g_prev != g_new
-                        and not _is_same_row_qualifier(text)
+                        and (
+                            not _is_same_row_qualifier(text) or keep_free_others
+                        )
                         and not combined_value
                     ):
+                        if keep_free_others:
+                            logger.info(
+                                "STOCK_PDF_HEADER_KEEP_FREE_OTHERS left=%r right=%r",
+                                prev_text,
+                                text,
+                            )
                         cells.append(
                             {
                                 "text": text,

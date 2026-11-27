@@ -120,26 +120,29 @@ class TestMargSalePurchaseAnalysisText(unittest.TestCase):
         self.assertEqual(
             names,
             [
-                "AACTARIL SOAP 75GM",
-                "ABANA TABLET 60'S",
-                "CLARINA CREAM 30GM",
+                "AACTARIL SOAP",
+                "ABANA TABLET",
+                "CLARINA CREAM",
                 "HAIRZONE SOLUTION",
-                "LIV 52 SYRUP 100ML",
+                "LIV 52 SYRUP",
             ],
         )
         by_name = _by_name(parsed)
-        aactaril = by_name["AACTARIL SOAP 75GM"]
+        aactaril = by_name["AACTARIL SOAP"]
+        self.assertEqual(aactaril["packing"], "75GM")
         self.assertEqual(aactaril["opening_qty"], 61.0)
         self.assertEqual(aactaril["receipts_qty"], 0.0)
         self.assertEqual(aactaril["sales_qty"], 0.0)
         self.assertEqual(aactaril["closing_qty"], 61.0)
         self.assertIsNone(aactaril["sales_value"])
         self.assertIsNone(aactaril["closing_value"])
-        abana = by_name["ABANA TABLET 60'S"]
+        abana = by_name["ABANA TABLET"]
+        self.assertEqual(abana["packing"], "60'S")
         self.assertEqual(abana["opening_qty"], 44.0)
         self.assertEqual(abana["sales_qty"], 1.0)
         self.assertEqual(abana["closing_qty"], 43.0)
-        clarina = by_name["CLARINA CREAM 30GM"]
+        clarina = by_name["CLARINA CREAM"]
+        self.assertEqual(clarina["packing"], "30GM")
         self.assertEqual(clarina["sales_return_qty"], 2.0)
         self.assertEqual(clarina["subtotal_qty"], 26.0)
         self.assertEqual(clarina["closing_qty"], 26.0)
@@ -148,7 +151,8 @@ class TestMargSalePurchaseAnalysisText(unittest.TestCase):
         self.assertEqual(hairzone["opening_qty"], 15.0)
         self.assertEqual(hairzone["sales_qty"], 1.0)
         self.assertEqual(hairzone["closing_qty"], 14.0)
-        liv = by_name["LIV 52 SYRUP 100ML"]
+        liv = by_name["LIV 52 SYRUP"]
+        self.assertEqual(liv["packing"], "100ML")
         self.assertEqual(liv["opening_qty"], 273.0)
         self.assertEqual(liv["sales_qty"], 253.0)
         self.assertEqual(liv["closing_qty"], 20.0)
@@ -181,12 +185,14 @@ class TestMargSalePurchaseAnalysisPdfExtract(unittest.TestCase):
         self.assertNotIn("VALUE", names)
 
     def test_printed_qtys_are_not_zeroed(self):
-        abana = self.by_name["ABANA TABLET 60'S"]
+        abana = self.by_name["ABANA TABLET"]
+        self.assertEqual(abana["packing"], "60'S")
         self.assertEqual(abana["opening_qty"], 44.0)
         self.assertEqual(abana["receipts_qty"], 0.0)
         self.assertEqual(abana["sales_qty"], 1.0)
         self.assertEqual(abana["closing_qty"], 43.0)
-        liv = self.by_name["LIV 52 SYRUP 100ML"]
+        liv = self.by_name["LIV 52 SYRUP"]
+        self.assertEqual(liv["packing"], "100ML")
         self.assertEqual(liv["sales_qty"], 253.0)
         self.assertEqual(liv["closing_qty"], 20.0)
         self.assertIsNone(abana.get("sales_value"))

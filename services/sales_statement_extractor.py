@@ -9181,6 +9181,30 @@ def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
                 return _to_float(row_extra.get(field))
             return 0.0
 
+        def _is_footer_product_name(name: Any) -> bool:
+            return bool(
+                re.match(
+                    r"(?i)^(?:total\s+)?quantity\b|^value(?:\s+in\s+rs\.?)?\b|"
+                    r"^total\b",
+                    str(name or "").strip(),
+                )
+            )
+
+        product_items = [
+            i
+            for i in items
+            if isinstance(i, dict) and not _is_footer_product_name(i.get("product_name"))
+        ]
+        # Never keep Quantity / Value in Rs. rows in line_items.
+        if len(product_items) != len(items):
+            result["line_items"] = product_items
+            items = product_items
+            logger.info(
+                "MARG_SALE_PURCHASE_ANALYSIS_FOOTER_STRIP dropped=%s kept=%s",
+                "footer_labels",
+                len(items),
+            )
+
         for item in items:
             if not isinstance(item, dict):
                 continue
@@ -9193,6 +9217,8 @@ def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
             if item.get("purchase_qty") in (None, ""):
                 purchase = _src(item, "receipts_qty")
             sales_return = _src(item, "sales_return_qty")
+            if item.get("sales_return_qty") in (None, ""):
+                sales_return = _src(item, "sale_return")
             others_in = _src(item, "others_in_qty")
             subtotal = _src(item, "subtotal_qty")
             sale = _src(item, "sales_qty")
@@ -9207,6 +9233,7 @@ def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
             )
             row_extra["expected_total"] = calculated_subtotal
             row_extra["expected_closing"] = calculated_closing
+            # Classify only — never rewrite printed qty/value to force balance.
             ok = (
                 abs(calculated_subtotal - subtotal) <= 0.05
                 and abs(calculated_closing - closing) <= 0.05
@@ -9226,10 +9253,12 @@ def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
         closing_sum = sum(
             _to_float(i.get("closing_qty")) for i in items if isinstance(i, dict)
         )
-        totals["extra"]["opening_qty"] = opening_sum
-        totals["extra"]["receipts_qty"] = receipt_sum
-        totals["extra"]["sales_qty"] = sales_sum
-        totals["extra"]["closing_qty"] = closing_sum
+        # Keep printed Quantity/Value footer totals on totals.*; line sums are
+        # aggregate diagnostics only (never overwrite financial footers).
+        totals["extra"]["line_sum_opening_qty"] = opening_sum
+        totals["extra"]["line_sum_receipts_qty"] = receipt_sum
+        totals["extra"]["line_sum_sales_qty"] = sales_sum
+        totals["extra"]["line_sum_closing_qty"] = closing_sum
         totals["extra"]["stock_identity_kind"] = "marg_sale_purchase_analysis"
         totals["extra"]["stock_identity_formula"] = (
             "subtotal=opening+purchases+sale_return+others_in; "
@@ -9241,7 +9270,11 @@ def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
             "extracted_purchase": receipt_sum,
             "extracted_sales_qty": sales_sum,
             "extracted_closing": closing_sum,
+            "printed_opening": totals.get("opening_qty"),
+            "printed_sales_qty": totals.get("sales_qty"),
+            "printed_closing": totals.get("closing_qty"),
             "is_valid": mismatch == 0,
+            "source": "product_rows_only",
         }
         return result
 
@@ -20377,23 +20410,76 @@ def _parse_marg_sale_purchase_analysis_xls(
         raw_name = str(row[name_idx] or "").strip() if row and name_idx < len(row) else ""
         if not raw_name:
             continue
+        # Quantity / Total Quantity / Value in Rs. are printed footers — never SKUs.
         if re.search(
-            r"^(quantity|value\b|import purchase|marg\s+erp|total|digital)\b",
+            r"^(?:total\s+)?quantity\b|^value(?:\s+in\s+rs\.?)?\b|"
+            r"^import purchase\b|^marg\s+erp\b|^total\b|^digital\b",
             raw_name,
             re.I,
         ):
+            extra = result["totals"].setdefault("extra", {})
             if re.match(r"^(?:total\s+)?quantity\b", raw_name, re.I):
+                # Last Quantity row wins (page subtotals then grand total).
                 result["totals"]["opening_qty"] = cell_qty(row, "opening_qty")
-                result["totals"]["receipts_qty"] = cell_qty(row, "purchase_qty")
+                purchase_qty = cell_qty(row, "purchase_qty")
+                result["totals"]["receipts_qty"] = purchase_qty
+                result["totals"]["purchase_qty"] = purchase_qty
                 result["totals"]["sales_qty"] = cell_qty(row, "sales_qty")
                 result["totals"]["closing_qty"] = cell_qty(row, "closing_qty")
+                result["totals"]["sales_return_qty"] = cell_qty(
+                    row, "sales_return_qty"
+                )
+                result["totals"]["purchase_return_qty"] = cell_qty(
+                    row, "purchase_return_qty"
+                )
+                extra["opening_qty"] = result["totals"]["opening_qty"]
+                extra["purchase_qty"] = purchase_qty
+                extra["sales_qty"] = result["totals"]["sales_qty"]
+                extra["closing_qty"] = result["totals"]["closing_qty"]
+                extra["sales_return_qty"] = result["totals"]["sales_return_qty"]
+                extra["purchase_return_qty"] = result["totals"][
+                    "purchase_return_qty"
+                ]
+                extra["total_row_source"] = "marg_sale_purchase_quantity"
+                logger.info(
+                    "MARG_SALE_PURCHASE_ANALYSIS_FOOTER kind=quantity "
+                    "opening=%s purchase=%s sales=%s closing=%s",
+                    result["totals"]["opening_qty"],
+                    purchase_qty,
+                    result["totals"]["sales_qty"],
+                    result["totals"]["closing_qty"],
+                )
             elif re.match(r"^value\b", raw_name, re.I):
                 result["totals"]["sales_value"] = cell_qty(row, "sales_qty")
                 result["totals"]["closing_value"] = cell_qty(row, "closing_qty")
-                extra = result["totals"].setdefault("extra", {})
-                extra["opening_value"] = cell_qty(row, "opening_qty")
-                extra["purchase_value"] = cell_qty(row, "purchase_qty")
+                result["totals"]["opening_value"] = cell_qty(row, "opening_qty")
+                result["totals"]["purchase_value"] = cell_qty(row, "purchase_qty")
+                extra["opening_value"] = result["totals"]["opening_value"]
+                extra["purchase_value"] = result["totals"]["purchase_value"]
+                extra["sales_value"] = result["totals"]["sales_value"]
+                extra["closing_value"] = result["totals"]["closing_value"]
+                extra["sales_return_value"] = cell_qty(row, "sales_return_qty")
+                extra["purchase_return_value"] = cell_qty(
+                    row, "purchase_return_qty"
+                )
+                result["totals"]["sales_return_value"] = extra[
+                    "sales_return_value"
+                ]
+                result["totals"]["purchase_return_value"] = extra[
+                    "purchase_return_value"
+                ]
                 extra["total_row_source"] = "marg_sale_purchase_value"
+                logger.info(
+                    "MARG_SALE_PURCHASE_ANALYSIS_FOOTER kind=value "
+                    "opening=%s purchase=%s sales=%s closing=%s "
+                    "sale_ret=%s pur_ret=%s",
+                    extra["opening_value"],
+                    extra["purchase_value"],
+                    extra["sales_value"],
+                    extra["closing_value"],
+                    extra["sales_return_value"],
+                    extra["purchase_return_value"],
+                )
             continue
         if not any(
             cell_present(row, role)
@@ -20407,9 +20493,7 @@ def _parse_marg_sale_purchase_analysis_xls(
         ):
             continue
 
-        parts = re.split(r"\s{2,}", raw_name, maxsplit=1)
-        name = _clean_name(parts[0])
-        packing = _clean_name(parts[1]) if len(parts) > 1 else None
+        name, packing = _split_marg_item_and_pack(raw_name)
         if not name:
             continue
 
@@ -20431,6 +20515,7 @@ def _parse_marg_sale_purchase_analysis_xls(
         item["receipts_qty"] = purchase
         item["purchase_qty"] = purchase
         item["sales_return_qty"] = sales_return
+        item["sale_return"] = sales_return
         item["others_in_qty"] = others_in
         item["subtotal_qty"] = subtotal
         item["sales_qty"] = sales
@@ -20450,6 +20535,7 @@ def _parse_marg_sale_purchase_analysis_xls(
         extra_item["layout"] = "marg_sale_purchase_analysis"
         extra_item["purchase_qty"] = purchase
         extra_item["sales_return_qty"] = sales_return
+        extra_item["sale_return"] = sales_return
         extra_item["others_in_qty"] = others_in
         extra_item["subtotal_qty"] = subtotal
         extra_item["purchase_return_qty"] = purchase_return
@@ -20514,6 +20600,68 @@ def _marg_analysis_text_is_qty_token(token: str) -> bool:
     return bool(re.fullmatch(r"-?\d+(?:\.\d+)?[Kk]?", text))
 
 
+def _marg_analysis_token_blob(parts: List[Any]) -> str:
+    return "".join(_marg_analysis_tokens(parts))
+
+
+def _marg_analysis_collapsed_header_match(parent_line: str, child_line: str) -> bool:
+    """True when pdfplumber collapsed OPENING/SALE/REPL headers to single spaces.
+
+    Also accepts an optional leading CODE column before ITEM DESCRIPTION.
+    """
+    parent_blob = _marg_analysis_token_blob(parent_line.split())
+    child_blob = _marg_analysis_token_blob(child_line.split())
+    expected_parent = "".join(_MARG_ANALYSIS_PARENT)
+    expected_parent_short = "".join(_MARG_ANALYSIS_PARENT[:-1])
+    expected_child = "".join(_MARG_ANALYSIS_CHILD)
+    expected_child_rate = "".join(_MARG_ANALYSIS_CHILD_RATE)
+    if parent_blob.startswith("code"):
+        parent_blob = parent_blob[len("code") :]
+    parent_ok = parent_blob in {expected_parent, expected_parent_short} or (
+        parent_blob.endswith(expected_parent) or parent_blob.endswith(expected_parent_short)
+    )
+    child_ok = child_blob.startswith(expected_child) or child_blob.startswith(
+        expected_child_rate
+    )
+    return bool(parent_ok and child_ok)
+
+
+def _marg_analysis_split_name_qty(stripped: str) -> Optional[Tuple[str, List[str]]]:
+    """Split a product/footer line into name + qty cells (wide or single-space)."""
+    wide = [part for part in re.split(r"\s{2,}", stripped) if part]
+    if len(wide) >= 2:
+        qty_start = 0
+        while qty_start < len(wide) and not _marg_analysis_text_is_qty_token(
+            wide[qty_start]
+        ):
+            qty_start += 1
+        if 0 < qty_start < len(wide):
+            name = "  ".join(wide[:qty_start])
+            qty = wide[qty_start : qty_start + len(_MARG_ANALYSIS_ROLES)]
+            if len(qty) >= 5 and name.strip():
+                return name.strip(), qty
+
+    cells = stripped.split()
+    if len(cells) < 6:
+        return None
+    n_roles = len(_MARG_ANALYSIS_ROLES)
+    qty: List[str] = []
+    i = len(cells)
+    while i > 0 and len(qty) < n_roles:
+        tok = cells[i - 1]
+        if _marg_analysis_text_is_qty_token(tok):
+            qty.insert(0, tok)
+            i -= 1
+            continue
+        break
+    if len(qty) < 5:
+        return None
+    name = " ".join(cells[:i]).strip()
+    if not name:
+        return None
+    return name, qty
+
+
 def _marg_sale_purchase_analysis_rows_from_text(
     text: str,
 ) -> Optional[List[List[Any]]]:
@@ -20531,12 +20679,29 @@ def _marg_sale_purchase_analysis_rows_from_text(
         child = [
             part for part in re.split(r"\s{2,}", lines[index + 1].strip()) if part
         ]
-        if tuple(_marg_analysis_tokens(parent)) != _MARG_ANALYSIS_PARENT:
-            continue
+        parent_tokens = tuple(_marg_analysis_tokens(parent))
+        if parent_tokens and parent_tokens[0] == "code":
+            parent_tokens = parent_tokens[1:]
         child_tokens = tuple(_marg_analysis_tokens(child))
-        if child_tokens[: len(_MARG_ANALYSIS_CHILD)] != _MARG_ANALYSIS_CHILD:
+        wide_ok = (
+            parent_tokens == _MARG_ANALYSIS_PARENT
+            or parent_tokens == _MARG_ANALYSIS_PARENT[:-1]
+        ) and (
+            child_tokens[: len(_MARG_ANALYSIS_CHILD)] == _MARG_ANALYSIS_CHILD
+            or child_tokens[: len(_MARG_ANALYSIS_CHILD_RATE)]
+            == _MARG_ANALYSIS_CHILD_RATE
+        )
+        collapsed_ok = _marg_analysis_collapsed_header_match(
+            lines[index], lines[index + 1]
+        )
+        if not wide_ok and not collapsed_ok:
             continue
         header_idx = index
+        logger.info(
+            "MARG_SALE_PURCHASE_ANALYSIS_HEADER mode=%s line=%s",
+            "wide" if wide_ok else "collapsed",
+            lines[index][:80],
+        )
         break
     if header_idx is None:
         return None
@@ -20555,20 +20720,17 @@ def _marg_sale_purchase_analysis_rows_from_text(
             continue
         if re.match(r"^LAST\s+MONTH\s+SALE\b", stripped, re.I):
             break
-        cells = [part for part in re.split(r"\s{2,}", stripped) if part]
-        if not cells:
-            continue
-        qty_start = 0
-        while qty_start < len(cells) and not _marg_analysis_text_is_qty_token(
-            cells[qty_start]
+        # Skip repeated page chrome / section banners with no qty run.
+        if re.match(
+            r"(?i)^(?:continued|page\s*no|holly\s+drugs|himalaya\s+drug|"
+            r"store\s*:|code\s+item\s+description|stock\s*&\s*sales)\b",
+            stripped,
         ):
-            qty_start += 1
-        if qty_start == 0 or qty_start >= len(cells):
             continue
-        name = "  ".join(cells[:qty_start])
-        qty = cells[qty_start : qty_start + len(_MARG_ANALYSIS_ROLES)]
-        if len(qty) < 5:
+        split = _marg_analysis_split_name_qty(stripped)
+        if not split:
             continue
+        name, qty = split
         rows.append([name] + qty)
     return rows
 

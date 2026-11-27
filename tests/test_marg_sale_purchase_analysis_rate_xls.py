@@ -73,7 +73,7 @@ class MargSalePurchaseAnalysisRateXlsTests(unittest.TestCase):
         assert parsed is not None
         by = {i["product_name"]: i for i in parsed["line_items"]}
         self.assertNotIn("HIMALYA ZANDRA", by)
-        bon = by["BONNISAN SYP 200ML"]
+        bon = by["BONNISAN SYP"]
         self.assertEqual(bon["packing"], "200ml")
         self.assertEqual(bon["opening_qty"], 24.0)
         self.assertEqual(bon["receipts_qty"], 0.0)
@@ -84,15 +84,18 @@ class MargSalePurchaseAnalysisRateXlsTests(unittest.TestCase):
         self.assertEqual(bon["extra"]["rate"], 96.24)
 
         cyst = by["CYSTONE TAB"]
+        self.assertEqual(cyst["packing"], "60t")
         self.assertEqual(cyst["sales_qty"], 23.0)
         self.assertEqual(cyst["sales_return_qty"], 1.0)
         self.assertAlmostEqual(cyst["sales_value"], 23.0 * 161.07, places=2)
 
         eve = by["EVE CARE 200ml SYP."]
+        self.assertEqual(eve["packing"], "200ml")
         self.assertEqual(eve["receipts_qty"], 28.0)
         self.assertEqual(eve["sales_qty"], 9.0)
 
         liv = by["LIV-52 DS TAB"]
+        self.assertEqual(liv["packing"], "60t")
         self.assertEqual(liv["receipts_qty"], 100.0)
         self.assertEqual(liv["sales_qty"], 127.0)
         self.assertAlmostEqual(liv["sales_value"], 127.0 * 189.8, places=2)

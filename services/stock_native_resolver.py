@@ -851,6 +851,39 @@ def build_line_items_from_tokens(
         # Prefer those printed totals over the first lot line alone.
         total_label = str(name or "")
         if items and is_product_total:
+            # Bare sheet TOTAL: / TOTAL with .xx money must not overwrite the
+            # last SKU (qty-only FREE/P.RETURN grids print value footers).
+            moneyish = 0
+            for t in tokens:
+                if not isinstance(t, dict):
+                    continue
+                raw = str(t.get("text") or "").replace(",", "").strip()
+                if re.search(r"\.\d{2}$", raw):
+                    moneyish += 1
+            bare_total_name = bool(
+                _is_total_row_name(name)
+                or re.match(
+                    r"(?i)^(?:grand\s+|sub\s+)?totals?\s*:?\s*$",
+                    str(name or "").strip(),
+                )
+            )
+            nameless_money_footer = (
+                moneyish >= 2
+                and (
+                    bare_total_name
+                    or not name
+                    or not re.search(r"[A-Za-z]", str(name))
+                )
+            )
+            if bare_total_name or nameless_money_footer:
+                logger.info(
+                    "STOCK_PDF_WORDS_SHEET_TOTAL_SKIP product_total "
+                    "name=%s moneyish=%s blob=%s",
+                    str(name or "")[:40],
+                    moneyish,
+                    token_blob[:60],
+                )
+                continue
             prev = items[-1]
             for key in (
                 "opening_qty",
@@ -1805,7 +1838,16 @@ def items_from_free_column_rows(
                 prev = str(items[-1].get("product_name") or "").strip()
                 items[-1]["product_name"] = (prev + " " + label).strip()
             continue
-        aligned = _align_by_header_x(tokens, header_cells)
+        # Keep token x when stamping col_index — dropping x makes particular/pack
+        # join swallow PACK into product_name and shift OPENING→pack.
+        if len(tokens) == width:
+            aligned = []
+            for idx, tok in enumerate(tokens):
+                nxt = dict(tok)
+                nxt["col_index"] = idx
+                aligned.append(nxt)
+        else:
+            aligned = _align_by_header_x(tokens, header_cells)
         built = build_line_items_from_tokens(columns, [aligned])
         if not built:
             continue
