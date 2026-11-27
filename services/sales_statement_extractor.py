@@ -622,9 +622,10 @@ _REPORT_PERIOD_MON_RANGE_RE = re.compile(
     r"(\d{1,2}[-/ ][A-Za-z]{3,9}[-/ ]\d{2,4})",
     re.I,
 )
-# ORDER FORM / header "Date: October, 2026" or bare "October 2026".
+# ORDER FORM / header "Date: October, 2026", "MONTH-OCT 2026", or bare "October 2026".
+# Month-only labels expand to first/last day — never invent a single reporting day.
 _REPORT_PERIOD_MONTH_YEAR_RE = re.compile(
-    r"(?:Date\s*:?\s*|Period\s*:?\s*|Month\s*(?:of|:)\s*)?"
+    r"(?:Date\s*:?\s*|Period\s*:?\s*|MONTH[-\s]*|Month\s*(?:of|:)?\s*)?"
     r"(January|February|March|April|May|June|July|August|September|"
     r"October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Sept|"
     r"Oct|Nov|Dec)\.?\s*[,\-/]?\s*('?\d{2,4})\b",
@@ -657,13 +658,10 @@ def _coerce_month_year_period_fields(
 ) -> Dict[str, Any]:
     """Fill period_from/to from a printed month+year when ISO dates are absent.
 
-    Does not invent a day that was not printed — expands only the named month.
+    Does not invent a day that was not printed — expands only the named month
+    (e.g. MONTH-OCT 2026 → 2026-10-01 .. 2026-10-31).
     """
     if not isinstance(result, dict):
-        return result
-    if _usable_period_date(result.get("period_from")) and _usable_period_date(
-        result.get("period_to")
-    ):
         return result
     blobs: List[str] = []
     if isinstance(parsed, dict):
@@ -677,21 +675,59 @@ def _coerce_month_year_period_fields(
             blobs.append(str(raw))
     if content_text:
         blobs.append(content_text[:4000])
+
+    month_only = False
+    for blob in blobs:
+        if re.search(r"\bMONTH[-\s]*[A-Za-z]{3,9}", str(blob or ""), re.I):
+            month_only = True
+            break
+        if re.search(
+            r"\b(?:Month\s*(?:of|:)\s*)?(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|"
+            r"January|February|March|April|June|July|August|September|October|November|"
+            r"December)[a-z]*\.?\s*[,\-/]?\s*'?\d{2,4}\b",
+            str(blob or ""),
+            re.I,
+        ) and not re.search(
+            r"\d{1,2}[./-]\d{1,2}[./-]\d{2,4}",
+            str(blob or ""),
+        ):
+            month_only = True
+            break
+
+    # Already have distinct ISO bounds and no month-only label — keep them.
+    pf0 = result.get("period_from")
+    pt0 = result.get("period_to")
+    if (
+        not month_only
+        and _usable_period_date(pf0)
+        and _usable_period_date(pt0)
+        and str(pf0) != str(pt0)
+    ):
+        return result
+
     for blob in blobs:
         pf, pt = _parse_month_year_period_text(blob)
         if pf and pt:
-            result["period_from"] = pf
-            result["period_to"] = pt
-            extra = result.setdefault("totals", {}).setdefault("extra", {})
-            if isinstance(extra, dict):
-                extra["statement_period_source"] = (
-                    extra.get("statement_period_source") or "header_month_year"
+            # Collapse duplicated same-day invent (both 2026-10-31) back to
+            # full month bounds when the sheet only printed the month.
+            if (
+                month_only
+                or not (_usable_period_date(pf0) and _usable_period_date(pt0))
+                or str(pf0) == str(pt0)
+            ):
+                result["period_from"] = pf
+                result["period_to"] = pt
+                extra = result.setdefault("totals", {}).setdefault("extra", {})
+                if isinstance(extra, dict):
+                    extra["statement_period_source"] = "header_month_year"
+                    extra["statement_month"] = pf[:7]
+                    extra["statement_period_precision"] = "month"
+                logger.info(
+                    "STATEMENT_PERIOD source=header_month_year "
+                    "precision=month period_from=%s period_to=%s",
+                    pf,
+                    pt,
                 )
-            logger.info(
-                "STATEMENT_PERIOD source=header_month_year period_from=%s period_to=%s",
-                pf,
-                pt,
-            )
             break
     return result
 
@@ -5111,8 +5147,8 @@ def _ocr_qty_token(tok: str) -> Optional[float]:
         return None
     if t in {"o", "O", "°", "〇", "()", "—", "-", "."}:
         return 0.0
-    # Pack sizes (60TABS / 30CAPS / 100ML) must never become OpBal qty.
-    if re.search(r"(?i)(?:TABS?|CAPS?|MLS?|MGS?|SYP|INJ|GMS?|GR|PH)\s*$", t):
+    # Pack sizes (60TABS / 30CAPS / 100ML / 30g) must never become OpBal qty.
+    if re.search(r"(?i)(?:TABS?|CAPS?|MLS?|MGS?|SYP|INJ|GMS?|GRM?|G|PH)\s*$", t):
         return None
     if re.fullmatch(r"-?\d+(?:\.\d+)?", t):
         return _to_float(t)
@@ -5120,9 +5156,9 @@ def _ocr_qty_token(tok: str) -> Optional[float]:
     m = re.fullmatch(r"[A-Za-z](-?\d+(?:\.\d+)?)", t)
     if m:
         return _to_float(m.group(1))
-    # Trailing junk letter: 66o, 30_
+    # Trailing junk letter: 66o, 30_ — never strip pack units into qty.
     m = re.fullmatch(r"(-?\d+(?:\.\d+)?)[A-Za-z._]*", t)
-    if m and not re.search(r"(?i)(?:TABS?|CAPS?|ML|MG|SYP|INJ)", t):
+    if m and not re.search(r"(?i)(?:TABS?|CAPS?|ML|MG|SYP|INJ|GMS?|GRM?|G)\s*$", t):
         return _to_float(m.group(1))
     return None
 
@@ -5132,14 +5168,14 @@ def _looks_like_packing_token(tok: str) -> bool:
     if not t:
         return False
     if re.fullmatch(
-        r"\d+(?:\.\d+)?(?:TAB|TABS|ML|MG|CAP|SYP|INJ|DS|S|'S|GR|GM|GRM|PH|UNT)",
+        r"\d+(?:\.\d+)?(?:TAB|TABS|ML|MG|CAP|SYP|INJ|DS|S|'S|GR|GM|G|GRM|PH|UNT)",
         t,
         re.I,
     ):
         return True
-    # SwilERP: "50 S", "60'S", "30ML", "50 GR", "100GR", "(C200 GR"
+    # SwilERP: "50 S", "60'S", "30ML", "50 GR", "100GR", "30g", "(C200 GR"
     if re.fullmatch(
-        r"\(?[A-Z]?\d+(?:\.\d+)?\s*(?:S|'S|ML|GR|GM|GRM|PH|TAB|TABS|CAP|UNT)\)?",
+        r"\(?[A-Z]?\d+(?:\.\d+)?\s*(?:S|'S|ML|GR|GM|G|GRM|PH|TAB|TABS|CAP|UNT)\)?",
         t,
         re.I,
     ):
@@ -6466,10 +6502,36 @@ def _parse_opbal_receipt_issue_statement(
     layout = _opbal_layout(text)
     result = empty_result(filename, source_format)
     lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
-    if lines:
+    # Prefer stockist lines like "ASHISH MEDICAL STORE 2026-27" over app chrome
+    # (e.g. "HIMALAYA-NAVEEN...") that often appears as the first OCR line.
+    stockist_line = None
+    for ln in lines[:20]:
+        if re.search(
+            r"MEDICAL\s+STORE|MEDICAL\s+STORES|MEDICOS|AGENC(?:Y|IES)|"
+            r"DISTRIBUT|PHARMA(?:CY)?\b",
+            ln,
+            re.I,
+        ) and not re.search(
+            r"PRODUCT\s*NAME|Op\.?\s*Bal|Issue\s*Qty|SALES\s+AND\s+STOCK|"
+            r"Sales\s*&\s*Stock|DIVISION|MONTH[-\s]",
+            ln,
+            re.I,
+        ):
+            stockist_line = ln
+            break
+    if stockist_line:
+        result["stockist_name"] = _clean_name(
+            re.sub(r"\s+\d{4}\s*[-–]\s*\d{2,4}\s*$", "", stockist_line).strip()
+            or stockist_line
+        )
+    elif lines:
         result["stockist_name"] = _clean_name(lines[0])
     for ln in lines[:25]:
-        if re.search(r"Sales\s*&\s*Stock|Stock\s*&\s*Sales", ln, re.I):
+        if re.search(
+            r"Sales\s*&\s*Stock|Stock\s*&\s*Sales|SALES\s+AND\s+STOCK\s+STATEMENT",
+            ln,
+            re.I,
+        ):
             result["report_title"] = _clean_name(ln)
             m = re.search(
                 r"(?:From\s+)?(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s*(?:Upto|to|[-–])\s*"
@@ -6488,17 +6550,29 @@ def _parse_opbal_receipt_issue_statement(
                 ):
                     result["period_to"] = f"{pf[:4]}{pt[3:]}"
         if re.search(r"AUROBINDO|VERITAZ|PHARMA\s+LIMITED|AUROBINO", ln, re.I) and not re.search(
-            r"MAHAJAN|ASSOCIATES|Sales\s*&\s*Stock", ln, re.I
+            r"MAHAJAN|ASSOCIATES|Sales\s*&\s*Stock|SALES\s+AND\s+STOCK", ln, re.I
         ):
             result["company_name"] = _clean_name(ln)
-        # Biswas / Srinandan / ZANDRA division banner (keep first match only)
-        if not result.get("company_name") and re.search(
-            r"HIMALAYA\s*(?:\([^)]+\))?|HIMALAYA\s+WELLNESS", ln, re.I
-        ):
+        # Prefer real division banners (HIMALAYA ZEAL DIVISION) over app chrome
+        # like "HIMALAYA-NAVEEN..." from the phone status/title bar.
+        if re.search(
+            r"HIMALAYA\s+(?:ZEAL|ZANDRA|ZENITH|WELLNESS|DRUG)|"
+            r"HIMALAYA\s*\([^)]+\)",
+            ln,
+            re.I,
+        ) and not re.search(r"MEDICAL\s+STORE|NAVEEN\.\.\.|PRODUCT\s*NAME", ln, re.I):
             result["company_name"] = _clean_name(ln)
-        if not result.get("company_name") and re.fullmatch(
+        elif not result.get("company_name") and re.fullmatch(
             r"ZANDRA|ZENITH|ZEAL|ZANDU",
             ln.strip(),
+            re.I,
+        ):
+            result["company_name"] = _clean_name(ln)
+        elif not result.get("company_name") and re.search(
+            r"\bHIMALAYA\b", ln, re.I
+        ) and not re.search(
+            r"NAVEEN\.\.\.|MEDICAL\s+STORE|PRODUCT\s*NAME|Op\.?\s*Bal",
+            ln,
             re.I,
         ):
             result["company_name"] = _clean_name(ln)
@@ -6511,7 +6585,8 @@ def _parse_opbal_receipt_issue_statement(
                 re.I,
             )
             and not re.search(
-                r"Sales\s*&\s*Stock|PRODUCT\s*NAME|Op\.?\s*Bal|Page\s*No",
+                r"Sales\s*&\s*Stock|SALES\s+AND\s+STOCK|PRODUCT\s*NAME|"
+                r"Op\.?\s*Bal|Page\s*No",
                 ln,
                 re.I,
             )
@@ -6542,11 +6617,29 @@ def _parse_opbal_receipt_issue_statement(
     result["line_items"] = items
     result["totals"]["extra"]["extraction_method"] = "opbal_issue_closing_parser"
     result["totals"]["extra"]["opbal_layout"] = layout
+    result["totals"]["extra"]["layout"] = "opbal_issue_closing"
+    result["totals"]["extra"]["qty_only"] = True
+    result["totals"]["extra"]["no_sales_value"] = True
     if stacked_used:
         result["totals"]["extra"]["opbal_stacked_lines"] = True
     result["totals"]["sales_value"] = None
     result["totals"]["closing_value"] = None
+    # Stamp line qty sums when no printed TOTAL footer (Ashish phone photos).
+    line_sums = _line_item_qty_sums(result)
+    for key, val in line_sums.items():
+        if result["totals"].get(key) in (None, ""):
+            result["totals"][key] = val
+        result["totals"]["extra"][f"line_{key}_sum"] = val
+    # MONTH-OCT 2026 / October 2026 — month bounds only, never invent a day.
+    result = _coerce_month_year_period_fields(result, content_text=text)
     result = _apply_total_row_to_result(result, text)
+    # Never leave Issue Qty parked as sales_value on this qty-only layout.
+    try:
+        from services.stock_native_resolver import apply_universal_sales_qty_value_guard
+
+        result = apply_universal_sales_qty_value_guard(result)
+    except Exception:
+        pass
     return result
 
 
@@ -10410,8 +10503,12 @@ def extract_sales_statement(file_bytes: bytes, filename: str) -> Dict[str, Any]:
     # All-path sales_qty↔sales_value repair (PDF/Excel/image). Re-slots printed
     # cells only; never invents money from rate×qty.
     try:
-        from services.stock_native_resolver import apply_universal_sales_qty_value_guard
+        from services.stock_native_resolver import (
+            apply_universal_sales_qty_value_guard,
+            repair_opbal_qty_only_fields,
+        )
 
+        result = repair_opbal_qty_only_fields(result)
         result = apply_universal_sales_qty_value_guard(result)
     except Exception:
         pass
@@ -10430,6 +10527,14 @@ def extract_sales_statement(file_bytes: bytes, filename: str) -> Dict[str, Any]:
     except Exception:
         pass
     result = _ensure_stock_qty_value_fields(result)
+    # Re-apply Op.Bal qty repairs after ensure_* — ensure can leave Issue parked
+    # in sales_value when qty_only was not stamped on the first pass.
+    try:
+        from services.stock_native_resolver import repair_opbal_qty_only_fields
+
+        result = repair_opbal_qty_only_fields(result)
+    except Exception:
+        pass
     result = _product_wise_drop_banner_items(result)
     result = _drop_promotional_footer_line_items(result)
 
@@ -10520,6 +10625,15 @@ def extract_sales_statement(file_bytes: bytes, filename: str) -> Dict[str, Any]:
     )
     if not decided and not vision_table_final:
         result = maybe_apply_gemini_fallback(result, file_bytes, name, ext)
+
+    # Final Op.Bal guard AFTER structured/gemini selection so later stages cannot
+    # leave Issue parked in sales_value or keep an unrepaired qty-only sheet.
+    try:
+        from services.stock_native_resolver import repair_opbal_qty_only_fields
+
+        result = repair_opbal_qty_only_fields(result)
+    except Exception:
+        pass
 
     if shadow_summary is not None:
         try:
@@ -12299,6 +12413,15 @@ def _parse_txt(file_bytes: bytes, filename: str) -> Dict[str, Any]:
     )
     if lstsl and lstsl.get("line_items"):
         return _finalize_statement_period_fields(lstsl, content_text=text)
+
+    # Op.Bal / Receipt / Total / Issue / Closing Balance (Ashish / Mahajan /
+    # SwilERP qty-only). Must run before generic TXT so Issue stays sales_qty
+    # and Closing Balance stays closing_qty (identity alone cannot detect swaps).
+    opbal_txt = _parse_opbal_receipt_issue_statement(
+        _strip_printer_controls(text), filename, "txt"
+    )
+    if opbal_txt and opbal_txt.get("line_items"):
+        return _finalize_statement_period_fields(opbal_txt, content_text=text)
 
     # OPENING / RECEIPT / ISSUE / CLOSING qty grid (STOCK & SALES ANALYSIS).
     # Must run before the Kaveri-only path so report periods in the title are kept.
@@ -23961,9 +24084,10 @@ _ITEM_PACK_FREE_RETURN_QTY = (
     ("closing_qty", "closing"),
 )
 
-# Exact TOTAL VALUE / Total Value (no division parenthetical).
+# Exact TOTAL VALUE / Total Value / TOTAL: (phone ANALYSIS money footer).
+# Bare TOTAL (no colon, no Value) stays on the generic last-total peel.
 _FREE_RETURN_TOTAL_VALUE_NAME = re.compile(
-    r"(?is)^\s*total\s+values?\s*$"
+    r"(?is)^\s*(?:total\s+values?\s*:?|total\s*:)\s*$"
 )
 _FREE_RETURN_DIVISION_TOTAL_VALUE_NAME = re.compile(
     r"(?is)^\s*total\s+values?\s*\("
@@ -63069,6 +63193,24 @@ def _extract_ssa_opening_receipt_issue_dump_image(
             skip_ocr_gate,
         )
         return None
+    # Soft-reject PRODUCT|PACK|OPENING|PURCHASE|FREE|P.RETURN|…|SALE|CLOSING
+    # ANALYSIS photos so SSA dump does not burn the Gemini budget before VT.
+    _item_pack_free_preview = "\n".join(
+        x for x in (soft_preview or "", upright_preview or "") if x
+    )
+    if _text_looks_like_item_pack_free_return_chrome(_item_pack_free_preview):
+        logger.info(
+            "SSA_DUMP_SKIP reason=item_pack_free_return file=%s "
+            "skip_ocr_gate=%s",
+            filename,
+            skip_ocr_gate,
+        )
+        stub = empty_result(filename, ext.lstrip(".") or "jpg")
+        extra_stub = stub.setdefault("totals", {}).setdefault("extra", {})
+        if isinstance(extra_stub, dict):
+            extra_stub["ssa_dump_item_pack_free_return"] = True
+            extra_stub["extraction_method"] = "ssa_dump_item_pack_free_reject"
+        return stub
     # Soft-reject Stock and Sale Op|Pur|Gd.In|Purchase|Sale|Stock (trailing money).
     # SSA OPENING/RECEIPT/ISSUE schema parks Tot In as closing and zeros sales.
     if _text_looks_like_stock_and_sale_op_pur_gd_chrome(soft_preview):
@@ -64035,6 +64177,44 @@ def _ssa_dump_result_looks_like_stock_and_sale_misfile(
     return False
 
 
+def _text_looks_like_item_pack_free_return_chrome(text: str) -> bool:
+    """PRODUCT|PACK|OPENING|PURCHASE|FREE|P.RETURN|…|SALE|CLOSING ANALYSIS chrome."""
+    if not (text or "").strip():
+        return False
+    # Op|Pur|Gd.In money grids are a different family — do not steal them.
+    if _text_looks_like_stock_and_sale_op_pur_gd_chrome(text):
+        return False
+    has_analysis = bool(
+        re.search(
+            r"STOCK\s+AND\s+SALES\s+ANALYSIS|STOCK\s*&\s*SALES\s+ANALYSIS",
+            text,
+            re.I,
+        )
+    )
+    has_pack = bool(re.search(r"\bPACK(?:ING)?\b", text, re.I))
+    has_open = bool(re.search(r"\bOPENING\b", text, re.I))
+    has_pur = bool(re.search(r"\bPURCHASE\b", text, re.I))
+    has_free = bool(re.search(r"\bFREE\b", text, re.I))
+    has_pret = bool(re.search(r"P\.?\s*RETURN", text, re.I))
+    has_sale = bool(re.search(r"\bSALE\b", text, re.I))
+    has_close = bool(re.search(r"\bCLOSING\b", text, re.I))
+    # Full header strip (phone OCR often gets most of these).
+    if has_pack and has_open and has_pur and has_free and has_pret and has_sale and has_close:
+        if has_analysis:
+            return True
+        return bool(
+            re.search(r"\b(?:PRODUCT|ITEM)\b", text, re.I)
+            and re.search(r"\bOTHERS\b", text, re.I)
+        )
+    # Soft OCR may only catch the ANALYSIS title + a few qty headers — still
+    # skip SSA dump so VISION_TABLE keeps the Gemini budget.
+    if has_analysis and has_pack and has_sale and (has_open or has_pur) and (
+        has_free or has_pret
+    ):
+        return True
+    return False
+
+
 def _ssa_dump_result_looks_like_item_pack_free_misfile(
     result: Optional[Dict[str, Any]],
 ) -> bool:
@@ -64045,6 +64225,9 @@ def _ssa_dump_result_looks_like_item_pack_free_misfile(
     """
     if not isinstance(result, dict):
         return False
+    extra = (result.get("totals") or {}).get("extra") or {}
+    if isinstance(extra, dict) and extra.get("ssa_dump_item_pack_free_return"):
+        return True
     title = str(result.get("report_title") or "")
     title_hint = bool(
         re.search(r"STOCK\s+AND\s+SALES\s+ANALYSIS|STOCK\s*&\s*SALES", title, re.I)
@@ -79476,6 +79659,32 @@ def _maybe_early_vision_for_image(
             )
             return psr, True
 
+    # Op.Bal / Receipt / Total / Issue / Closing qty-only BEFORE Swil Receipt/Pur
+    # value vision — that reader zeroes Issue on qty-only sheets (TENTEX gap).
+    if _is_opbal_issue_closing_format(sample or "") or _is_swilerp_sales_stock_statement(
+        sample or ""
+    ):
+        try:
+            opbal_gate = _parse_swilerp_sales_stock_image(file_bytes, filename, ext)
+        except Exception as exc:
+            logger.info(
+                "[SalesStatement] file=%s Op.Bal before Swil Receipt/Pur failed: %s",
+                filename,
+                type(exc).__name__,
+            )
+            opbal_gate = None
+        if _opbal_issue_closing_photo_usable(opbal_gate):
+            extra_op = opbal_gate.setdefault("totals", {}).setdefault("extra", {})
+            extra_op["early_vision_reason"] = "opbal_before_swil_receipt_pur"
+            extra_op["layout"] = "opbal_issue_closing"
+            extra_op["qty_only"] = True
+            logger.info(
+                "[SalesStatement] file=%s decision=OPBAL_BEFORE_SWIL_RECEIPT rows=%s",
+                filename,
+                len(opbal_gate.get("line_items") or []),
+            )
+            return opbal_gate, True
+
     # Sales & Stock Receipt/Pur BEFORE the quality gate. Good OCR still needs the
     # column-locked Swil reader (header-driven drops SEPTILIN TABLETS-style pairs).
     import os as _os_swil_early
@@ -79498,6 +79707,52 @@ def _maybe_early_vision_for_image(
                 exc,
             )
             swil_early = None
+        if swil_early and swil_early.get("line_items"):
+            # Reject when the extract is clearly qty-only Op.Bal (no Pur values)
+            # with dropped Issue rows — keep searching for the OpBal reader.
+            try:
+                from services.stock_native_resolver import (
+                    repair_opbal_qty_only_fields,
+                    result_looks_like_opbal_qty_only,
+                )
+
+                if result_looks_like_opbal_qty_only(swil_early):
+                    swil_early = repair_opbal_qty_only_fields(swil_early)
+                    fail_n = 0
+                    for _it in swil_early.get("line_items") or []:
+                        if not isinstance(_it, dict):
+                            continue
+                        _op = _to_float(_it.get("opening_qty"))
+                        _rec = _to_float(_it.get("receipts_qty"))
+                        _sl = _to_float(_it.get("sales_qty"))
+                        _cl = _to_float(_it.get("closing_qty"))
+                        if abs(_op + _rec - _sl - _cl) > 0.51:
+                            fail_n += 1
+                    if fail_n == 0:
+                        extra = swil_early.setdefault("totals", {}).setdefault(
+                            "extra", {}
+                        )
+                        extra["early_vision_reason"] = (
+                            "swil_receipt_pur_qty_only_repaired"
+                        )
+                        extra["qty_only"] = True
+                        extra["layout"] = "opbal_issue_closing"
+                        logger.info(
+                            "[SalesStatement] file=%s decision=SWIL_RECEIPT_EARLY "
+                            "opbal_repaired rows=%s",
+                            filename,
+                            len(swil_early.get("line_items") or []),
+                        )
+                        return swil_early, True
+                    logger.info(
+                        "[SalesStatement] file=%s Swil Receipt/Pur rejected "
+                        "reason=opbal_qty_only_identity_fails fail_rows=%s",
+                        filename,
+                        fail_n,
+                    )
+                    swil_early = None
+            except Exception:
+                pass
         if swil_early and swil_early.get("line_items"):
             extra = swil_early.setdefault("totals", {}).setdefault("extra", {})
             extra["early_vision_reason"] = "swil_receipt_pur_before_quality_gate"
@@ -80104,6 +80359,102 @@ def _maybe_early_vision_for_image(
                 extra = psr.setdefault("totals", {}).setdefault("extra", {})
                 extra["early_vision_reason"] = "product_stock_report_after_generic"
                 return psr, True
+        # Op.Bal / Receipt / Total / Issue / Closing qty-only: dedicated SwilERP
+        # reader beats generic early Vision (Issue↔Closing swaps; Issue as money).
+        try:
+            from services.stock_native_resolver import (
+                repair_opbal_qty_only_fields,
+                result_looks_like_opbal_qty_only,
+            )
+
+            opbal_like = result_looks_like_opbal_qty_only(early) or _is_opbal_issue_closing_format(
+                sample or ""
+            ) or _is_swilerp_sales_stock_statement(sample or "")
+        except Exception:
+            opbal_like = _is_opbal_issue_closing_format(sample or "") or _is_swilerp_sales_stock_statement(
+                sample or ""
+            )
+        if opbal_like:
+            try:
+                opbal = _parse_swilerp_sales_stock_image(file_bytes, filename, ext)
+            except Exception as exc:
+                logger.info(
+                    "[SalesStatement] file=%s Op.Bal SwilERP after early vision "
+                    "failed: %s",
+                    filename,
+                    type(exc).__name__,
+                )
+                opbal = None
+            if _opbal_issue_closing_photo_usable(opbal):
+                extra_op = opbal.setdefault("totals", {}).setdefault("extra", {})
+                extra_op["early_vision_reason"] = "opbal_swilerp_after_generic"
+                extra_op["layout"] = "opbal_issue_closing"
+                extra_op["qty_only"] = True
+                logger.info(
+                    "[SalesStatement] file=%s decision=OPBAL_SWILERP_AFTER_GENERIC "
+                    "rows=%s",
+                    filename,
+                    len(opbal.get("line_items") or []),
+                )
+                return opbal, True
+            # Vertex SwilERP unavailable — re-read via the same quota client that
+            # produced early Gemini, with the Op.Bal column-locked prompt.
+            try:
+                from services.gemini_extraction_fallback import (
+                    _call_gemini,
+                    _document_parts,
+                    _finish_gemini_result,
+                )
+
+                opbal_parsed = _call_gemini(
+                    file_bytes,
+                    ext,
+                    _document_parts(file_bytes, ext),
+                    prompt=_SWILERP_SALES_STOCK_VISION_PROMPT,
+                )
+            except Exception as exc:
+                logger.info(
+                    "[SalesStatement] file=%s Op.Bal quota re-read failed: %s",
+                    filename,
+                    type(exc).__name__,
+                )
+                opbal_parsed = None
+            if opbal_parsed and opbal_parsed.get("line_items"):
+                try:
+                    opbal_quota = _finish_gemini_result(opbal_parsed, filename, ext)
+                    opbal_quota = repair_opbal_qty_only_fields(opbal_quota)
+                    for _it in opbal_quota.get("line_items") or []:
+                        if isinstance(_it, dict):
+                            _repair_swilerp_vision_item(_it)
+                    if _opbal_issue_closing_photo_usable(opbal_quota):
+                        extra_op = opbal_quota.setdefault("totals", {}).setdefault(
+                            "extra", {}
+                        )
+                        extra_op["extraction_method"] = "opbal_issue_closing_quota_vision"
+                        extra_op["early_vision_reason"] = "opbal_quota_after_generic"
+                        extra_op["layout"] = "opbal_issue_closing"
+                        extra_op["qty_only"] = True
+                        logger.info(
+                            "[SalesStatement] file=%s decision=OPBAL_QUOTA_AFTER_GENERIC "
+                            "rows=%s",
+                            filename,
+                            len(opbal_quota.get("line_items") or []),
+                        )
+                        return opbal_quota, True
+                except Exception as exc:
+                    logger.info(
+                        "[SalesStatement] file=%s Op.Bal quota finish failed: %s",
+                        filename,
+                        type(exc).__name__,
+                    )
+            # Dedicated path unavailable — still repair qty/money on generic rows.
+            try:
+                early = repair_opbal_qty_only_fields(early)
+                for _it in early.get("line_items") or []:
+                    if isinstance(_it, dict):
+                        _repair_swilerp_vision_item(_it)
+            except Exception:
+                pass
         extra = early.setdefault("totals", {}).setdefault("extra", {})
         extra["early_vision_reason"] = ",".join(quality.get("reasons") or []) or (
             "low_ocr_quality_score"
@@ -80979,11 +81330,11 @@ Return ONLY valid JSON (no markdown) with this exact shape:
   "totals": {"sales_value": null, "closing_value": null, "extra": {}}
 }
 
-CRITICAL column mapping (left → right after PACKING):
+CRITICAL column mapping (left → right; PACKING may be absent — packing can sit in the name):
 1) Op.Bal. Qty. -> opening_qty
 2) Receipt Qty. -> receipts_qty
 3) Total Qty. -> extra.total_stock_qty ONLY (never sales_qty / never closing_qty)
-4) Issue Qty. -> sales_qty  (this is sales/issues for the period — copy even when non-zero)
+4) Issue Qty. -> sales_qty  (period issues — copy the Issue column even when non-zero)
 5) Closing Balance -> closing_qty
 6) Dump Stock -> extra.dump_qty when printed (NOT closing_qty); omit when absent
 7) Near Expiry -> extra.near_expiry_qty when printed
@@ -80992,12 +81343,24 @@ CRITICAL column mapping (left → right after PACKING):
 
 Rules:
 - Qty-only statement: sales_value=0 and closing_value=0 on every line; totals money null.
+  Never put Issue Qty digits into sales_value. A blank money cell stays null/0 — do not
+  invent money, and do not move a quantity into a monetary field because qty is missing.
+- Issue Qty and Closing Balance are separate positional columns. Read left→right header
+  geometry. Do NOT swap them even when Op+Rec−Issue=Closing still holds after a swap.
+  Example pattern: Op.Bal=22, Receipt=0, Total=22, Issue=1, Closing=21
+  → sales_qty=1, closing_qty=21 (NOT sales_qty=21, closing_qty=1).
+  Example pattern: Op.Bal=2640, Issue=2551, Closing=89
+  → sales_qty=2551, closing_qty=89, sales_value=0 (2551 is Issue Qty, not money).
 - Identity: opening_qty + receipts_qty - sales_qty = closing_qty (allow Issue=-1 returns).
+  Total Qty must equal opening_qty + receipts_qty when that column is printed.
+  Closing Qty must equal Total Qty − Issue Qty when those columns are printed.
+  A balanced row can still be wrong if Issue/Closing were swapped — trust column order.
 - Never set closing_qty = opening_qty + receipts_qty when Issue Qty is printed and non-zero.
 - Do NOT skip non-zero rows. Do NOT shift qtys onto the next product.
 - Keep packing with its row (50 GR vs 100GR are different rows).
 - Include every product row on THIS page image only.
-- stockist_name = shop/agency header; company_name = THE HIMALAYA DRUG(ZANDRA) style division.
+- stockist_name = shop/agency header; company_name = division / drug-house banner.
+- Period "MONTH-OCT 2026" → period_from=2026-10-01, period_to=2026-10-31 (month bounds only).
 """.strip()
 
 
@@ -81159,6 +81522,133 @@ def _repair_swilerp_vision_item(item: Dict[str, Any]) -> None:
         if cl > sl and abs(sl - remain_f) <= max(2.0, remain_f):
             item["sales_qty"], item["closing_qty"] = cl, sl
 
+
+def _opbal_vision_product_key(item: Dict[str, Any]) -> str:
+    """Normalize product+packing for OpBal Vision↔OCR Issue/Closing merge."""
+    name = str(item.get("product_name") or "")
+    pack = str(item.get("packing") or "")
+    blob = f"{name} {pack}".upper()
+    return re.sub(r"[^A-Z0-9]", "", blob)
+
+
+def _opbal_qty_close(a: Optional[float], b: Optional[float], tol: float = 0.51) -> bool:
+    if a is None or b is None:
+        return False
+    return abs(float(a) - float(b)) <= tol
+
+
+def _merge_opbal_ocr_issue_closing_into_vision(
+    vision: Dict[str, Any], ocr: Optional[Dict[str, Any]]
+) -> int:
+    """Prefer OCR positional Issue/Closing when Vision swapped equal-balance columns.
+
+    OpBal OCR reads trailing qty tokens left→right (Total, Issue, Closing). Vision
+    often swaps Issue↔Closing while Op+Rec−Issue=Closing still holds. When OCR
+    opening/receipt/total agree and OCR Issue/Closing are a pure swap of Vision's
+    pair (or Vision parked Issue in sales_value), re-slot OCR's printed digits.
+    Never invents values.
+    """
+    if not isinstance(vision, dict) or not isinstance(ocr, dict):
+        return 0
+    v_items = [i for i in (vision.get("line_items") or []) if isinstance(i, dict)]
+    o_items = [i for i in (ocr.get("line_items") or []) if isinstance(i, dict)]
+    if not v_items or not o_items:
+        return 0
+
+    by_key: Dict[str, Dict[str, Any]] = {}
+    for item in o_items:
+        key = _opbal_vision_product_key(item)
+        if len(key) < 4:
+            continue
+        o_op = _to_float(item.get("opening_qty"))
+        o_rec = _to_float(item.get("receipts_qty")) or 0.0
+        o_sl = _to_float(item.get("sales_qty"))
+        o_cl = _to_float(item.get("closing_qty"))
+        if o_op is None or o_sl is None or o_cl is None:
+            continue
+        if abs(o_op + o_rec - o_sl - o_cl) > 0.51:
+            continue
+        by_key[key] = item
+
+    patched = 0
+    for item in v_items:
+        key = _opbal_vision_product_key(item)
+        src = by_key.get(key)
+        if not src and key:
+            for ok, cand in by_key.items():
+                if key not in ok and ok not in key:
+                    continue
+                # Distinct pack sizes (100ml vs 200ml) must stay separate.
+                digits_v = re.findall(r"\d+", key)
+                digits_o = re.findall(r"\d+", ok)
+                if digits_v and digits_o and digits_v[-1] != digits_o[-1]:
+                    continue
+                src = cand
+                break
+        if not src:
+            continue
+
+        v_op = _to_float(item.get("opening_qty"))
+        v_rec = _to_float(item.get("receipts_qty")) or 0.0
+        v_sl = _to_float(item.get("sales_qty"))
+        v_cl = _to_float(item.get("closing_qty"))
+        v_sv = _to_float(item.get("sales_value"))
+        o_op = _to_float(src.get("opening_qty"))
+        o_rec = _to_float(src.get("receipts_qty")) or 0.0
+        o_sl = _to_float(src.get("sales_qty"))
+        o_cl = _to_float(src.get("closing_qty"))
+        if o_sl is None or o_cl is None:
+            continue
+        if not _opbal_qty_close(v_op, o_op) or abs(v_rec - o_rec) > 0.51:
+            continue
+
+        # Case A: Vision Issue/Closing are a pure swap of OCR's positional pair.
+        swapped = (
+            v_sl is not None
+            and v_cl is not None
+            and _opbal_qty_close(v_sl, o_cl)
+            and _opbal_qty_close(v_cl, o_sl)
+            and not _opbal_qty_close(v_sl, o_sl)
+        )
+        # Case B: Issue parked in sales_value; sales_qty blank/zero.
+        parked = (
+            (v_sl is None or abs(v_sl) < 0.001)
+            and v_sv is not None
+            and _opbal_qty_close(v_sv, o_sl)
+            and _opbal_qty_close(v_cl, o_cl)
+        )
+        if not (swapped or parked):
+            continue
+
+        item["sales_qty"] = float(o_sl)
+        item["closing_qty"] = float(o_cl)
+        if parked or (v_sv is not None and _opbal_qty_close(v_sv, o_sl)):
+            item["sales_value"] = None
+        src_extra = src.get("extra") if isinstance(src.get("extra"), dict) else {}
+        extra = item.setdefault("extra", {})
+        if not isinstance(extra, dict):
+            extra = {}
+            item["extra"] = extra
+        for ek in ("total_stock_qty", "total_stock", "dump_qty", "near_expiry_qty"):
+            if src_extra.get(ek) is not None and extra.get(ek) in (None, ""):
+                extra[ek] = src_extra.get(ek)
+        fs = extra.setdefault("field_source", {})
+        if isinstance(fs, dict):
+            fs["sales_qty"] = "opbal_ocr_positional"
+            fs["closing_qty"] = "opbal_ocr_positional"
+            if item.get("sales_value") is None:
+                fs["sales_value"] = "missing"
+        flags = list(extra.get("flags") or [])
+        if "OPBAL_OCR_ISSUE_CLOSING_MERGE" not in flags:
+            flags.append("OPBAL_OCR_ISSUE_CLOSING_MERGE")
+        extra["flags"] = flags
+        patched += 1
+
+    if patched:
+        logger.info("OPBAL_OCR_ISSUE_CLOSING_MERGE patched_rows=%s", patched)
+    return patched
+
+
 def _parse_swilerp_sales_stock_image(
     file_bytes: bytes, filename: str, ext: str
 ) -> Optional[Dict[str, Any]]:
@@ -81197,18 +81687,60 @@ def _parse_swilerp_sales_stock_image(
         merged_items.extend(page_result.get("line_items") or [])
 
     if merged_items:
-        for it in merged_items:
-            it["sales_value"] = 0.0
-            it["closing_value"] = 0.0
-            _repair_swilerp_vision_item(it)
+        # Recover Issue parked in sales_value / rate-based Issue↔Closing BEFORE
+        # qty-only money wipe — otherwise the Issue digits are discarded.
+        try:
+            from services.stock_native_resolver import (
+                _repair_issue_closing_swap_by_rate,
+                _repair_issue_qty_parked_in_sales_value,
+            )
+
+            for it in merged_items:
+                _repair_issue_qty_parked_in_sales_value(it)
+                _repair_issue_closing_swap_by_rate(it)
+                _repair_swilerp_vision_item(it)
+                it["sales_value"] = 0.0
+                it["closing_value"] = 0.0
+        except Exception:
+            for it in merged_items:
+                _repair_swilerp_vision_item(it)
+                it["sales_value"] = 0.0
+                it["closing_value"] = 0.0
         merged["line_items"] = merged_items
         merged["totals"]["sales_value"] = None
         merged["totals"]["closing_value"] = None
         merged["totals"]["extra"]["extraction_method"] = "swilerp_page_split_vision"
+        merged["totals"]["extra"]["layout"] = "opbal_issue_closing"
+        merged["totals"]["extra"]["qty_only"] = True
         merged["totals"]["extra"]["split_pages"] = len(page_bytes_list)
         try:
             ocr_bits = [_ocr_image_to_text(pb) for pb in page_bytes_list]
-            merged = _apply_total_row_to_result(merged, "\n".join(ocr_bits))
+            combined_ocr = "\n".join(ocr_bits)
+            merged = _apply_total_row_to_result(merged, combined_ocr)
+            if _is_opbal_issue_closing_format(combined_ocr) or _is_swilerp_sales_stock_statement(
+                combined_ocr
+            ):
+                opbal_ocr = _parse_opbal_receipt_issue_statement(
+                    combined_ocr, filename, (ext or ".jpg").lstrip(".") or "jpg"
+                )
+                if opbal_ocr and opbal_ocr.get("line_items"):
+                    _merge_opbal_ocr_issue_closing_into_vision(merged, opbal_ocr)
+                    # Qty-only after OCR merge — clear any residual money park.
+                    for it in merged.get("line_items") or []:
+                        if not isinstance(it, dict):
+                            continue
+                        sv = _to_float(it.get("sales_value"))
+                        sq = _to_float(it.get("sales_qty"))
+                        if sv is not None and abs(sv) > 0.001 and (
+                            sq is None or abs(sv - (sq or 0.0)) < 0.001
+                        ):
+                            it["sales_value"] = 0.0
+        except Exception:
+            pass
+        try:
+            from services.stock_native_resolver import apply_universal_sales_qty_value_guard
+
+            merged = apply_universal_sales_qty_value_guard(merged)
         except Exception:
             pass
         return merged
@@ -81918,23 +82450,73 @@ def _extract_sideways_rate_ssa_photo(
     return result
 
 
+def _parse_image_opbal_ocr_only(
+    file_bytes: bytes, filename: str, ext: str
+) -> Dict[str, Any]:
+    """Op.Bal / Issue / Closing Balance from image OCR when Vision is unavailable.
+
+    Covers phone photos like ASHISH MEDICAL STORE / HIMALAYA ZEAL DIVISION
+    (MONTH-OCT) where Issue Qty and Closing Balance must stay positional.
+    """
+    result = empty_result(filename, (ext or ".jpg").lstrip(".") or "jpg")
+    try:
+        ocr_text = _ocr_image_to_text(file_bytes) or ""
+    except Exception as exc:
+        logger.warning(
+            "STOCK_IMAGE_OPBAL_OCR_ONLY ocr_failed file=%s err=%s",
+            filename,
+            type(exc).__name__,
+        )
+        return result
+    if not ocr_text.strip():
+        return result
+    if not _is_opbal_issue_closing_format(ocr_text):
+        # Still try month period + generic text parse for Ashish-like chrome.
+        fallback = _parse_txt(ocr_text.encode("utf-8", errors="ignore"), filename)
+        if fallback and fallback.get("line_items"):
+            return _finalize_statement_period_fields(fallback, content_text=ocr_text)
+        return _finalize_statement_period_fields(result, content_text=ocr_text)
+    opbal = _parse_opbal_receipt_issue_statement(
+        ocr_text, filename, (ext or ".jpg").lstrip(".") or "jpg"
+    )
+    if not opbal or not opbal.get("line_items"):
+        return _finalize_statement_period_fields(result, content_text=ocr_text)
+    opbal["totals"]["extra"]["extraction_method"] = "opbal_issue_closing_image_ocr"
+    opbal["totals"]["extra"]["ocr_used"] = True
+    opbal["totals"]["extra"]["llm_used"] = False
+    return _finalize_statement_period_fields(opbal, content_text=ocr_text)
+
+
 def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
     """Extract sales statement from image via Gemini Vision, with OCR fallback."""
     import os
     import time
 
-    from services.vertex_gemini_client import GeminiProviderError
-    from services.sales_extraction_runtime import sales_generate_content_via_vertex as generate_content_via_vertex
-    from services.sales_extraction_runtime import (
-        SalesExtractionDeadlineExceeded,
-        SalesOcrBudgetExceeded,
-        check_sales_deadline,
-        gemini_call_slot,
-        sales_deadline_remaining_seconds,
-        sales_gemini_timeout_seconds,
-        sales_ocr_budget_exhausted,
-        sales_sleep_respecting_deadline,
-    )
+    try:
+        from services.vertex_gemini_client import GeminiProviderError, genai as _genai_mod
+        from services.sales_extraction_runtime import (
+            sales_generate_content_via_vertex as generate_content_via_vertex,
+        )
+        from services.sales_extraction_runtime import (
+            SalesExtractionDeadlineExceeded,
+            SalesOcrBudgetExceeded,
+            check_sales_deadline,
+            gemini_call_slot,
+            sales_deadline_remaining_seconds,
+            sales_gemini_timeout_seconds,
+            sales_ocr_budget_exhausted,
+            sales_sleep_respecting_deadline,
+        )
+        if _genai_mod is None:
+            raise RuntimeError("google.genai unavailable")
+    except Exception as exc:
+        # Missing google.genai / Vertex stack must not abort Op.Bal OCR.
+        logger.warning(
+            "STOCK_IMAGE_GEMINI_UNAVAILABLE file=%s err=%s — OCR/opbal only",
+            filename,
+            type(exc).__name__,
+        )
+        return _parse_image_opbal_ocr_only(file_bytes, filename, ext)
 
     # Mild camera tilt merges product rows into one jumbled line. Straighten
     # only when table rules are clearly slanted; already-level images are
@@ -82250,7 +82832,20 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                         ssa_first
                     )
                 )
-                if _ssa_stock_sale_misfile:
+                if ssa_first and _ssa_dump_result_looks_like_item_pack_free_misfile(
+                    ssa_first
+                ):
+                    # Prefer FREE|P.RETURN ANALYSIS over Op|Pur misfile when both
+                    # heuristics could fire on the same dump.
+                    _defer_item_pack_free_vt = True
+                    logger.info(
+                        "[STOCK_EXTRACTION_PATH] stage=ssa_dump_before_lstsl "
+                        "file=%s status=rejected reason=item_pack_free_return "
+                        "line_items=%s",
+                        filename,
+                        len(ssa_first.get("line_items") or []),
+                    )
+                elif _ssa_stock_sale_misfile:
                     _defer_stock_and_sale_vt = True
                     logger.info(
                         "[STOCK_EXTRACTION_PATH] stage=ssa_dump_before_lstsl "
@@ -82288,17 +82883,6 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                     logger.info(
                         "[STOCK_EXTRACTION_PATH] stage=ssa_dump_before_lstsl "
                         "file=%s status=rejected reason=ssa_purchase_qty_grid "
-                        "line_items=%s",
-                        filename,
-                        len(ssa_first.get("line_items") or []),
-                    )
-                elif ssa_first and _ssa_dump_result_looks_like_item_pack_free_misfile(
-                    ssa_first
-                ):
-                    _defer_item_pack_free_vt = True
-                    logger.info(
-                        "[STOCK_EXTRACTION_PATH] stage=ssa_dump_before_lstsl "
-                        "file=%s status=rejected reason=item_pack_free_return "
                         "line_items=%s",
                         filename,
                         len(ssa_first.get("line_items") or []),
@@ -84890,6 +85474,40 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                     result, file_bytes, filename, ext
                 )
                 sale_closing_only = False
+                # Op.Bal / Issue / Closing qty-only: prefer column-locked SwilERP
+                # (or repair Issue parked as money) before accepting generic vision.
+                try:
+                    from services.stock_native_resolver import (
+                        repair_opbal_qty_only_fields,
+                        result_looks_like_opbal_qty_only,
+                    )
+
+                    if result_looks_like_opbal_qty_only(result):
+                        try:
+                            opbal = _parse_swilerp_sales_stock_image(
+                                file_bytes, filename, ext
+                            )
+                        except Exception:
+                            opbal = None
+                        if _opbal_issue_closing_photo_usable(opbal):
+                            extra_op = opbal.setdefault("totals", {}).setdefault(
+                                "extra", {}
+                            )
+                            extra_op["layout"] = "opbal_issue_closing"
+                            extra_op["qty_only"] = True
+                            extra_op["early_vision_reason"] = (
+                                "opbal_swilerp_after_gemini_vision"
+                            )
+                            return opbal
+                        result = repair_opbal_qty_only_fields(result)
+                        for _it in result.get("line_items") or []:
+                            if isinstance(_it, dict):
+                                _repair_swilerp_vision_item(_it)
+                except Exception as exc:
+                    logger.info(
+                        "Op.Bal repair after gemini_vision skipped: %s",
+                        type(exc).__name__,
+                    )
                 if not qty_ssa_tried and _is_qty_only_issue_ssa(result):
                     qty_ssa = _try_qty_only_ssa()
                     if qty_ssa and qty_ssa.get("line_items"):

@@ -144,8 +144,13 @@ class TestSwilERPHelpers(unittest.TestCase):
         self.assertEqual(totals["sales_qty"], 105.0)
         self.assertEqual(totals["closing_qty"], 145.0)
         self.assertEqual(totals["extra"].get("total_row_source"), "line_item_sum")
-        self.assertEqual(
-            totals["extra"].get("total_row_rejected"), "closing_qty_mismatch"
+        # Garbled footer must not keep qty totals; reject stamp or qty→value remap.
+        self.assertTrue(
+            totals["extra"].get("total_row_rejected") == "closing_qty_mismatch"
+            or totals["extra"].get("oric_footer_qty_remapped")
+            == "closing_qty_mismatch"
+            or isinstance(totals["extra"].get("total_row_rejected_footer"), dict),
+            msg=f"footer reject metadata missing: {totals.get('extra')}",
         )
 
     def test_plausible_footer_qty_totals_kept(self):

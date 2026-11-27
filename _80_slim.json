@@ -1,0 +1,360 @@
+{
+  "n": 38,
+  "totals": {
+    "sales_qty": null,
+    "sales_value": null,
+    "extra": {
+      "layout": null,
+      "extraction_method": "gemini_vision",
+      "gemini_calls": 1,
+      "line_sales_qty_sum": 365.0,
+      "final_selected_extraction": "failed",
+      "sales_total_value_recovery": {
+        "status": "absent",
+        "source_format": "jpg",
+        "page_or_sheet": null,
+        "cell_ref": null,
+        "original_sales_value": null,
+        "original_closing_value": null,
+        "recovered_sales_value": null,
+        "recovered_closing_value": null,
+        "recovery_method": null,
+        "column_shift_detected": false,
+        "validation_result": "genuinely_absent",
+        "reason": "sales_value_not_found_in_source"
+      }
+    }
+  },
+  "sample": [
+    {
+      "product_code": null,
+      "product_name": "ARJUNA TABLET",
+      "packing": "60",
+      "opening_qty": 49.0,
+      "opening_value": null,
+      "receipts_qty": 60.0,
+      "receipts_value": null,
+      "sales_qty": 69.0,
+      "sales_value": 0.0,
+      "closing_qty": 38.0,
+      "closing_value": 0.0,
+      "extra": {
+        "purchase_return": null,
+        "free": null,
+        "sale_return": null,
+        "others": null,
+        "field_source": {},
+        "expected_total": 109.0,
+        "expected_closing": 40.0,
+        "stock_identity_ok": false,
+        "reconciliation": {
+          "expected_total_qty": 109.0,
+          "expected_closing_qty": 40.0,
+          "actual_closing_qty": 38.0,
+          "quantity_difference": -2.0,
+          "total_ok": true,
+          "closing_ok": false,
+          "valid": false,
+          "opening_qty": 49.0,
+          "purchase_qty": 60.0,
+          "sales_qty": 69.0,
+          "extracted_closing_qty": 38.0,
+          "base_source": "opening_plus_purchase_plus_returns",
+          "sales_return_in_total": false,
+          "base_qty": 109.0,
+          "adjustments": {
+            "sales_return_qty": 0.0,
+            "sales_qty": 69.0,
+            "sales_free_qty": 0.0,
+            "purchase_return_qty": 0.0,
+            "expiry_damage_qty": 0.0,
+            "sample_qty": 0.0,
+            "other_outward_qty": 0.0,
+            "others_qty": 0.0,
+            "br_trf_qty": 0.0
+          },
+          "formula_variant": "opening_plus_purchase_minus_sales",
+          "br_trf_in_identity": false,
+          "expected_closing_with_br_trf": 40.0,
+          "expected_closing_without_br_trf": 40.0
+        },
+        "br_trf_in_identity": false,
+        "candidates": [
+          {
+            "source": "br_trf_adaptive_identity",
+            "fields": {},
+            "reason": "printed_closing_matches_neither_br_trf_variant",
+            "would_balance": false,
+            "expected_with_br_trf": 40.0,
+            "expected_without_br_trf": 40.0
+          }
+        ],
+        "reconciliation_failed": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "BONNISAN DROPS",
+      "packing": "30ML",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 76.0,
+      "receipts_value": null,
+      "sales_qty": 69.0,
+      "sales_value": 0.0,
+      "closing_qty": 38.0,
+      "closing_value": 0.0,
+      "extra": {
+        "purchase_return": null,
+        "free": null,
+        "sale_return": null,
+        "others": null,
+        "field_source": {},
+        "expected_total": 76.0,
+        "expected_closing": 7.0,
+        "stock_identity_ok": false,
+        "reconciliation": {
+          "expected_total_qty": 76.0,
+          "expected_closing_qty": 7.0,
+          "actual_closing_qty": 38.0,
+          "quantity_difference": 31.0,
+          "total_ok": true,
+          "closing_ok": false,
+          "valid": false,
+          "opening_qty": 0.0,
+          "purchase_qty": 76.0,
+          "sales_qty": 69.0,
+          "extracted_closing_qty": 38.0,
+          "base_source": "opening_plus_purchase_plus_returns",
+          "sales_return_in_total": false,
+          "base_qty": 76.0,
+          "adjustments": {
+            "sales_return_qty": 0.0,
+            "sales_qty": 69.0,
+            "sales_free_qty": 0.0,
+            "purchase_return_qty": 0.0,
+            "expiry_damage_qty": 0.0,
+            "sample_qty": 0.0,
+            "other_outward_qty": 0.0,
+            "others_qty": 0.0,
+            "br_trf_qty": 0.0
+          },
+          "formula_variant": "opening_plus_purchase_minus_sales",
+          "br_trf_in_identity": false,
+          "expected_closing_with_br_trf": 7.0,
+          "expected_closing_without_br_trf": 7.0
+        },
+        "br_trf_in_identity": false,
+        "candidates": [
+          {
+            "source": "br_trf_adaptive_identity",
+            "fields": {},
+            "reason": "printed_closing_matches_neither_br_trf_variant",
+            "would_balance": false,
+            "expected_with_br_trf": 7.0,
+            "expected_without_br_trf": 7.0
+          }
+        ],
+        "reconciliation_failed": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "BONNISAN SYP",
+      "packing": "200ML",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 36.0,
+      "receipts_value": null,
+      "sales_qty": 28.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "purchase_return": null,
+        "free": null,
+        "sale_return": null,
+        "others": null,
+        "field_source": {},
+        "expected_total": 36.0,
+        "expected_closing": 8.0,
+        "stock_identity_ok": false,
+        "reconciliation": {
+          "expected_total_qty": 36.0,
+          "expected_closing_qty": 8.0,
+          "actual_closing_qty": 0.0,
+          "quantity_difference": -8.0,
+          "total_ok": true,
+          "closing_ok": false,
+          "valid": false,
+          "opening_qty": 0.0,
+          "purchase_qty": 36.0,
+          "sales_qty": 28.0,
+          "extracted_closing_qty": 0.0,
+          "base_source": "opening_plus_purchase_plus_returns",
+          "sales_return_in_total": false,
+          "base_qty": 36.0,
+          "adjustments": {
+            "sales_return_qty": 0.0,
+            "sales_qty": 28.0,
+            "sales_free_qty": 0.0,
+            "purchase_return_qty": 0.0,
+            "expiry_damage_qty": 0.0,
+            "sample_qty": 0.0,
+            "other_outward_qty": 0.0,
+            "others_qty": 0.0,
+            "br_trf_qty": 0.0
+          },
+          "formula_variant": "opening_plus_purchase_minus_sales",
+          "br_trf_in_identity": false,
+          "expected_closing_with_br_trf": 8.0,
+          "expected_closing_without_br_trf": 8.0
+        },
+        "br_trf_in_identity": false,
+        "candidates": [
+          {
+            "source": "br_trf_adaptive_identity",
+            "fields": {},
+            "reason": "printed_closing_matches_neither_br_trf_variant",
+            "would_balance": false,
+            "expected_with_br_trf": 8.0,
+            "expected_without_br_trf": 8.0
+          }
+        ],
+        "reconciliation_failed": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "BONNISPAZ DROPS",
+      "packing": "15ML",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 14.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "purchase_return": null,
+        "free": null,
+        "sale_return": null,
+        "others": null,
+        "field_source": {},
+        "expected_total": 14.0,
+        "expected_closing": 14.0,
+        "stock_identity_ok": false,
+        "reconciliation": {
+          "expected_total_qty": 14.0,
+          "expected_closing_qty": 14.0,
+          "actual_closing_qty": 0.0,
+          "quantity_difference": -14.0,
+          "total_ok": true,
+          "closing_ok": false,
+          "valid": false,
+          "opening_qty": 0.0,
+          "purchase_qty": 14.0,
+          "sales_qty": 0.0,
+          "extracted_closing_qty": 0.0,
+          "base_source": "opening_plus_purchase_plus_returns",
+          "sales_return_in_total": false,
+          "base_qty": 14.0,
+          "adjustments": {
+            "sales_return_qty": 0.0,
+            "sales_qty": 0.0,
+            "sales_free_qty": 0.0,
+            "purchase_return_qty": 0.0,
+            "expiry_damage_qty": 0.0,
+            "sample_qty": 0.0,
+            "other_outward_qty": 0.0,
+            "others_qty": 0.0,
+            "br_trf_qty": 0.0
+          },
+          "formula_variant": "opening_plus_purchase_minus_sales",
+          "br_trf_in_identity": false,
+          "expected_closing_with_br_trf": 14.0,
+          "expected_closing_without_br_trf": 14.0
+        },
+        "br_trf_in_identity": false,
+        "candidates": [
+          {
+            "source": "br_trf_adaptive_identity",
+            "fields": {},
+            "reason": "printed_closing_matches_neither_br_trf_variant",
+            "would_balance": false,
+            "expected_with_br_trf": 14.0,
+            "expected_without_br_trf": 14.0
+          }
+        ],
+        "reconciliation_failed": true
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "BRESOL SYP",
+      "packing": "200",
+      "opening_qty": 0.0,
+      "opening_value": null,
+      "receipts_qty": 30.0,
+      "receipts_value": null,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "purchase_return": null,
+        "free": null,
+        "sale_return": null,
+        "others": null,
+        "field_source": {},
+        "expected_total": 30.0,
+        "expected_closing": 30.0,
+        "stock_identity_ok": false,
+        "reconciliation": {
+          "expected_total_qty": 30.0,
+          "expected_closing_qty": 30.0,
+          "actual_closing_qty": 0.0,
+          "quantity_difference": -30.0,
+          "total_ok": true,
+          "closing_ok": false,
+          "valid": false,
+          "opening_qty": 0.0,
+          "purchase_qty": 30.0,
+          "sales_qty": 0.0,
+          "extracted_closing_qty": 0.0,
+          "base_source": "opening_plus_purchase_plus_returns",
+          "sales_return_in_total": false,
+          "base_qty": 30.0,
+          "adjustments": {
+            "sales_return_qty": 0.0,
+            "sales_qty": 0.0,
+            "sales_free_qty": 0.0,
+            "purchase_return_qty": 0.0,
+            "expiry_damage_qty": 0.0,
+            "sample_qty": 0.0,
+            "other_outward_qty": 0.0,
+            "others_qty": 0.0,
+            "br_trf_qty": 0.0
+          },
+          "formula_variant": "opening_plus_purchase_minus_sales",
+          "br_trf_in_identity": false,
+          "expected_closing_with_br_trf": 30.0,
+          "expected_closing_without_br_trf": 30.0
+        },
+        "br_trf_in_identity": false,
+        "candidates": [
+          {
+            "source": "br_trf_adaptive_identity",
+            "fields": {},
+            "reason": "printed_closing_matches_neither_br_trf_variant",
+            "would_balance": false,
+            "expected_with_br_trf": 30.0,
+            "expected_without_br_trf": 30.0
+          }
+        ],
+        "reconciliation_failed": true
+      }
+    }
+  ]
+}

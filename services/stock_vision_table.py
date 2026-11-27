@@ -2305,7 +2305,9 @@ def build_table_prompt() -> str:
         "its header cell is blank — emit ITEM as the first header, then PACK. "
         "PACK (60, 30ML, 60 TAB) is packing, never opening_qty. Emit one cell per "
         "FREE/P.RETURN/S.RETURN/OTHERS column even when the cell is dash/blank so "
-        "SALE and CLOSING do not shift left. On phone photos of Excel sheets, "
+        "SALE and CLOSING do not shift left. Never park a SALE digit under the "
+        "FREE column after PURCHASE — that FREE is purchase-free, SALE is three "
+        "columns right. On phone photos of Excel sheets, "
         "SALE and CLOSING are the squeezed right-hand columns — never leave them "
         "null when a digit is visible (dash/blank only → null). "
         "P.RETURN is purchase_return_qty, S.RETURN is sales_return_qty. "
@@ -4725,33 +4727,6 @@ def _closing_value_missing(item: Dict[str, Any]) -> bool:
         return float(cv) == 0.0 and fs.get("closing_value") in {None, "missing"}
     except (TypeError, ValueError):
         return cv in {"", "-", "—", "–"}
-
-
-def _column_map_item_pack_free_return(
-    column_map: Sequence[Dict[str, Any]],
-) -> bool:
-    """ITEM|PACK|OPENING|PURCHASE|FREE|P.RETURN|…|SALE|…|CLOSING qty-only family."""
-    canons = {
-        str(c.get("canonical") or "")
-        for c in (column_map or [])
-        if isinstance(c, dict)
-    }
-    blob = " ".join(
-        str(c.get("header_text") or "").upper()
-        for c in (column_map or [])
-        if isinstance(c, dict)
-    )
-    if re.search(r"\bVAL(?:UE)?\b", blob):
-        return False
-    has_open = "opening_qty" in canons
-    has_pur = bool(canons & {"purchase_qty", "receipts_qty"})
-    has_sale = "sales_qty" in canons
-    has_close = "closing_qty" in canons
-    has_ret = bool(canons & {"purchase_return_qty", "sales_return_qty"})
-    has_free = bool(canons & {"free_in_qty", "free_out_qty"}) or bool(
-        re.search(r"\bFREE\b", blob)
-    )
-    return bool(has_open and has_pur and has_sale and has_close and has_ret and has_free)
 
 
 def _column_map_item_pack_free_return(
@@ -9974,6 +9949,203 @@ def _apply_item_pack_free_opening_in_purchase_pass(
     return repaired
 
 
+def _item_pack_free_sale_in_free_enabled() -> bool:
+    """STOCK_VISION_ITEM_PACK_FREE_SALE_IN_FREE — SALE digit under FREE. Default ON."""
+    return os.getenv(
+        "STOCK_VISION_ITEM_PACK_FREE_SALE_IN_FREE", "true"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _cell_blank_or_dash(val: Any) -> bool:
+    if val is None:
+        return True
+    text = str(val).strip()
+    if not text or text in {"-", "—", "–", ".", "null", "None"}:
+        return True
+    return False
+
+
+def _align_item_pack_free_sale_left_shift_cells(
+    cells: List[Any],
+    columns: Sequence[Dict[str, Any]],
+    column_count: int,
+) -> Tuple[List[Any], int]:
+    """Move SALE digit out of free_in when blank FREE/P.RETURN/FREE were collapsed.
+
+    PRODUCT|PACK|OPENING|PURCHASE|FREE|P.RETURN|FREE|SALE|…: Vision often puts the
+    SALE qty in the first FREE slot and leaves SALE null. Move the printed digit
+    only — never invent SALE/CLOSING.
+    """
+    if not _item_pack_free_sale_in_free_enabled():
+        return list(cells or []), column_count
+    if not _column_map_item_pack_free_return(columns):
+        return list(cells or []), column_count
+    by_canon: Dict[str, int] = {}
+    for col in columns:
+        if not isinstance(col, dict):
+            continue
+        canon = str(col.get("canonical") or "")
+        if not canon or canon == "ignore":
+            continue
+        try:
+            idx = int(col.get("col_index"))
+        except (TypeError, ValueError):
+            continue
+        by_canon.setdefault(canon, idx)
+    free_i = by_canon.get("free_in_qty")
+    sale_i = by_canon.get("sales_qty")
+    if free_i is None or sale_i is None or sale_i <= free_i:
+        return list(cells or []), column_count
+    out = list(cells or [])
+    while len(out) < max(column_count, sale_i + 1):
+        out.append(None)
+    if not _cell_blank_or_dash(out[sale_i]) and not _qty_is_blank_zero(out[sale_i]):
+        return out, column_count
+    free_val = out[free_i]
+    if _cell_blank_or_dash(free_val) or not _looks_small_qty(free_val):
+        return out, column_count
+    if _qty_is_blank_zero(free_val):
+        return out, column_count
+    # Middle FREE/P.RETURN/FREE must be blank — otherwise free_in is real.
+    for mid in range(free_i + 1, sale_i):
+        if mid < len(out) and not _cell_blank_or_dash(out[mid]) and not _qty_is_blank_zero(
+            out[mid]
+        ):
+            return out, column_count
+    out[sale_i] = free_val
+    out[free_i] = None
+    logger.info(
+        "VISION_TABLE ALIGN_ITEM_PACK_FREE_SALE_IN_FREE free_col=%s sale_col=%s val=%r",
+        free_i,
+        sale_i,
+        free_val,
+    )
+    return out, column_count
+
+
+def _sale_parked_in_free_in_candidate(item: Dict[str, Any]) -> bool:
+    """SALE blank/0 with a printed free_in qty and blank return chrome."""
+    if not isinstance(item, dict):
+        return False
+    extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+    fs = extra.get("field_source") if isinstance(extra.get("field_source"), dict) else {}
+    if fs.get("free_in_qty") != "printed":
+        return False
+    free_in = extra.get("free_in_qty")
+    if _looks_money(free_in) or not _looks_small_qty(free_in) or _qty_is_blank_zero(
+        free_in
+    ):
+        return False
+    sq = item.get("sales_qty")
+    if not (
+        sq is None
+        or fs.get("sales_qty") == "missing"
+        or _qty_is_blank_zero(sq)
+    ):
+        return False
+    # Real purchase-free rows usually also print P.RETURN / sale-free digits.
+    for slot in ("purchase_return_qty", "sales_return_qty", "free_out_qty"):
+        val = _item_extra_qty(item, slot, slot.replace("_qty", ""))
+        if not _qty_is_blank_zero(val):
+            return False
+    cq = item.get("closing_qty")
+    closing_printed = (
+        cq is not None
+        and fs.get("closing_qty") == "printed"
+        and not _qty_is_blank_zero(cq)
+    )
+    if closing_printed:
+        try:
+            oq = float(item.get("opening_qty") or 0)
+            rq = float(item.get("receipts_qty") or item.get("purchase_qty") or 0)
+            fi = float(free_in)
+            close_n = float(cq)
+        except (TypeError, ValueError):
+            return False
+        # Identity with free_in treated as SALE.
+        if abs((oq + rq - fi) - close_n) > 0.51:
+            return False
+    return True
+
+
+def _repair_sale_parked_in_free_in(item: Dict[str, Any]) -> bool:
+    """Move free_in → sales_qty on FREE/P.RETURN grids when SALE was left-shifted."""
+    if not _item_pack_free_sale_in_free_enabled():
+        return False
+    if not _sale_parked_in_free_in_candidate(item):
+        return False
+    extra = item.setdefault("extra", {})
+    if not isinstance(extra, dict):
+        return False
+    fs = extra.setdefault("field_source", {})
+    if not isinstance(fs, dict):
+        return False
+    try:
+        sale = float(extra.get("free_in_qty"))
+    except (TypeError, ValueError):
+        return False
+    item["sales_qty"] = sale
+    extra["free_in_qty"] = None
+    fs["sales_qty"] = "printed"
+    fs["free_in_qty"] = "missing"
+    flags = list(extra.get("flags") or [])
+    if "SALE_PARKED_IN_FREE_IN" not in flags:
+        flags.append("SALE_PARKED_IN_FREE_IN")
+    extra["flags"] = flags
+    logger.info(
+        "VISION_TABLE SALE_PARKED_IN_FREE_IN product=%s sales_qty=%s",
+        str(item.get("product_name") or "")[:60],
+        sale,
+    )
+    return True
+
+
+def _headers_look_like_item_pack_free_return(headers: Sequence[Any]) -> bool:
+    blob = " ".join(str(h or "") for h in (headers or [])).upper()
+    if not blob or re.search(r"\bVAL(?:UE)?\b", blob):
+        return False
+    return bool(
+        re.search(r"\bOPENING\b", blob)
+        and re.search(r"\bPURCHASE\b", blob)
+        and re.search(r"\bFREE\b", blob)
+        and re.search(r"P\.?\s*RETURN", blob)
+        and re.search(r"\bSALE\b", blob)
+        and re.search(r"\bCLOSING\b", blob)
+    )
+
+
+def _apply_item_pack_free_sale_in_free_pass(
+    items: Sequence[Dict[str, Any]],
+    column_map: Sequence[Dict[str, Any]],
+) -> int:
+    """Move SALE digits out of free_in on ITEM|PACK|…|FREE|P.RETURN|…|SALE grids."""
+    if not _item_pack_free_sale_in_free_enabled():
+        return 0
+    layout_ok = bool(column_map) and _column_map_item_pack_free_return(column_map)
+    if not layout_ok:
+        for item in items or []:
+            if not isinstance(item, dict):
+                continue
+            extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+            if _headers_look_like_item_pack_free_return(
+                extra.get("vision_column_headers") or []
+            ):
+                layout_ok = True
+                break
+    if not layout_ok:
+        return 0
+    repaired = 0
+    for item in items or []:
+        if isinstance(item, dict) and _repair_sale_parked_in_free_in(item):
+            repaired += 1
+    if repaired:
+        logger.info(
+            "VISION_TABLE SALE_IN_FREE_PASS repaired=%s",
+            repaired,
+        )
+    return repaired
+
+
 def _apply_negative_qty_unread_pass(items: Sequence[Dict[str, Any]]) -> None:
     for item in items or []:
         if isinstance(item, dict):
@@ -11360,12 +11532,14 @@ def _promote_printed_total_row_money(
         for t in named
         if re.search(r"(?i)grand\s+total", str(t.get("product_name") or ""))
     ]
-    # Plain Total Value rows (no parenthetical division) on FREE/P.RETURN grids.
+    # Plain Total Value / TOTAL: rows (no parenthetical division) on
+    # FREE/P.RETURN ANALYSIS grids (phone photos print TOTAL: money footers).
+    # Bare TOTAL is not included: a later dashed cumulative total must still win.
     plain_total_value = [
         t
         for t in named
         if re.fullmatch(
-            r"(?is)\s*total\s+values?\s*",
+            r"(?is)\s*(?:total\s+values?\s*:?|total\s*:)\s*",
             str(t.get("product_name") or "").strip(),
         )
     ]
@@ -13578,6 +13752,9 @@ def _map_single_table(
         )
         if _dropped_pair:
             errors.append("DROPPED_PAIR_VALUE_SHIFT")
+        cells, column_count = _align_item_pack_free_sale_left_shift_cells(
+            cells, columns, column_count
+        )
 
         # TOTAL lines often skip packing; realign before column assignment.
         product_hint = None
@@ -13713,6 +13890,8 @@ def _map_single_table(
             # those qty slots and block PUR_FREE_SALE_CLOSING_SHIFT.
             _repair_free_in_issue_closing_shift(item)
             _repair_pur_free_sale_closing_left_shift(item)
+            # FREE/P.RETURN qty grid: SALE digit parked under purchase FREE.
+            _repair_sale_parked_in_free_in(item)
             # Sales Qty=0 with the real count under Sales Free (free_out).
             _repair_sales_qty_parked_in_free_out(item)
             # Pack|Rate|Free: Opening parked in Receipt, Sales parked in Free.
@@ -13985,6 +14164,7 @@ def map_vision_table(
     _apply_negative_qty_unread_pass(all_items)
     _apply_unread_zero_opening_pass(all_items)
     _apply_item_pack_free_opening_in_purchase_pass(all_items, column_map or [])
+    _apply_item_pack_free_sale_in_free_pass(all_items, column_map or [])
     _apply_unread_zero_closing_pass(all_items)
     _apply_closing_qty_from_header_pass(all_items, column_map or [])
     _apply_issue_from_header_pass(all_items, column_map or [])
@@ -16294,6 +16474,7 @@ def run_vision_table_path(
         _apply_negative_qty_unread_pass(all_items)
         _apply_unread_zero_opening_pass(all_items)
         _apply_item_pack_free_opening_in_purchase_pass(all_items, column_map or [])
+        _apply_item_pack_free_sale_in_free_pass(all_items, column_map or [])
         _apply_unread_zero_closing_pass(all_items)
         _apply_closing_qty_from_header_pass(all_items, column_map or [])
         _apply_issue_from_header_pass(all_items, column_map or [])
@@ -16680,6 +16861,9 @@ def run_vision_table_path(
         _apply_item_pack_free_opening_in_purchase_pass(
             result.get("line_items") or [], _post_cols
         )
+        _apply_item_pack_free_sale_in_free_pass(
+            result.get("line_items") or [], _post_cols
+        )
         _apply_unread_zero_closing_pass(result.get("line_items") or [])
         _apply_closing_qty_from_header_pass(
             result.get("line_items") or [], _post_cols
@@ -16791,7 +16975,10 @@ def run_vision_table_path(
     except Exception as exc:
         _log("status=fallback", reason="exception", error=type(exc).__name__)
         logger.info(
-            "VISION_TABLE request_id=%s exception=%s", request_id, type(exc).__name__
+            "VISION_TABLE request_id=%s exception=%s detail=%s",
+            request_id,
+            type(exc).__name__,
+            str(exc)[:300],
         )
         return {
             "status": "fallback",
