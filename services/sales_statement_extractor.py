@@ -4777,34 +4777,52 @@ def _is_opbal_issue_closing_format(text: str) -> bool:
     has_closing = bool(re.search(r"\bClosing\b", header, re.I))
     if has_op and has_receipt and has_issue and has_closing:
         return True
+    title = bool(re.search(r"Sales\s*&\s*Stock\s*Statement", header, re.I))
+    powered = bool(re.search(r"Powered\s+By\s+SwilERP", header, re.I))
+    has_dump = bool(re.search(r"\bDump\b", header, re.I))
+    has_near = bool(re.search(r"Near\s*Expiry", header, re.I))
     # SwilERP Sales & Stock Statement: Dump / Remain Day even when Op.Bal OCR fails
-    return bool(
-        re.search(r"Sales\s*&\s*Stock\s*Statement", header, re.I)
-        and has_receipt
-        and has_issue
-        and has_closing
-        and re.search(r"\bDump\b", header, re.I)
-    )
+    if title and has_receipt and has_issue and has_closing and has_dump:
+        return True
+    # Near Expiry qty sheet (no Dump): Op.Bal headers or SwilERP chrome.
+    if (title or powered) and has_issue and has_closing and has_near and (
+        has_op or has_receipt
+    ):
+        return True
+    return False
 
 def _is_swilerp_sales_stock_statement(text: str) -> bool:
-    """SwilERP printed Sales & Stock Statement (Op.Bal/Receipt/Total/Issue/Closing/Dump)."""
+    """SwilERP Sales & Stock Statement (Op.Bal/Receipt/Total/Issue/Closing).
+
+    Matches Dump layouts and Near-Expiry-only sheets (no Dump column) when the
+    title or SwilERP footer is present with Op.Bal / Issue / Closing headers.
+    """
     if not text:
         return False
     blob = text[:4000]
-    return bool(
-        re.search(r"Sales\s*&\s*Stock\s*Statement", blob, re.I)
-        and re.search(r"\bDump\b", blob, re.I)
-        and (
-            re.search(r"Op\.?\s*Bal|Opal\.?|OpBal|Remain\s*Day", blob, re.I)
-            or re.search(r"Powered\s+By\s+SwilERP", blob, re.I)
-        )
-    )
+    title = bool(re.search(r"Sales\s*&\s*Stock\s*Statement", blob, re.I))
+    powered = bool(re.search(r"Powered\s+By\s+SwilERP", blob, re.I))
+    has_op = bool(re.search(r"Op\.?\s*Bal|Opal\.?|OpBal|Remain\s*Day", blob, re.I))
+    has_issue = bool(re.search(r"\bIssue\b", blob, re.I))
+    has_closing = bool(re.search(r"\bClosing\b", blob, re.I))
+    has_dump = bool(re.search(r"\bDump\b", blob, re.I))
+    has_near = bool(re.search(r"Near\s*Expiry", blob, re.I))
+    if title and has_dump and (has_op or powered):
+        return True
+    # Near Expiry without Dump (NARBADA-style SwilERP qty sheet).
+    if (title or powered) and has_op and has_issue and has_closing and (
+        has_near or has_dump
+    ):
+        return True
+    return False
 
 def _opbal_layout(text: str) -> str:
     """Return qty column layout for OpBal statements.
 
     - issue_expiry_closing: OpBal Receipt Total Issue Expiry Closing Near
       (MAHAJAN & MAHAJAN)
+    - issue_closing_near: OpBal Receipt Total Issue Closing NearExpiry
+      (SwilERP sheets with Near Expiry and no Dump)
     - issue_closing_dump: OpBal Receipt Total Issue Closing Dump Near
       (MAHAJAN ASSOCIATES)
     """
@@ -4823,6 +4841,18 @@ def _opbal_layout(text: str) -> str:
         r"Issue.{0,20}Expiry.{0,20}Closing", header_for_expiry, re.I | re.S
     ):
         return "issue_expiry_closing"
+    has_near = bool(
+        re.search(r"NearExpiry|Near\s*Expiry", header, re.I)
+        # OCR often wraps the header: "Closing Near" then "Balance Expiry"
+        or (
+            re.search(r"Closing\s+Near\b|\bNear\b", header, re.I)
+            and re.search(r"\bExpiry\b", header, re.I)
+        )
+    )
+    has_dump = bool(re.search(r"\bDump\b", header, re.I))
+    # Closing then Near Expiry with no Dump — sixth trailing qty is Near Expiry.
+    if has_near and not has_dump:
+        return "issue_closing_near"
     return "issue_closing_dump"
 
 
@@ -6136,6 +6166,17 @@ def _parse_opbal_receipt_issue_row(
     item["sales_value"] = 0.0
     item["closing_value"] = 0.0
     item["extra"]["total_stock_qty"] = use[2]
+    fs = item["extra"].setdefault("field_source", {})
+    if isinstance(fs, dict):
+        fs.update(
+            {
+                "opening_qty": "printed",
+                "receipts_qty": "printed",
+                "sales_qty": "printed",
+                "closing_qty": "printed",
+                "total_stock_qty": "printed",
+            }
+        )
 
     if layout == "issue_expiry_closing" and len(use) >= 6:
         # OpBal Receipt Total Issue Expiry Closing [Near]
@@ -6143,6 +6184,17 @@ def _parse_opbal_receipt_issue_row(
         item["closing_qty"] = use[5]
         if len(use) >= 7:
             item["extra"]["near_expiry_qty"] = use[6]
+            if isinstance(fs, dict):
+                fs["near_expiry_qty"] = "printed"
+    elif layout == "issue_closing_near":
+        # OpBal Receipt Total Issue Closing NearExpiry (no Dump column)
+        item["closing_qty"] = use[4]
+        if len(use) >= 6:
+            item["extra"]["near_expiry_qty"] = use[5]
+            if isinstance(fs, dict):
+                fs["near_expiry_qty"] = "printed"
+        if len(use) >= 7:
+            item["extra"]["remain_day_stock"] = use[6]
     else:
         # OpBal Receipt Total Issue Closing [Dump] [Near]
         item["closing_qty"] = use[4]
@@ -6150,6 +6202,8 @@ def _parse_opbal_receipt_issue_row(
             item["extra"]["dump_qty"] = use[5]
         if len(use) >= 7:
             item["extra"]["near_expiry_qty"] = use[6]
+            if isinstance(fs, dict):
+                fs["near_expiry_qty"] = "printed"
         # 8th qty (Remain Day Stock) when present on SwilERP rows
         if len(qtys) >= 8:
             item["extra"]["remain_day_stock"] = qtys[-1]
@@ -6740,6 +6794,29 @@ def _parse_statement_total_row(text: str) -> Optional[Dict[str, Any]]:
             parsed["total_row_labels"].append("NearExpiry")
         return parsed
 
+    # SwilERP Near Expiry only (no Dump): OpBal Receipt Total Issue Closing Near
+    if _opbal_layout(text) == "issue_closing_near" and len(nums) >= 6:
+        parsed.update(
+            {
+                "opening_qty": nums[0],
+                "receipts_qty": nums[1],
+                "total_stock_qty": nums[2],
+                "sales_qty": nums[3],  # ISSUE
+                "closing_qty": nums[4],
+                "near_expiry_qty": nums[5],
+                "total_row_format": "opbal_receipt_total_issue_closing_near",
+                "total_row_labels": [
+                    "OpBal",
+                    "Receipt",
+                    "Total",
+                    "Issue",
+                    "Closing",
+                    "NearExpiry",
+                ],
+            }
+        )
+        return parsed
+
     # Mahajan Associates: OpBal Receipt Total Issue Closing [Dump] [Near Expiry]
     if re.search(r"Op\.?\s*Bal|Receipt|Issue|Closing", header_blob, re.I) and len(nums) >= 5:
         parsed.update(
@@ -6759,12 +6836,21 @@ def _parse_statement_total_row(text: str) -> Optional[Dict[str, Any]]:
                 ],
             }
         )
+        layout_hint = _opbal_layout(text)
         if len(nums) >= 6:
-            parsed["dump_qty"] = nums[5]
-            parsed["total_row_labels"].append("Dump")
+            if layout_hint == "issue_closing_near" or (
+                re.search(r"Near\s*Expiry", header_blob, re.I)
+                and not re.search(r"\bDump\b", header_blob, re.I)
+            ):
+                parsed["near_expiry_qty"] = nums[5]
+                parsed["total_row_labels"].append("NearExpiry")
+            else:
+                parsed["dump_qty"] = nums[5]
+                parsed["total_row_labels"].append("Dump")
         if len(nums) >= 7:
             parsed["near_expiry_qty"] = nums[6]
-            parsed["total_row_labels"].append("NearExpiry")
+            if "NearExpiry" not in parsed["total_row_labels"]:
+                parsed["total_row_labels"].append("NearExpiry")
         return parsed
 
     # Generic 4-number TOTAL → treat as opening/receipt/issue/closing
@@ -7242,6 +7328,7 @@ def _apply_total_row_to_result(result: Dict[str, Any], text: str) -> Dict[str, A
     if parsed.get("total_row_format") in {
         "opening_receipt_issue_closing",
         "opbal_receipt_total_issue_closing",
+        "opbal_receipt_total_issue_closing_near",
         "opbal_receipt_total_issue_expiry_closing",
         "qty4_generic",
     }:
@@ -71647,6 +71734,15 @@ def _looks_like_op_stk_rcpts_grid_text(text: str) -> bool:
     # Qoh / O.Stk+Purc+Tot layouts are a different column set.
     if _looks_like_ostk_qoh_stock_sales_text(text):
         return False
+    # Classic Op.Bal / Issue / Closing / Near Expiry is NOT Op_Stk|Rcpts.
+    if _is_opbal_issue_closing_format(text) or _is_swilerp_sales_stock_statement(text):
+        return False
+    if (
+        re.search(r"\bIssue\b", text, re.I)
+        and re.search(r"\bClosing\b", text, re.I)
+        and re.search(r"Near\s*Expiry|Op\.?\s*Bal", text, re.I)
+    ):
+        return False
     if re.search(r"\bOp[_\s.]*Stk\b|\bOP[_\s.]*STK\b", text, re.I) and (
         re.search(r"\bRcpts?\b", text, re.I)
         or re.search(r"\bCl[_\s.]*Stk\b|\bCL[_\s.]*STK\b", text, re.I)
@@ -71657,7 +71753,8 @@ def _looks_like_op_stk_rcpts_grid_text(text: str) -> bool:
     if re.search(r"STOCK\s*&\s*SALES\s*STATEMENT", text, re.I):
         if re.search(r"\bRcpts?\b", text, re.I) and re.search(r"\bSales\b", text, re.I):
             if not re.search(
-                r"RECEIVE\s+QUANTITY|ISSUE\s+QUANTITY|PRODUCT\s+DESC(?:RIPTION)?",
+                r"RECEIVE\s+QUANTITY|ISSUE\s+QUANTITY|PRODUCT\s+DESC(?:RIPTION)?|"
+                r"Op\.?\s*Bal|Near\s*Expiry|\bIssue\s+Qty",
                 text,
                 re.I,
             ):
@@ -81029,7 +81126,7 @@ CRITICAL column mapping (left → right; PACKING may be absent — packing can s
 4) Issue Qty. -> sales_qty  (period issues — copy the Issue column even when non-zero)
 5) Closing Balance -> closing_qty
 6) Dump Stock -> extra.dump_qty when printed (NOT closing_qty); omit when absent
-7) Near Expiry -> extra.near_expiry_qty when printed
+7) Near Expiry -> extra.near_expiry_qty when printed (dedicated field; never omit zeros)
 8) Remain Day Stock -> extra.remain_day_stock when printed
 9) MSR Price -> ignore for qty fields (money only; often 0.00)
 
@@ -81037,12 +81134,23 @@ Rules:
 - Qty-only statement: sales_value=0 and closing_value=0 on every line; totals money null.
   Never put Issue Qty digits into sales_value. A blank money cell stays null/0 — do not
   invent money, and do not move a quantity into a monetary field because qty is missing.
+- Never put Issue Qty into receipts_qty. Never put Opening Qty into receipts_qty.
+  A printed Receipt=0 (dash/blank) stays receipts_qty=0 — do not fill it from Issue.
+  Example: Op.Bal=66, Receipt=0, Total=66, Issue=11, Closing=55, Near=0
+  → opening=66, receipts=0, total_stock=66, sales=11, closing=55, near_expiry=0.
+  WRONG: receipts=11 (that is Issue).
+  Example: Op.Bal=49, Receipt=0, Total=49, Issue=2, Closing=47
+  → opening=49, receipts=0 (NOT opening=0, receipts=49).
 - Issue Qty and Closing Balance are separate positional columns. Read left→right header
   geometry. Do NOT swap them even when Op+Rec−Issue=Closing still holds after a swap.
   Example pattern: Op.Bal=22, Receipt=0, Total=22, Issue=1, Closing=21
   → sales_qty=1, closing_qty=21 (NOT sales_qty=21, closing_qty=1).
   Example pattern: Op.Bal=2640, Issue=2551, Closing=89
   → sales_qty=2551, closing_qty=89, sales_value=0 (2551 is Issue Qty, not money).
+- Near Expiry is independent of Dump. When Near Expiry is printed without Dump,
+  put the trailing Near Expiry digit in extra.near_expiry_qty (0 when blank/dash).
+- Preserve printed TOTAL footer numbers when present (Opening/Receipt/Total/Issue/
+  Closing/Near Expiry) into totals.* — never replace with row sums.
 - Identity: opening_qty + receipts_qty - sales_qty = closing_qty (allow Issue=-1 returns).
   Total Qty must equal opening_qty + receipts_qty when that column is printed.
   Closing Qty must equal Total Qty − Issue Qty when those columns are printed.
@@ -81269,7 +81377,10 @@ def _merge_opbal_ocr_issue_closing_into_vision(
         if not src and key:
             for ok, cand in by_key.items():
                 if key not in ok and ok not in key:
-                    continue
+                    # Prefix match tolerates OCR packing glue (TAB vs TABI).
+                    prefix = min(len(key), len(ok), 12)
+                    if prefix < 8 or key[:prefix] != ok[:prefix]:
+                        continue
                 # Distinct pack sizes (100ml vs 200ml) must stay separate.
                 digits_v = re.findall(r"\d+", key)
                 digits_o = re.findall(r"\d+", ok)
@@ -81309,18 +81420,45 @@ def _merge_opbal_ocr_issue_closing_into_vision(
             and _opbal_qty_close(v_sv, o_sl)
             and _opbal_qty_close(v_cl, o_cl)
         )
+        src_extra = src.get("extra") if isinstance(src.get("extra"), dict) else {}
+        extra = item.setdefault("extra", {})
+        if not isinstance(extra, dict):
+            extra = {}
+            item["extra"] = extra
+
+        # Always prefer OCR Near Expiry / Total when Vision dropped them.
+        near_synced = False
+        o_near = src_extra.get("near_expiry_qty")
+        if o_near is None and src_extra.get("dump_qty") is not None:
+            # Near-only sheets park the 6th qty in dump when layout OCR is noisy.
+            o_near = src_extra.get("dump_qty")
+        if o_near is not None and (
+            extra.get("near_expiry_qty") in (None, "")
+            or (
+                abs(_to_float(extra.get("near_expiry_qty")) or 0.0) < 0.001
+                and abs(_to_float(o_near) or 0.0) > 0.001
+            )
+        ):
+            extra["near_expiry_qty"] = o_near
+            fs_near = extra.setdefault("field_source", {})
+            if isinstance(fs_near, dict):
+                fs_near["near_expiry_qty"] = "opbal_ocr_positional"
+            near_synced = True
+            # Drop mistaken Dump when Near Expiry is the only trailing column.
+            if extra.get("dump_qty") is not None and _opbal_qty_close(
+                _to_float(extra.get("dump_qty")), _to_float(o_near)
+            ):
+                extra.pop("dump_qty", None)
+
         if not (swapped or parked):
+            if near_synced:
+                patched += 1
             continue
 
         item["sales_qty"] = float(o_sl)
         item["closing_qty"] = float(o_cl)
         if parked or (v_sv is not None and _opbal_qty_close(v_sv, o_sl)):
             item["sales_value"] = None
-        src_extra = src.get("extra") if isinstance(src.get("extra"), dict) else {}
-        extra = item.setdefault("extra", {})
-        if not isinstance(extra, dict):
-            extra = {}
-            item["extra"] = extra
         for ek in ("total_stock_qty", "total_stock", "dump_qty", "near_expiry_qty"):
             if src_extra.get(ek) is not None and extra.get(ek) in (None, ""):
                 extra[ek] = src_extra.get(ek)
@@ -81339,6 +81477,63 @@ def _merge_opbal_ocr_issue_closing_into_vision(
     if patched:
         logger.info("OPBAL_OCR_ISSUE_CLOSING_MERGE patched_rows=%s", patched)
     return patched
+
+
+def _remap_dump_qty_to_near_expiry(
+    result: Optional[Dict[str, Any]], text: str = ""
+) -> None:
+    """On Near-Expiry-only sheets, Dump must not hold the Near Expiry digits."""
+    if not isinstance(result, dict):
+        return
+    blob = text or ""
+    if re.search(r"\bDump\b", blob, re.I):
+        return
+    layout = _opbal_layout(blob) if blob else ""
+    has_near_chrome = bool(
+        layout == "issue_closing_near"
+        or re.search(r"Near\s*Expiry|Closing\s+Near|\bExpiry\b", blob, re.I)
+    )
+    if not has_near_chrome:
+        return
+    extra = (result.get("totals") or {}).get("extra")
+    if not isinstance(extra, dict):
+        extra = {}
+
+    for item in result.get("line_items") or []:
+        if not isinstance(item, dict):
+            continue
+        row_extra = item.get("extra")
+        if not isinstance(row_extra, dict):
+            continue
+        if row_extra.get("near_expiry_qty") in (None, "") and row_extra.get(
+            "dump_qty"
+        ) is not None:
+            row_extra["near_expiry_qty"] = row_extra.get("dump_qty")
+            row_extra.pop("dump_qty", None)
+            fs = row_extra.setdefault("field_source", {})
+            if isinstance(fs, dict):
+                fs["near_expiry_qty"] = fs.get("near_expiry_qty") or "printed"
+        elif (
+            row_extra.get("near_expiry_qty") is not None
+            and row_extra.get("dump_qty") is not None
+            and _opbal_qty_close(
+                _to_float(row_extra.get("near_expiry_qty")),
+                _to_float(row_extra.get("dump_qty")),
+            )
+        ):
+            row_extra.pop("dump_qty", None)
+
+    totals = result.get("totals")
+    if isinstance(totals, dict):
+        if totals.get("near_expiry_qty") in (None, "") and totals.get("dump_qty") is not None:
+            totals["near_expiry_qty"] = totals.get("dump_qty")
+            totals.pop("dump_qty", None)
+            labels = list((extra.get("total_row_labels") or []))
+            if "Dump" in labels:
+                labels = [("NearExpiry" if x == "Dump" else x) for x in labels]
+                extra["total_row_labels"] = labels
+            if extra.get("total_row_format") == "opbal_receipt_total_issue_closing":
+                extra["total_row_format"] = "opbal_receipt_total_issue_closing_near"
 
 
 def _parse_swilerp_sales_stock_image(
@@ -81427,6 +81622,7 @@ def _parse_swilerp_sales_stock_image(
                             sq is None or abs(sv - (sq or 0.0)) < 0.001
                         ):
                             it["sales_value"] = 0.0
+            _remap_dump_qty_to_near_expiry(merged, combined_ocr)
         except Exception:
             pass
         try:
@@ -83175,6 +83371,56 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                 "reason=sale_and_stock_analysis_grid_defer_vt",
                 filename,
             )
+        # Op.Bal / Issue / Closing / Near Expiry (SwilERP) must never enter the
+        # Op_Stk|Rcpts|Sales reader — that path parks Issue in receipts_qty.
+        _opbal_near_peek = bool(
+            _is_opbal_issue_closing_format(_op_stk_peek or "")
+            or _is_swilerp_sales_stock_statement(_op_stk_peek or "")
+            or (
+                re.search(r"Near\s*Expiry", _op_stk_peek or "", re.I)
+                and re.search(r"\bIssue\b", _op_stk_peek or "", re.I)
+                and re.search(r"\bClosing\b", _op_stk_peek or "", re.I)
+                and (
+                    re.search(r"Op\.?\s*Bal|Opal\.?|OpBal", _op_stk_peek or "", re.I)
+                    or re.search(
+                        r"Sales\s*&\s*Stock\s*Statement|Powered\s+By\s+SwilERP",
+                        _op_stk_peek or "",
+                        re.I,
+                    )
+                )
+            )
+        )
+        if _opbal_near_peek:
+            _allow_op_stk_before_ssa = False
+            logger.info(
+                "[SalesStatement] file=%s Op_Stk before SSA skipped "
+                "reason=opbal_issue_closing_near_expiry",
+                filename,
+            )
+            try:
+                opbal_pre = _parse_swilerp_sales_stock_image(
+                    file_bytes, filename, ext
+                )
+            except Exception as exc:
+                logger.info(
+                    "[SalesStatement] file=%s Op.Bal before Op_Stk failed: %s",
+                    filename,
+                    type(exc).__name__,
+                )
+                opbal_pre = None
+            if _opbal_issue_closing_photo_usable(opbal_pre):
+                extra_op = opbal_pre.setdefault("totals", {}).setdefault("extra", {})
+                if isinstance(extra_op, dict):
+                    extra_op["early_vision_reason"] = "opbal_before_op_stk_phone"
+                    extra_op["layout"] = "opbal_issue_closing"
+                    extra_op["qty_only"] = True
+                logger.info(
+                    "[STOCK_EXTRACTION_PATH] stage=opbal_before_op_stk_phone "
+                    "file=%s line_items=%s",
+                    filename,
+                    len(opbal_pre.get("line_items") or []),
+                )
+                return opbal_pre
         elif (
             _op_stk_before_ssa_phone_enabled()
             and not _skip_vt_for_op_stk
