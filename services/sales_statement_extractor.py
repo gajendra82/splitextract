@@ -2710,6 +2710,21 @@ def _ssa_oric_ocr_multi_enabled() -> bool:
     }
 
 
+def _ssa_oric_ocr_bands_enabled() -> bool:
+    """Header+body OCR bands for compact qty-only ORIC phone photos (default ON).
+
+    Full-page Tesseract often drops mid-table SKUs (GERIFORTE TAB / LUKOL) and
+    the printed TOTAL row; overlapping vertical crops recover them. Kill switch
+    only — no new env required for managers.
+    """
+    return os.getenv("STOCK_SSA_ORIC_OCR_BANDS", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
 def _ssa_oric_prepare_image(file_bytes: bytes):
     """EXIF-orient a sales-statement photo for Tesseract (PIL Image)."""
     from PIL import Image, ImageOps
@@ -2740,6 +2755,9 @@ def _ssa_oric_ocr_variant_texts(file_bytes: bytes) -> List[Tuple[str, str]]:
     Sharpness-boosted OCR often invents wrong ISSUE/CLOSING digits on phone
     photos. Autocontrast + a 2x upscale pass recover printed digits better;
     callers merge per-SKU preferring identity-balanced rows (no invented qty).
+
+    Compact phone sheets also OCR two header+body bands so mid-crease SKUs and
+    the printed TOTAL row are not dropped by a single full-page pass.
     """
     from PIL import Image, ImageEnhance, ImageOps
 
@@ -2767,6 +2785,48 @@ def _ssa_oric_ocr_variant_texts(file_bytes: bytes) -> List[Tuple[str, str]]:
         logger.info(
             "SSA_ORIC_OCR_MULTI status=up2_failed error=%s", type(exc).__name__
         )
+    if _ssa_oric_ocr_bands_enabled():
+        try:
+            # Prefer ink-content vertical slices over letterhead stitches: phone
+            # chrome below the table makes lower vision-style bands empty, while
+            # mid/lower document slices recover GERIFORTE TAB / LUKOL / TOTAL.
+            chrome_prefix = (
+                "STOCK & SALES ANALYSIS\n"
+                "ITEM DESCRIPTION OPENING RECEIPT ISSUE CLOSING\n"
+            )
+            w, h = gray.size
+            content_bands = (
+                ("mid", 0.18, 0.58),
+                ("low", 0.42, 0.72),
+            )
+            for label, y0, y1 in content_bands:
+                crop = gray.crop((0, int(h * y0), w, int(h * y1)))
+                up = crop.resize(
+                    (max(1, crop.width * 2), max(1, crop.height * 2)),
+                    Image.Resampling.LANCZOS,
+                )
+                up = ImageEnhance.Sharpness(up).enhance(2.0)
+                text = _ssa_oric_tesseract_string(
+                    up, psm=6, region=f"page_oric_band_{label}"
+                )
+                if not text.strip():
+                    continue
+                # Body crops often omit the header line; keep authoritative ORIC
+                # column order for the parser without shifting qty tokens.
+                if not re.search(
+                    r"OPENING\s+RECEIPT\s+ISSUE\s+CLOSING", text, re.I
+                ):
+                    text = chrome_prefix + text
+                out.append((f"band_{label}", text))
+                logger.info(
+                    "SSA_ORIC_OCR_BANDS status=ok band=%s chars=%s",
+                    label,
+                    len(text),
+                )
+        except Exception as exc:
+            logger.info(
+                "SSA_ORIC_OCR_BANDS status=failed error=%s", type(exc).__name__
+            )
     return out
 
 
@@ -3133,6 +3193,7 @@ def _ssa_oric_merge_parse_results(
         return None
     best_header: Optional[Dict[str, Any]] = None
     best_header_n = -1
+    footer_donor: Optional[Dict[str, Any]] = None
     merged: Dict[str, Dict[str, Any]] = {}
     for label, result in results:
         items = list(result.get("line_items") or [])
@@ -3140,11 +3201,19 @@ def _ssa_oric_merge_parse_results(
         if n > best_header_n:
             best_header = result
             best_header_n = n
+        tot_extra = ((result.get("totals") or {}).get("extra") or {})
+        if (
+            footer_donor is None
+            and str(tot_extra.get("total_row_source") or "") == "footer_total"
+        ):
+            footer_donor = result
         for item in items:
             key = _ssa_oric_item_key(item)
             if not key or key.startswith("|"):
                 continue
             existing = _ssa_oric_resolve_merge_key(merged, key)
+            if existing is None:
+                existing = _ssa_oric_find_near_dup_key(merged, item)
             if existing is None:
                 # Geom is repair-only — never insert SKUs the text passes missed
                 # (those rows are often wrong-column ghosts).
@@ -3180,11 +3249,54 @@ def _ssa_oric_merge_parse_results(
                 )
             elif cur_ok and prev_ok and label == "up2":
                 merged[existing] = item
+            elif (
+                cur_ok
+                and prev_ok
+                and str(label).startswith("band")
+                and abs(
+                    _to_float(item.get("opening_qty"))
+                    - _to_float(prev.get("opening_qty"))
+                )
+                <= 0.51
+                and _ssa_oric_move_score(item)
+                > (_ssa_oric_move_score(prev) + 0.5)
+            ):
+                # Band recovered real RECEIPT/ISSUE that full-page OCR dashed out.
+                merged[existing] = item
+                logger.info(
+                    "SSA_ORIC_OCR_MULTI_MERGE key=%s from=%s reason=band_movement",
+                    existing[:48],
+                    label,
+                )
             elif not cur_ok and not prev_ok and label == "up2":
                 merged[existing] = item
     if not merged or best_header is None:
         return None
     out = dict(best_header)
+    if footer_donor is not None:
+        # Keep printed TOTAL column order from any band that read the footer.
+        out_totals = out.setdefault("totals", {})
+        donor_totals = footer_donor.get("totals") or {}
+        for field in ("opening_qty", "receipts_qty", "sales_qty", "closing_qty"):
+            if donor_totals.get(field) not in (None, ""):
+                out_totals[field] = donor_totals.get(field)
+        out_totals["sales_value"] = None
+        out_totals["closing_value"] = None
+        donor_extra = donor_totals.get("extra") or {}
+        out_extra = out_totals.setdefault("extra", {})
+        for key in (
+            "total_row_source",
+            "total_row_format",
+            "total_row_labels",
+            "total_row_raw",
+            "TOTAL_MISMATCH",
+            "flags",
+            "printed_total_validation",
+            "line_item_qty_sums",
+            "qty_only",
+        ):
+            if key in donor_extra:
+                out_extra[key] = donor_extra[key]
     # Keep every parsed SKU (including negative / hard OCR). Dropping
     # identity-broken rows was omitting ORO-T / PILEX KIT / PURIM / TENTEX.
     keep = {
@@ -3201,20 +3313,90 @@ def _ssa_oric_merge_parse_results(
             unbalanced,
             len(keep),
         )
-    # Keep stable sheet order: gray first, then up2-only keys.
+    # Keep stable sheet order from the densest full-page pass, then insert
+    # band-only SKUs after their nearest already-seen neighbor (GERIFORTE TAB
+    # after GERIFORTE SYRUP, LUKOL after LIV-52 DS SYRUP) instead of appending.
     ordered: List[Dict[str, Any]] = []
     seen = set()
+    spine_labels = {"gray", "up2"}
     for _label, result in results:
+        if _label not in spine_labels and not str(_label).startswith("band"):
+            continue
+        if _label not in spine_labels:
+            continue
         for item in result.get("line_items") or []:
             key = _ssa_oric_item_key(item)
             resolved = _ssa_oric_resolve_merge_key(keep, key) or (
                 key if key in keep else None
             )
+            if resolved is None:
+                hit = _ssa_oric_find_near_dup_key(
+                    {k: keep[k] for k in keep if k not in seen}, item
+                )
+                resolved = hit
             if resolved and resolved not in seen and resolved in keep:
                 ordered.append(keep[resolved])
                 seen.add(resolved)
+
+    def _ordered_keys() -> List[str]:
+        keys: List[str] = []
+        for it in ordered:
+            k = _ssa_oric_item_key(it)
+            resolved = _ssa_oric_resolve_merge_key(keep, k) or (
+                k if k in keep else None
+            )
+            if resolved:
+                keys.append(resolved)
+        return keys
+
+    for label, result in results:
+        if not str(label).startswith("band"):
+            continue
+        band_items = [
+            it for it in (result.get("line_items") or []) if isinstance(it, dict)
+        ]
+        for idx, item in enumerate(band_items):
+            key = _ssa_oric_item_key(item)
+            resolved = _ssa_oric_resolve_merge_key(keep, key) or (
+                key if key in keep else None
+            )
+            if resolved is None:
+                resolved = _ssa_oric_find_near_dup_key(keep, item)
+            if not resolved or resolved in seen or resolved not in keep:
+                continue
+            insert_at = len(ordered)
+            # Prefer the previous band neighbor already on the spine.
+            for back in range(1, idx + 1):
+                prev_item = band_items[idx - back]
+                prev_key = _ssa_oric_item_key(prev_item)
+                prev_res = _ssa_oric_resolve_merge_key(keep, prev_key) or (
+                    prev_key if prev_key in keep else None
+                )
+                if prev_res is None:
+                    prev_res = _ssa_oric_find_near_dup_key(
+                        {k: keep[k] for k in seen}, prev_item
+                    )
+                if prev_res and prev_res in seen:
+                    try:
+                        insert_at = _ordered_keys().index(prev_res) + 1
+                    except ValueError:
+                        insert_at = len(ordered)
+                    break
+            ordered.insert(insert_at, keep[resolved])
+            seen.add(resolved)
+            logger.info(
+                "SSA_ORIC_OCR_BAND_INSERT key=%s after_pos=%s from=%s",
+                resolved[:48],
+                insert_at,
+                label,
+            )
     for key, item in keep.items():
         if key not in seen:
+            # Drop all-zero OCR ghosts that near-dup an already kept SKU.
+            if _ssa_oric_row_is_static(item) and _ssa_oric_find_near_dup_key(
+                {k: keep[k] for k in seen}, item
+            ):
+                continue
             ordered.append(item)
             seen.add(key)
     for item in ordered:
@@ -3223,8 +3405,16 @@ def _ssa_oric_merge_parse_results(
     # Re-dedupe after name cleanup (PILEX KIT np, → PILEX KIT).
     final: Dict[str, Dict[str, Any]] = {}
     for item in ordered:
+        if _ssa_oric_product_name_junk(str(item.get("product_name") or "")):
+            continue
+        if _ssa_oric_row_is_static(item):
+            ghost = _ssa_oric_find_near_dup_key(final, item)
+            if ghost is not None and not _ssa_oric_row_is_static(final[ghost]):
+                continue
         key = _ssa_oric_item_key(item)
         existing = _ssa_oric_resolve_merge_key(final, key)
+        if existing is None:
+            existing = _ssa_oric_find_near_dup_key(final, item)
         if existing is None:
             final[key] = item
             continue
@@ -3238,31 +3428,13 @@ def _ssa_oric_merge_parse_results(
 
 
 def _ssa_oric_repair_row_qtys(item: Dict[str, Any]) -> None:
-    """Narrow OCR/Vision repairs — re-slot printed ORIC digits, never invent money."""
+    """Narrow OCR/Vision repairs — re-slot printed ORIC digits, never invent money.
+
+    Preserve printed sell-outs (OPENING==ISSUE, CLOSING dash/0). Never rewrite a
+    balancing row into a static open==close just because identity also works that
+    way — that silently replaces printed ISSUE/CLOSING.
+    """
     if _ssa_oric_item_balances(item):
-        # Static row with ISSUE/CLOSING swapped still "balances" as o+0-o=0.
-        o = _to_float(item.get("opening_qty"))
-        r = _to_float(item.get("receipts_qty"))
-        s = _to_float(item.get("sales_qty"))
-        c = _to_float(item.get("closing_qty"))
-        extra = item.setdefault("extra", {})
-        fs = extra.setdefault("field_source", {}) if isinstance(extra, dict) else {}
-        if (
-            isinstance(fs, dict)
-            and abs(r) < 1e-9
-            and abs(c) < 1e-9
-            and abs(o) > 1e-9
-            and abs(s - o) <= 0.51
-        ):
-            item["sales_qty"] = 0.0
-            item["closing_qty"] = float(o)
-            fs["sales_qty"] = "oric_static_issue_closing_swap"
-            fs["closing_qty"] = "oric_static_issue_closing_swap"
-            logger.info(
-                "SSA_ORIC_STATIC_SWAP product=%s opening=%s",
-                str(item.get("product_name") or "")[:40],
-                o,
-            )
         return
     o = _to_float(item.get("opening_qty"))
     r = _to_float(item.get("receipts_qty"))
@@ -3270,6 +3442,25 @@ def _ssa_oric_repair_row_qtys(item: Dict[str, Any]) -> None:
     c = _to_float(item.get("closing_qty"))
     extra = item.setdefault("extra", {})
     fs = extra.setdefault("field_source", {}) if isinstance(extra, dict) else {}
+
+    # Ghost RECEIPT on a static open==close row (OCR read a dash as a neighbor
+    # digit, e.g. MESHASHRINGI 23/7/0/23). Clear RECEIPT — do not invent ISSUE.
+    if (
+        isinstance(fs, dict)
+        and abs(o - c) <= 0.51
+        and abs(r) > 1e-9
+        and abs(s) < 1e-9
+        and not _ps_pharma_oric_balances(o, r, s, c)
+        and _ps_pharma_oric_balances(o, 0.0, 0.0, c)
+    ):
+        item["receipts_qty"] = 0.0
+        fs["receipts_qty"] = "oric_static_receipt_clear"
+        logger.info(
+            "SSA_ORIC_STATIC_RECEIPT_CLEAR product=%s cleared_receipt=%s",
+            str(item.get("product_name") or "")[:40],
+            r,
+        )
+        return
 
     # ISSUE also parked in RECEIPT (REOSTO/SEPTILIN TAB: r==s, o+0-s==c).
     if (
@@ -3310,11 +3501,14 @@ def _ssa_oric_repair_row_qtys(item: Dict[str, Any]) -> None:
     # ISSUE missing only when RECEIPT was actually read (GERIFORTE/KARELA).
     # Never derive ISSUE from open/close alone — that invents sales on Vision
     # column slips (MENOSAN 68/0/16/16 → 52, HIORA 10/0/0/1 → 9).
+    # Also skip when open==close: a non-zero RECEIPT there is usually a dash
+    # misread, not a real receipt that needs a derived ISSUE.
     if (
         isinstance(fs, dict)
         and abs(s) < 0.51
         and abs(r) > 0.51
         and abs(o) > 1e-9
+        and abs(o - c) > 0.51
     ):
         derived_s = o + r - c
         if (
@@ -3385,7 +3579,15 @@ def _ssa_oric_product_name_junk(name: str) -> bool:
     if re.match(r"^(SOAP|TAB|SYP|CREAM)\b", n):
         return True
     letters = sum(1 for c in n if c.isalpha())
-    return letters < 4
+    if letters < 4:
+        return True
+    # Phone band OCR invents glyph soup (LIiVwSe / iUUml) that is not a SKU.
+    if re.search(r"[a-z]{2,}[A-Z]|[A-Z]{2,}[a-z]{2,}[A-Z]", name or ""):
+        if re.search(r"ii|vv|uu|ww|l+i+v", n, re.I):
+            return True
+    if re.search(r"\bIUUML\b|\bSUGAR\s+TREE\b|\bDO\s+SUGAR\b", n):
+        return True
+    return False
 
 
 def _ssa_oric_clean_product_fields(item: Dict[str, Any]) -> None:
@@ -3546,7 +3748,9 @@ def _ssa_oric_qty_only_band_jpegs(file_bytes: bytes) -> List[bytes]:
     """Header + upper/lower body stitches so dense sheets stay readable.
 
     Two bands fit the Gemini call budget (max 2). Overlap the mid crease so a
-    product near the fold is not dropped from both crops.
+    product near the fold is not dropped from both crops. Lower band keeps the
+    printed TOTAL row. Compact phone pages (~25 SKUs) use a tighter overlap so
+    OCR/Vision merge does not invent duplicate product rows.
     """
     from PIL import Image, ImageOps
 
@@ -3561,10 +3765,17 @@ def _ssa_oric_qty_only_band_jpegs(file_bytes: bytes) -> List[bytes]:
     if width < 400 or height < 600:
         return []
     header = image.crop((0, int(height * 0.02), width, int(height * 0.18)))
-    # Overlap the mid crease so MENOSAN/MENTAT/LUKOL near the fold stay
-    # name-aligned in both bands (sheet really has ~46 printed SKUs).
-    upper_body = image.crop((0, int(height * 0.14), width, int(height * 0.60)))
-    lower_body = image.crop((0, int(height * 0.46), width, int(height * 0.93)))
+    # Compact phone screenshots of a full ORIC page (~25 SKUs) need less
+    # mid-crease overlap than dense ~46-SKU sheets.
+    compact = height <= 1900
+    upper_bottom = 0.58 if compact else 0.60
+    lower_top = 0.50 if compact else 0.46
+    upper_body = image.crop(
+        (0, int(height * 0.14), width, int(height * upper_bottom))
+    )
+    lower_body = image.crop(
+        (0, int(height * lower_top), width, int(height * 0.98))
+    )
 
     def _stitch(body: "Image.Image") -> bytes:
         canvas = Image.new(
@@ -3590,12 +3801,20 @@ def _ssa_oric_ocr_needs_vision(result: Optional[Dict[str, Any]]) -> bool:
     """True when qty-only ORIC OCR is too shifted/noisy to keep as final.
 
     Short but identity-balanced sheets (clean OCR of a small page) stay on OCR.
+    Escalate when the printed TOTAL footer was never read — phone OCR often
+    keeps rows but drops the TOTAL line, and band merge should have recovered it.
     """
     if not isinstance(result, dict):
         return True
     items = [it for it in (result.get("line_items") or []) if isinstance(it, dict)]
     if not items:
         return True
+    tot_extra = ((result.get("totals") or {}).get("extra") or {})
+    if str(tot_extra.get("total_row_source") or "") != "footer_total":
+        # Compact phone pages print a TOTAL under OPENING|RECEIPT|ISSUE|CLOSING.
+        # Missing footer after band OCR means the page still needs Vision.
+        if 12 <= len(items) <= 40:
+            return True
     unbalanced = sum(1 for it in items if not _ssa_oric_item_balances(it))
     if unbalanced / float(len(items)) >= 0.10:
         return True
@@ -4249,6 +4468,13 @@ def _ssa_oric_merge_vision_band_results(
             if _ssa_oric_row_is_static(item) and not _ssa_oric_row_is_static(prev):
                 continue
             take = False
+            same_opening = (
+                abs(
+                    _to_float(item.get("opening_qty"))
+                    - _to_float(prev.get("opening_qty"))
+                )
+                <= 0.51
+            )
             if cur_ok and not prev_ok:
                 take = True
             elif (
@@ -4256,10 +4482,16 @@ def _ssa_oric_merge_vision_band_results(
                 and _ssa_oric_row_is_static(prev)
             ):
                 take = True
-            elif cur_ok and prev_ok and _ssa_oric_move_score(item) > (
-                _ssa_oric_move_score(prev) + 0.5
+            elif (
+                cur_ok
+                and prev_ok
+                and same_opening
+                and _ssa_oric_move_score(item)
+                > (_ssa_oric_move_score(prev) + 0.5)
             ):
-                # Both balance — keep the stronger RECEIPT/ISSUE read (GERIFORTE).
+                # Both balance on the same SKU — keep the stronger RECEIPT/ISSUE
+                # read. Require matching OPENING so overlap crops cannot steal a
+                # neighbor's movement into a dashed row.
                 take = True
             elif cur_ok == prev_ok and bool(item.get("packing")) and not bool(
                 prev.get("packing")
@@ -4268,6 +4500,7 @@ def _ssa_oric_merge_vision_band_results(
             elif (
                 not cur_ok
                 and not prev_ok
+                and same_opening
                 and _ssa_oric_move_score(item) > _ssa_oric_move_score(prev) + 0.5
             ):
                 take = True
@@ -4366,6 +4599,27 @@ def _extract_ssa_oric_qty_only_vision(
     band_jpegs: List[bytes] = []
     if _ssa_oric_qty_only_vision_bands_enabled():
         band_jpegs = _ssa_oric_qty_only_band_jpegs(file_bytes)
+    # Compact phone ORIC pages (~25 printed SKUs) with a strong OCR seed stay
+    # on one full-page Vision call — overlapping bands previously duplicated
+    # product/packing identity into ~36 rows.
+    ocr_seed_n = len(
+        [row for row in (ocr_items or []) if isinstance(row, dict)]
+    )
+    if band_jpegs and 15 <= ocr_seed_n <= 32:
+        try:
+            from PIL import Image, ImageOps
+
+            probe = ImageOps.exif_transpose(Image.open(io.BytesIO(file_bytes)))
+            if probe is not None and int(probe.size[1]) <= 1900:
+                logger.info(
+                    "SSA_ORIC_QTY_ONLY_VISION file=%s status=single_page "
+                    "reason=compact_ocr_seed items=%s",
+                    filename,
+                    ocr_seed_n,
+                )
+                band_jpegs = []
+        except Exception:
+            pass
     payloads = band_jpegs if len(band_jpegs) >= 2 else [file_bytes]
     if len(payloads) == 1:
         mime = _image_mime(ext)
@@ -4709,9 +4963,63 @@ def _extract_ssa_oric_qty_only_photo(
             len((result or {}).get("line_items") or []),
         )
         return None
-    # Re-apply TOTAL from the richest OCR text when multi-pass merged rows.
-    if parsed_variants and text:
+    # Footer TOTAL is copied from band parses inside merge; if still missing,
+    # fall back to the first OCR text. Always re-stamp mismatch vs merged rows.
+    tot_extra = (result.get("totals") or {}).get("extra") or {}
+    if str(tot_extra.get("total_row_source") or "") != "footer_total" and text:
         result = _apply_total_row_to_result(result, text)
+    try:
+        items_now = [
+            it for it in (result.get("line_items") or []) if isinstance(it, dict)
+        ]
+        line_sums = {
+            "opening_qty": round(
+                sum(_to_float(i.get("opening_qty")) for i in items_now), 2
+            ),
+            "receipts_qty": round(
+                sum(_to_float(i.get("receipts_qty")) for i in items_now), 2
+            ),
+            "sales_qty": round(
+                sum(_to_float(i.get("sales_qty")) for i in items_now), 2
+            ),
+            "closing_qty": round(
+                sum(_to_float(i.get("closing_qty")) for i in items_now), 2
+            ),
+        }
+        tot = result.get("totals") or {}
+        if str((tot.get("extra") or {}).get("total_row_source") or "") == (
+            "footer_total"
+        ):
+            parsed_footer = {
+                "total_row_raw": (tot.get("extra") or {}).get("total_row_raw")
+                or "footer_total",
+                "total_row_numbers": [
+                    tot.get("opening_qty"),
+                    tot.get("receipts_qty"),
+                    tot.get("sales_qty"),
+                    tot.get("closing_qty"),
+                ],
+                "total_row_format": "opening_receipt_issue_closing",
+                "total_row_labels": [
+                    "OPENING",
+                    "RECEIPT",
+                    "ISSUE",
+                    "CLOSING",
+                ],
+                "opening_qty": tot.get("opening_qty"),
+                "receipts_qty": tot.get("receipts_qty"),
+                "sales_qty": tot.get("sales_qty"),
+                "closing_qty": tot.get("closing_qty"),
+            }
+            reject = _footer_qty_totals_implausible(parsed_footer, line_sums)
+            _stamp_oric_qty_printed_totals_with_mismatch(
+                result,
+                parsed_footer,
+                line_sums,
+                mismatch_reason=reject,
+            )
+    except Exception:
+        pass
     result["source_format"] = source_fmt
     extra = result.setdefault("totals", {}).setdefault("extra", {})
     extra["extraction_method"] = "ssa_oric_qty_only_ocr"
@@ -82331,10 +82639,42 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                     ),
                 )
                 return _opbal_photo
-        # Qty-only ORIC ANALYSIS: OCR+ps_pharma before VT (VT shifts RECEIPT).
-        if _is_ssa_oric_qty_only_text(_op_stk_peek) or _is_ssa_oric_qty_only_text_fuzzy(
-            _op_stk_peek
-        ):
+        # Qty-only ORIC ANALYSIS: OCR+ps_pharma before VT (VT shifts RECEIPT
+        # into purchase_qty, invents money footers, and duplicates via vertical
+        # split). Phone peeks often miss OPENING|RECEIPT|ISSUE|CLOSING while
+        # the ORIC up2+band reader still recovers the grid — also try on tall
+        # stacked screenshots when peek chrome is weak.
+        _peek_blocks_oric = bool(
+            re.search(
+                r"QTY\.?\s+VALUE|VALUE\s+QTY|\bDUMP\b|\bM\.?\s*EXP\b|\bRATE\b",
+                _op_stk_peek or "",
+                re.I,
+            )
+        )
+        _oric_try = (
+            not _peek_blocks_oric
+            and (
+                _is_ssa_oric_qty_only_text(_op_stk_peek)
+                or _is_ssa_oric_qty_only_text_fuzzy(_op_stk_peek)
+                or bool(
+                    re.search(
+                        r"STOCK\s*[&§]\s*SAL|SALES\s*ANAL|ES\s*ANALYSIS",
+                        _op_stk_peek or "",
+                        re.I,
+                    )
+                )
+            )
+        )
+        if not _oric_try and not _peek_blocks_oric:
+            try:
+                from PIL import Image as _PilOricGate
+
+                _oric_im = _PilOricGate.open(io.BytesIO(file_bytes))
+                _oric_w, _oric_h = _oric_im.size
+                _oric_try = _oric_h >= 1200 and _oric_h >= int(_oric_w * 1.6)
+            except Exception:
+                _oric_try = False
+        if _oric_try:
             try:
                 _oric_vt = _extract_ssa_oric_qty_only_photo(
                     file_bytes, filename, ext, ocr_hint=_op_stk_peek
@@ -82347,13 +82687,21 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                 )
                 _oric_vt = None
             if _oric_vt and _oric_vt.get("line_items"):
-                logger.info(
-                    "[STOCK_EXTRACTION_PATH] stage=ssa_oric_qty_only_ocr "
-                    "file=%s line_items=%s",
-                    filename,
-                    len(_oric_vt.get("line_items") or []),
+                _oric_method = str(
+                    ((_oric_vt.get("totals") or {}).get("extra") or {}).get(
+                        "extraction_method"
+                    )
+                    or ""
                 )
-                return _oric_vt
+                if _oric_method.startswith("ssa_oric_qty_only"):
+                    logger.info(
+                        "[STOCK_EXTRACTION_PATH] stage=ssa_oric_qty_only_ocr "
+                        "file=%s line_items=%s method=%s",
+                        filename,
+                        len(_oric_vt.get("line_items") or []),
+                        _oric_method,
+                    )
+                    return _oric_vt
         _main_stock_oric_peek = _peek_is_main_stock_oric_statement(_op_stk_peek or "")
         _ssa_sheets_qty_value = bool(
             (

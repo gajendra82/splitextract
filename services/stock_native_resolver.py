@@ -5997,7 +5997,6 @@ def apply_sales_total_value_recovery_fallback(
         ]
         return result
 
-    need = _stvr_needs_recovery(result)
     totals = result.setdefault("totals", {})
     if not isinstance(totals, dict):
         totals = {}
@@ -6006,6 +6005,39 @@ def apply_sales_total_value_recovery_fallback(
     if not isinstance(extra, dict):
         extra = {}
         totals["extra"] = extra
+
+    # Qty-only OPENING|RECEIPT|ISSUE|CLOSING: printed TOTAL digits stay in qty
+    # columns. Never remap ISSUE/CLOSING totals into sales_value/closing_value.
+    _method = str(extra.get("extraction_method") or "")
+    _layout = str(extra.get("layout") or "")
+    if (
+        extra.get("qty_only")
+        or _method.startswith("ssa_oric_qty_only")
+        or "opening_receipt_issue_closing" in _layout
+    ):
+        totals["sales_value"] = None
+        if (
+            _method.startswith("ssa_oric_qty_only")
+            or "opening_receipt_issue_closing" in _layout
+            or extra.get("qty_only")
+        ):
+            # Keep closing_value only when a money layout stamped it earlier.
+            if str(extra.get("total_row_format") or "") == (
+                "opening_receipt_issue_closing"
+            ) or _method.startswith("ssa_oric_qty_only"):
+                totals["closing_value"] = None
+        extra["sales_total_value_recovery"] = {
+            "status": "skipped",
+            "reason": "qty_only_oric",
+        }
+        logger.info(
+            "STOCK_SALES_TOTAL_VALUE_RECOVERY status=skipped reason=qty_only "
+            "method=%s",
+            _method or _layout or "qty_only",
+        )
+        return result
+
+    need = _stvr_needs_recovery(result)
 
     source_format = str(result.get("source_format") or extra.get("source_format") or "")
     log_base = {
