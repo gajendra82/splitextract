@@ -37410,6 +37410,18 @@ async def extract_sales_statement_endpoint(file: UploadFile = File(...)):
             logger.exception(
                 "STOCK_LMS_NEAREXP_FALLBACK api_boundary failed file=%s", filename
             )
+        try:
+            from services.stock_native_resolver import (
+                apply_universal_stock_footer_financials,
+            )
+
+            result = apply_universal_stock_footer_financials(
+                result, file_bytes=file_bytes
+            )
+        except Exception:
+            logger.exception(
+                "STOCK_FOOTER_FINANCIALS api_boundary failed file=%s", filename
+            )
         extra = ((result.get("totals") or {}).get("extra") or {})
         if extra.get("extraction_failed") and extra.get("photo_quality_rejected"):
             from services.stock_photo_quality import photo_quality_client_detail
@@ -38129,6 +38141,19 @@ async def extract_sales_statement_endpoint(
         except Exception:
             logger.exception(
                 "STOCK_LMS_NEAREXP_FALLBACK api_boundary failed file=%s", filename
+            )
+        try:
+            from services.stock_native_resolver import (
+                apply_universal_stock_footer_financials,
+            )
+
+            sales_result = apply_universal_stock_footer_financials(
+                sales_result, file_bytes=file_bytes
+            )
+            extra = ((sales_result.get("totals") or {}).get("extra") or {})
+        except Exception:
+            logger.exception(
+                "STOCK_FOOTER_FINANCIALS api_boundary failed file=%s", filename
             )
         # POD hospital GRN workbooks keep the invoice wrapper. Secondary-sales
         # reprocess requires the original statement contract (line_items,

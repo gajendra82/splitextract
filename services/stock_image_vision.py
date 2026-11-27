@@ -584,6 +584,53 @@ def assess_stock_structured_quality(
         except Exception:
             pass
 
+    # Op.Qty/Op.Val Detail + SSA qty/value: flag Op→P/Cl copies, Sl.No gaps,
+    # and printed S.Val/Cl.Val header-total mismatches for needs_direct_gemini.
+    # Native Excel/Word with excel_column_aligned skip (columns already mapped).
+    detail_or_ssa = (
+        method
+        in {
+            "ssa_qty_value_vision",
+            "ssa_qty_value_vision_pdf",
+            "ssa_opening_receipt_issue_value",
+            "stock_sales_op_qty_val_vision",
+            "stock_sales_detail_opval",
+            "docx_stock_sales_detail",
+        }
+        or layout
+        in {
+            "ssa_opening_receipt_issue_value",
+            "ssa_opening_receipt_issue",
+            "stock_sales_op_qty_val",
+            "stock_sales_detail_opval",
+        }
+        or "stock_sales_op_qty_val" in method
+        or "stock_sales_detail" in method
+    )
+    if detail_or_ssa and not extra.get("excel_column_aligned"):
+        try:
+            from services.stock_direct_vision import (
+                _detail_op_qty_val_alignment_signals,
+            )
+
+            align = _detail_op_qty_val_alignment_signals(result)
+            for tag in align.get("soft_reasons") or []:
+                if tag not in reasons:
+                    reasons.append(tag)
+                trusted = False
+            if align.get("soft_reasons"):
+                logger.info(
+                    "STOCK_DETAIL_ALIGNMENT_QUALITY method=%s layout=%s "
+                    "reasons=%s max_sl=%s rows=%s",
+                    method,
+                    layout,
+                    ",".join(align.get("soft_reasons") or []),
+                    align.get("max_sl_no"),
+                    align.get("row_count"),
+                )
+        except Exception:
+            pass
+
     extraction_confidence = signals.get(
         "extraction_confidence", extra.get("extraction_confidence")
     )

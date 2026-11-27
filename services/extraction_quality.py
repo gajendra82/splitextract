@@ -225,7 +225,13 @@ def _identity_applies(
     if extra.get("stock_identity_fail_count") is None and not veto_active:
         return False
     kind = str(extra.get("stock_identity_kind") or "")
-    if not veto_active and kind not in {"", "opening_receipts_sales_closing"}:
+    # Layout-specific identities still score when fail_count is present.
+    _identity_kinds = {
+        "",
+        "opening_receipts_sales_closing",
+        "open_pur_ret_sales_close",
+    }
+    if not veto_active and kind not in _identity_kinds:
         return False
     # Validator already counted failures for this formula — always score them when
     # the sheet actually uses opening/receipts/sales. Pure closing-only sheets
@@ -367,6 +373,268 @@ def assess_extraction_quality(
     return evaluate_extraction_quality(result, source_metadata)
 
 
+def _score_financial_extraction(result: Dict[str, Any], extra: Dict[str, Any]) -> Dict[str, Any]:
+    """Independent financial score — aggregates only; null ≠ zero."""
+    totals = result.get("totals") if isinstance(result.get("totals"), dict) else {}
+    detected = list(extra.get("footer_detected_columns") or [])
+    missing = list(extra.get("footer_financial_missing_columns") or [])
+    footer = extra.get("footer_financials") if isinstance(extra.get("footer_financials"), dict) else {}
+    qty_only = bool(extra.get("qty_only"))
+
+    # Detected source columns from footer, else infer from present aggregate keys.
+    if not detected and footer.get("detected_columns"):
+        detected = list(footer["detected_columns"])
+    if not detected:
+        for key in (
+            "opening_value",
+            "inward_value",
+            "receipts_value",
+            "sales_value",
+            "outward_value",
+            "closing_value",
+            "lms_value",
+        ):
+            if totals.get(key) not in (None, "") or extra.get(key) not in (None, ""):
+                detected.append(key)
+
+    present = 0
+    for col in detected:
+        if col == "opening_value" and (
+            totals.get("opening_value") not in (None, "")
+            or extra.get("opening_value") not in (None, "")
+        ):
+            present += 1
+        elif col in {"inward_value", "receipts_value", "purchase_value"} and (
+            extra.get("inward_value") not in (None, "")
+            or extra.get("receipts_value") not in (None, "")
+            or extra.get("purchase_value") not in (None, "")
+            or totals.get("receipts_value") not in (None, "")
+        ):
+            present += 1
+        elif col in {"outward_value", "sales_value"} and (
+            totals.get("sales_value") not in (None, "")
+            or extra.get("outward_value") not in (None, "")
+            or extra.get("sales_value") not in (None, "")
+        ):
+            present += 1
+        elif col == "closing_value" and (
+            totals.get("closing_value") not in (None, "")
+            or extra.get("closing_value") not in (None, "")
+        ):
+            present += 1
+        elif col == "lms_value" and extra.get("lms_value") not in (None, ""):
+            present += 1
+
+    # Prefer explicit footer completeness when the extractor stamped it.
+    if extra.get("footer_financial_complete") is True and not missing:
+        return {
+            "score": 100,
+            "detected_columns": detected
+            or list(extra.get("footer_detected_columns") or []),
+            "present_columns": present or len(detected),
+            "missing_columns": [],
+            "complete": True,
+            "qty_only": qty_only,
+            "source": extra.get("footer_financial_source") or footer.get("source"),
+        }
+
+    if not detected:
+        # Qty-only sheets without a Values footer: financial N/A, not a fail.
+        score = 100 if qty_only else 50
+        return {
+            "score": score,
+            "detected_columns": [],
+            "present_columns": present,
+            "missing_columns": missing,
+            "complete": qty_only,
+            "qty_only": qty_only,
+        }
+
+    score = int(round(100.0 * present / max(len(detected), 1)))
+    if missing:
+        score = min(score, max(0, 100 - 20 * len(missing)))
+    if extra.get("footer_financial_complete") is False:
+        score = min(score, 70)
+    complete = bool(
+        (not missing and present >= len(detected))
+        or extra.get("footer_financial_complete") is True
+    )
+    return {
+        "score": max(0, min(100, score)),
+        "detected_columns": detected,
+        "present_columns": present,
+        "missing_columns": missing,
+        "complete": complete,
+        "qty_only": qty_only,
+        "source": extra.get("footer_financial_source") or footer.get("source"),
+    }
+
+
+def _score_quantity_extraction(items: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Independent quantity completeness across opening/receipts/sales/closing.
+
+    Rows whose field_source marks every qty as missing (printed blank product
+    lines) are completeness-neutral — they are not treated as failed numerics.
+    """
+    if not items:
+        return {"score": 0, "numeric_pct": 0.0, "movement_pct": 0.0}
+    numeric_rows = 0
+    movement_rows = 0
+    scored_rows = 0
+    blank_rows = 0
+    for item in items:
+        extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        fs = extra.get("field_source") if isinstance(extra.get("field_source"), dict) else {}
+        qty_keys = ("opening_qty", "receipts_qty", "sales_qty", "closing_qty")
+        if fs and all(fs.get(k) == "missing" for k in qty_keys):
+            blank_rows += 1
+            continue
+        scored_rows += 1
+        qty_fields = tuple(item.get(k) for k in qty_keys)
+        if any(_number(value) is not None for value in qty_fields):
+            numeric_rows += 1
+        if any((_number(value) or 0.0) != 0.0 for value in qty_fields):
+            movement_rows += 1
+    denom = max(scored_rows, 1)
+    numeric_pct = 100.0 * numeric_rows / denom
+    movement_pct = 100.0 * movement_rows / denom
+    if scored_rows == 0 and blank_rows > 0:
+        score = 100
+    else:
+        score = int(round(0.7 * numeric_pct + 0.3 * min(100.0, movement_pct * 1.2)))
+    return {
+        "score": max(0, min(100, score)),
+        "numeric_pct": round(numeric_pct, 2),
+        "movement_pct": round(movement_pct, 2),
+        "blank_printed_rows": blank_rows,
+        "scored_rows": scored_rows,
+    }
+
+
+def _score_identity_extraction(
+    items: List[Dict[str, Any]],
+    extra: Dict[str, Any],
+    *,
+    veto_active: bool,
+    veto_info: Dict[str, Any],
+    identity_gate: float,
+) -> Dict[str, Any]:
+    """Independent stock-identity score."""
+    fail_count = extra.get("stock_identity_fail_count")
+    applies = _identity_applies(items, extra, veto_active=veto_active)
+    # Short OP/PI document-gap sheets record discrepancies separately; the
+    # OP+PI−Sale formula is not an extract identity gate.
+    if (
+        str(extra.get("extraction_method") or "") == "stock_sales_op_pi_clqty"
+        or extra.get("stock_document_gap")
+    ):
+        return {
+            "score": 100,
+            "applies": False,
+            "fail_count": int(fail_count or 0),
+            "fail_pct": 0.0,
+            "document_gap": True,
+            "discrepancy_count": int(
+                extra.get("stock_reconciliation_discrepancy_count")
+                or extra.get("stock_identity_discrepancy_count")
+                or 0
+            ),
+        }
+    if fail_count is None or not items or not applies:
+        return {
+            "score": 100 if not applies else 80,
+            "applies": applies,
+            "fail_count": fail_count,
+            "fail_pct": None,
+        }
+    fail_pct = 100.0 * float(fail_count) / max(len(items), 1)
+    if veto_active and veto_info.get("veto"):
+        score = 0
+    elif fail_pct <= max(0.0, identity_gate):
+        score = int(round(100.0 - fail_pct))
+    else:
+        score = max(0, int(round(70.0 - fail_pct)))
+    return {
+        "score": max(0, min(100, score)),
+        "applies": True,
+        "fail_count": fail_count,
+        "fail_pct": round(fail_pct, 2),
+    }
+
+
+def _score_row_completeness(
+    items: List[Dict[str, Any]],
+    *,
+    name_pct: float,
+    noise_pct: float,
+    header_rows: int,
+    extra: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """Independent product-row / identity-of-rows score."""
+    if not items:
+        return {"score": 0, "name_pct": 0.0, "noise_pct": 0.0, "header_rows": 0}
+    extra = extra or {}
+    score = 100
+    score -= int(max(0.0, 50 - name_pct))
+    score -= int(max(0.0, noise_pct - 30))
+    if header_rows:
+        score -= min(40, header_rows * 8)
+    dup = _duplicate_percent(items)
+    if len(items) >= 6 and dup > 40:
+        score -= 20
+
+    source_rows = extra.get("source_product_row_count")
+    extracted_rows = extra.get("extracted_product_row_count")
+    if extracted_rows is None:
+        extracted_rows = len(items)
+    missing_source_rows = 0
+    try:
+        if source_rows is not None and int(source_rows) > int(extracted_rows):
+            missing_source_rows = int(source_rows) - int(extracted_rows)
+            score -= min(40, missing_source_rows * 4)
+    except (TypeError, ValueError):
+        missing_source_rows = 0
+
+    # Shadow classifier: blank printed rows are MISSING_VALUE (acceptable).
+    # Only assignment/OCR/structural suspects should hurt completeness.
+    shadow = extra.get("shadow_row_classification")
+    valid_pct = None
+    suspect_pct = None
+    if isinstance(shadow, dict):
+        counts = shadow.get("row_status_counts") or {}
+        if isinstance(counts, dict) and items:
+            acceptable = (
+                int(counts.get("VALID") or 0)
+                + int(counts.get("MISSING_VALUE") or 0)
+                + int(counts.get("MINOR_DISCREPANCY") or 0)
+                + int(counts.get("CLOSING_DERIVED") or 0)
+            )
+            suspects = (
+                int(counts.get("COLUMN_ASSIGNMENT_SUSPECTED") or 0)
+                + int(counts.get("OCR_VALUE_SUSPECTED") or 0)
+                + int(counts.get("STRUCTURAL_ERROR") or 0)
+            )
+            valid_pct = 100.0 * acceptable / len(items)
+            suspect_pct = 100.0 * suspects / len(items)
+            if suspect_pct > 10:
+                score -= int(min(40, round(suspect_pct)))
+            elif valid_pct < 85:
+                score -= int(min(25, round(85 - valid_pct)))
+
+    return {
+        "score": max(0, min(100, score)),
+        "name_pct": round(name_pct, 2),
+        "noise_pct": round(noise_pct, 2),
+        "header_rows": header_rows,
+        "duplicate_pct": round(dup, 2),
+        "row_count": len(items),
+        "source_row_count": source_rows,
+        "missing_source_rows": missing_source_rows,
+        "valid_row_pct": round(valid_pct, 2) if valid_pct is not None else None,
+        "suspect_row_pct": round(suspect_pct, 2) if suspect_pct is not None else None,
+    }
+
+
 def evaluate_extraction_quality(
     result: Optional[Dict[str, Any]],
     source_metadata: Optional[Dict[str, Any]] = None,
@@ -379,6 +647,12 @@ def evaluate_extraction_quality(
             "score": 0,
             "should_fallback": True,
             "reasons": ["empty_line_items"],
+            "dimension_scores": {
+                "financial": {"score": 0},
+                "quantity": {"score": 0},
+                "identity": {"score": 0},
+                "row_completeness": {"score": 0},
+            },
         }
 
     items = _items(result)
@@ -492,6 +766,10 @@ def evaluate_extraction_quality(
         # sheet itself; keep header-aligned Cr/Db columns, do not Gemini-overwrite.
         "stock_sales_detail_opval",
         "docx_stock_sales_detail",
+        # Short OP/PI/Sale/CLQty XLSX: printed CLQty often ≠ OP+PI−Sale
+        # (hidden transfers). Keep openpyxl rows; discrepancies are reported
+        # via recon counters, not as extract corruption.
+        "stock_sales_op_pi_clqty",
     } and os.getenv(
         "STOCK_OP_QTY_VAL_KEEP_ON_IDENTITY_FAIL", "true"
     ).strip().lower() in {"1", "true", "yes", "on"}
@@ -531,14 +809,122 @@ def evaluate_extraction_quality(
                 protected = False
                 reasons.append("stock_identity_failure")
                 hard_fail = True
+
+    # Independent dimension scores (always computed).
+    financial_dim = _score_financial_extraction(result, extra if isinstance(extra, dict) else {})
+    quantity_dim = _score_quantity_extraction(items)
+    identity_dim = _score_identity_extraction(
+        items,
+        extra if isinstance(extra, dict) else {},
+        veto_active=veto_active,
+        veto_info=veto_info,
+        identity_gate=identity_gate,
+    )
+    row_dim = _score_row_completeness(
+        items,
+        name_pct=name_pct,
+        noise_pct=noise_pct,
+        header_rows=header_rows,
+        extra=extra if isinstance(extra, dict) else {},
+    )
+    dimension_scores = {
+        "financial": financial_dim,
+        "quantity": quantity_dim,
+        "identity": identity_dim,
+        "row_completeness": row_dim,
+    }
+
+    # Footer detected but incomplete → surface as reason (does not alone veto natives).
+    # Never claim missing_footer_financials when the extractor stamped complete=true.
+    footer_complete_flag = (
+        extra.get("footer_financial_complete")
+        if isinstance(extra, dict)
+        else None
+    )
+    if (
+        financial_dim.get("detected_columns")
+        and not financial_dim.get("complete")
+        and footer_complete_flag is not True
+    ):
+        if "missing_footer_financials" not in reasons:
+            reasons.append("missing_footer_financials")
+    elif footer_complete_flag is True and "missing_footer_financials" in reasons:
+        reasons = [r for r in reasons if r != "missing_footer_financials"]
+
+    try:
+        _fail_n = int(fail_count) if fail_count is not None else 0
+    except (TypeError, ValueError):
+        _fail_n = 0
+    _short_op_pi_doc_gap = (
+        method == "stock_sales_op_pi_clqty"
+        or bool(extra.get("stock_document_gap"))
+        if isinstance(extra, dict)
+        else method == "stock_sales_op_pi_clqty"
+    )
+    if (
+        _fail_n > 0
+        and "stock_identity_failure" not in reasons
+        and not _short_op_pi_doc_gap
+    ):
+        reasons.append("stock_identity_failure")
+    if int(row_dim.get("missing_source_rows") or 0) > 0:
+        if "missing_source_rows" not in reasons:
+            reasons.append("missing_source_rows")
+    valid_row_pct = row_dim.get("valid_row_pct")
+    suspect_row_pct = row_dim.get("suspect_row_pct")
+    if suspect_row_pct is not None and float(suspect_row_pct) > 15:
+        if "low_valid_row_rate" not in reasons:
+            reasons.append("low_valid_row_rate")
+    elif valid_row_pct is not None and float(valid_row_pct) < 70:
+        if "low_valid_row_rate" not in reasons:
+            reasons.append("low_valid_row_rate")
+
+    # Perfect score is forbidden when identity / completeness / financial dims fail.
+    dim_floor = min(
+        int(financial_dim.get("score") or 100),
+        int(quantity_dim.get("score") or 100),
+        int(identity_dim.get("score") or 100),
+        int(row_dim.get("score") or 100),
+    )
+    imperfect = (
+        _fail_n > 0
+        or int(row_dim.get("missing_source_rows") or 0) > 0
+        or (suspect_row_pct is not None and float(suspect_row_pct) > 5)
+        or (
+            financial_dim.get("detected_columns")
+            and not financial_dim.get("complete")
+        )
+        or dim_floor < 100
+    )
+
     if protected and not (veto_active and veto_info.get("veto")):
-        return {
+        out = {
             "quality": "good",
             "score": 100,
             "should_fallback": False,
             "reasons": [],
             "parser": method,
+            "dimension_scores": dimension_scores,
         }
+        if imperfect:
+            # Named parsers stay primary (no Gemini fallback) but cannot claim
+            # a perfect score when validation / completeness is incomplete.
+            out["score"] = max(0, min(99, dim_floor))
+            out["reasons"] = list(reasons)
+            out["quality"] = "good" if out["score"] >= quality_threshold() else "poor"
+            # Only force fallback on hard corruption — not mere identity misses
+            # on otherwise column-accurate native extracts.
+            out["should_fallback"] = bool(hard_fail)
+        if financial_dim.get("detected_columns") and not financial_dim.get("complete"):
+            if "missing_footer_financials" not in out["reasons"]:
+                out["reasons"] = list(out.get("reasons") or []) + [
+                    "missing_footer_financials"
+                ]
+            if not financial_dim.get("source"):
+                out["should_fallback"] = True
+                out["quality"] = "poor"
+                out["score"] = min(int(out.get("score") or 100), int(financial_dim.get("score") or 0))
+        return out
 
     if items and not hard_fail:
         if name_pct < 50:
@@ -594,6 +980,8 @@ def evaluate_extraction_quality(
             score -= 35
         if "all_zero_suspicious" in reasons:
             score -= 30
+        if "missing_footer_financials" in reasons:
+            score -= max(0, 25 - int((financial_dim.get("score") or 0) // 4))
         score = max(0, min(100, score))
 
     # Phase 4a: failed soffice convert → never KEEP_PARSER at score 100.
@@ -613,6 +1001,15 @@ def evaluate_extraction_quality(
     # Empty extract always falls back when Vision can see the file.
     if not items:
         should_fallback = True
+    # Missing footer money alone should not force Gemini when rows/qty are solid
+    # and a Values band was never printed (qty_only without detected columns).
+    if (
+        reasons == ["missing_footer_financials"]
+        and financial_dim.get("qty_only")
+        and not financial_dim.get("detected_columns")
+    ):
+        should_fallback = False
+        reasons = []
 
     return {
         "quality": "poor" if should_fallback else "good",
@@ -620,4 +1017,5 @@ def evaluate_extraction_quality(
         "should_fallback": should_fallback,
         "reasons": reasons,
         "parser": method or "generic",
+        "dimension_scores": dimension_scores,
     }

@@ -315,6 +315,11 @@ ALIASES: Dict[str, List[str]] = {
         "opening bal qty",
         "openbal qty",
         "opening stock",
+        # HSN/SAC CODE WISE STOCK REPORT: OPENING STOCK-1 (series suffix).
+        "opening stock 1",
+        # Bare "STOCK-1" word box when "OPENING STOCK-1" header splits into
+        # two cells — prevents the closing alias "stock" from capturing it.
+        "stock 1",
         # Vision/OCR often truncates the final letter(s) of "Opening stock".
         "opening stoc",
         # MR Report: OPENING STK QTY (two-line header).
@@ -451,6 +456,14 @@ ALIASES: Dict[str, List[str]] = {
         "nt sale",
         "nt sale qnty",
         "nt sale qty",
+        # HSN/SAC CODE WISE STOCK REPORT: NET SALE-1.
+        "net sale",
+        "net sale 1",
+        "net sales",
+        "net sale qty",
+        "net sale value",
+        "net sale value 1",
+
         # Secondary Qty Total (customer secondary-sale grids).
         "secondary qty total",
         "secondary qty tota",
@@ -618,6 +631,8 @@ ALIASES: Dict[str, List[str]] = {
         "ci stk",
         "cb",
         "closing stock",
+        # HSN/SAC CODE WISE STOCK REPORT: CLOSING STOCK-1.
+        "closing stock 1",
         "closing stoc",  # wrapped CLOSING STOC(K)
         "closing qty",
         "closing balance",
@@ -675,14 +690,19 @@ ALIASES: Dict[str, List[str]] = {
         "goods in",
         "goods inward",
         # MR Report / Stock and Sales: PUR FREE QTY | SALE FREE QTY.
+        # Phone OCR often truncates FREE → Fre.
         "pur free",
         "pur free qty",
+        "pur fre",
         "purchase free",
         "purchase free qty",
+        "purchase fre",
         "sale free",
         "sale free qty",
+        "sale fre",
         "sales free",
         "sales free qty",
+        "sales fre",
         # Compact SFree beside Sale on Op|Pur|Sale|Stk|Rate grids.
         "sfree",
         "s free",
@@ -703,6 +723,7 @@ ALIASES: Dict[str, List[str]] = {
     # Signed adjustment between sales and closing (outward when negative).
     "others": [
         "others",
+        "other",  # Opening|Inward|Sales|Other|Closing qty grids
         "others qty",
         "other qty",
         "adj",
@@ -977,6 +998,15 @@ _DIRECT_VALUE_FIELDS = {
     "sal. val": "sales_value",
     "sales value": "sales_value",
     "sale value": "sales_value",
+    # STOCK REGISTER: SALE | AMOUNT-I | CL.STOCK | AMOUNT-II
+    "amount i": "sales_value",
+    "amount-i": "sales_value",
+    "amounti": "sales_value",
+    "amount ii": "closing_value",
+    "amount-ii": "closing_value",
+    "amountii": "closing_value",
+    "amount 2": "closing_value",
+    "amount2": "closing_value",
     "secondary value": "sales_value",
     "secondary val": "sales_value",
     "secondary valu": "sales_value",
@@ -1335,11 +1365,11 @@ def _pick_group(norm: str) -> Tuple[Optional[str], float, str]:
                 or "opening" in compact_norm
             ):
                 continue
-        # "Receipt Free" / "Purchase Free" is free-in, not purchase.
-        if group == "purchase" and "free" in tokens:
+        # "Receipt Free" / "Purchase Free" / truncated "Purchase Fre" is free-in.
+        if group == "purchase" and (set(tokens) & {"free", "fre"}):
             continue
-        # "Sales Free" is free-out, not sales qty.
-        if group == "sales" and "free" in tokens:
+        # "Sales Free" / truncated "Sale Fre" is free-out, not sales qty.
+        if group == "sales" and (set(tokens) & {"free", "fre"}):
             continue
         # "Ins Sale" / institution sale is not period sales_qty.
         if group == "sales" and set(tokens) & {
@@ -4728,12 +4758,49 @@ _TRAILING_EXPIRY_AFTER_AMOUNT = re.compile(
 # Single comma + 1–2 fraction digits, no other separators → decimal comma.
 _EU_DECIMAL_COMMA = re.compile(r"^(-?\d+),(\d{1,2})$")
 
+# Footer chrome: "N indicates Non Moving Stock" / "E stands for Short Expiry".
+# Qty cells print as "16 N" / "16N" / "3 E" — peel the letter, keep the qty.
+_STOCK_STATUS_MARKER_RE = re.compile(
+    r"^(?P<num>.+?)\s*(?P<marker>[EN])\s*$",
+    re.I,
+)
+
+
+def parse_qty_with_stock_marker(
+    raw: Any, *, allow_internal_spaces: bool = False
+) -> Tuple[Optional[float], Optional[str]]:
+    """Parse a qty cell that may carry a trailing non-moving / short-expiry marker.
+
+    Returns ``(qty, marker)`` where marker is ``\"N\"`` / ``\"E\"`` or None.
+    Never invents a qty — unreadable cells return ``(None, None)``.
+    """
+    if raw is None or isinstance(raw, bool):
+        return None, None
+    if isinstance(raw, (int, float)):
+        return float(raw), None
+    text = decode_pdf_pseudo_digits(str(raw).strip())
+    if not text:
+        return None, None
+    marker: Optional[str] = None
+    # Do not treat unit "NOs"/"Nos" as the N marker — unit peel runs in parse_number.
+    if not re.search(r"(?i)\b(?:nos?|pcs?|units?|qty|qnty)\.?$", text):
+        m = _STOCK_STATUS_MARKER_RE.match(text)
+        if m and not re.search(r"[A-Za-z]", m.group("num")):
+            marker = m.group("marker").upper()
+            text = m.group("num").strip()
+    qty = parse_number(text, allow_internal_spaces=allow_internal_spaces)
+    if qty is None:
+        return None, None
+    return float(qty), marker
+
 
 def parse_number(raw: Any, *, allow_internal_spaces: bool = False) -> Optional[float]:
     """Parse a printed quantity/amount into float|None.
 
     Handles Indian grouping, accounting negatives, dashes/nil as None,
     and 0 / 0.00 as 0.0. Internal spaces only when allow_internal_spaces.
+    Also peels trailing stock-status markers (``16 N`` / ``3E``) so closing
+    qty is never marked missing when the digit is printed.
     """
     if raw is None:
         return None
@@ -4769,6 +4836,11 @@ def parse_number(raw: Any, *, allow_internal_spaces: bool = False) -> Optional[f
     )
     if unit_glued:
         text = unit_glued.group(1).strip()
+    else:
+        # Non-moving / short-expiry marker after the digit (not a unit).
+        marker_glued = _STOCK_STATUS_MARKER_RE.match(text)
+        if marker_glued and not re.search(r"[A-Za-z]", marker_glued.group("num")):
+            text = marker_glued.group("num").strip()
 
     # Peel BEFORE digit-space collapse — otherwise "81.56 01-Nov-28" becomes
     # "81.5601-Nov-28" and fails. Pipe gutter peel handles "|" forms below.
