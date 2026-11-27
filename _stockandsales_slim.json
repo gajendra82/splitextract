@@ -1,0 +1,112 @@
+{
+  "n": 54,
+  "method": "item_pack_sreturn_others",
+  "layout": "item_pack_sreturn_others",
+  "samples": [
+    {
+      "n": "ASHVAGANDHA TAB",
+      "oq": 41.0,
+      "sq": 29.0,
+      "sv": 5423.93,
+      "cq": 12.0
+    },
+    {
+      "n": "AYURSLIM 3*60CAP.",
+      "oq": 6.0,
+      "sq": 0.0,
+      "sv": 0.0,
+      "cq": 6.0
+    },
+    {
+      "n": "SHATAVARI TAB",
+      "oq": 59.0,
+      "sq": 8.0,
+      "sv": 1730.35,
+      "cq": 51.0
+    },
+    {
+      "n": "BONNISAN 200ML SYP",
+      "oq": 15.0,
+      "sq": 2.0,
+      "sv": 214.85,
+      "cq": 13.0
+    },
+    {
+      "n": "BONNISAN DROPS",
+      "oq": 19.0,
+      "sq": 10.0,
+      "sv": 703.3,
+      "cq": 9.0
+    },
+    {
+      "n": "BRESOL SYP 200ML",
+      "oq": 18.0,
+      "sq": 4.0,
+      "sv": 622.4,
+      "cq": 15.0
+    },
+    {
+      "n": "BRESOL TAB",
+      "oq": 48.0,
+      "sq": 9.0,
+      "sv": 1608.04,
+      "cq": 39.0
+    },
+    {
+      "n": "CYSTONE FORTE TAB",
+      "oq": 16.0,
+      "sq": 3.0,
+      "sv": 340.4,
+      "cq": 13.0
+    },
+    {
+      "n": "EVECARE CAP",
+      "oq": 94.0,
+      "sq": 5.0,
+      "sv": 879.41,
+      "cq": 89.0
+    },
+    {
+      "n": "EVECARE FORTE SYP",
+      "oq": 7.0,
+      "sq": 1.0,
+      "sv": 169.65,
+      "cq": 6.0
+    },
+    {
+      "n": "EVECARE SYP 400ML",
+      "oq": 2.0,
+      "sq": 1.0,
+      "sv": 237.4,
+      "cq": 1.0
+    },
+    {
+      "n": "EVECARE SYP200ML",
+      "oq": 16.0,
+      "sq": 6.0,
+      "sv": 920.89,
+      "cq": 10.0
+    },
+    {
+      "n": "GALACTOSURE GRANULES(ELAICHI)",
+      "oq": 12.0,
+      "sq": 0.0,
+      "sv": 0.0,
+      "cq": 12.0
+    },
+    {
+      "n": "GASEX SYRUP ELAICHI",
+      "oq": 1.0,
+      "sq": 1.0,
+      "sv": 98.4,
+      "cq": 0.0
+    },
+    {
+      "n": "GASEX SYRUP GINGER",
+      "oq": 22.0,
+      "sq": 2.0,
+      "sv": 217.13,
+      "cq": 20.0
+    }
+  ]
+}

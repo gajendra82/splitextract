@@ -2032,6 +2032,65 @@ _PHARMASSIST_MONTH = (
 )
 
 
+def _has_item_pack_free_return_headers(text: str) -> bool:
+    """PRODUCT|PACK|OPENING|PURCHASE|FREE|P.RETURN|…|SALE|…|CLOSING qty-only family.
+
+    Distinct from PharmAssist Op/Pur/Bal/BVal and from SaleRet/ClosStock.
+    """
+    blob = text or ""
+    if not blob.strip():
+        return False
+    if not (
+        re.search(r"\b(?:PRODUCT|ITEM)\b", blob, re.I)
+        and re.search(r"\bPACK\b", blob, re.I)
+        and re.search(r"\bOPENING\b", blob, re.I)
+        and re.search(r"\bPURCHASE\b", blob, re.I)
+        and re.search(r"\bSALE\b", blob, re.I)
+        and re.search(r"\bCLOSING\b", blob, re.I)
+    ):
+        return False
+    has_free = bool(re.search(r"\bFREE\b", blob, re.I))
+    has_ret = bool(re.search(r"\bP\.?\s*RETURN\b|\bS\.?\s*RETURN\b", blob, re.I))
+    return bool(has_free and has_ret)
+
+
+def _pharmassist_result_has_native_chrome(result: Optional[Dict[str, Any]]) -> bool:
+    """True when Vision saw real PharmAssist chrome (not the default title stamp).
+
+    Blank-OCR divert used to keep FREE/P.RETURN ANALYSIS sheets because
+    extract_pharmassist stamps report_title='Stock and Sale Report' by default
+    and zeros SALE.
+    """
+    if not isinstance(result, dict):
+        return False
+    title = str(result.get("report_title") or "")
+    if re.search(r"\bPharmAssist\b", title, re.I):
+        return True
+    if re.search(r"STOCK\s+AND\s+SALES\s+ANALYSIS", title, re.I):
+        return False
+    prior_keys = (
+        "jul_qty",
+        "jun_qty",
+        "aug_qty",
+        "sep_qty",
+        "prior_month_a_qty",
+        "prior_month_b_qty",
+        "bval",
+        "sval",
+        "order_qty",
+    )
+    hits = 0
+    for item in result.get("line_items") or []:
+        if not isinstance(item, dict):
+            continue
+        extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        if any(extra.get(k) not in (None, "", 0, 0.0) for k in prior_keys):
+            hits += 1
+            if hits >= 3:
+                return True
+    return False
+
+
 def _has_pharmassist_stock_sale_headers(text: str) -> bool:
     """C-Square PharmAssist Stock and Sale Report (photo or PDF OCR).
 
@@ -2040,6 +2099,9 @@ def _has_pharmassist_stock_sale_headers(text: str) -> bool:
     OCR-tolerant: leading S of Stock may drop; BVal/SVal case varies.
     """
     blob = text or ""
+    # FREE|P.RETURN qty-only ANALYSIS grids are not PharmAssist.
+    if _has_item_pack_free_return_headers(blob):
+        return False
     title = bool(
         re.search(r"(?:S)?tock\s+and\s+Sale\s+Report", blob, re.I)
         or re.search(r"STOCK\s+AND\s+SALES\s+ANALYSIS", blob, re.I)
@@ -2243,9 +2305,25 @@ def classify_stock_direct_vision(
             "reason": "product_wise_stock_statement_headers",
         }
 
+    # STOCK & SALES ANALYSIS Opening/Receipt/Issue/Closing(+Dump) must beat
+    # both SaleRet (_ZA_) and the generic ORIC qty|value "return None" below.
+    if (
+        _ssa_issue_closing_beats_filename_za_enabled()
+        and _has_ssa_opening_receipt_issue_closing_headers(peek_text or "")
+    ):
+        return {
+            "layout": "ssa_opening_receipt_issue",
+            "schema": "opening_receipt_issue_closing_dump",
+            "reason": "ssa_opening_receipt_issue_headers",
+        }
+
     # Marg OPENING STOCK|RECEIVE|ISSUE|CLOSING qty|value → Vision table ORIC,
     # not Op.Qty/P.Qty Detail (that route zeros ISSUE into sales_qty).
-    if _has_opening_receive_issue_closing_qty_value_headers(peek_text or ""):
+    # DUMP ANALYSIS grids stay on the SSA route above (or filename ZA SaleRet
+    # when that flag is off) — do not swallow them here.
+    if _has_opening_receive_issue_closing_qty_value_headers(
+        peek_text or ""
+    ) and not re.search(r"\bDump\b", peek_text or "", re.I):
         return None
 
     # Op.Qty/Op.Val STOCK AND SALES (Vardhman etc.) must not use SaleRet schema
@@ -2282,6 +2360,11 @@ def classify_stock_direct_vision(
         }
 
 
+    # PRODUCT|PACK|OPENING|PURCHASE|FREE|P.RETURN|SALE|CLOSING — Vision table /
+    # OCR header-align own this grid. Do not lock SaleRet or PharmAssist.
+    if _has_item_pack_free_return_headers(peek_text or ""):
+        return None
+
     # PharmAssist Op./Pur/Sale/Bal. must not use SaleRet schema (Jul/Jun ≠ opening).
     if _has_pharmassist_stock_sale_headers(peek_text or ""):
         return {
@@ -2298,17 +2381,6 @@ def classify_stock_direct_vision(
             "layout": "sales_stock_opbal_issue",
             "schema": "opbal_receipt_issue_closing",
             "reason": "sales_stock_opbal_issue_headers",
-        }
-
-    # STOCK & SALES ANALYSIS Opening/Receipt/Issue/Closing must beat _ZA_ SaleRet.
-    if (
-        _ssa_issue_closing_beats_filename_za_enabled()
-        and _has_ssa_opening_receipt_issue_closing_headers(peek_text or "")
-    ):
-        return {
-            "layout": "ssa_opening_receipt_issue",
-            "schema": "opening_receipt_issue_closing_dump",
-            "reason": "ssa_opening_receipt_issue_headers",
         }
 
     if re.search(r"SaleRet|Sale\s*Ret|ClosStock|Clos\s*Stock|Closstock|Exp\s*/\s*Dmg", compact, re.I):
@@ -2359,6 +2431,8 @@ def classify_stock_direct_vision(
         if re.search(r"Stock\s*&\s*Sales\s*Statement", compact, re.I) and not re.search(
             r"SaleRet|ClosStock|Clos\s*Stock|Exp\s*/\s*Dmg", compact, re.I
         ):
+            pass
+        elif _has_item_pack_free_return_headers(compact):
             pass
         else:
             return {

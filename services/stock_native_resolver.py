@@ -4823,12 +4823,19 @@ def apply_universal_stock_footer_financials(
         extra["sales_value_source"] = str(
             footer.get("source") or "universal_stock_footer_financials"
         )
+    if footer.get("sales_value") is not None:
+        # Always stamp when footer printed sales money — even if totals already
+        # held the value from Vision TOTAL promote (qty-only Sale* grids).
         extra["has_printed_sales_value"] = True
+        if _missing(extra.get("sales_value")):
+            extra["sales_value"] = float(footer["sales_value"])
     if footer.get("closing_value") is not None and _missing(totals.get("closing_value")):
         totals["closing_value"] = float(footer["closing_value"])
         extra["closing_value_source"] = str(
             footer.get("source") or "universal_stock_footer_financials"
         )
+    if footer.get("closing_value") is not None and _missing(extra.get("closing_value")):
+        extra["closing_value"] = float(footer["closing_value"])
     if footer.get("opening_value") is not None:
         if _missing(totals.get("opening_value")):
             totals["opening_value"] = float(footer["opening_value"])
