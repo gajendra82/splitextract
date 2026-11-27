@@ -916,6 +916,39 @@ def build_line_items_from_tokens(
         # Prefer those printed totals over the first lot line alone.
         total_label = str(name or "")
         if items and is_product_total:
+            # Bare sheet TOTAL: / TOTAL with .xx money must not overwrite the
+            # last SKU (qty-only FREE/P.RETURN grids print value footers).
+            moneyish = 0
+            for t in tokens:
+                if not isinstance(t, dict):
+                    continue
+                raw = str(t.get("text") or "").replace(",", "").strip()
+                if re.search(r"\.\d{2}$", raw):
+                    moneyish += 1
+            bare_total_name = bool(
+                _is_total_row_name(name)
+                or re.match(
+                    r"(?i)^(?:grand\s+|sub\s+)?totals?\s*:?\s*$",
+                    str(name or "").strip(),
+                )
+            )
+            nameless_money_footer = (
+                moneyish >= 2
+                and (
+                    bare_total_name
+                    or not name
+                    or not re.search(r"[A-Za-z]", str(name))
+                )
+            )
+            if bare_total_name or nameless_money_footer:
+                logger.info(
+                    "STOCK_PDF_WORDS_SHEET_TOTAL_SKIP product_total "
+                    "name=%s moneyish=%s blob=%s",
+                    str(name or "")[:40],
+                    moneyish,
+                    token_blob[:60],
+                )
+                continue
             prev = items[-1]
             for key in (
                 "opening_qty",
@@ -1870,7 +1903,16 @@ def items_from_free_column_rows(
                 prev = str(items[-1].get("product_name") or "").strip()
                 items[-1]["product_name"] = (prev + " " + label).strip()
             continue
-        aligned = _align_by_header_x(tokens, header_cells)
+        # Keep token x when stamping col_index — dropping x makes particular/pack
+        # join swallow PACK into product_name and shift OPENING→pack.
+        if len(tokens) == width:
+            aligned = []
+            for idx, tok in enumerate(tokens):
+                nxt = dict(tok)
+                nxt["col_index"] = idx
+                aligned.append(nxt)
+        else:
+            aligned = _align_by_header_x(tokens, header_cells)
         built = build_line_items_from_tokens(columns, [aligned])
         if not built:
             continue
@@ -6636,10 +6678,196 @@ def _guard_qty_like(val: float) -> bool:
     return abs(val - round(val)) <= 0.001 and 0 < abs(val) < 500.0
 
 
+def _guard_whole_qty(val: float) -> bool:
+    """Whole printed qty including large Issue counts (e.g. 2551)."""
+    return abs(val - round(val)) <= 0.001 and abs(val) > 0.001
+
+
+def _row_qty_balances(
+    opening: float, receipt: float, sales: float, closing: float
+) -> bool:
+    return abs((opening + receipt - sales) - closing) <= 0.51
+
+
+def _item_receipt_qty(item: Dict[str, Any]) -> float:
+    extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+    for key in ("receipts_qty", "purchase_qty"):
+        val = _guard_as_float(item.get(key))
+        if val is not None:
+            return float(val)
+    if isinstance(extra, dict):
+        for key in ("receipts_qty", "purchase_qty"):
+            val = _guard_as_float(extra.get(key))
+            if val is not None:
+                return float(val)
+    return 0.0
+
+
+def _repair_issue_qty_parked_in_sales_value(item: Dict[str, Any]) -> bool:
+    """Move Issue Qty out of sales_value when sales_qty is blank.
+
+    Qty-only Op.Bal / Issue / Closing sheets often park the Issue digits in
+    sales_value (e.g. LIV.52 Issue 2551 → sales_value=2551, sales_qty=null).
+    Never invent digits — only re-slot a printed whole number that balances.
+    """
+    if not isinstance(item, dict):
+        return False
+    sq = _guard_as_float(item.get("sales_qty"))
+    sv = _guard_as_float(item.get("sales_value"))
+    if sv is None or abs(sv) < 0.001:
+        return False
+    if sq is not None and abs(sq) > 0.001:
+        return False
+    if not _guard_whole_qty(sv):
+        return False
+    # Decimal rupees stay in sales_value.
+    if abs(sv - round(sv)) > 0.001:
+        return False
+    opening = _guard_as_float(item.get("opening_qty")) or 0.0
+    closing = _guard_as_float(item.get("closing_qty"))
+    if closing is None:
+        return False
+    receipt = _item_receipt_qty(item)
+    candidate = float(round(sv))
+    if not _row_qty_balances(opening, receipt, candidate, float(closing)):
+        return False
+    # Prefer Issue-as-qty over treating a large whole as money when identity
+    # holds; money columns on these sheets are usually decimal or absent.
+    item["sales_qty"] = candidate
+    item["sales_value"] = None
+    extra = item.setdefault("extra", {})
+    if not isinstance(extra, dict):
+        item["extra"] = {}
+        extra = item["extra"]
+    fs = extra.setdefault("field_source", {})
+    if isinstance(fs, dict):
+        fs["sales_qty"] = "printed"
+        fs["sales_value"] = "missing"
+    flags = list(extra.get("flags") or [])
+    if "ISSUE_QTY_PARKED_IN_SALES_VALUE" not in flags:
+        flags.append("ISSUE_QTY_PARKED_IN_SALES_VALUE")
+    extra["flags"] = flags
+    logger.info(
+        "STOCK_ISSUE_QTY_PARKED_IN_SALES_VALUE product=%s sales_qty=%s",
+        str(item.get("product_name") or "")[:60],
+        candidate,
+    )
+    return True
+
+
+def issue_closing_rate_prefers_swap(item: Dict[str, Any]) -> bool:
+    """True when printed money rates disagree with current Issue/Closing slots.
+
+    Stock identity holds either way after a pure Issue↔Closing swap, so qty
+    formulas alone cannot detect the error. Sale/closing values (or opening
+    unit rate vs closing value) break the tie using printed money only — never
+    invents amounts.
+    """
+    if not isinstance(item, dict):
+        return False
+    sales = _guard_as_float(item.get("sales_qty"))
+    closing = _guard_as_float(item.get("closing_qty"))
+    if sales is None or closing is None:
+        return False
+    if sales <= 0 or closing <= 0 or abs(sales - closing) <= 0.05:
+        return False
+    opening = _guard_as_float(item.get("opening_qty")) or 0.0
+    receipt = _item_receipt_qty(item)
+    if not _row_qty_balances(opening, receipt, sales, closing):
+        return False
+    # Swapped assignment also balances — identity-ambiguous.
+    if not _row_qty_balances(opening, receipt, closing, sales):
+        return False
+
+    sales_value = _guard_as_float(item.get("sales_value"))
+    closing_value = _guard_as_float(item.get("closing_value"))
+    opening_value = _guard_as_float(item.get("opening_value"))
+    extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+    if opening_value is None and isinstance(extra, dict):
+        opening_value = _guard_as_float(extra.get("opening_value"))
+
+    if (
+        sales_value is not None
+        and closing_value is not None
+        and sales_value > 0
+        and closing_value > 0
+    ):
+        keep = abs((sales_value / sales) - (closing_value / closing))
+        swapped = abs((sales_value / closing) - (closing_value / sales))
+        rate_a = sales_value / closing
+        rate_b = closing_value / sales
+        if min(rate_a, rate_b) > 0 and max(rate_a, rate_b) / min(rate_a, rate_b) <= 1.35:
+            if keep >= 80 and swapped * 4 < keep and swapped <= 80:
+                return True
+    elif (
+        opening is not None
+        and opening > 0.05
+        and opening_value is not None
+        and opening_value > 0.05
+        and closing_value is not None
+        and closing_value > 0.05
+    ):
+        rate = opening_value / opening
+        if rate > 0.01:
+            keep_err = abs(closing_value - closing * rate)
+            swap_err = abs(closing_value - sales * rate)
+            # Closing value matches the other qty far better → columns swapped.
+            if swap_err * 4 < keep_err and swap_err <= max(1.0, 0.08 * closing_value):
+                return True
+    return False
+
+
+def _repair_issue_closing_swap_by_rate(item: Dict[str, Any]) -> bool:
+    """Swap Issue↔Closing when stock identity holds both ways but rates disagree.
+
+    Opening+receipt−issue=closing is true after a pure swap, so formula checks
+    alone accept the wrong column assignment. Sale/closing values (or opening
+    unit rate vs closing value) break the tie using printed money only.
+    """
+    if not issue_closing_rate_prefers_swap(item):
+        return False
+
+    sales = _guard_as_float(item.get("sales_qty"))
+    closing = _guard_as_float(item.get("closing_qty"))
+    sales_value = _guard_as_float(item.get("sales_value"))
+    closing_value = _guard_as_float(item.get("closing_value"))
+    if sales is None or closing is None:
+        return False
+
+    item["sales_qty"] = float(closing)
+    item["closing_qty"] = float(sales)
+    if sales_value is not None and closing_value is not None:
+        item["sales_value"] = float(closing_value)
+        item["closing_value"] = float(sales_value)
+    extra = item.setdefault("extra", {})
+    if not isinstance(extra, dict):
+        item["extra"] = {}
+        extra = item["extra"]
+    fs = extra.setdefault("field_source", {})
+    if isinstance(fs, dict):
+        fs["sales_qty"] = "issue_closing_rate_swap"
+        fs["closing_qty"] = "issue_closing_rate_swap"
+    flags = list(extra.get("flags") or [])
+    if "ISSUE_CLOSING_RATE_SWAP" not in flags:
+        flags.append("ISSUE_CLOSING_RATE_SWAP")
+    extra["flags"] = flags
+    logger.info(
+        "STOCK_ISSUE_CLOSING_RATE_SWAP product=%s sales=%s closing=%s",
+        str(item.get("product_name") or "")[:60],
+        item["sales_qty"],
+        item["closing_qty"],
+    )
+    return True
+
+
 def _repair_sales_qty_value_pair(item: Dict[str, Any]) -> bool:
     """Fix one line: unswap money↔qty, or clear qty copied into sales_value."""
     if not isinstance(item, dict):
         return False
+    if _repair_issue_qty_parked_in_sales_value(item):
+        return True
+    if _repair_issue_closing_swap_by_rate(item):
+        return True
     sq = _guard_as_float(item.get("sales_qty"))
     sv = _guard_as_float(item.get("sales_value"))
     extra = item.setdefault("extra", {})
@@ -6697,6 +6925,9 @@ def _repair_sales_qty_value_pair(item: Dict[str, Any]) -> bool:
         # Do not invent sales_qty (leave missing). Never treat 0 as the qty.
         # Skip when Free/scheme columns exist — decimal Sale qtys (30.26) on
         # Item|Pack|Free|Return grids are quantities, not parked rupees.
+        # CRITICAL: never move a whole number that already balances as Issue Qty
+        # (Op+Rec−Issue=Closing). Large Issue counts (≥1000) look "money-like"
+        # but are quantities on qty-only Op.Bal / Issue / Closing sheets.
         elif sq is not None and _guard_money_like(sq) and sv_blank:
             has_free_cols = any(
                 (item.get(k) not in (None, "") or extra.get(k) not in (None, ""))
@@ -6708,10 +6939,25 @@ def _repair_sales_qty_value_pair(item: Dict[str, Any]) -> bool:
                     "free_in_qty",
                 )
             )
+            opening = _guard_as_float(item.get("opening_qty")) or 0.0
+            closing = _guard_as_float(item.get("closing_qty"))
+            receipt = _item_receipt_qty(item)
+            balances_as_issue = (
+                closing is not None
+                and _guard_whole_qty(sq)
+                and _row_qty_balances(opening, receipt, float(sq), float(closing))
+            )
             if has_free_cols and abs(sq - round(sq)) > 0.001 and abs(sq) < 500.0:
                 logger.info(
                     "STOCK_UNIVERSAL_SALES_QTY_VALUE_GUARD action=skip_decimal_qty "
                     "product=%s sales_qty=%s",
+                    str(item.get("product_name") or "")[:60],
+                    sq,
+                )
+            elif balances_as_issue:
+                logger.info(
+                    "STOCK_UNIVERSAL_SALES_QTY_VALUE_GUARD "
+                    "action=skip_money_from_qty_identity product=%s sales_qty=%s",
                     str(item.get("product_name") or "")[:60],
                     sq,
                 )
@@ -6803,6 +7049,191 @@ def _repair_totals_sales_value_qty_sum(result: Dict[str, Any]) -> bool:
     return True
 
 
+def result_looks_like_opbal_qty_only(result: Dict[str, Any]) -> bool:
+    """True when line items are Op.Bal/Issue/Closing quantities with no money column.
+
+    Used to stamp qty_only on generic Gemini extracts so Issue Qty is never
+    migrated into sales_value, and so parked-value / rate-swap repairs run.
+    """
+    if not isinstance(result, dict):
+        return False
+    totals = result.get("totals") if isinstance(result.get("totals"), dict) else {}
+    extra = totals.get("extra") if isinstance(totals.get("extra"), dict) else {}
+    layout = str(extra.get("layout") or "")
+    method = str(extra.get("extraction_method") or "")
+    if layout in {"opbal_issue_closing", "opening_receive_issue_closing"}:
+        return True
+    if "opbal" in method or method.startswith("swilerp"):
+        return True
+    items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+    if len(items) < 4:
+        return False
+    money_rows = 0
+    qty_rows = 0
+    balanced = 0
+    for item in items:
+        sq = _guard_as_float(item.get("sales_qty"))
+        sv = _guard_as_float(item.get("sales_value"))
+        cv = _guard_as_float(item.get("closing_value"))
+        oq = _guard_as_float(item.get("opening_qty")) or 0.0
+        rq = _item_receipt_qty(item)
+        cq = _guard_as_float(item.get("closing_qty"))
+        if (sv is not None and abs(sv) > 0.01 and not (
+            sq is not None and abs(sv - sq) < 0.001
+        )) or (cv is not None and abs(cv) > 0.01):
+            # Treat copied qty-as-value as non-money for this probe.
+            if sv is not None and abs(sv) > 0.01 and not (
+                sq is not None and abs(sv - sq) < 0.001
+            ):
+                if _guard_money_like(sv) and not (
+                    cq is not None
+                    and _guard_whole_qty(sv)
+                    and _row_qty_balances(oq, rq, float(sv), float(cq))
+                ):
+                    money_rows += 1
+            elif cv is not None and abs(cv) > 0.01 and _guard_money_like(cv):
+                money_rows += 1
+        if any(
+            abs(v) > 0.01
+            for v in (oq, rq, sq or 0.0, cq or 0.0)
+            if v is not None
+        ):
+            qty_rows += 1
+        if (
+            sq is not None
+            and cq is not None
+            and _row_qty_balances(oq, rq, float(sq), float(cq))
+        ):
+            balanced += 1
+        elif (
+            sq is None
+            and sv is not None
+            and cq is not None
+            and _guard_whole_qty(sv)
+            and _row_qty_balances(oq, rq, float(sv), float(cq))
+        ):
+            # Issue parked in sales_value — still qty-only layout.
+            balanced += 1
+            qty_rows += 1
+    if qty_rows < 3:
+        return False
+    if money_rows > max(1, int(0.2 * len(items))):
+        return False
+    return balanced >= max(3, int(0.5 * len(items)))
+
+
+def stamp_opbal_qty_only_if_detected(result: Dict[str, Any]) -> bool:
+    """Stamp qty_only/layout when Op.Bal Issue Closing geometry is detected."""
+    if not isinstance(result, dict):
+        return False
+    if not result_looks_like_opbal_qty_only(result):
+        return False
+    totals = result.setdefault("totals", {})
+    if not isinstance(totals, dict):
+        return False
+    extra = totals.setdefault("extra", {})
+    if not isinstance(extra, dict):
+        return False
+    changed = False
+    if not extra.get("qty_only"):
+        extra["qty_only"] = True
+        changed = True
+    if not extra.get("no_sales_value"):
+        extra["no_sales_value"] = True
+        changed = True
+    if not extra.get("layout"):
+        extra["layout"] = "opbal_issue_closing"
+        changed = True
+    return changed
+
+
+def _repair_missing_issue_from_printed_closing(item: Dict[str, Any]) -> bool:
+    """Record a candidate Issue when Opening and Closing are printed and Issue is blank.
+
+    Identity may classify the row only. Opening+Receipt−Closing is stored on
+    extra["candidates"] and is not written into sales_qty.
+    """
+    if not isinstance(item, dict):
+        return False
+    sq = _guard_as_float(item.get("sales_qty"))
+    if sq is not None and abs(sq) > 0.001:
+        return False
+    # Do not steal Issue that is already parked in sales_value — that path
+    # has its own repair.
+    sv = _guard_as_float(item.get("sales_value"))
+    opening = _guard_as_float(item.get("opening_qty"))
+    closing = _guard_as_float(item.get("closing_qty"))
+    if opening is None or closing is None:
+        return False
+    receipt = _item_receipt_qty(item)
+    if sv is not None and abs(sv) > 0.001 and _guard_whole_qty(sv):
+        if _row_qty_balances(float(opening), receipt, float(sv), float(closing)):
+            return False
+    candidate = float(opening) + receipt - float(closing)
+    if candidate <= 0.51 or not _guard_whole_qty(candidate):
+        return False
+    if not _row_qty_balances(float(opening), receipt, candidate, float(closing)):
+        return False
+    # Prefer when printed Total also matches Opening+Receipt.
+    extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+    total = None
+    if isinstance(extra, dict):
+        total = _guard_as_float(extra.get("total_stock_qty"))
+        if total is None:
+            total = _guard_as_float(extra.get("total_stock"))
+    if total is not None and abs(total - (float(opening) + receipt)) > 0.51:
+        return False
+    printed_sales_qty = item.get("sales_qty")
+    from services.stock_row_classifier import record_candidate
+
+    record_candidate(
+        item,
+        {"sales_qty": float(round(candidate))},
+        "opbal_missing_issue",
+        "opening_receipt_minus_closing",
+    )
+    # record_candidate must not become a write of an unprinted Issue.
+    item["sales_qty"] = printed_sales_qty
+    extra = item.setdefault("extra", {})
+    if isinstance(extra, dict):
+        fs = extra.get("field_source")
+        if isinstance(fs, dict) and fs.get("sales_qty") == "derived":
+            fs["sales_qty"] = "missing"
+        flags = list(extra.get("flags") or [])
+        if "MISSING_ISSUE_CANDIDATE_ONLY" not in flags:
+            flags.append("MISSING_ISSUE_CANDIDATE_ONLY")
+        extra["flags"] = flags
+    logger.info(
+        "STOCK_MISSING_ISSUE_CANDIDATE product=%s candidate=%s",
+        str(item.get("product_name") or "")[:60],
+        float(round(candidate)),
+    )
+    return True
+
+
+def repair_opbal_qty_only_fields(result: Dict[str, Any]) -> Dict[str, Any]:
+    """Post-extract Op.Bal repairs that must survive structured selection.
+
+    1) Stamp qty_only when the sheet has no real money column.
+    2) Move Issue Qty out of sales_value.
+    3) Swap Issue↔Closing when rates disagree.
+    4) Clear residual qty copies from sales_value.
+    5) Record a missing-Issue candidate from Opening/Closing. Do not write it.
+    """
+    if not isinstance(result, dict):
+        return result
+    stamp_opbal_qty_only_if_detected(result)
+    result = apply_universal_sales_qty_value_guard(result)
+    totals = result.get("totals") if isinstance(result.get("totals"), dict) else {}
+    extra = totals.get("extra") if isinstance(totals.get("extra"), dict) else {}
+    qty_only = bool(extra.get("qty_only") or extra.get("no_sales_value"))
+    if qty_only or result_looks_like_opbal_qty_only(result):
+        for item in result.get("line_items") or []:
+            if isinstance(item, dict):
+                _repair_missing_issue_from_printed_closing(item)
+    return result
+
+
 def apply_universal_sales_qty_value_guard(result: Dict[str, Any]) -> Dict[str, Any]:
     """Stockist-agnostic sales_qty / sales_value repair for PDF + Excel + image.
 
@@ -6816,6 +7247,11 @@ def apply_universal_sales_qty_value_guard(result: Dict[str, Any]) -> Dict[str, A
         return result
     totals = result.get("totals") if isinstance(result.get("totals"), dict) else {}
     extra = totals.get("extra") if isinstance(totals.get("extra"), dict) else {}
+    # Auto-detect qty-only Op.Bal sheets (generic Gemini often omits the flag).
+    if not bool(extra.get("qty_only") or extra.get("no_sales_value")):
+        stamp_opbal_qty_only_if_detected(result)
+        totals = result.get("totals") if isinstance(result.get("totals"), dict) else {}
+        extra = totals.get("extra") if isinstance(totals.get("extra"), dict) else {}
     # Qty-only sheets have no per-line Sale Value column — only clear copies.
     qty_only = bool(extra.get("qty_only") or extra.get("no_sales_value"))
     fixed = 0
@@ -6823,7 +7259,13 @@ def apply_universal_sales_qty_value_guard(result: Dict[str, Any]) -> Dict[str, A
         if not isinstance(item, dict):
             continue
         if qty_only:
-            # On qty-only grids, only strip qty copies; never promote money.
+            # Qty-only: re-slot Issue parked in sales_value; strip qty copies;
+            # never invent money from rate×qty.
+            row_fixed = False
+            if _repair_issue_qty_parked_in_sales_value(item):
+                row_fixed = True
+            if _repair_issue_closing_swap_by_rate(item):
+                row_fixed = True
             sq = _guard_as_float(item.get("sales_qty"))
             sv = _guard_as_float(item.get("sales_value"))
             if (
@@ -6843,6 +7285,8 @@ def apply_universal_sales_qty_value_guard(result: Dict[str, Any]) -> Dict[str, A
                     if "UNIVERSAL_SALES_QTY_VALUE_GUARD" not in flags:
                         flags.append("UNIVERSAL_SALES_QTY_VALUE_GUARD")
                     item_extra["flags"] = flags
+                row_fixed = True
+            if row_fixed:
                 fixed += 1
             continue
         if _repair_sales_qty_value_pair(item):

@@ -600,6 +600,7 @@ def _score_row_completeness(
     shadow = extra.get("shadow_row_classification")
     valid_pct = None
     suspect_pct = None
+    column_assignment_count = 0
     if isinstance(shadow, dict):
         counts = shadow.get("row_status_counts") or {}
         if isinstance(counts, dict) and items:
@@ -609,14 +610,21 @@ def _score_row_completeness(
                 + int(counts.get("MINOR_DISCREPANCY") or 0)
                 + int(counts.get("CLOSING_DERIVED") or 0)
             )
+            column_assignment_count = int(
+                counts.get("COLUMN_ASSIGNMENT_SUSPECTED") or 0
+            )
             suspects = (
-                int(counts.get("COLUMN_ASSIGNMENT_SUSPECTED") or 0)
+                column_assignment_count
                 + int(counts.get("OCR_VALUE_SUSPECTED") or 0)
                 + int(counts.get("STRUCTURAL_ERROR") or 0)
             )
             valid_pct = 100.0 * acceptable / len(items)
             suspect_pct = 100.0 * suspects / len(items)
-            if suspect_pct > 10:
+            # Confirmed column-assignment errors must never leave a perfect
+            # completeness score — even a single flagged row is a discrepancy.
+            if column_assignment_count > 0:
+                score -= min(40, 15 + column_assignment_count * 5)
+            elif suspect_pct > 10:
                 score -= int(min(40, round(suspect_pct)))
             elif valid_pct < 85:
                 score -= int(min(25, round(85 - valid_pct)))
@@ -632,6 +640,7 @@ def _score_row_completeness(
         "missing_source_rows": missing_source_rows,
         "valid_row_pct": round(valid_pct, 2) if valid_pct is not None else None,
         "suspect_row_pct": round(suspect_pct, 2) if suspect_pct is not None else None,
+        "column_assignment_count": column_assignment_count,
     }
 
 
@@ -872,6 +881,10 @@ def evaluate_extraction_quality(
             reasons.append("missing_source_rows")
     valid_row_pct = row_dim.get("valid_row_pct")
     suspect_row_pct = row_dim.get("suspect_row_pct")
+    column_assignment_count = int(row_dim.get("column_assignment_count") or 0)
+    if column_assignment_count > 0:
+        if "column_assignment_suspected" not in reasons:
+            reasons.append("column_assignment_suspected")
     if suspect_row_pct is not None and float(suspect_row_pct) > 15:
         if "low_valid_row_rate" not in reasons:
             reasons.append("low_valid_row_rate")
@@ -889,6 +902,7 @@ def evaluate_extraction_quality(
     imperfect = (
         _fail_n > 0
         or int(row_dim.get("missing_source_rows") or 0) > 0
+        or column_assignment_count > 0
         or (suspect_row_pct is not None and float(suspect_row_pct) > 5)
         or (
             financial_dim.get("detected_columns")
