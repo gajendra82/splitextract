@@ -43,6 +43,8 @@ class ItemPackFreeChromeSkipTests(unittest.TestCase):
     def test_total_colon_matches_free_return_total_name(self):
         self.assertTrue(_FREE_RETURN_TOTAL_VALUE_NAME.match("TOTAL:"))
         self.assertTrue(_FREE_RETURN_TOTAL_VALUE_NAME.match("Total Value"))
+        self.assertTrue(_FREE_RETURN_TOTAL_VALUE_NAME.match("Total Value:"))
+        self.assertFalse(_FREE_RETURN_TOTAL_VALUE_NAME.match("TOTAL"))
         self.assertFalse(_FREE_RETURN_TOTAL_VALUE_NAME.match("Total Value (00)"))
 
 

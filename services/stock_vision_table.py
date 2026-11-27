@@ -11534,11 +11534,12 @@ def _promote_printed_total_row_money(
     ]
     # Plain Total Value / TOTAL: rows (no parenthetical division) on
     # FREE/P.RETURN ANALYSIS grids (phone photos print TOTAL: money footers).
+    # Bare TOTAL is not included: a later dashed cumulative total must still win.
     plain_total_value = [
         t
         for t in named
         if re.fullmatch(
-            r"(?is)\s*total(?:\s+values?)?\s*:?\s*",
+            r"(?is)\s*(?:total\s+values?\s*:?|total\s*:)\s*",
             str(t.get("product_name") or "").strip(),
         )
     ]

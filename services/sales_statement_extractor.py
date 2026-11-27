@@ -23491,9 +23491,10 @@ _ITEM_PACK_FREE_RETURN_QTY = (
     ("closing_qty", "closing"),
 )
 
-# Exact TOTAL VALUE / Total Value / bare TOTAL: (phone ANALYSIS money footer).
+# Exact TOTAL VALUE / Total Value / TOTAL: (phone ANALYSIS money footer).
+# Bare TOTAL (no colon, no Value) stays on the generic last-total peel.
 _FREE_RETURN_TOTAL_VALUE_NAME = re.compile(
-    r"(?is)^\s*total(?:\s+values?)?\s*:?\s*$"
+    r"(?is)^\s*(?:total\s+values?\s*:?|total\s*:)\s*$"
 )
 _FREE_RETURN_DIVISION_TOTAL_VALUE_NAME = re.compile(
     r"(?is)^\s*total\s+values?\s*\("
