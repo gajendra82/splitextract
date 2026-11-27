@@ -8489,7 +8489,10 @@ def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
     # Medica prints IN/OT between SALE VAL and STOCK. Closing is the STOCK
     # column. Opening+Receipts-Sales is 13 short of STOCK on this file and
     # must not be stored as the closing total.
-    if totals["extra"].get("extraction_method") == "medica_opstk_columns":
+    if totals["extra"].get("extraction_method") in {
+        "medica_opstk_columns",
+        "medica_stock_statement_vision",
+    } or totals["extra"].get("layout") == "medica_stock_statement":
         opening_sum = sum(
             _to_float(i.get("opening_qty")) for i in items if isinstance(i, dict)
         )
@@ -8502,10 +8505,16 @@ def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
         closing_sum = sum(
             _to_float(i.get("closing_qty")) for i in items if isinstance(i, dict)
         )
+        sales_value_sum = round(
+            sum(_to_float(i.get("sales_value")) for i in items if isinstance(i, dict)),
+            2,
+        )
         totals["opening_qty"] = opening_sum
         totals["receipts_qty"] = receipt_sum
         totals["sales_qty"] = sales_sum
         totals["closing_qty"] = closing_sum
+        if totals.get("sales_value") in (None, "") and sales_value_sum > 0:
+            totals["sales_value"] = sales_value_sum
         totals["extra"]["opening_qty"] = opening_sum
         totals["extra"]["receipts_qty"] = receipt_sum
         totals["extra"]["sales_qty"] = sales_sum
@@ -27493,6 +27502,42 @@ def _item_looks_like_group_wise_sales_headers(item: Dict[str, Any]) -> bool:
     return bool(has_strength and has_cl and sales_like >= 3)
 
 
+def _headers_look_like_barcode_op_sale_value(hdrs: Any) -> bool:
+    """Barcode|Name|Pack|Opening|Purchase|Sale|Closing|Pur Value|Sale Value.
+
+    Qty then money. Not SSA TOTAL STOCK. Physical remap reads the barcode as
+    opening qty and shifts Sale / Sale Value.
+    """
+    if not isinstance(hdrs, (list, tuple)) or len(hdrs) < 8:
+        return False
+    try:
+        from services.stock_header_resolver import normalize_header
+    except Exception:
+        return False
+    norms = [normalize_header(h) for h in hdrs]
+    blob = " ".join(norms)
+    if re.search(r"total\s*stock|sale\s*return|\brepl\b", blob):
+        return False
+    has_code = any(
+        n in {"barcode", "bar code", "item code", "itemcode"} or "barcode" in n
+        for n in norms
+    )
+    has_sale_qty = any(n in {"sale", "sales", "sale qty", "sales qty"} for n in norms)
+    has_sale_val = any(
+        n in {"sale value", "sales value", "salevalue"} for n in norms
+    )
+    has_open = any(
+        n in {"opening", "opening qty", "opstk"} or n.startswith("opening ")
+        for n in norms
+    )
+    has_money = (
+        "pur value" in blob
+        or "purchase value" in blob
+        or "closing value" in blob
+    )
+    return bool(has_code and has_sale_qty and has_sale_val and has_open and has_money)
+
+
 def _result_looks_like_ssa_analysis(result: Dict[str, Any]) -> bool:
     if not isinstance(result, dict):
         return False
@@ -27512,6 +27557,9 @@ def _result_looks_like_ssa_analysis(result: Dict[str, Any]) -> bool:
             continue
         hdrs = (item.get("extra") or {}).get("vision_column_headers") or []
         if isinstance(hdrs, (list, tuple)) and hdrs:
+            # Stock And Sales: Barcode|Opening|Sale|Sale Value is not SSA.
+            if _headers_look_like_barcode_op_sale_value(hdrs):
+                return False
             joined = " ".join(str(h) for h in hdrs).upper()
             if re.search(
                 r"OPENING|PURCHASES|TOTAL\s*STOCK|CLOSING\s*STOCK|ITEM\s*DESCRIPTION",
@@ -64222,6 +64270,13 @@ def _ssa_dump_portrait_noise_candidate(file_bytes: bytes, peek: str) -> bool:
         re.I,
     ):
         return False
+    # Empty OCR + Medica maroon header chrome: still OPSTK/SALE VAL, not SSA.
+    if not (blob or "").strip() and _medica_red_header_plausible(file_bytes):
+        logger.info(
+            "SSA_DUMP_PORTRAIT_NOISE skip_medica_red_header "
+            "reason=opstk_sale_val_chrome"
+        )
+        return False
     # Clear SSA chrome already handled by sheets/phone paths.
     if re.search(
         r"STOCK\s*&\s*SALES\s*ANALYSIS|OPENING\s+RECEIPT\s+ISSUE",
@@ -70401,7 +70456,7 @@ def _looks_like_medica_stock_statement(result: Optional[Dict[str, Any]]) -> bool
 _MEDICA_STOCK_STATEMENT_PROMPT = """
 This image is a Medica Ultimate STOCK STATEMENT.
 Columns left to right:
-PRODUCT DESCRIPTION, PACKING, OPSTK, PURCH, SALE, SALE VAL, IN/OT (or IN/OUT), STOCK, STK VAL, JUL, JUN, STK120, EXP3M
+PRODUCT DESCRIPTION, PACKING, OPSTK, PURCH, SALE, SALE VAL, IN/OT (or IN/OUT), STOCK, STK VAL, then prior-month qty columns (SEP/AUG or JUL/JUN), STK120, EXP3M
 
 Keep every number on the same product row. Never move a value onto the previous or next product.
 
@@ -70415,14 +70470,15 @@ Map:
 - IN/OT or IN/OUT -> extra.in_ot_qty   (NOT closing_qty)
 - STOCK -> closing_qty
 - STK VAL -> closing_value
-- JUL -> extra.jul_qty
-- JUN -> extra.jun_qty
+- SEP or JUL -> extra.jul_qty (prior-month qty only — never sales_qty)
+- AUG or JUN -> extra.jun_qty (prior-month qty only — never sales_value)
 
 Critical:
+- SALE is sales_qty. SALE VAL is sales_value. Never leave both empty when those cells show numbers.
 - IN/OT is never the closing quantity. STOCK is closing_qty.
 - STK VAL is the money column immediately after STOCK → closing_value.
-- JUL is the next column after STK VAL. JUL is usually a small monthly qty.
-- Do not put STK VAL into closing_value when it belongs in JUL, and do not put STOCK into closing_value.
+- SEP/AUG (or JUL/JUN) after STK VAL are small monthly qtys — never sales_qty/sales_value.
+- Do not put STK VAL into closing_value when it belongs in JUL/SEP, and do not put STOCK into closing_value.
 - Do not put IN/OT into closing_qty.
 - Never leave closing_qty/closing_value at 0 when STOCK/STK VAL cells show numbers.
   Example: OPSTK 34, SALE 4, IN/OT 0, STOCK 30, STK VAL 1822 →
@@ -70912,18 +70968,37 @@ def _medica_result_looks_usable(result: Optional[Dict[str, Any]]) -> bool:
     # Overlapping half-page strips often re-read the same products with
     # CLOSING left at 0. That tail must not lock the Medica path.
     hollow_close = 0
+    # SALE/SALE VAL dropped while STOCK still filled: opening+purch ≫ closing
+    # with sales at 0 implies printed SALE was never copied.
+    implied_sale_missing = 0
     for item in rows:
         try:
             opening = float(item.get("opening_qty") or 0)
             receipts = float(item.get("receipts_qty") or 0)
             sales = float(item.get("sales_qty") or 0)
+            sales_value = float(item.get("sales_value") or 0)
             closing = float(item.get("closing_qty") or 0)
         except (TypeError, ValueError):
             continue
         implied = opening + receipts - sales
         if abs(opening) > 0.05 and abs(closing) <= 0.05 and abs(implied) > 0.05:
             hollow_close += 1
+        if (
+            abs(sales) <= 0.05
+            and abs(sales_value) <= 0.05
+            and abs(closing) > 0.05
+            and (opening + receipts - closing) > 0.5
+        ):
+            implied_sale_missing += 1
     if hollow_close >= max(5, int(len(rows) * 0.18)):
+        return False
+    if sales_hits == 0 and implied_sale_missing >= max(5, int(len(rows) * 0.25)):
+        logger.info(
+            "MEDICA_RESULT_UNUSABLE reason=sale_sale_val_missing "
+            "implied_sale_rows=%s rows=%s",
+            implied_sale_missing,
+            len(rows),
+        )
         return False
     return closing_hits >= 3 or (sales_hits >= 3 and closing_hits >= 2)
 
@@ -82506,18 +82581,58 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                 and not _lstsl_chrome
                 and _ssa_before_lstsl_empty_ocr_enabled()
             ):
-                try:
-                    ssa_first = _extract_ssa_opening_receipt_issue_dump_image(
-                        file_bytes, filename, ext, skip_ocr_gate=True
-                    )
-                except Exception as _ssa_first_exc:
+                # Medica OPSTK|PURCH|SALE|SALE VAL photos: empty OCR must not
+                # spend the Gemini budget on OPENING/RECEIPT/ISSUE dump (which
+                # zeros SALE/SALE VAL). Prefer the dedicated Medica strip reader.
+                if _medica_red_header_plausible(file_bytes):
+                    try:
+                        medica_pre = _extract_medica_stock_statement_vision(
+                            file_bytes, filename, ext
+                        )
+                    except Exception as _medica_pre_exc:
+                        logger.info(
+                            "[SalesStatement] file=%s medica before empty-OCR "
+                            "SSA dump skipped: %s",
+                            filename,
+                            type(_medica_pre_exc).__name__,
+                        )
+                        medica_pre = None
+                    if _medica_result_looks_usable(medica_pre):
+                        extra_pre = medica_pre.setdefault("totals", {}).setdefault(
+                            "extra", {}
+                        )
+                        extra_pre["early_vision_reason"] = (
+                            "medica_before_empty_ocr_ssa_dump"
+                        )
+                        logger.info(
+                            "[STOCK_EXTRACTION_PATH] stage=medica_before_ssa_dump "
+                            "file=%s line_items=%s reason=red_header_empty_ocr",
+                            filename,
+                            len(medica_pre.get("line_items") or []),
+                        )
+                        return medica_pre
                     logger.info(
-                        "[SalesStatement] file=%s SSA before empty-OCR LstSL "
-                        "skipped: %s",
+                        "[SalesStatement] file=%s medica before SSA dump "
+                        "unusable — skip dump keep Gemini for VISION_TABLE",
                         filename,
-                        type(_ssa_first_exc).__name__,
                     )
+                    _defer_item_pack_free_vt = True
                     ssa_first = None
+                else:
+                    ssa_first = None
+                if ssa_first is None and not _defer_item_pack_free_vt:
+                    try:
+                        ssa_first = _extract_ssa_opening_receipt_issue_dump_image(
+                            file_bytes, filename, ext, skip_ocr_gate=True
+                        )
+                    except Exception as _ssa_first_exc:
+                        logger.info(
+                            "[SalesStatement] file=%s SSA before empty-OCR LstSL "
+                            "skipped: %s",
+                            filename,
+                            type(_ssa_first_exc).__name__,
+                        )
+                        ssa_first = None
                 _ssa_stock_sale_misfile = bool(
                     ssa_first
                     and _ssa_dump_result_looks_like_stock_and_sale_misfile(
