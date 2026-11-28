@@ -559,6 +559,9 @@ _SAME_ROW_QUALIFIERS = frozenset(
         "qty",
         "stock",
         "name",
+        # TOTAL SALES header: "SALES" after "TOTAL" must merge (Lucky Pharma style).
+        "sale",
+        "sales",
     }
 )
 _HEADER_QUALS = frozenset(

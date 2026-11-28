@@ -794,6 +794,113 @@ def _peel_trailing_pack_from_product_code(item: Dict[str, Any]) -> None:
     )
 
 
+def _sale_sub_column_indices(
+    columns: List[Dict[str, Any]],
+) -> List[int]:
+    """Col-indices of 'ignore' columns that were deduped from sales_qty.
+
+    When a header has SALE-TRADE | SALE-APOLLO | TOTAL SALES, the first two
+    are deduped to 'ignore' and TOTAL SALES keeps sales_qty.  Some PDFs leave
+    TOTAL SALES blank for rows that only have SALE-TRADE.  This function
+    identifies the sub-column indices so the caller can sum them as a
+    fallback when sales_qty is empty.
+    """
+    from services.stock_header_resolver import normalize_header as _nh
+
+    indices: List[int] = []
+    for c in columns:
+        if (
+            str(c.get("canonical") or "") == "ignore"
+            and str(c.get("reason") or "") == "DUPLICATE_CANONICAL"
+        ):
+            hdr = _nh(c.get("header_text") or c.get("text") or "")
+            if re.search(r"\bsale\b|\bsales\b", hdr):
+                indices.append(int(c.get("col_index", -1)))
+    return [i for i in indices if i >= 0]
+
+
+def _sale_sub_x_centers(
+    columns: List[Dict[str, Any]],
+    sub_indices: List[int],
+) -> List[Optional[float]]:
+    """X-centers of sale sub-columns, parallel to *sub_indices*."""
+    idx_to_xc: Dict[int, Optional[float]] = {}
+    for c in columns:
+        ci = int(c.get("col_index", -1))
+        if ci in sub_indices:
+            xc = c.get("x_center")
+            idx_to_xc[ci] = float(xc) if xc is not None else None
+    return [idx_to_xc.get(i) for i in sub_indices]
+
+
+def _sum_sale_sub_tokens(
+    tokens: List[Dict[str, Any]],
+    sub_indices: List[int],
+    sub_x_centers: Optional[List[Optional[float]]] = None,
+) -> Optional[float]:
+    """Sum numeric tokens at sale sub-column positions.
+
+    Uses col_index matching for aligned rows.  When tokens still carry an
+    ``x`` field (geometry-mode rows where the product name was multi-word),
+    falls back to x-proximity matching against sub-column header centres.
+    """
+    if not sub_indices or not tokens:
+        return None
+    from services.stock_header_resolver import parse_number
+
+    total = 0.0
+    found = False
+
+    has_x = any(
+        isinstance(t, dict) and t.get("x") is not None for t in tokens
+    )
+    valid_xc = (
+        [(i, xc) for i, xc in enumerate(sub_x_centers or []) if xc is not None]
+        if has_x and sub_x_centers
+        else []
+    )
+
+    if valid_xc:
+        for tok in tokens:
+            if not isinstance(tok, dict):
+                continue
+            tx = tok.get("x")
+            if tx is None:
+                continue
+            tx = float(tx)
+            best_dist = float("inf")
+            for _si, xc in valid_xc:
+                dist = abs(tx - xc)
+                if dist < best_dist:
+                    best_dist = dist
+            if best_dist < 0.045:
+                raw = str(tok.get("text") or "").strip()
+                if raw in ("-", ""):
+                    continue
+                val = parse_number(raw)
+                if val is not None and val > 0:
+                    total += val
+                    found = True
+    else:
+        tok_by_col: Dict[int, str] = {}
+        for tok in tokens:
+            if not isinstance(tok, dict):
+                continue
+            ci = tok.get("col_index")
+            if ci is None:
+                continue
+            tok_by_col[int(ci)] = str(tok.get("text") or "")
+        for ci in sub_indices:
+            raw = tok_by_col.get(ci, "").strip()
+            if raw in ("-", ""):
+                continue
+            val = parse_number(raw)
+            if val is not None and val > 0:
+                total += val
+                found = True
+    return total if found else None
+
+
 def build_line_items_from_tokens(
     columns: List[Dict[str, Any]],
     token_rows: List[List[Dict[str, Any]]],
@@ -804,6 +911,8 @@ def build_line_items_from_tokens(
     from services.stock_native_tables import is_software_price_ad_name
 
     items: List[Dict[str, Any]] = []
+    _sub_sale_indices = _sale_sub_column_indices(columns)
+    _sub_x_centers = _sale_sub_x_centers(columns, _sub_sale_indices) if _sub_sale_indices else None
     pending_name: Optional[str] = None
     for tokens in token_rows:
         blob = " ".join(
@@ -906,6 +1015,19 @@ def build_line_items_from_tokens(
         assign_tokens = _join_leading_particular_tokens(assign_tokens)
         assigned = assign_cells(assign_tokens, columns)
         fields = assigned.get("fields") or {}
+        # Fallback: fill sales_qty from sale sub-columns (SALE-TRADE etc.)
+        # when TOTAL SALES is blank/dash but sub-columns have values.
+        _sq = fields.get("sales_qty")
+        _sq_empty = (
+            not _sq
+            or str(_sq).strip() in ("-", "0", "0.0", "0.00")
+        )
+        if _sub_sale_indices and _sq_empty:
+            sub_total = _sum_sale_sub_tokens(
+                assign_tokens, _sub_sale_indices, _sub_x_centers
+            )
+            if sub_total is not None and sub_total > 0:
+                fields["sales_qty"] = str(int(sub_total)) if sub_total == int(sub_total) else str(sub_total)
         formula_toks = [t for t in tokens if isinstance(t, dict) and t.get("formula")]
         item = fields_to_line_item(fields, formula_tokens=formula_toks)
         name = item.get("product_name")
