@@ -1086,6 +1086,16 @@ def _sheet_total_row_kind(tokens: List[Dict[str, Any]]) -> Optional[str]:
         return "value"
     if re.search(r"(?i)^(?:total\s+)?quantity$", label_joined):
         return "quantity"
+    # Saleable Stock Report: "Company Total" is the qty band; "Amt=>" is the
+    # money band under the same Opn / N.T.Pur / N.T.Sale / Bal headers.
+    if re.fullmatch(r"(?i)company\s+total", label_joined):
+        logger.info("STOCK_PDF_WORDS_FOOTER_TOTALS kind=quantity company_total")
+        return "quantity"
+    if re.fullmatch(r"(?i)amt\s*=>?", label_joined) or re.fullmatch(
+        r"(?i)amount", label_joined
+    ):
+        logger.info("STOCK_PDF_WORDS_FOOTER_TOTALS kind=value amt_band")
+        return "value"
     # "Total For: All Items" — qty under the movement columns, money under value.
     if re.search(r"(?i)total\s+for\b", joined):
         return "quantity"

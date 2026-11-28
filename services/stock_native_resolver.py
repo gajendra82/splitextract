@@ -94,7 +94,9 @@ _SHEET_TOTAL_NAME = re.compile(
     r"|^\s*total\s*count\b"
     r"|^\s*total\s*:-"
     r"|^\s*value\s+in\s+rs\.?\s*$"
-    r"|^\s*(?:total\s+)?quantity\s*$",
+    r"|^\s*(?:total\s+)?quantity\s*$"
+    r"|^\s*amt\s*=>?\s*$"
+    r"|^\s*amount\s*$",
     re.I,
 )
 
@@ -357,6 +359,24 @@ def _footer_totals_from_page_results(
     if _frag_has_value(out):
         for key in qty_keys:
             out.pop(key, None)
+    # A separate Company Total (qty) beside an Amt=> (value) row must keep both.
+    # The value row wins priority, so copy qty from the last qty-only footer.
+    if _frag_has_value(out) and not _frag_has_qty(out):
+        for _pri, _ord, frag in reversed(candidates):
+            if not _frag_has_qty(frag) or _frag_has_value(frag):
+                continue
+            for key in qty_keys:
+                if out.get(key) is None and frag.get(key) is not None:
+                    out[key] = frag[key]
+            logger.info(
+                "STOCK_PDF_WORDS_FOOTER_TOTALS merge_qty_beside_value "
+                "opening=%s receipts=%s sales_qty=%s closing=%s",
+                out.get("opening_qty"),
+                out.get("receipts_qty"),
+                out.get("sales_qty"),
+                out.get("closing_qty"),
+            )
+            break
     # Busy SSA: Grand Total Quantity + Value in Rs. split across two rows.
 
     if saw_busy_value_rs and not any(
@@ -463,6 +483,8 @@ def _empty_line_item() -> Dict[str, Any]:
 
 
 _DASH_QTY_ZERO = frozenset({"-", "--", "—", "–"})
+# A run of hyphens (——) is the same printed zero as a single dash.
+_PRINTED_DASH_QTY_RE = re.compile(r"^[-–—−]+$")
 _DASH_QTY_CANONS = frozenset(
     {
         "opening_qty",
@@ -536,7 +558,7 @@ def fields_to_line_item(
             field_source[dest] = "missing"
             continue
         raw_s = str(raw).strip()
-        if dash_qty_zero and canon in _DASH_QTY_CANONS and raw_s in _DASH_QTY_ZERO:
+        if dash_qty_zero and canon in _DASH_QTY_CANONS and _is_printed_dash_qty(raw_s):
             number = 0.0
             logger.info(
                 "STOCK_NATIVE_DASH_QTY_ZERO canon=%s dest=%s",
@@ -1376,7 +1398,20 @@ def _join_leading_particular_tokens(
             break
         if re.fullmatch(r"\d{1,2}/\d{2,4}", text):
             break
-        if re.fullmatch(r"-+", text):
+        # Packing (75 G / 60 ML / 60'S) and Last P.Bill Date stay in their
+        # columns. Joining them into Particular drops pack and keeps the date.
+        if re.fullmatch(
+            r"(?i)\d{1,2}[/.-](?:[A-Za-z]{3}|\d{1,2})[/.-]\d{2,4}",
+            text,
+        ):
+            break
+        if re.fullmatch(
+            r"(?i)\d+(?:\.\d+)?\s*(?:'s|s|gm|gms|g|mg|ml|kg|ltr|lt|l|tab|cap|pcs|pc|nos|no)"
+            r"|\d+\s*[xX]\s*\d+",
+            text,
+        ):
+            break
+        if re.fullmatch(r"-+", text) or _is_printed_dash_qty(text):
             break
         if re.search(r"[A-Za-z]", text):
             leading_idx.append(i)
@@ -2365,6 +2400,14 @@ _LMS_QTY_LAYOUT = frozenset(
 _DASH_CELL = {"-", "--", "—", "–"}
 
 
+def _is_printed_dash_qty(text: Any) -> bool:
+    """True when the cell is only dash glyphs (printed zero, including ——)."""
+    raw = str(text or "").strip()
+    if not raw:
+        return False
+    return raw in _DASH_QTY_ZERO or bool(_PRINTED_DASH_QTY_RE.fullmatch(raw))
+
+
 def _lms_qty_layout(columns: List[Dict[str, Any]]) -> bool:
     canons = {str(c.get("canonical") or "") for c in columns}
     if not _LMS_QTY_LAYOUT <= canons:
@@ -2714,7 +2757,7 @@ def _is_stacked_lms_nearexp_layout(text: str) -> bool:
 
 def _stacked_lms_qty_token(text: str) -> Optional[float]:
     raw = (text or "").strip().replace(",", "")
-    if raw in _DASH_CELL or raw == "":
+    if _is_printed_dash_qty(raw) or raw == "":
         return 0.0
     if not re.fullmatch(r"-?\d+(?:\.\d+)?", raw):
         return None
@@ -2972,12 +3015,12 @@ def items_from_lms_qty_rows(
                 continue
             canon = str(_nearest(xf).get("canonical") or "")
             if canon not in qty_canons and canon not in value_canons:
-                if text not in _DASH_CELL:
+                if not _is_printed_dash_qty(text):
                     number = parse_number(text.replace(",", ""))
                     if number is not None:
                         side.append((xf, float(number)))
                 continue
-            if text in _DASH_CELL:
+            if _is_printed_dash_qty(text):
                 if canon in qty_canons and canon not in nums:
                     nums[canon] = 0.0
                 continue
