@@ -570,11 +570,49 @@ def expected_closing_qty(item: Dict[str, Any]) -> float:
     return expected
 
 
+def _printed_money_layout_skips_value_identity(item: Dict[str, Any]) -> bool:
+    """Layouts where closing money is rate/cost based, not OP+IN−OUT identity."""
+    extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+    layout = str(extra.get("layout") or "")
+    method = str(extra.get("extraction_method") or "")
+    if layout in {"company_summary_op_in_out"}:
+        return True
+    if method in {"company_summary_op_in_out_xls"}:
+        return True
+    return False
+
+
+def _item_money_field(item: Dict[str, Any], field: str) -> Optional[float]:
+    """Read a printed money field from the item or its extra block."""
+    extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+    fs = extra.get("field_source") if isinstance(extra.get("field_source"), dict) else {}
+    if fs.get(field) == "missing":
+        return None
+    if field == "purchase_value":
+        for key in ("purchase_value", "receipts_value"):
+            if extra.get(key) not in (None, ""):
+                return _f(extra.get(key))
+        if item.get("receipts_value") not in (None, ""):
+            return _f(item.get("receipts_value"))
+        return None
+    if field in {"total_value", "profit", "total_stock_qty"}:
+        if extra.get(field) not in (None, ""):
+            return _f(extra.get(field))
+        return None
+    if item.get(field) not in (None, ""):
+        return _f(item.get(field))
+    if extra.get(field) not in (None, ""):
+        return _f(extra.get(field))
+    return None
+
+
 def _value_reconciliation_diagnostic(item: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """Diagnostic-only value check when related value columns are all printed.
 
     Never rejects the qty result. Only records metadata when the layout
     clearly exposes opening/purchase/sales/closing values.
+    Never rewrites printed money. Company [Summary] / rate-based closing
+    money does not use opening+purchase−sales as a validity rule.
     """
     extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
     fs = extra.get("field_source") if isinstance(extra.get("field_source"), dict) else {}
@@ -595,6 +633,25 @@ def _value_reconciliation_diagnostic(item: Dict[str, Any]) -> Optional[Dict[str,
     closing_v = _val("closing_value")
     if None in (opening_v, purchase_v, sales_v, closing_v):
         return None
+
+    # Company [Summary] OP/IN/OUT/CL AMT: printed CL AMT is authoritative.
+    # Do not mark rows invalid when CL ≠ OP+IN−OUT (cost/profit grids).
+    if _printed_money_layout_skips_value_identity(item):
+        identity_expected = round(opening_v + purchase_v - sales_v, 4)
+        identity_diff = round(closing_v - identity_expected, 4)
+        return {
+            "basis": "printed_excel_values",
+            "enforced": False,
+            "identity_applicable": False,
+            "identity_basis": "opening_value+purchase_value-sales_value",
+            "identity_expected_closing_value": identity_expected,
+            "identity_difference": identity_diff,
+            "identity_holds": abs(identity_diff) <= max(_TOL, 1.0),
+            "expected_closing_value": closing_v,
+            "actual_closing_value": closing_v,
+            "value_difference": 0.0,
+            "valid": True,
+        }
 
     expected = round(opening_v + purchase_v - sales_v, 4)
     diff = round(closing_v - expected, 4)
@@ -620,6 +677,7 @@ def _value_reconciliation_diagnostic(item: Dict[str, Any]) -> Optional[Dict[str,
     out = {
         "basis": basis,
         "enforced": False,
+        "identity_applicable": True,
         "expected_closing_value": expected,
         "actual_closing_value": closing_v,
         "value_difference": diff,
@@ -628,6 +686,139 @@ def _value_reconciliation_diagnostic(item: Dict[str, Any]) -> Optional[Dict[str,
     if rate_valued is not None:
         out["rate_valued_closing"] = rate_valued
     return out
+
+
+_FINANCIAL_FOOTER_FIELDS = (
+    "opening_value",
+    "purchase_value",
+    "total_value",
+    "sales_value",
+    "closing_value",
+    "profit",
+)
+
+
+def apply_printed_financial_validation(result: Dict[str, Any]) -> Dict[str, Any]:
+    """Compare printed footer money to line-item sums; never rewrite values.
+
+    Quantity reconciliation stays in ``stock_validation``. This block only
+    flags financial mismatches (footer vs line sums). Value identity
+    OP+PUR−SALE=CL is informational and never used to correct cells.
+    """
+    if not isinstance(result, dict):
+        return result
+    totals = result.setdefault("totals", {})
+    if not isinstance(totals, dict):
+        return result
+    extra = totals.setdefault("extra", {})
+    if not isinstance(extra, dict):
+        return result
+
+    items = [
+        it
+        for it in (result.get("line_items") or [])
+        if isinstance(it, dict)
+        and str(it.get("product_name") or "").strip()
+        and not str(it.get("product_name") or "")
+        .strip()
+        .upper()
+        .startswith(("TOTAL", "GRAND"))
+    ]
+    layout = str(extra.get("layout") or "")
+    method = str(extra.get("extraction_method") or "")
+    printed_row = extra.get("printed_total_row")
+    if not isinstance(printed_row, dict):
+        printed_row = {}
+    company_summary = (
+        layout == "company_summary_op_in_out"
+        or method == "company_summary_op_in_out_xls"
+        or any(
+            str((it.get("extra") or {}).get("layout") or "")
+            == "company_summary_op_in_out"
+            for it in items
+        )
+    )
+    has_printed_money = any(
+        printed_row.get(field) not in (None, "")
+        or extra.get(field) not in (None, "")
+        or (field == "sales_value" and totals.get("sales_value") not in (None, ""))
+        or (field == "closing_value" and totals.get("closing_value") not in (None, ""))
+        for field in _FINANCIAL_FOOTER_FIELDS
+    )
+    if not items or not (company_summary or has_printed_money):
+        return result
+
+    line_sums: Dict[str, Optional[float]] = {}
+    for field in _FINANCIAL_FOOTER_FIELDS:
+        vals = [_item_money_field(it, field) for it in items]
+        if all(v is None for v in vals):
+            line_sums[field] = None
+        else:
+            line_sums[field] = round(sum(v or 0.0 for v in vals), 2)
+
+    printed_totals: Dict[str, Optional[float]] = {}
+    for field in _FINANCIAL_FOOTER_FIELDS:
+        raw = printed_row.get(field)
+        if raw in (None, ""):
+            if field == "sales_value":
+                raw = totals.get("sales_value")
+            elif field == "closing_value":
+                raw = totals.get("closing_value")
+            else:
+                raw = extra.get(field)
+        printed_totals[field] = None if raw in (None, "") else round(_f(raw), 2)
+
+    mismatches: List[Dict[str, Any]] = []
+    for field in _FINANCIAL_FOOTER_FIELDS:
+        line_v = line_sums.get(field)
+        print_v = printed_totals.get(field)
+        if line_v is None or print_v is None:
+            continue
+        delta = round(float(line_v) - float(print_v), 2)
+        if abs(delta) > 0.05:
+            mismatches.append(
+                {
+                    "field": field,
+                    "line_item_sum": line_v,
+                    "printed_total": print_v,
+                    "difference": delta,
+                }
+            )
+
+    identity_break_n = 0
+    for it in items:
+        ov = _item_money_field(it, "opening_value")
+        pv = _item_money_field(it, "purchase_value")
+        sv = _item_money_field(it, "sales_value")
+        cv = _item_money_field(it, "closing_value")
+        if None in (ov, pv, sv, cv):
+            continue
+        if abs((ov + pv - sv) - cv) > max(_TOL, 1.0):
+            identity_break_n += 1
+
+    financial = {
+        "kind": "printed_footer_vs_line_sums",
+        "printed_values_authoritative": True,
+        "value_identity_enforced": False,
+        "value_identity_applicable": not company_summary,
+        "line_sums": line_sums,
+        "printed_totals": printed_totals,
+        "mismatches": mismatches,
+        "mismatch_count": len(mismatches),
+        "row_value_identity_break_count": identity_break_n,
+        "is_valid": len(mismatches) == 0 and len(items) > 0,
+        "corrected_values": False,
+    }
+    extra["financial_validation"] = financial
+    logger.info(
+        "STOCK_FINANCIAL_VALIDATION valid=%s mismatches=%s identity_breaks=%s "
+        "method=%s",
+        financial["is_valid"],
+        len(mismatches),
+        identity_break_n,
+        method or layout or "-",
+    )
+    return result
 
 
 def _sale_closing_only_row(item: Dict[str, Any], fs: Dict[str, Any]) -> bool:
@@ -1387,6 +1578,16 @@ def apply_stock_reconciliation(
             or str(extra_t.get("layout") or "") == "item_pack_free_return"
             or str(extra_t.get("total_row_source") or "") == "free_return_total_value"
         )
+        product_rows = sum(
+            1
+            for it in items
+            if isinstance(it, dict)
+            and str(it.get("product_name") or "").strip()
+            and not str(it.get("product_name") or "")
+            .strip()
+            .upper()
+            .startswith(("TOTAL", "GRAND"))
+        )
         prev.update(
             {
                 "opening_plus_purchase": expected_total,
@@ -1401,18 +1602,29 @@ def apply_stock_reconciliation(
                 "row_discrepancy_count": discrepancy_n,
                 "row_reconciled_count": reconciled_n,
                 "row_skipped_count": skip_n,
-                # Short OP/PI: printed document values win — formula variance is
-                # informational only (do not invalidate / trigger remapping).
-                "is_valid": True
-                if short_op_pi_sheet
+                # Empty extracts must never look "valid" — that surfaces as a
+                # corrupted / successful reprocess with zero products.
+                "is_valid": False
+                if product_rows == 0
                 else (
-                    fail == 0
-                    and skip_n == 0
-                    and abs(calculated_closing - float(extracted_closing)) < 0.05
-                    and abs(aggregate_variance) < 0.05
+                    True
+                    if short_op_pi_sheet
+                    else (
+                        fail == 0
+                        and skip_n == 0
+                        and abs(calculated_closing - float(extracted_closing)) < 0.05
+                        and abs(aggregate_variance) < 0.05
+                    )
                 ),
                 "printed_values_authoritative": bool(short_op_pi_sheet)
-                or bool(prev.get("printed_values_authoritative")),
+                or bool(prev.get("printed_values_authoritative"))
+                or str(extra_t.get("total_row_source") or "")
+                in {
+                    "xls_grand_total",
+                    "xls_total",
+                    "footer_total",
+                }
+                or bool(extra_t.get("printed_values_authoritative")),
             }
         )
         extra_t["stock_validation"] = prev
@@ -1434,6 +1646,13 @@ def apply_stock_reconciliation(
                 extra_t["closing_qty"] = round(closing_sum, 2)
     except Exception:
         logger.exception("STOCK_RECONCILIATION_VALIDATION_SYNC_FAILED")
+
+    # Financial footer vs line sums — separate from qty stock_validation.
+    # Never rewrites printed money; only flags mismatches.
+    try:
+        apply_printed_financial_validation(result)
+    except Exception:
+        logger.exception("STOCK_FINANCIAL_VALIDATION_FAILED")
     return result
 
 

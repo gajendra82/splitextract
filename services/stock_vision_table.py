@@ -8,6 +8,7 @@ STOCK_VISION_TABLE (default ON).
 from __future__ import annotations
 
 import base64
+import itertools
 import json
 import logging
 import os
@@ -363,6 +364,311 @@ def _vision_header_cells_look_like_data(
     ):
         return True
     return False
+
+
+def _header_texts_list(header_cells: Sequence[Any]) -> List[str]:
+    texts: List[str] = []
+    for cell in header_cells or []:
+        if isinstance(cell, dict):
+            texts.append(str(cell.get("text") or cell.get("header_text") or "").strip())
+        else:
+            texts.append(str(cell or "").strip())
+    return texts
+
+
+def _vision_header_cells_look_like_zl_opening_bal_year_month(
+    header_cells: Sequence[Any],
+) -> bool:
+    """Agency|Code|Name|Mrp|Rate(+Ob)|Primary|Closing|Year|Month|Div data-as-header.
+
+    Portal Opening_bal dumps scrolled past the real header band; Vision copies
+    the first product row into header_rows. Trailing Year|Month|Div (ZA/ZL/…)
+    fingerprints this family — not Medica OPSTK or Busy SSA.
+    """
+    texts = [t for t in _header_texts_list(header_cells) if t]
+    if len(texts) < 8:
+        return False
+    year_i = month_i = div_i = None
+    for i, t in enumerate(texts):
+        if year_i is None and re.fullmatch(r"20\d{2}", t):
+            year_i = i
+            continue
+        if year_i is not None and month_i is None and re.fullmatch(r"1[0-2]|[1-9]", t):
+            month_i = i
+            continue
+        if (
+            year_i is not None
+            and month_i is not None
+            and div_i is None
+            and re.fullmatch(r"[A-Za-z]{2}", t)
+        ):
+            div_i = i
+            break
+    if year_i is None or month_i is None or div_i is None:
+        return False
+    if not (year_i < month_i < div_i):
+        return False
+    # Must look like agency + material code + product + mrp ahead of Year.
+    head = texts[:year_i]
+    if len(head) < 5:
+        return False
+    has_code = any(re.fullmatch(r"\d{5,}", t) for t in head)
+    has_product = any(_classify_layout_cell(t) == "product" for t in head)
+    has_mrp = any(re.fullmatch(r"\d{2,4}", t) for t in head)
+    has_rate = any(
+        _split_rate_opening_glued_token(t) is not None
+        or re.fullmatch(r"-?\d+\.\d+", t)
+        for t in head
+    )
+    return bool(has_code and has_product and has_mrp and has_rate)
+
+
+def _zl_opening_bal_year_month_column_map(column_count: int) -> List[Dict[str, Any]]:
+    """Canonical map for Agency|Code|Name|Mrp|Secondaryrate|Ob|Primary|Cb|Year|Month|Div."""
+    labels = [
+        ("ignore", "Customer name"),
+        ("product_code", "Material code"),
+        ("product_name", "Material name"),
+        ("rate", "Mrp"),
+        ("ignore", "Secondaryrate"),
+        ("opening_qty", "Opening balqty"),
+        ("purchase_qty", "Primary qty"),
+        ("closing_qty", "Closing balqty"),
+        ("ignore", "Year"),
+        ("ignore", "Month"),
+        ("ignore", "Div"),
+    ]
+    width = max(8, min(int(column_count or 0), len(labels)))
+    return [
+        {
+            "col_index": i,
+            "canonical": labels[i][0],
+            "header_text": labels[i][1],
+            "source": "zl_opening_bal_year_month_repair",
+        }
+        for i in range(width)
+    ]
+
+
+_NAME_PACK_FOUR_QTY_SOURCE = "name_pack_op_rcpt_sale_close_repair"
+_DASH_QTY_CELL_RE = re.compile(r"^[-–—]+$")
+
+
+def _qty_or_printed_dash(text: Any) -> bool:
+    s = str(text or "").strip()
+    if not s or _DASH_QTY_CELL_RE.fullmatch(s):
+        return True
+    return bool(re.fullmatch(r"-?\d+", s))
+
+
+def _vision_header_cells_look_like_name_pack_four_qty(
+    header_cells: Sequence[Any],
+) -> bool:
+    """Name|Pack|Opening|Receipt|Sales|Closing used as the header row.
+
+    Continuation pages omit the column titles. The first product line is
+    copied into header_rows. Four qty cells (digits or a printed hyphen) after
+    a pack token fingerprint this grid. A 3-qty row means a hyphen column was
+    dropped, so this stays false and does not lock a shifted map.
+    """
+    texts = _header_texts_list(header_cells)
+    if len(texts) < 6:
+        return False
+    if any(str(t or "").strip() for t in texts[6:]):
+        return False
+    if _classify_layout_cell(texts[0]) != "product":
+        return False
+    if not _loose_pack_token(texts[1]):
+        return False
+    qty = [str(t or "").strip() for t in texts[2:6]]
+    if not all(_qty_or_printed_dash(t) for t in qty):
+        return False
+    if any(re.search(r"\d+\.\d+", str(t or "")) for t in texts[:6]):
+        return False
+    if any(re.fullmatch(r"20\d{2}", str(t or "").strip()) for t in texts[:6]):
+        return False
+    return True
+
+
+def _name_pack_four_qty_column_map(column_count: int) -> List[Dict[str, Any]]:
+    """Canonical map for Name|Pack|Opening|Receipt|Sales|Closing."""
+    labels = [
+        ("product_name", "Product"),
+        ("pack", "Pack"),
+        ("opening_qty", "Opening"),
+        ("purchase_qty", "Receipt"),
+        ("sales_qty", "Sales"),
+        ("closing_qty", "Closing"),
+    ]
+    width = 6 if int(column_count or 0) >= 6 else len(labels)
+    width = min(width, len(labels))
+    return [
+        {
+            "col_index": i,
+            "canonical": labels[i][0],
+            "header_text": labels[i][1],
+            "source": _NAME_PACK_FOUR_QTY_SOURCE,
+        }
+        for i in range(width)
+    ]
+
+
+def _name_pack_row_texts(row: Any) -> List[str]:
+    if isinstance(row, dict):
+        raw = row.get("cells") or []
+    elif isinstance(row, list):
+        raw = row
+    else:
+        return []
+    texts: List[str] = []
+    for cell in raw:
+        if isinstance(cell, dict):
+            texts.append(str(cell.get("text") or "").strip())
+        elif cell is None:
+            texts.append("")
+        else:
+            texts.append(str(cell).strip())
+    return texts
+
+
+def _name_pack_four_qty_source_indexes(rows: Sequence[Any]) -> List[int]:
+    """Indexes of Name, Pack, Opening, Receipt, Sales, Closing.
+
+    A wider read inserts a blank or repeated-pack column after Pack and a
+    blank slot before Closing. The four qty columns are the ones where
+    opening + receipt − sales equals closing on the most product rows.
+    Blank and hyphen cells count as zero only for that choice.
+    """
+    texts = [
+        t
+        for t in (_name_pack_row_texts(r) for r in (rows or []))
+        if t and _classify_layout_cell(t[0]) == "product"
+    ]
+    straight = [0, 1, 2, 3, 4, 5]
+    if len(texts) < 2:
+        return straight
+    width = max(len(t) for t in texts)
+    if width <= 6:
+        return straight
+    numeric: List[int] = []
+    n = float(len(texts))
+    for idx in range(2, width):
+        hits = 0
+        for t in texts:
+            tok = t[idx] if idx < len(t) else ""
+            if re.fullmatch(r"-?\d+", tok):
+                hits += 1
+        if hits / n >= 0.08:
+            numeric.append(idx)
+    if len(numeric) < 4:
+        return straight
+    if len(numeric) == 4:
+        return [0, 1] + numeric
+
+    def _score(combo: Sequence[int]) -> int:
+        ok = 0
+        for t in texts:
+            vals: List[int] = []
+            bad = False
+            for idx in combo:
+                tok = t[idx] if idx < len(t) else ""
+                if not tok or _DASH_QTY_CELL_RE.fullmatch(tok):
+                    vals.append(0)
+                elif re.fullmatch(r"-?\d+", tok):
+                    vals.append(int(tok))
+                else:
+                    bad = True
+                    break
+            if bad:
+                continue
+            if vals[0] + vals[1] - vals[2] == vals[3]:
+                ok += 1
+        return ok
+
+    ranked = [
+        (_score(combo), combo) for combo in itertools.combinations(numeric, 4)
+    ]
+    ranked.sort(key=lambda item: item[0], reverse=True)
+    best_score, best = ranked[0]
+    second = ranked[1][0] if len(ranked) > 1 else -1
+    if best_score >= 3 and best_score > second:
+        return [0, 1] + list(best)
+    return straight
+
+
+def _collapse_name_pack_four_qty_cells(
+    cells: Sequence[Any], indexes: Sequence[int]
+) -> List[Any]:
+    """Keep the six printed cells chosen for this grid; drop phantom columns."""
+    if not indexes or list(indexes[:6]) == [0, 1, 2, 3, 4, 5]:
+        return list(cells)
+    src = list(cells)
+    out: List[Any] = []
+    for idx in list(indexes)[:6]:
+        out.append(src[idx] if 0 <= int(idx) < len(src) else None)
+    return out
+
+
+def _rows_look_like_name_pack_four_qty(rows: Sequence[Any]) -> bool:
+    """True when body lines are product, pack, then qty or hyphen cells."""
+    hits = 0
+    for row in rows or []:
+        texts = _name_pack_row_texts(row)
+        if len(texts) < 4:
+            continue
+        if _classify_layout_cell(texts[0]) != "product":
+            continue
+        if not _loose_pack_token(texts[1]):
+            continue
+        tail = texts[2:]
+        if any(re.search(r"\d+\.\d+", t) for t in tail if t):
+            return False
+        if not any(re.fullmatch(r"-?\d+", t) for t in tail):
+            continue
+        if not all(
+            _qty_or_printed_dash(t) or _loose_pack_token(t) for t in tail
+        ):
+            continue
+        hits += 1
+    return hits >= 2
+
+
+def _promote_product_header_rows(
+    header_rows: Sequence[Any],
+) -> List[Dict[str, Any]]:
+    """Turn product lines parked in header_rows into body rows.
+
+    Headerless grids come back with every product in header_rows and an empty
+    rows array. Real column-title headers (Opening / Qty) are left alone.
+    """
+    body: List[Dict[str, Any]] = []
+    product_n = 0
+    for hr in header_rows or []:
+        texts = _name_pack_row_texts(hr if isinstance(hr, list) else {"cells": hr})
+        if len(texts) < 2:
+            continue
+        kind = _classify_layout_cell(texts[0])
+        if kind not in {"product", "total"}:
+            continue
+        second = texts[1]
+        if second and not (
+            _loose_pack_token(second)
+            or _qty_or_printed_dash(second)
+            or _classify_layout_cell(second) in {"pack", "empty", "number", "serial_or_small_int"}
+        ):
+            continue
+        if kind == "product":
+            product_n += 1
+        body.append(
+            {
+                "row_index": len(body),
+                "cells": texts,
+                "is_total_row": kind == "total",
+            }
+        )
+    if product_n < 2:
+        return []
+    return body
 
 
 def _loose_pack_token(text: Any) -> bool:
@@ -2262,6 +2568,11 @@ def build_table_prompt() -> str:
         "or invent columns that are not printed — if there is no Closing "
         "header, do not map any column to closing_qty. "
         "Dash-only cells (—, ----) are empty/null. "
+        "Exception: a headerless grid whose lines are product name, pack "
+        "(60'S, 30 ML, 200 GM), then Opening, Receipt, Sales, Closing has six "
+        "cells on every row. A printed hyphen is the cell text \"-\", not a "
+        "dropped column. Do not omit hyphen columns and do not copy the next "
+        "row's digits into a hyphen cell. "
         "Qty-only OPENING|RECEIPT|ISSUE|CLOSING sheets: a printed dash or blank "
         "under RECEIPT or ISSUE is null — never copy the next product's OPENING "
         "(or any digit from another row) into this row's RECEIPT/ISSUE, and never "
@@ -2631,6 +2942,11 @@ def _phone_wide_qty_grid_upscale_enabled() -> bool:
 def _upscale_phone_wide_qty_grid_image(img: bytes) -> bytes:
     """2x LANCZOS + contrast for phone portraits of wide qty-only Excel sheets."""
     if not _phone_wide_qty_grid_upscale_enabled():
+        return img
+    if _image_is_clean_text_document(img):
+        logger.info(
+            "VISION_TABLE PHONE_WIDE_QTY_UPSCALE skipped clean_text_document"
+        )
         return img
     w, h = _image_dimensions(img)
     if w <= 0 or h <= 0:
@@ -3194,6 +3510,18 @@ def _normalize_one_table(
                 coercions.get("missing_is_total_row", 0) + 1
             )
         rows_out.append(item)
+    if not rows_out:
+        promoted = _promote_product_header_rows(out.get("header_rows") or [])
+        if promoted:
+            rows_out = promoted
+            width = max(len(r.get("cells") or []) for r in promoted)
+            if width > column_count:
+                column_count = width
+            coercions["header_rows_promoted_to_body"] = len(promoted)
+            logger.info(
+                "VISION_TABLE HEADER_ROWS_PROMOTED_TO_BODY rows=%s",
+                len(promoted),
+            )
     out["rows"] = rows_out
     out["column_count"] = column_count
     repaired = _unglue_ob_primary_cb_table(out, coercions)
@@ -3762,6 +4090,39 @@ def _phone_portrait_split_min_height() -> int:
         return max(_split_min_height(), 4000)
 
 
+def _image_is_clean_text_document(img: bytes) -> bool:
+    """True for a white page of black text, not a photo of a screen or desk.
+
+    Used only to allow a vertical split on dense continuation pages that the
+    phone-portrait skip would otherwise keep as one frame.
+    """
+    try:
+        import io
+
+        from PIL import Image
+
+        with Image.open(io.BytesIO(img)) as im:
+            gray = im.convert("L")
+            w, h = gray.size
+            if w <= 0 or h <= w:
+                return False
+            px = gray.load()
+            white = dark = n = 0
+            for y in range(0, h, 8):
+                for x in range(0, w, 8):
+                    n += 1
+                    v = px[x, y]
+                    if v > 240:
+                        white += 1
+                    elif v < 40:
+                        dark += 1
+            if n < 100:
+                return False
+            return (white / float(n)) >= 0.80 and (dark / float(n)) < 0.08
+    except Exception:
+        return False
+
+
 def _needs_vertical_split(img: bytes) -> bool:
     """Tall / high-res single pages often exceed output token budget.
 
@@ -3776,6 +4137,13 @@ def _needs_vertical_split(img: bytes) -> bool:
     # Stacked multi-block scans (OKEN etc.): aspect >= 2 even under 2800px.
     # One full-frame call invents catalog SKUs and shifts Prev Sale → Opening.
     aspect = (h / float(w)) if w > 0 else 0.0
+    if _image_is_clean_text_document(img) and w < h and h >= 1500:
+        logger.info(
+            "VISION_TABLE need_vertical_split clean_text_document w=%s h=%s",
+            w,
+            h,
+        )
+        return True
     stacked_multi_block = w > 0 and aspect >= 2.0 and h >= 1600
     if h >= _split_min_height() or stacked_multi_block:
         # Narrow upright phone frames: prefer one shot unless extremely tall
@@ -3787,6 +4155,14 @@ def _needs_vertical_split(img: bytes) -> bool:
             and h < _phone_portrait_split_min_height()
             and not stacked_multi_block
         ):
+            if _image_is_clean_text_document(img) and h >= 1600:
+                logger.info(
+                    "VISION_TABLE need_vertical_split clean_text_document "
+                    "w=%s h=%s",
+                    w,
+                    h,
+                )
+                return True
             logger.info(
                 "VISION_TABLE skip_vertical_split phone_portrait w=%s h=%s "
                 "phone_min_h=%s",
@@ -5948,12 +6324,20 @@ def _closing_qty_parked_in_value_repair_enabled() -> bool:
     }
 
 
+def _row_is_zl_year_month_qty(item: Dict[str, Any]) -> bool:
+    """Opening|Primary|Closing with Year|Month|Div. Qty cells are not money."""
+    extra = item.get("extra") if isinstance(item, dict) else None
+    return isinstance(extra, dict) and bool(extra.get("zl_year_month_qty_only"))
+
+
 def _repair_closing_money_parked_in_qty(item: Dict[str, Any]) -> bool:
     """Move money parked in closing_qty into closing_value when VALUE cell is empty.
 
     Printed layout often has Closing Stock QTY | VALUE; Vision reads the money
     into the QTY slot and leaves VALUE null. Re-slot only — never invent qty.
     """
+    if _row_is_zl_year_month_qty(item):
+        return False
     if not _closing_money_in_qty_repair_enabled():
         return False
     # Qty-only ORIC (OPENING/RECEIPT/ISSUE/CLOSING) has no VALUE column.
@@ -9555,6 +9939,8 @@ def _correct_letterhead_stockist(result: Dict[str, Any]) -> bool:
 
 def _repair_negative_core_qty(item: Dict[str, Any]) -> bool:
     """Treat negative opening/purchase/sales/closing as unread (not printed)."""
+    if _row_is_zl_year_month_qty(item):
+        return False
     if not _reject_negative_qty_enabled() or not isinstance(item, dict):
         return False
     extra = item.setdefault("extra", {})
@@ -11230,6 +11616,10 @@ def _repair_missing_pair_null_shift(item: Dict[str, Any]) -> bool:
     """
     if not _cell_layout_repair_enabled():
         return False
+    # Opening|Primary|Closing with Year|Month has no value pair. A closing
+    # qty of 500 or more is still a qty.
+    if _row_is_zl_year_month_qty(item):
+        return False
     extra = item.setdefault("extra", {})
     sq = item.get("sales_qty")
     sv = item.get("sales_value")
@@ -11437,6 +11827,40 @@ def _money_from_total_raw_cells(
     return found
 
 
+def _bare_total_is_qty_identity(printed: Dict[str, Any]) -> bool:
+    """Bare TOTAL whose four whole numbers already balance as quantities.
+
+    Opening + receipt − sales = closing means the footer is the qty grand
+    total. Leave those cells in the qty slots.
+    """
+    if not isinstance(printed, dict):
+        return False
+    name = str(printed.get("product_name") or "").strip()
+    if not re.fullmatch(r"(?i)total", name):
+        return False
+    keys = (
+        ("opening_qty", None),
+        ("receipts_qty", "purchase_qty"),
+        ("sales_qty", None),
+        ("closing_qty", None),
+    )
+    vals: List[float] = []
+    for key, alt in keys:
+        raw = printed.get(key)
+        if raw in (None, "") and alt:
+            raw = printed.get(alt)
+        if raw in (None, ""):
+            return False
+        try:
+            num = float(raw)
+        except (TypeError, ValueError):
+            return False
+        if abs(num - round(num)) > 0.001:
+            return False
+        vals.append(num)
+    return abs((vals[0] + vals[1] - vals[2]) - vals[3]) < 0.01
+
+
 def _remap_total_values_money_parked_in_qty(printed: Dict[str, Any]) -> None:
     """Qty-only Opening|Inward|Sales|Other|Closing footers park money in qty slots.
 
@@ -11450,6 +11874,12 @@ def _remap_total_values_money_parked_in_qty(printed: Dict[str, Any]) -> None:
     looks_values_footer = bool(
         re.search(r"(?i)total\s+values?\b|based\s+on\s+prate|\bvalues?\b", name)
     )
+    if _bare_total_is_qty_identity(printed):
+        logger.info(
+            "VISION_TABLE TOTAL_QTY_IDENTITY_KEEP name=%s",
+            name[:60],
+        )
+        return
     pairs = (
         ("opening_qty", "opening_value"),
         ("receipts_qty", "receipts_value"),
@@ -13544,6 +13974,118 @@ def _map_single_table(
                 )
         if use_carry:
             pass
+        elif data_as_headers and _vision_header_cells_look_like_zl_opening_bal_year_month(
+            header_cells
+        ):
+            # Portal Opening_bal Year|Month|Div: first product row was used as
+            # headers. Restore the ZL map and put that row back into the body.
+            columns = _zl_opening_bal_year_month_column_map(column_count)
+            header_used = {
+                "column_count": column_count,
+                "columns": columns,
+                "header_cells": header_cells,
+                "data_as_headers": True,
+                # Trusted ZL map — must propagate into run_vision_table_path
+                # column_map (untrusted_carry would drop it and keep SSA reread).
+                "untrusted_carry": False,
+                "zl_opening_bal_year_month_repair": True,
+            }
+            stolen = _header_texts_list(header_cells)
+            if stolen and any(str(t or "").strip() for t in stolen):
+                body_rows: List[Dict[str, Any]] = []
+                for i, raw in enumerate(table.get("rows") or []):
+                    if not isinstance(raw, dict):
+                        continue
+                    row = dict(raw)
+                    try:
+                        row["row_index"] = int(row.get("row_index") or i) + 1
+                    except (TypeError, ValueError):
+                        row["row_index"] = i + 1
+                    body_rows.append(row)
+                # Vision often keeps the stolen header row in body too — avoid dup.
+                already = False
+                if body_rows:
+                    first_cells = [
+                        str(c or "").strip()
+                        for c in (body_rows[0].get("cells") or [])
+                    ]
+                    stolen_norm = [str(c or "").strip() for c in stolen]
+                    if first_cells[:4] == stolen_norm[:4]:
+                        already = True
+                table = dict(table)
+                if already:
+                    table["rows"] = body_rows
+                else:
+                    table["rows"] = [
+                        {
+                            "row_index": 0,
+                            "cells": list(stolen),
+                            "is_total_row": False,
+                        }
+                    ] + body_rows
+            errors.append("ZL_OPENING_BAL_YEAR_MONTH_DATA_HEADER")
+            logger.info(
+                "VISION_TABLE ZL_OPENING_BAL_YEAR_MONTH_DATA_HEADER "
+                "column_count=%s request_id=%s",
+                column_count,
+                request_id,
+            )
+        elif _vision_header_cells_look_like_name_pack_four_qty(
+            header_cells
+        ) or _rows_look_like_name_pack_four_qty(table.get("rows") or []):
+            # Name|Pack|Opening|Receipt|Sales|Closing continuation page.
+            # The first product row was used as headers. Hyphens are printed zeros.
+            columns = _name_pack_four_qty_column_map(column_count)
+            header_used = {
+                "column_count": max(column_count, 6),
+                "columns": columns,
+                "header_cells": header_cells,
+                "data_as_headers": True,
+                "untrusted_carry": False,
+                "name_pack_four_qty_repair": True,
+            }
+            stolen = _header_texts_list(header_cells)
+            if stolen and any(str(t or "").strip() for t in stolen):
+                body_rows = []
+                for i, raw in enumerate(table.get("rows") or []):
+                    if not isinstance(raw, dict):
+                        continue
+                    row = dict(raw)
+                    try:
+                        row["row_index"] = int(row.get("row_index") or i) + 1
+                    except (TypeError, ValueError):
+                        row["row_index"] = i + 1
+                    body_rows.append(row)
+                already = False
+                if body_rows:
+                    first_cells = [
+                        str(c or "").strip()
+                        for c in (body_rows[0].get("cells") or [])
+                    ]
+                    stolen_norm = [str(c or "").strip() for c in stolen]
+                    if first_cells[:4] == stolen_norm[:4]:
+                        already = True
+                table = dict(table)
+                if already:
+                    table["rows"] = body_rows
+                else:
+                    table["rows"] = [
+                        {
+                            "row_index": 0,
+                            "cells": list(stolen),
+                            "is_total_row": False,
+                        }
+                    ] + body_rows
+            errors.append("NAME_PACK_FOUR_QTY_DATA_HEADER")
+            qty_indexes = _name_pack_four_qty_source_indexes(table.get("rows") or [])
+            header_used["name_pack_qty_indexes"] = qty_indexes
+            logger.info(
+                "VISION_TABLE NAME_PACK_FOUR_QTY_DATA_HEADER "
+                "column_count=%s indexes=%s request_id=%s",
+                column_count,
+                qty_indexes,
+                request_id,
+            )
         else:
             if _x_order_violation(header_cells):
                 # Vision cell arrays are col_index-ordered; unsorted x_center must
@@ -13721,6 +14263,34 @@ def _map_single_table(
         except (TypeError, ValueError):
             continue
         cells = list(row.get("cells") or [])
+        if any(
+            isinstance(c, dict) and c.get("source") == _NAME_PACK_FOUR_QTY_SOURCE
+            for c in columns
+        ):
+            indexes = []
+            if isinstance(header_used, dict):
+                indexes = list(header_used.get("name_pack_qty_indexes") or [])
+            if indexes:
+                cells = _collapse_name_pack_four_qty_cells(cells, indexes)
+            # Printed hyphen is zero on Name|Pack|Opening|Receipt|Sales|Closing.
+            for c in columns:
+                if not isinstance(c, dict):
+                    continue
+                if c.get("canonical") not in {
+                    "opening_qty",
+                    "purchase_qty",
+                    "sales_qty",
+                    "closing_qty",
+                }:
+                    continue
+                try:
+                    idx = int(c.get("col_index"))
+                except (TypeError, ValueError):
+                    continue
+                if 0 <= idx < len(cells) and _DASH_QTY_CELL_RE.fullmatch(
+                    str(cells[idx] or "").strip()
+                ):
+                    cells[idx] = "0"
         unlabeled_pack: Optional[str] = None
         cells, unlabeled_pack = _extract_unlabeled_pack_token(
             cells, columns, column_count, inplace=use_carry
@@ -13861,6 +14431,14 @@ def _map_single_table(
             str(c.get("header_text") or "") for c in columns
         ]
         item["extra"]["physical_cells"] = physical_pairs
+        if any(
+            isinstance(c, dict)
+            and c.get("source") == "zl_opening_bal_year_month_repair"
+            for c in columns
+        ):
+            # Closing_bal_qty is a real qty even when it is >= 500. Do not let
+            # the money-in-qty park move it into closing_value.
+            item["extra"]["zl_year_month_qty_only"] = True
         if row.get("y_center") is not None:
             try:
                 item.setdefault("extra", {})["y_center"] = float(row.get("y_center"))
@@ -16424,8 +17002,12 @@ def run_vision_table_path(
                         "gemini_budget": gemini_budget,
                     }
             hu = mapped.get("header_used")
-            if isinstance(hu, dict) and not hu.get("untrusted_carry"):
-                carry = hu
+            if isinstance(hu, dict) and (
+                not hu.get("untrusted_carry")
+                or hu.get("zl_opening_bal_year_month_repair")
+            ):
+                if not hu.get("untrusted_carry"):
+                    carry = hu
                 column_map = list(mapped.get("column_map") or column_map)
             errors.extend(str(e) for e in (mapped.get("errors") or []))
             if mapped.get("stockist_name") and not stockist_name:
@@ -16515,6 +17097,66 @@ def run_vision_table_path(
             statement_period=statement_period,
             totals_rows=all_totals,
         )
+        if any(
+            isinstance(c, dict)
+            and c.get("source") == "zl_opening_bal_year_month_repair"
+            for c in (column_map or [])
+        ):
+            try:
+                from services.sales_statement_extractor import (
+                    _finalize_zl_opening_bal_sheet,
+                )
+
+                # Mrp parked in rate → extra.mrp; Secondaryrate is phys col 4.
+                for it in result.get("line_items") or []:
+                    if not isinstance(it, dict):
+                        continue
+                    extra_it = it.setdefault("extra", {})
+                    if not isinstance(extra_it, dict):
+                        continue
+                    phys = extra_it.get("physical_cells")
+                    if not isinstance(phys, dict):
+                        phys = {}
+                    if extra_it.get("mrp") in (None, ""):
+                        mrp_tok = phys.get("3")
+                        if mrp_tok in (None, "") and it.get("rate") not in (None, ""):
+                            mrp_tok = it.get("rate")
+                        if mrp_tok not in (None, ""):
+                            try:
+                                extra_it["mrp"] = float(mrp_tok)
+                            except (TypeError, ValueError):
+                                pass
+                    rate_tok = phys.get("4")
+                    if rate_tok not in (None, ""):
+                        try:
+                            rate_f = float(rate_tok)
+                            # Secondaryrate is paisa-shaped; prefer it over Mrp.
+                            if abs(rate_f - round(rate_f)) > 0.001 or extra_it.get(
+                                "unit_rate"
+                            ) in (None, ""):
+                                extra_it["unit_rate"] = rate_f
+                        except (TypeError, ValueError):
+                            pass
+                    if not result.get("stockist_name"):
+                        cust = str(phys.get("0") or "").strip()
+                        if cust and not re.fullmatch(r"\d+", cust):
+                            result["stockist_name"] = cust
+                result = _finalize_zl_opening_bal_sheet(
+                    result,
+                    extraction_method="zl_opening_bal_year_month_vision",
+                    derive_secondary_sales=True,
+                )
+                logger.info(
+                    "VISION_TABLE ZL_OPENING_BAL_YEAR_MONTH_FINALIZE "
+                    "rows=%s request_id=%s",
+                    len(result.get("line_items") or []),
+                    request_id,
+                )
+            except Exception:
+                logger.exception(
+                    "ZL_OPENING_BAL_YEAR_MONTH_FINALIZE failed request_id=%s",
+                    request_id,
+                )
         bump_gemini_calls(result, 0)
         result["totals"]["extra"]["gemini_calls"] = calls
         result["totals"]["extra"]["gemini_budget"] = gemini_budget
@@ -16590,7 +17232,20 @@ def run_vision_table_path(
             result, request_id=request_id, page=1, recovery_attempt=0
         )
         flagged = flagged_row_indices(result)
-        if flagged and calls < gemini_budget and kind in {"image", "scanned_pdf"}:
+        zl_ym = any(
+            isinstance(c, dict)
+            and c.get("source") == "zl_opening_bal_year_month_repair"
+            for c in (column_map or [])
+        ) or str(
+            ((result.get("totals") or {}).get("extra") or {}).get("extraction_method")
+            or ""
+        ).startswith("zl_opening_bal_year_month")
+        if (
+            flagged
+            and calls < gemini_budget
+            and kind in {"image", "scanned_pdf"}
+            and not zl_ym
+        ):
             logger.info(
                 "STOCK_RECONCILIATION_RECOVERY request_id=%s flagged=%s "
                 "gemini_calls=%s budget=%s",
@@ -16613,8 +17268,11 @@ def run_vision_table_path(
                     # physical grids from line items instead.
                     ssa_like = any(
                         isinstance(it, dict)
-                        and isinstance((it.get("extra") or {}).get("physical_cells"), dict)
-                        and len((it.get("extra") or {}).get("physical_cells") or {}) >= 8
+                        and isinstance(
+                            (it.get("extra") or {}).get("physical_cells"), dict
+                        )
+                        and len((it.get("extra") or {}).get("physical_cells") or {})
+                        >= 8
                         for it in line_items_now[:5]
                     )
                 use_focused = _ssa_focused_reread_enabled() and (

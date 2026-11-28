@@ -479,12 +479,21 @@ def assess_stock_structured_quality(
             }
             or layout == "opening_receive_issue_closing"
         )
+        op_stk_method = method in {
+            "op_stk_rcpts_stock_sale_vision",
+            "op_stk_rcpts_sales_closing",
+        }
         if identity_rate >= threshold:
             # Phase 1: do not suppress identity for trusted methods when veto is on.
-            if (not trusted and not vision) or veto_active or main_stock_layout:
+            if (
+                (not trusted and not vision)
+                or veto_active
+                or main_stock_layout
+                or op_stk_method
+            ):
                 if "identity_failure_rate" not in reasons:
                     reasons.append("identity_failure_rate")
-                if main_stock_layout:
+                if main_stock_layout or op_stk_method:
                     trusted = False
             elif method in {"gemini_vision", "gemini_extraction_fallback"}:
                 # Generic vision often shifts SaleRet / ClosStock / Exp/Dmg sheets.
@@ -496,6 +505,57 @@ def assess_stock_structured_quality(
                 if not has_saleret:
                     reasons.append("identity_failure_rate")
                     reasons.append("layout_not_understood")
+        # Any identity fails on Op_Stk still downgrade confidence — Issue→Receipt
+        # shifts often keep a minority of rows failing but look "trusted".
+        elif op_stk_method and float(fail_count) > 0:
+            if "identity_failure_rate" not in reasons:
+                reasons.append("identity_failure_rate")
+            trusted = False
+
+    # Op.Bal sheets with Near Expiry must not claim trusted when the column
+    # was dropped entirely (every row missing near_expiry_qty).
+    near_count = sum(
+        1
+        for item in items
+        if isinstance(item, dict)
+        and isinstance(item.get("extra"), dict)
+        and item["extra"].get("near_expiry_qty") is not None
+    )
+    layout_wants_near = (
+        "near" in str(layout).lower()
+        or "opbal" in str(layout).lower()
+        or "swilerp" in method.lower()
+        or "opbal" in method.lower()
+    )
+    title_blob = " ".join(
+        [
+            str((result or {}).get("report_title") or ""),
+            str(extra.get("early_vision_reason") or ""),
+            str(schema or ""),
+        ]
+    )
+    if (
+        items
+        and near_count == 0
+        and (
+            layout_wants_near
+            or re.search(r"Near\s*Expiry|opbal_issue_closing", title_blob, re.I)
+        )
+    ):
+        if "missing_near_expiry_column" not in reasons:
+            reasons.append("missing_near_expiry_column")
+        trusted = False
+
+    # Shadow COLUMN_ASSIGNMENT counts must surface in structured quality.
+    shadow = extra.get("shadow_row_classification")
+    if isinstance(shadow, dict):
+        counts = shadow.get("row_status_counts") or {}
+        if isinstance(counts, dict):
+            col_assign = int(counts.get("COLUMN_ASSIGNMENT_SUSPECTED") or 0)
+            if col_assign > 0:
+                if "column_assignment_suspected" not in reasons:
+                    reasons.append("column_assignment_suspected")
+                trusted = False
 
     # A trusted column reader may keep a few noisy names. Explicit signals
     # above still send the original image to Gemini.

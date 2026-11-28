@@ -143,6 +143,13 @@ class TestZlSecondaryParse(unittest.TestCase):
         self.assertEqual(first["closing_qty"], 0.0)
         self.assertIsNone(first["sales_qty"])
         self.assertIsNone(first["sales_value"])
+        self.assertEqual(first["extra"]["field_source"]["sales_qty"], "missing")
+        cand = next(
+            c
+            for c in first["extra"]["candidates"]
+            if c.get("source") == "zl_opening_primary_missing_sales"
+        )
+        self.assertEqual(cand["fields"]["sales_qty"], 60.0)
         self.assertIsNone(first["closing_value"])
         self.assertEqual(first["extra"]["mrp"], 115.0)
         self.assertEqual(first["extra"]["secondary_rate"], 77.68)
