@@ -6,6 +6,7 @@ import unittest
 from pathlib import Path
 
 from services.sales_statement_extractor import (
+    _expand_marg_qty_value_dump_single_column_rows,
     _find_marg_erp_xls_header,
     _find_marg_qty_value_dump_xls_header,
     _parse_marg_closing_mexp_xls,
@@ -70,6 +71,48 @@ QTY_MEXP_DUMP_ROWS = [
 FIXTURE = Path("0000725772_2026_08_ZA_24_8137_03092026174341.xlsx")
 LIVE_REPORT_1 = Path(r"C:\Users\adity\Downloads\REPORT_1.XLS")
 LIVE_ZANDRA_CODE = Path(r"C:\Users\adity\Downloads\ZANDRA STM OCT26.XLS")
+LIVE_SINGLE_COLUMN = Path(r"C:\Users\Prerana Bhalerao\Downloads\REPORTSATYA.xls")
+
+# Marg often writes the whole fixed-width STOCK & SALES ANALYSIS into column A
+# (OPENING|RECEIPT|ISSUE|CLOSING × QTY|VALUE + DUMP QTY + month LMS). DUMP parent
+# may be clipped; child still ends with QTY. SEP.
+SINGLE_COLUMN_ROWS = [
+    ["K.B.C."],
+    ["1501/2, RAM GALI BHAGIRATH PLACE"],
+    ["Phone : 23863465"],
+    ["STOCK & SALES ANALYSIS 01-10-2026 -"],
+    [
+        "ITEM DESCRIPTION             OPENING       RECEIPT       ISSUE       CLOSING"
+    ],
+    [
+        "                  QTY.    VALUE    QTY.    VALUE   QTY.    VALUE    "
+        "QTY.    VALUE  QTY.  SEP"
+    ],
+    ["HIMALAYA OTX"],
+    [
+        "GASEX SYP.       200ML      6     546.86      -      0.00      1     "
+        "98.00      5     455.72      -      4"
+    ],
+    [
+        "HIMCOCID SYP.    200ML      8     706.32      -      0.00      2    "
+        "186.00      6     529.74      -      2"
+    ],
+    [
+        "  TOTAL                   14    1253.18      0      0.00      3    "
+        "284.00     11     985.46      0"
+    ],
+    ["HIMALAYA ZEAL"],
+    [
+        "CONFIDO TAB      60TAB     77   11753.35      -      0.00      4    "
+        "640.00     73   11142.79     73      2"
+    ],
+    [
+        "TOTAL                   91   13006.53    105      0.00      7    "
+        "924.00     84   12128.25      0"
+    ],
+    ["LAST MONTH SALE   SEPTEMBER"],
+    ["QUANTITY          178"],
+]
 
 # Same OPENING/RECEIPT/ISSUE/CLOSING×QTY|VALUE+DUMP family with a leading CODE
 # column (Marg often exports CODE before ITEM DESCRIPTION).
@@ -335,6 +378,81 @@ class TestMargQtyValueDumpLiveZandraCode(unittest.TestCase):
         self.assertEqual(result["totals"]["sales_value"], 4560.73)
         self.assertEqual(result["totals"]["extra"]["sales_qty"], 22.0)
         self.assertEqual(result["totals"]["closing_value"], 79565.13)
+
+
+class TestMargQtyValueDumpSingleColumn(unittest.TestCase):
+    def test_expands_fixed_width_column_a_dump(self):
+        expanded = _expand_marg_qty_value_dump_single_column_rows(SINGLE_COLUMN_ROWS)
+        self.assertIsNotNone(expanded)
+        assert expanded is not None
+        self.assertEqual(_find_marg_qty_value_dump_xls_header(expanded), 4)
+        parsed = _parse_marg_qty_value_dump_xls(
+            expanded, "REPORTSATYA.xls", ".xls", "sheet1"
+        )
+        self.assertIsNotNone(parsed)
+        assert parsed is not None
+        self.assertEqual(
+            parsed["totals"]["extra"]["extraction_method"], "marg_qty_value_dump_xls"
+        )
+        self.assertEqual(parsed["stockist_name"], "K.B.C.")
+        self.assertEqual(parsed["period_from"], "2026-10-01")
+        self.assertIsNone(parsed.get("period_to"))
+        names = [item["product_name"] for item in parsed["line_items"]]
+        self.assertNotIn("HIMALAYA OTX", names)
+        self.assertNotIn("HIMALAYA ZEAL", names)
+        self.assertEqual(len(parsed["line_items"]), 3)
+        by = {i["product_name"]: i for i in parsed["line_items"]}
+        gasex = by["GASEX SYP."]
+        self.assertEqual(gasex["packing"], "200ML")
+        self.assertEqual(gasex["opening_qty"], 6.0)
+        self.assertEqual(gasex["sales_qty"], 1.0)
+        self.assertEqual(gasex["sales_value"], 98.0)
+        self.assertEqual(gasex["closing_qty"], 5.0)
+        self.assertEqual(gasex["closing_value"], 455.72)
+        self.assertEqual(gasex["extra"]["dump_qty"], 0.0)
+        self.assertEqual(gasex["extra"]["lms_qty"], 4.0)
+        confido = by["CONFIDO TAB"]
+        self.assertEqual(confido["sales_qty"], 4.0)
+        self.assertEqual(confido["closing_qty"], 73.0)
+        self.assertEqual(confido["extra"]["dump_qty"], 73.0)
+        self.assertEqual(confido["extra"]["lms_qty"], 2.0)
+        self.assertEqual(parsed["totals"]["sales_value"], 924.0)
+        self.assertEqual(parsed["totals"]["closing_value"], 12128.25)
+        self.assertEqual(parsed["totals"]["extra"]["sales_qty"], 7.0)
+
+    def test_multi_column_dump_rows_are_not_expanded(self):
+        self.assertIsNone(
+            _expand_marg_qty_value_dump_single_column_rows(QTY_MEXP_DUMP_ROWS)
+        )
+
+
+@unittest.skipUnless(LIVE_SINGLE_COLUMN.is_file(), "REPORTSATYA.xls not on this machine")
+class TestMargQtyValueDumpLiveSingleColumn(unittest.TestCase):
+    def test_reportsatya_single_column_xls(self):
+        result = extract_sales_statement(
+            LIVE_SINGLE_COLUMN.read_bytes(), LIVE_SINGLE_COLUMN.name
+        )
+        self.assertEqual(
+            result["totals"]["extra"]["extraction_method"],
+            "marg_qty_value_dump_xls",
+        )
+        self.assertEqual(result["stockist_name"], "K.B.C.")
+        self.assertEqual(result["period_from"], "2026-10-01")
+        items = result["line_items"]
+        self.assertEqual(len(items), 27)
+        names = [item["product_name"] for item in items]
+        self.assertNotIn("HIMALAYA OTX", names)
+        self.assertNotIn("HIMALAYA ZANDRA", names)
+        by = {i["product_name"]: i for i in items}
+        gasex = by["GASEX SYP."]
+        self.assertEqual(gasex["sales_qty"], 1.0)
+        self.assertEqual(gasex["sales_value"], 98.0)
+        self.assertEqual(gasex["closing_qty"], 5.0)
+        self.assertEqual(gasex["extra"]["lms_qty"], 4.0)
+        self.assertEqual(result["totals"]["sales_value"], 26907.0)
+        self.assertEqual(result["totals"]["closing_value"], 108179.45)
+        self.assertEqual(result["totals"]["extra"]["sales_qty"], 206.0)
+        self.assertEqual(result["totals"]["extra"]["closing_qty"], 806.0)
 
 
 if __name__ == "__main__":

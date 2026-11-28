@@ -18549,29 +18549,49 @@ def _norm_tabular_col_key(value: Any) -> str:
 
 
 def _zl_secondary_derive_sales_enabled() -> bool:
-    """Record a sales candidate on Opening_bal|Primary|Closing sheets.
+    """Do not invent sales on Opening_bal_qty|Primary_qty|Closing_bal_qty sheets.
 
-    These exports print no Sale qty/value column. The identity
-    Opening + Primary − Closing is stored on the row candidate list only.
-    sales_qty and sales_value stay missing. Default ON.
+    These exports print no Sale qty/value column. Sales stay null with
+    field_source=missing. Default OFF — never fabricate unavailable fields.
+
+    When enabled, record a sales candidate on Opening_bal|Primary|Closing sheets.
+    The identity Opening + Primary − Closing is stored on the row candidate list
+    only; sales_qty and sales_value stay missing.
     """
-    return True
+    return False
 
 
 def _find_zl_secondary_xlsx_header(
     rows: List[List[Any]],
 ) -> Optional[Tuple[int, Dict[str, int]]]:
-    """Detect ZL secondary stock tabular export headers.
+    """Detect Opening_bal_qty|Primary_qty|Closing_bal_qty tabular export headers.
 
-    Expected columns include Customer_name, Material_code/Material_name,
-    Opening_bal_qty, Primary_qty, Closing_bal_qty.
+    Layout-family fallback for Material (+ optional Customer) dumps with
+    Opening_bal_qty / Closing_bal_qty and no printed Sale column. Customer_name
+    is optional — phone/export sheets often start at Code|Material_name.
     """
     for ri, row in enumerate(rows[:20]):
-        keys = {_norm_tabular_col_key(c): ci for ci, c in enumerate(row) if c not in (None, "")}
+        keys = {
+            _norm_tabular_col_key(c): ci
+            for ci, c in enumerate(row)
+            if c not in (None, "")
+        }
         has_material = "materialname" in keys or "materialcode" in keys
         has_opening = "openingbalqty" in keys or "openingbalquantity" in keys
-        has_customer = "customername" in keys or "customercode" in keys
-        if has_material and has_opening and has_customer:
+        has_closing = "closingbalqty" in keys or "closingbalquantity" in keys
+        has_sale = any(
+            k in keys
+            for k in (
+                "sale",
+                "sales",
+                "saleqty",
+                "salesqty",
+                "secondaryqty",
+                "secondaryqtytotal",
+            )
+        )
+        # Opening + Closing only (Primary / Secondaryrate optional). Never Sale grids.
+        if has_material and has_opening and has_closing and not has_sale:
             return ri, keys
     return None
 
@@ -18597,12 +18617,18 @@ def _parse_zl_secondary_xlsx(
     ext: str,
     header_info: Tuple[int, Dict[str, int]],
 ) -> Dict[str, Any]:
-    """Parse Customer/Material Opening_bal|Primary|Closing .xlsx export.
+    """Parse Material Opening_bal|Primary|Closing .xlsx export (layout-family).
 
+    Column lock (header names only — never shift Closing into Primary):
+      Opening_bal_qty → opening_qty
+      Primary_qty     → receipts_qty (missing column stays null)
+      Closing_bal_qty → closing_qty
+      Secondaryrate   → unit_rate / secondary_rate only (never stock values)
+      Year / Month    → period metadata
     No printed sales qty/value column, so those fields stay missing.
     Opening + Primary − Closing is recorded as a candidate only.
     Closing value remains Closing_bal_qty × Secondaryrate.
-    Does not alter Marg ERP or legacy Item/Op./Bal. parsers.
+    Does not alter Marg/legacy parsers or Marg ERP / Item/Op./Bal. parsers.
     """
     header_idx, keys = header_info
     result = empty_result(filename, ext.lstrip("."))
@@ -18618,7 +18644,7 @@ def _parse_zl_secondary_xlsx(
         return None
 
     col_customer = _col("Customer_name")
-    col_code = _col("Material_code")
+    col_code = _col("Material_code", "Code")
     col_name = _col("Material_name")
     col_mrp = _col("Mrp")
     col_rate = _col("Secondaryrate")
@@ -18675,31 +18701,50 @@ def _parse_zl_secondary_xlsx(
         item = empty_line_item()
         item["product_code"] = code_text or None
         item["product_name"] = _clean_name(name_text) if name_text else None
-        # Qty fields: preserve genuine zeros from source
+        # Qty fields: read ONLY from named columns. Never copy Closing → Primary.
         item["opening_qty"] = _to_float(_row_cell_at(row, col_open), 0.0)
-        item["receipts_qty"] = _to_float(_row_cell_at(row, col_primary), 0.0)
+        if col_primary is not None:
+            item["receipts_qty"] = _to_float(_row_cell_at(row, col_primary), 0.0)
+            item["purchase_qty"] = item["receipts_qty"]
+        else:
+            item["receipts_qty"] = None
+            item["purchase_qty"] = None
         item["closing_qty"] = _to_float(_row_cell_at(row, col_close), 0.0)
-        # No printed sales column. Closing value is Closing_bal_qty × Secondaryrate.
+        # No printed sales / stock-value columns. Secondaryrate is rate only.
         item["sales_qty"] = None
         item["sales_value"] = None
         item["closing_value"] = None
+        item["opening_value"] = None
+        item["receipts_value"] = None
         fs = item["extra"].setdefault("field_source", {})
         if not isinstance(fs, dict):
             fs = {}
             item["extra"]["field_source"] = fs
         fs["sales_qty"] = "missing"
         fs["sales_value"] = "missing"
+        fs["opening_value"] = "missing"
+        fs["receipts_value"] = "missing"
+        if col_primary is None:
+            fs["receipts_qty"] = "missing"
+            fs["purchase_qty"] = "missing"
 
         mrp = _to_nullable_float(_row_cell_at(row, col_mrp))
         rate = _to_nullable_float(_row_cell_at(row, col_rate))
         item["extra"]["layout"] = "zl_opening_primary_closing"
+        item["extra"].pop("receipts_value", None)
+        item["extra"].pop("purchase_value", None)
+        item["extra"].pop("opening_value", None)
         if mrp is not None:
             item["extra"]["mrp"] = mrp
         if rate is not None:
+            # Secondaryrate → rate only. Never opening_value / receipts_value.
             item["extra"]["secondary_rate"] = rate
             item["extra"]["unit_rate"] = rate
-            if item["closing_qty"]:
-                item["closing_value"] = round(item["closing_qty"] * rate, 2)
+            if item["closing_qty"] is not None:
+                item["closing_value"] = round(
+                    float(item["closing_qty"]) * float(rate), 2
+                )
+                fs["closing_value"] = "derived"
 
         if derive_sales:
             derived_sale = _xls_sale_identity_from_op_pur_close(
@@ -18737,7 +18782,22 @@ def _parse_zl_secondary_xlsx(
     result["totals"]["sales_value"] = None
     result["totals"]["closing_value"] = closing_sum or None
     result["totals"]["extra"]["layout"] = "zl_opening_primary_closing"
+    result["totals"]["extra"]["qty_only"] = False
+    result["totals"]["extra"]["no_sales_value"] = True
+    logger.info(
+        "STOCK_ZL_OPENING_PRIMARY_CLOSING items=%s open_col=%s primary_col=%s "
+        "close_col=%s rate_col=%s file=%s",
+        len(items),
+        col_open,
+        col_primary,
+        col_close,
+        col_rate,
+        filename,
+    )
     if derive_sales and derived_sales_rows:
+        result["totals"]["extra"]["derived_sales"] = True
+        result["totals"]["extra"]["derived_sales_rows"] = derived_sales_rows
+        result["totals"]["extra"]["no_sales_value"] = False
         result["totals"]["extra"]["sales_candidate_rows"] = derived_sales_rows
         logger.info(
             "STOCK_ZL_OPENING_PRIMARY_SALES_CANDIDATE rows=%s file=%s",
@@ -22409,6 +22469,205 @@ def _marg_qty_value_dump_name_col(header_row: List[Any]) -> int:
     return 0
 
 
+def _marg_qty_value_dump_single_column_enabled() -> bool:
+    """Expand single-column Marg ORIC×qty|value text dumps inside .xls cells.
+
+    Default ON. Some Marg STOCK & SALES ANALYSIS exports write the whole fixed-
+    width report into column A (real BIFF, one cell per line). Without expansion
+    the multi-column dump header never matches and extraction returns 0 rows.
+    Kill switch: STOCK_XLS_MARG_QTY_VALUE_DUMP_SINGLE_COLUMN=false.
+    """
+    return os.getenv(
+        "STOCK_XLS_MARG_QTY_VALUE_DUMP_SINGLE_COLUMN", "true"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
+
+_MARG_QTY_VALUE_DUMP_MONTH_TOKENS = {
+    "jan",
+    "january",
+    "feb",
+    "february",
+    "mar",
+    "march",
+    "apr",
+    "april",
+    "may",
+    "jun",
+    "june",
+    "jul",
+    "july",
+    "aug",
+    "august",
+    "sep",
+    "sept",
+    "september",
+    "oct",
+    "october",
+    "nov",
+    "november",
+    "dec",
+    "december",
+    "lms",
+    "lastmonth",
+    "lastmonthsale",
+    "lastmonthsales",
+}
+
+
+def _marg_qty_value_dump_line_text(row: List[Any]) -> str:
+    if not row:
+        return ""
+    return str(row[0] if len(row) == 1 else " ".join(str(c or "") for c in row)).replace(
+        "\u00a0", " "
+    )
+
+
+def _expand_marg_qty_value_dump_single_column_rows(
+    rows: List[List[Any]],
+) -> Optional[List[List[Any]]]:
+    """Turn one-cell-per-line Marg ORIC×qty|value dumps into a column grid.
+
+    Parent may omit DUMP (truncated fixed width) while the child still prints a
+    fifth QTY, often labeled with a month (SEP) for last-month sales after DUMP.
+    Returns None when the sheet is already multi-column or not this family.
+    """
+    if not _marg_qty_value_dump_single_column_enabled() or not rows:
+        return None
+    nonempty = [
+        row
+        for row in rows
+        if any(str(cell or "").strip() for cell in (row or []))
+    ]
+    if len(nonempty) < 6:
+        return None
+    if max(len(row or []) for row in nonempty) > 1:
+        return None
+
+    lines = [_marg_qty_value_dump_line_text(row) for row in rows]
+    header_idx: Optional[int] = None
+    for index in range(min(len(lines) - 1, 40)):
+        parent = re.sub(r"\s+", " ", lines[index]).strip().upper()
+        child_parts = [
+            part for part in re.split(r"\s{2,}", lines[index + 1].strip()) if part
+        ]
+        child_labels = [_marg_qty_value_label(part) for part in child_parts]
+        if "ITEM DESCRIPTION" not in parent:
+            continue
+        if not all(
+            token in parent for token in ("OPENING", "RECEIPT", "ISSUE", "CLOSING")
+        ):
+            continue
+        # Four QTY|VALUE pairs; optional trailing DUMP QTY (+ month / LMS label).
+        if child_labels[:8] != [
+            "qty",
+            "value",
+            "qty",
+            "value",
+            "qty",
+            "value",
+            "qty",
+            "value",
+        ]:
+            continue
+        if len(child_labels) >= 9 and child_labels[8] not in {"qty", "qtymexp"}:
+            continue
+        # Optional month label (SEP/OCT/…) beside trailing DUMP/LMS QTY.
+        if (
+            len(child_labels) >= 10
+            and child_labels[9]
+            and child_labels[9] not in _MARG_QTY_VALUE_DUMP_MONTH_TOKENS
+        ):
+            continue
+        header_idx = index
+        break
+    if header_idx is None:
+        return None
+
+    out: List[List[Any]] = []
+    for line in lines[:header_idx]:
+        stripped = line.strip()
+        if stripped and not set(stripped) <= {"-"}:
+            out.append([stripped])
+    # Synthesize the multi-column fingerprint `_find_marg_qty_value_dump_xls_header`
+    # expects (DUMP parent is often clipped off the fixed-width export).
+    out.append(
+        [
+            "ITEM DESCRIPTION",
+            "OPENING",
+            "",
+            "RECEIPT",
+            "",
+            "ISSUE",
+            "",
+            "CLOSING",
+            "",
+            "DUMP",
+        ]
+    )
+    out.append(
+        ["", "QTY.", "VALUE", "QTY.", "VALUE", "QTY.", "VALUE", "QTY.", "VALUE", "QTY."]
+    )
+
+    for line in lines[header_idx + 2 :]:
+        stripped = line.strip()
+        if not stripped or set(stripped) <= {"-"}:
+            continue
+        if re.match(
+            r"(?i)^(?:LAST\s+MONTH\s+SALE|PURCHASE\s+DETAIL|SUPPLIER\s+NAME)\b",
+            stripped,
+        ):
+            break
+        if re.match(
+            r"(?i)^(?:ITEM\s+DESCRIPTION|QTY\.?|VALUE|Continued|Page\s*No\.?)\b",
+            stripped,
+        ):
+            continue
+        if re.search(r"(?i)STOCK\s*&\s*SALES\s*ANALYSIS", stripped):
+            continue
+        parts = [part for part in re.split(r"\s{2,}", stripped) if part]
+        if len(parts) == 1:
+            # Division / company banners with no qty band.
+            out.append([parts[0]])
+            continue
+        # Name (+ optional pack) then OPENING…CLOSING qty|value (+ DUMP + LMS).
+        num_start = None
+        for idx in range(len(parts)):
+            tok = parts[idx]
+            if re.fullmatch(r"-|[-+]?\d+(?:\.\d+)?", tok):
+                # Prefer a run that can cover the ORIC qty|value band.
+                if len(parts) - idx >= 8:
+                    num_start = idx
+                    break
+        if num_start is None:
+            out.append([" ".join(parts)])
+            continue
+        name_bits = parts[:num_start]
+        nums = parts[num_start:]
+        if len(nums) < 8:
+            out.append([" ".join(parts)])
+            continue
+        if name_bits:
+            raw_name = name_bits[0]
+            if len(name_bits) > 1:
+                raw_name = f"{name_bits[0]}  {' '.join(name_bits[1:])}"
+        else:
+            raw_name = ""
+        if re.match(r"^(?:GRAND\s+)?TOTAL\b", raw_name.strip(), re.I):
+            row_out: List[Any] = [raw_name.strip()] + list(nums[:10])
+            out.append(row_out)
+            continue
+        row_out = [raw_name] + list(nums[:10])
+        out.append(row_out)
+
+    logger.info(
+        "MARG_QTY_VALUE_DUMP_SINGLE_COLUMN status=expanded header_line=%s "
+        "out_rows=%s",
+        header_idx,
+        len(out),
+    )
+    return out
+
+
 def _find_marg_qty_value_dump_xls_header(rows: List[List[Any]]) -> Optional[int]:
     """Parent OPENING/RECEIPT/ISSUE/CLOSING/DUMP with QTY|VALUE children.
 
@@ -22417,6 +22676,9 @@ def _find_marg_qty_value_dump_xls_header(rows: List[List[Any]]) -> Optional[int]
 
     Some Marg exports insert a leading CODE column before ITEM DESCRIPTION; the
     OPENING…DUMP qty|value band is otherwise identical (ISSUE = sales).
+
+    Fixed-width single-column dumps often clip the DUMP parent label and print a
+    month token (SEP) beside the trailing DUMP/LMS QTY child — still this family.
     """
     expected = [
         "itemdescription",
@@ -22429,6 +22691,16 @@ def _find_marg_qty_value_dump_xls_header(rows: List[List[Any]]) -> Optional[int]
         "closing",
         "",
         "dump",
+    ]
+    expected_no_dump = [
+        "itemdescription",
+        "opening",
+        "",
+        "receipt",
+        "",
+        "issue",
+        "",
+        "closing",
     ]
     # DUMP child is usually QTY; some Marg exports glue expiry as "QTY. M.EXP".
     sub_expected_prefix = [
@@ -22448,17 +22720,26 @@ def _find_marg_qty_value_dump_xls_header(rows: List[List[Any]]) -> Optional[int]
         name_col = 1 if labels and labels[0] == "code" else 0
         need = name_col + 10
         labels += [""] * max(0, need - len(labels))
-        if labels[name_col : name_col + 10] != expected:
+        parent_band = labels[name_col : name_col + 10]
+        parent_ok = parent_band == expected or (
+            labels[name_col : name_col + 8] == expected_no_dump
+            and parent_band[8:] == ["", ""]
+        )
+        if not parent_ok:
             continue
         if index + 1 >= len(rows):
             continue
         sub = [_marg_qty_value_label(cell) for cell in (rows[index + 1] or [])]
-        sub += [""] * max(0, need - len(sub))
+        sub += [""] * max(0, need + 1 - len(sub))
         if sub[name_col : name_col + 9] != sub_expected_prefix:
             continue
-        if sub[name_col + 9] not in dump_qty_labels:
-            continue
-        return index
+        dump_label = sub[name_col + 9]
+        if dump_label in dump_qty_labels:
+            return index
+        # Child row sometimes parks a month abbr in the DUMP slot when the
+        # export clipped "QTY." into the prior VALUE gap — require qty|value×4.
+        if dump_label in _MARG_QTY_VALUE_DUMP_MONTH_TOKENS:
+            return index
     return None
 
 
@@ -22529,6 +22810,14 @@ def _parse_marg_qty_value_dump_xls(
             if period and result.get("period_from") is None:
                 result["period_from"] = _normalize_date(period.group(1))
                 result["period_to"] = _normalize_date(period.group(2))
+            # Fixed-width exports often clip the end date ("01-10-2026 -").
+            elif result.get("period_from") is None:
+                start_only = re.search(
+                    r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s*[-–—]+\s*$",
+                    text,
+                )
+                if start_only:
+                    result["period_from"] = _normalize_date(start_only.group(1))
             continue
         if re.search(r"Phone\s*:|E-?\s*Mail", text, re.I):
             continue
@@ -22570,6 +22859,9 @@ def _parse_marg_qty_value_dump_xls(
             continue
         if _is_marg_qty_value_dump_chrome_row(raw_name):
             continue
+        # Division banners in single-column dumps have no qty|value cells.
+        if len(row) <= q0:
+            continue
         name, packing = _split_marg_item_and_pack(raw_name)
         if not name:
             continue
@@ -22588,6 +22880,12 @@ def _parse_marg_qty_value_dump_xls(
         closing = _marg_printed_number(row[q0 + 6] if len(row) > q0 + 6 else None)
         closing_value = _marg_printed_number(row[q0 + 7] if len(row) > q0 + 7 else None)
         dump_qty = _marg_dump_qty(row[q0 + 8] if len(row) > q0 + 8 else None)
+        # Optional trailing LMS qty (month-labeled SEP/OCT column after DUMP).
+        lms_qty = None
+        if len(row) > q0 + 9:
+            lms_cell = row[q0 + 9]
+            if str(lms_cell or "").strip():
+                lms_qty = _marg_printed_number(lms_cell)
         # Excel grids print every SKU including all-zero / dash rows. Keep them —
         # dropping pack-less zeros omitted real items (e.g. glued "30's" / "6 s").
         item = empty_line_item()
@@ -22607,6 +22905,8 @@ def _parse_marg_qty_value_dump_xls(
         extra_item["receipts_value"] = receipt_value
         extra_item["purchase_value"] = receipt_value
         extra_item["dump_qty"] = dump_qty
+        if lms_qty is not None:
+            extra_item["lms_qty"] = lms_qty
         if name_col == 1 and code_cell:
             extra_item["product_code"] = code_cell
         # Preserve printed negatives (adjustment receipts) for identity checks.
@@ -23856,6 +24156,18 @@ def _parse_xls(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
     parts: List[Dict[str, Any]] = []
     last_error: Optional[str] = None
     for sheet_name, rows, formats, hidden in _xls_iter_sheets(file_bytes, ext):
+        # Opening_bal_qty|Primary_qty|Closing_bal_qty first — before SSA/OP-PI
+        # paths that park Closing into receipts (SSA_DUMP_RECEIPT_AS_OPENING).
+        zl_header = _find_zl_secondary_xlsx_header(rows)
+        if zl_header is not None:
+            logger.info(
+                "STOCK_ZL_OPENING_PRIMARY_CLOSING file=%s sheet=%s",
+                filename,
+                sheet_name,
+            )
+            return _xls_finalize_result(
+                _parse_zl_secondary_xlsx(rows, filename, ext, zl_header)
+            )
         prompt_xls = _parse_prompt_datewise_xls(rows, filename, ext)
         if prompt_xls and prompt_xls.get("line_items"):
             return _xls_finalize_result(prompt_xls)
@@ -23882,16 +24194,14 @@ def _parse_xls(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                 sheet_name,
             )
             return _xls_finalize_result(op_pi_clqty)
-        # ZL secondary tabular export (Customer_name / Material_* / *_bal_qty)
-        zl_header = _find_zl_secondary_xlsx_header(rows)
-        if zl_header is not None:
-            return _xls_finalize_result(
-                _parse_zl_secondary_xlsx(rows, filename, ext, zl_header)
-            )
         # (GroupWise) headerless Open/Rec/Sale/Close qty+value — before Marg/Gemini.
         groupwise = _parse_groupwise_qty_value_xls(rows, filename, ext)
         if groupwise and groupwise.get("line_items"):
             return _xls_finalize_result(groupwise)
+        # Single-column fixed-width Marg ORIC×qty|value dumps (whole line in col A).
+        expanded_dump = _expand_marg_qty_value_dump_single_column_rows(rows)
+        if expanded_dump is not None:
+            rows = expanded_dump
         # OPENING/RECEIPT/ISSUE/CLOSING × QTY|VALUE + DUMP must beat generic Marg
         # (generic only mapped opening/closing and zeroed receipts/sales/values).
         marg_dump = _parse_marg_qty_value_dump_xls(rows, filename, ext, sheet_name)
@@ -26558,8 +26868,8 @@ def _xls_fill_from_rows(
     # Score title/blank rows away; do not assume row 1 is the header.
     header_idx, colmap, header_score = _xls_best_header(rows)
     colmap = _xls_promote_totalstock_as_closing(colmap)
-    # Himalaya ZL dump: Opening_bal_qty / Primary_qty / Closing_bal_qty / Secondaryrate.
-    # No sales or amount column. Flag only this header so other layouts stay unchanged.
+    # Opening_bal_qty / Closing_bal_qty (+ optional Primary_qty / Secondaryrate).
+    # No sales column. Flag only this header so other layouts stay unchanged.
     zl_bal_layout = False
     if header_idx is not None and header_idx < len(rows):
         _zl_compacts = {
@@ -26570,9 +26880,11 @@ def _xls_fill_from_rows(
         zl_bal_layout = (
             "openingbalqty" in _zl_compacts
             and "closingbalqty" in _zl_compacts
-            and "primaryqty" in _zl_compacts
-            and "secondaryrate" in _zl_compacts
             and "sale" not in colmap
+            and not any(
+                k in _zl_compacts
+                for k in ("saleqty", "salesqty", "secondaryqty", "secondaryqtytotal")
+            )
         )
     # Stock & sales sheet: each qty column has a printed value beside it.
     # Quantity already comes from opening/closing. Do not remap issue/receive qty.
@@ -27278,10 +27590,47 @@ def _xls_fill_from_rows(
             ):
                 item["closing_value"] = round(item["closing_qty"] * rate, 2)
         if zl_bal_layout:
+            # Opening_bal|Primary|Closing fallback: lock columns, never invent sales,
+            # never park Secondaryrate into opening_value / receipts_value.
             item["extra"]["layout"] = "zl_opening_primary_closing"
             mrp_i = _col("mrp")
             if mrp_i is not None and mrp_i < len(row) and _xls_cell_has_qty(row[mrp_i]):
                 item["extra"]["mrp"] = _to_float(row[mrp_i])
+            item["sales_qty"] = None
+            item["sales_value"] = None
+            item["opening_value"] = None
+            item["receipts_value"] = None
+            item["extra"].pop("opening_value", None)
+            item["extra"].pop("receipts_value", None)
+            item["extra"].pop("purchase_value", None)
+            fs_zl = item["extra"].setdefault("field_source", {})
+            if isinstance(fs_zl, dict):
+                fs_zl["sales_qty"] = "missing"
+                fs_zl["sales_value"] = "missing"
+                fs_zl["opening_value"] = "missing"
+                fs_zl["receipts_value"] = "missing"
+            if pur_i is None:
+                item["receipts_qty"] = None
+                item["purchase_qty"] = None
+                if isinstance(fs_zl, dict):
+                    fs_zl["receipts_qty"] = "missing"
+                    fs_zl["purchase_qty"] = "missing"
+            if rate_i is not None and rate_i < len(row) and _xls_cell_has_qty(row[rate_i]):
+                rate_v = _to_float(row[rate_i])
+                item["extra"]["secondary_rate"] = rate_v
+                item["extra"]["unit_rate"] = rate_v
+                if item.get("closing_qty") is not None:
+                    item["closing_value"] = round(
+                        float(item["closing_qty"]) * float(rate_v), 2
+                    )
+            logger.info(
+                "STOCK_XLS_ZL_BAL_LAYOUT open=%s primary=%s close=%s rate=%s name=%r",
+                item.get("opening_qty"),
+                item.get("receipts_qty"),
+                item.get("closing_qty"),
+                item["extra"].get("unit_rate"),
+                item.get("product_name"),
+            )
         if paired_value_layout:
             item["extra"]["layout"] = "paired_stock_value"
 
@@ -27525,6 +27874,17 @@ def _xls_fill_from_rows(
     if {"op", "pur", "sale", "bal"} <= set(colmap) and "sval" not in colmap:
         extra.setdefault("layout", "product_opening_purchase_sale_closing")
         extra.setdefault("extraction_method", "excel_op_pur_sale_closing")
+    # Opening_bal_qty|Primary_qty|Closing_bal_qty (+ Secondaryrate) — no Sale col.
+    if zl_bal_layout:
+        extra["layout"] = "zl_opening_primary_closing"
+        extra["extraction_method"] = "zl_secondary_xlsx"
+        extra["no_sales_value"] = True
+        extra["qty_only"] = False
+        logger.info(
+            "STOCK_XLS_ZL_BAL_LAYOUT_DONE sheet=%s items=%s",
+            sheet_name,
+            len(items),
+        )
     # Header-mapped Excel (Op.Qty/P.Qty/S.Qty/Cl.Qty Detail or ORIC) is
     # column-aligned — quality gate must not flag image Op→P/Cl misreads.
     if {"op", "pur", "sale", "bal"} <= set(colmap) or (
@@ -31456,10 +31816,11 @@ def _parse_zl_opening_bal_pdf_doc(doc, filename: str) -> Optional[Dict[str, Any]
 
 
 def _looks_like_zl_opening_bal_sheet(result: Optional[Dict[str, Any]]) -> bool:
-    """Phone screenshot of the ZL Opening_bal_qty / Secondaryrate grid.
+    """Phone screenshot of the Opening_bal_qty / Secondaryrate / Closing grid.
 
-    Title is the spreadsheet tab (Sheet1). There is no sales-qty column.
-    Other stock statements are not titled SheetN, so they stay on their parsers.
+    Title is often the spreadsheet tab (Sheet1). There is no sales-qty column.
+    Also accept when generic vision shifted Primary→opening (all zeros) but
+    Closing_bal_qty is still populated — so the column-locked re-read can run.
     """
     if not isinstance(result, dict):
         return False
@@ -31468,44 +31829,67 @@ def _looks_like_zl_opening_bal_sheet(result: Optional[Dict[str, Any]]) -> bool:
         "zl_opening_bal_sheet_vision",
         "zl_opening_bal_pdf",
         "zl_opening_bal_scan_vision",
+        "zl_secondary_xlsx",
     }:
         return True
+    if extra.get("layout") == "zl_opening_primary_closing":
+        return True
     title = str(result.get("report_title") or "").strip()
-    if not re.fullmatch(r"Sheet\s*\d+", title, re.I):
-        return False
+    sheet_title = bool(re.fullmatch(r"Sheet\s*\d+", title, re.I))
     items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
     if len(items) < 3:
         return False
     if any(abs(_to_float(i.get("sales_qty"))) > 0 for i in items):
         return False
-    return sum(1 for i in items if _to_float(i.get("opening_qty")) > 0) >= 3
+    open_hits = sum(1 for i in items if _to_float(i.get("opening_qty")) > 0)
+    close_hits = sum(1 for i in items if _to_float(i.get("closing_qty")) > 0)
+    if sheet_title and (open_hits >= 3 or close_hits >= 3):
+        return True
+    # Header chrome in vision extras / product names from this dump family.
+    header_blob = " ".join(
+        str(h)
+        for i in items[:5]
+        for h in (
+            ((i.get("extra") or {}).get("vision_column_headers") or [])
+            if isinstance(i.get("extra"), dict)
+            else []
+        )
+    )
+    if re.search(r"opening_?bal|primary_?qty|closing_?bal|secondaryrate", header_blob, re.I):
+        return close_hits >= 3 and open_hits + close_hits >= 3
+    return False
 
 
 _ZL_OPENING_BAL_SHEET_PROMPT = """
-This image is a spreadsheet screenshot of a Himalaya ZL stock dump.
-Use it ONLY when the header row is:
+This image is a spreadsheet screenshot of an Opening_bal_qty stock dump.
+Use it ONLY when the header row includes:
 Material_name | Mrp | Secondaryrate | Opening_bal_qty | Primary_qty | Closing_bal_qty
+(optional Year | Month on the right).
 
-There is NO sales quantity column and NO amount column.
-Do not map Secondaryrate to sales_qty. Do not map Mrp to opening or closing.
+There is NO sales quantity column and NO amount/value column.
+Do NOT invent sales_qty. Do NOT copy Closing_bal_qty into Primary_qty/receipts_qty.
+Do NOT map Secondaryrate to opening_value, receipts_value, sales_value, or closing_value.
 
-Column mapping, left to right:
+Column mapping (by header name, not position guess):
 - Material_name -> product_name
 - Mrp -> extra.mrp
-- Secondaryrate -> extra.unit_rate
+- Secondaryrate -> extra.unit_rate ONLY (rate, not money stock value)
 - Opening_bal_qty -> opening_qty
-- Primary_qty -> receipts_qty
+- Primary_qty -> receipts_qty (printed 0.00 is 0)
 - Closing_bal_qty -> closing_qty
-- sales_qty = 0
-- sales_value = 0
-- closing_value = 0
+- sales_qty = null
+- sales_value = null
+- opening_value = null
+- receipts_value = null
+- closing_value = null
 
 Ignore the phone status bar, Excel toolbar, and row numbers.
 Read only rows that are fully visible. Do not invent products.
 Copy printed numbers. Do not recompute closing from opening.
 
-Example: CONFIDO TABS (FC) 60s (AG)
-opening_qty=100, receipts_qty=0, closing_qty=85, extra.mrp=255, extra.unit_rate=172.23
+Example: BONNISAN LIQUID 100ml INDIA
+opening_qty=45, receipts_qty=0, closing_qty=35, extra.mrp=null-or-printed, extra.unit_rate=60.14
+sales_qty=null, receipts_value=null
 
 Return ONLY JSON:
 {
@@ -31522,10 +31906,10 @@ Return ONLY JSON:
       "packing": null,
       "opening_qty": number,
       "receipts_qty": number,
-      "sales_qty": 0,
-      "sales_value": 0,
+      "sales_qty": null,
+      "sales_value": null,
       "closing_qty": number,
-      "closing_value": 0,
+      "closing_value": null,
       "extra": {"mrp": number, "unit_rate": number}
     }
   ]
@@ -31539,11 +31923,12 @@ def _finalize_zl_opening_bal_sheet(
     extraction_method: str = "zl_opening_bal_sheet_vision",
     derive_secondary_sales: bool = False,
 ) -> Dict[str, Any]:
-    """Match the Excel ZL layout: rate and MRP live in extra.
+    """Match the Excel ZL layout: Secondaryrate is rate only; sales stay missing.
 
-    The printed columns are Opening_bal_qty, Primary_qty, Closing_bal_qty.
-    Screenshots of that grid with Year|Month|Div have no sales column.
-    Opening + Primary − Closing is recorded as a candidate only.
+    Rate and MRP live in extra. The printed columns are Opening_bal_qty,
+    Primary_qty, Closing_bal_qty. Screenshots of that grid with Year|Month|Div
+    have no sales column. Opening + Primary − Closing is recorded as a
+    candidate only.
     """
     items: List[Dict[str, Any]] = []
     for item in result.get("line_items") or []:
@@ -31559,20 +31944,29 @@ def _finalize_zl_opening_bal_sheet(
         extra["layout"] = "zl_opening_primary_closing"
         if extra.get("mrp") not in (None, ""):
             extra["mrp"] = _to_float(extra.get("mrp"))
-        rate = extra.get("unit_rate")
+        rate = extra.get("unit_rate", extra.get("secondary_rate"))
         if rate not in (None, ""):
             rate = _to_float(rate)
             extra["unit_rate"] = rate
+            extra["secondary_rate"] = rate
         else:
             rate = None
+        # Never park Secondaryrate into monetary stock fields.
+        item["opening_value"] = None
+        item["receipts_value"] = None
+        extra.pop("opening_value", None)
+        extra.pop("receipts_value", None)
+        extra.pop("purchase_value", None)
+        fs = extra.setdefault("field_source", {})
+        if not isinstance(fs, dict):
+            fs = {}
+            extra["field_source"] = fs
+        fs["opening_value"] = "missing"
+        fs["receipts_value"] = "missing"
         if derive_secondary_sales:
             opening = _to_nullable_float(item.get("opening_qty"))
             primary = _to_nullable_float(item.get("receipts_qty"))
             closing = _to_nullable_float(item.get("closing_qty"))
-            fs = extra.setdefault("field_source", {})
-            if not isinstance(fs, dict):
-                fs = {}
-                extra["field_source"] = fs
             item["sales_qty"] = None
             item["sales_value"] = None
             fs["sales_qty"] = "missing"
@@ -31598,16 +31992,27 @@ def _finalize_zl_opening_bal_sheet(
                     fs["sales_qty"] = "missing"
                     fs["sales_value"] = "missing"
         else:
+            # Incoming: zero when not deriving candidates.
             item["sales_qty"] = 0.0
             item["sales_value"] = 0.0
+            # HEAD: sales stay missing with field_source (no invent).
+            item["sales_qty"] = None
+            item["sales_value"] = None
+            fs["sales_qty"] = "missing"
+            fs["sales_value"] = "missing"
         if rate not in (None, "", 0, 0.0) and item.get("closing_qty") is not None:
             item["closing_value"] = round(_to_float(item.get("closing_qty")) * rate, 2)
+            if isinstance(fs, dict):
+                fs["closing_value"] = "derived"
+        else:
+            item["closing_value"] = None
         items.append(item)
     result["line_items"] = items
     result["report_title"] = result.get("report_title") or "Sheet1"
     result.setdefault("totals", {}).setdefault("extra", {})
     result["totals"]["extra"]["extraction_method"] = extraction_method
     result["totals"]["extra"]["layout"] = "zl_opening_primary_closing"
+    result["totals"]["extra"]["no_sales_value"] = True
     if derive_secondary_sales:
         candidate_rows = 0
         for it in items:
@@ -31775,8 +32180,10 @@ def _extract_zl_opening_bal_sheet_strips(
         return None
     model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
     prompt = _ZL_OPENING_BAL_SHEET_PROMPT.replace(
-        "Example: CONFIDO TABS (FC) 60s (AG)\n"
-        "opening_qty=100, receipts_qty=0, closing_qty=85, extra.mrp=255, extra.unit_rate=172.23\n\n",
+        "Example: BONNISAN LIQUID 100ml INDIA\n"
+        "opening_qty=45, receipts_qty=0, closing_qty=35, extra.mrp=null-or-printed, "
+        "extra.unit_rate=60.14\n"
+        "sales_qty=null, receipts_value=null\n\n",
         "Copy only the cells in this image. Do not reuse numbers from any other sheet.\n\n",
     )
     prompt += (
@@ -64852,6 +65259,9 @@ def _ssa_dump_opening_qty_missing(result: Optional[Dict[str, Any]]) -> bool:
     """Printed opening values exist but every opening_qty is still 0."""
     if not isinstance(result, dict):
         return False
+    # Opening_bal_qty|Primary|Closing sheets are not SSA qty+value dumps.
+    if _result_is_opening_bal_primary_closing(result):
+        return False
     items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
     if len(items) < 3:
         return False
@@ -65527,6 +65937,61 @@ def _ssa_dump_receipt_as_opening_enabled() -> bool:
         "yes",
         "on",
     }
+
+
+def _is_opening_bal_primary_closing_item(item: Dict[str, Any]) -> bool:
+    """Opening_bal_qty|Primary_qty|Closing_bal_qty (+ Secondaryrate) row family.
+
+    These sheets have no Sale/DUMP money columns. SSA_DUMP_RECEIPT_AS_OPENING
+    must not rewrite Opening→Receipts (turns closing into receipts).
+    """
+    if not isinstance(item, dict):
+        return False
+    extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+    if str(extra.get("layout") or "") == "zl_opening_primary_closing":
+        return True
+    headers = extra.get("vision_column_headers") or []
+    if isinstance(headers, (list, tuple)) and headers:
+        blob = re.sub(
+            r"[^a-z0-9]",
+            "",
+            " ".join(str(h) for h in headers).lower(),
+        )
+        if "openingbal" in blob and "closingbal" in blob:
+            return True
+    has_rate = extra.get("secondary_rate") not in (None, "") or extra.get(
+        "unit_rate"
+    ) not in (None, "")
+    has_dump = abs(_to_float(extra.get("dump_qty"))) > 0.01
+    open_val = abs(_ssa_dump_item_opening_value(item))
+    rec_val = abs(
+        _to_float(
+            item.get("receipts_value")
+            if item.get("receipts_value") not in (None, "")
+            else extra.get("receipts_value")
+        )
+    )
+    # Rate-only dump: Secondaryrate / unit_rate, no DUMP / opening-value money.
+    # sales_qty may be stamped 0 by generic paths — still Opening_bal family.
+    if has_rate and not has_dump and open_val < 0.05 and rec_val < 0.05:
+        return True
+    return False
+
+
+def _result_is_opening_bal_primary_closing(result: Optional[Dict[str, Any]]) -> bool:
+    """True when the statement is Opening_bal|Primary|Closing (not SSA qty+value)."""
+    if not isinstance(result, dict):
+        return False
+    extra = ((result.get("totals") or {}).get("extra") or {})
+    method = str(extra.get("extraction_method") or "")
+    layout = str(extra.get("layout") or "")
+    if layout == "zl_opening_primary_closing" or method.startswith("zl_"):
+        return True
+    items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+    if not items:
+        return False
+    hits = sum(1 for i in items if _is_opening_bal_primary_closing_item(i))
+    return hits >= max(2, len(items) // 2)
 
 
 def _ssa_dump_sales_qty_from_value_enabled() -> bool:
@@ -66655,8 +67120,19 @@ def _ssa_dump_repair_receipt_parked_as_opening(item: Dict[str, Any]) -> bool:
     Pattern: opening_qty == closing_qty > 0, receipts=0, sales=0, values match.
     Printed sheet had blank OPENING and RECEIPT qty/value in those cells.
     Never invents digits — only moves printed opening → receipts.
+
+    Skipped for Opening_bal_qty|Primary_qty|Closing_bal_qty sheets — that layout
+    prints real Opening/Primary/Closing; rewriting Opening→Receipts duplicates
+    Closing into receipts (BONNISAN 45/0/35 → 0/35/35).
     """
     if not _ssa_dump_receipt_as_opening_enabled() or not isinstance(item, dict):
+        return False
+    # Opening_bal|Primary|Closing (+ Secondaryrate): keep source qtys as printed.
+    if _is_opening_bal_primary_closing_item(item):
+        logger.info(
+            "SSA_DUMP_RECEIPT_AS_OPENING skip=opening_bal_layout product=%s",
+            str(item.get("product_name") or "")[:50],
+        )
         return False
     # Forward hollow/static re-slots already placed a true no-movement OPENING
     # block (e.g. RUMALAYA FORTE open=close). Do not rewrite those as receipts.
@@ -66674,6 +67150,17 @@ def _ssa_dump_repair_receipt_parked_as_opening(item: Dict[str, Any]) -> bool:
     close_val = _to_float(item.get("closing_value"))
     receipt_val = _to_float(item.get("receipts_value"))
     if abs(receipt_val) > 0.01:
+        return False
+    # Require printed OPENING VALUE. Opening_bal_qty sheets have no money column;
+    # without this gate, open==close qty rows become opening=0 receipts=closing.
+    if open_val <= 0.05:
+        logger.info(
+            "SSA_DUMP_RECEIPT_AS_OPENING skip=no_opening_value product=%s "
+            "opening=%s closing=%s",
+            str(item.get("product_name") or "")[:50],
+            opening,
+            closing,
+        )
         return False
     if open_val > 0.05 and close_val > 0.05 and abs(open_val - close_val) > 0.51:
         return False
@@ -66876,9 +67363,19 @@ def _ssa_dump_repair_items(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     repaired = _ssa_dump_pull_orphaned_movement_after_hollow(repaired)
     repaired = _ssa_dump_pull_static_then_movement_across_empties(repaired)
     repaired = _ssa_dump_shift_sales_closing_cascade(repaired)
+    # Opening_bal|Primary|Closing sheets: never run RECEIPT_AS_OPENING (keeps
+    # Opening_bal_qty / Primary_qty / Closing_bal_qty as source columns).
+    _skip_receipt_as_open = sum(
+        1
+        for it in repaired
+        if isinstance(it, dict) and _is_opening_bal_primary_closing_item(it)
+    ) >= max(2, len([it for it in repaired if isinstance(it, dict)]) // 2)
     for item in repaired:
-        if isinstance(item, dict):
-            _ssa_dump_repair_receipt_parked_as_opening(item)
+        if not isinstance(item, dict):
+            continue
+        if _skip_receipt_as_open or _is_opening_bal_primary_closing_item(item):
+            continue
+        _ssa_dump_repair_receipt_parked_as_opening(item)
     # Closing qty parked in closing_value (PILEX 70, CONFIDO 75, …) → qty slot.
     try:
         from services.stock_vision_table import (
@@ -87001,7 +87498,12 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                         "SSA closing_qty parked-in-value pass failed for %s",
                         filename,
                     )
-                if _ssa_dump_opening_qty_missing(result):
+                # Opening_bal_qty|Primary_qty|Closing_bal_qty: do not run SSA dump
+                # RECEIPT_AS_OPENING / opening repair (duplicates Closing→receipts).
+                if (
+                    not _result_is_opening_bal_primary_closing(result)
+                    and _ssa_dump_opening_qty_missing(result)
+                ):
                     result["line_items"] = _ssa_dump_repair_items(
                         result.get("line_items") or []
                     )
@@ -87013,6 +87515,11 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                             "STOCK & SALES ANALYSIS opening_qty repaired for %s",
                             filename,
                         )
+                elif _result_is_opening_bal_primary_closing(result):
+                    logger.info(
+                        "STOCK_OPENING_BAL_SKIP_SSA_DUMP_REPAIR file=%s",
+                        filename,
+                    )
                 if _datewise_photo_openings_missing(result):
                     datewise = _extract_prompt_datewise_photo(
                         file_bytes, filename, ext, result
