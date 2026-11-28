@@ -27538,6 +27538,21 @@ def _headers_look_like_barcode_op_sale_value(hdrs: Any) -> bool:
     return bool(has_code and has_sale_qty and has_sale_val and has_open and has_money)
 
 
+def _headers_look_like_zl_opening_bal_year_month(hdrs: Any) -> bool:
+    """Customer|Material|Mrp|Secondaryrate|Opening|Primary|Closing|Year|Month|Div."""
+    if not isinstance(hdrs, (list, tuple)) or len(hdrs) < 8:
+        return False
+    blob = " ".join(str(h or "") for h in hdrs).lower()
+    if "secondaryrate" in blob.replace(" ", "") or "secondary rate" in blob:
+        return True
+    if "opening bal" in blob and "primary" in blob and "closing bal" in blob:
+        return True
+    if re.search(r"\byear\b", blob) and re.search(r"\bmonth\b", blob):
+        if "material" in blob or "customer" in blob or "mrp" in blob:
+            return True
+    return False
+
+
 def _result_looks_like_ssa_analysis(result: Dict[str, Any]) -> bool:
     if not isinstance(result, dict):
         return False
@@ -27559,6 +27574,9 @@ def _result_looks_like_ssa_analysis(result: Dict[str, Any]) -> bool:
         if isinstance(hdrs, (list, tuple)) and hdrs:
             # Stock And Sales: Barcode|Opening|Sale|Sale Value is not SSA.
             if _headers_look_like_barcode_op_sale_value(hdrs):
+                return False
+            # Portal Opening_bal Year|Month|Div — not TOTAL STOCK SSA.
+            if _headers_look_like_zl_opening_bal_year_month(hdrs):
                 return False
             joined = " ".join(str(h) for h in hdrs).upper()
             if re.search(
@@ -30161,8 +30179,15 @@ def _finalize_zl_opening_bal_sheet(
     result: Dict[str, Any],
     *,
     extraction_method: str = "zl_opening_bal_sheet_vision",
+    derive_secondary_sales: bool = False,
 ) -> Dict[str, Any]:
-    """Match the Excel ZL layout: rate and MRP live in extra, sales qty stays 0."""
+    """Match the Excel ZL layout: rate and MRP live in extra.
+
+    The printed columns are Opening_bal_qty, Primary_qty, Closing_bal_qty.
+    Screenshots of that grid with Year|Month|Div have no sales column; secondary
+    sales is Opening + Primary − Closing, and sales value is that qty times
+    Secondaryrate. Only the year-month vision path asks for that fill.
+    """
     items: List[Dict[str, Any]] = []
     for item in result.get("line_items") or []:
         if not isinstance(item, dict):
@@ -30181,8 +30206,34 @@ def _finalize_zl_opening_bal_sheet(
         if rate not in (None, ""):
             rate = _to_float(rate)
             extra["unit_rate"] = rate
-        item["sales_qty"] = 0.0
-        item["sales_value"] = 0.0
+        else:
+            rate = None
+        if derive_secondary_sales:
+            opening = _to_nullable_float(item.get("opening_qty"))
+            primary = _to_nullable_float(item.get("receipts_qty"))
+            closing = _to_nullable_float(item.get("closing_qty"))
+            fs = extra.setdefault("field_source", {})
+            if not isinstance(fs, dict):
+                fs = {}
+                extra["field_source"] = fs
+            if opening is not None and primary is not None and closing is not None:
+                sales_qty = round(opening + primary - closing, 2)
+                item["sales_qty"] = sales_qty
+                fs["sales_qty"] = "derived"
+                if rate not in (None, "", 0, 0.0):
+                    item["sales_value"] = round(sales_qty * rate, 2)
+                    fs["sales_value"] = "derived"
+                else:
+                    item["sales_value"] = None
+                    fs["sales_value"] = "missing"
+            else:
+                item["sales_qty"] = None
+                item["sales_value"] = None
+                fs["sales_qty"] = "missing"
+                fs["sales_value"] = "missing"
+        else:
+            item["sales_qty"] = 0.0
+            item["sales_value"] = 0.0
         if rate not in (None, "", 0, 0.0) and item.get("closing_qty") is not None:
             item["closing_value"] = round(_to_float(item.get("closing_qty")) * rate, 2)
         items.append(item)
@@ -30191,6 +30242,28 @@ def _finalize_zl_opening_bal_sheet(
     result.setdefault("totals", {}).setdefault("extra", {})
     result["totals"]["extra"]["extraction_method"] = extraction_method
     result["totals"]["extra"]["layout"] = "zl_opening_primary_closing"
+    if derive_secondary_sales:
+        sales_qty_sum = round(
+            sum(_to_float(i.get("sales_qty")) for i in items),
+            2,
+        )
+        sales_value_sum = round(
+            sum(_to_float(i.get("sales_value")) for i in items),
+            2,
+        )
+        result["totals"]["sales_qty"] = sales_qty_sum
+        result["totals"]["sales_value"] = sales_value_sum or None
+        result["totals"]["extra"]["sales_qty"] = sales_qty_sum
+        result["totals"]["extra"]["sales_value"] = sales_value_sum or None
+        result["totals"]["extra"]["sales_qty_source"] = (
+            "derived_opening_plus_primary_minus_closing"
+        )
+        logger.info(
+            "ZL_YEAR_MONTH_SECONDARY_SALES rows=%s sales_qty=%s sales_value=%s",
+            len(items),
+            sales_qty_sum,
+            sales_value_sum,
+        )
     return result
 
 
@@ -70900,7 +70973,11 @@ def _medica_brighten_rgb(image: Any) -> Any:
 
 
 def _medica_red_header_plausible(file_bytes: bytes) -> bool:
-    """True when a brightened frame still shows Medica-style red/maroon rule lines."""
+    """True when a brightened frame still shows Medica-style red/maroon rule lines.
+
+    Rule lines span most of the table width. Narrow clusters (laptop bezel,
+    Excel cell fill, furniture) must not claim the Medica OPSTK path.
+    """
     try:
         from PIL import Image
     except ImportError:
@@ -70913,18 +70990,22 @@ def _medica_red_header_plausible(file_bytes: bytes) -> bool:
     pixels = image.load()
     red_rows = 0
     for y in range(0, height, 2):
-        reds = 0
+        red_xs: List[int] = []
         for x in range(0, width, 6):
             red, green, blue = pixels[x, y]
-            # Pure red rules OR maroon/burgundy table chrome after brighten.
-            if (red > 110 and green < 110 and blue < 110 and red > green + 15) or (
-                red > 90 and green < 70 and blue < 80 and red >= green
-            ):
-                reds += 1
-        if reds > 12:
-            red_rows += 1
-            if red_rows >= 2:
-                return True
+            # Medica maroon rules after brighten (~R190 G50 B50). Reject brown
+            # desk/bezel (G tracks R) and Excel orange fills.
+            if red >= 140 and green < 90 and blue < 90 and red > green + 40:
+                red_xs.append(x)
+        if len(red_xs) <= 12:
+            continue
+        span = (red_xs[-1] - red_xs[0]) / float(max(width, 1))
+        # Match _medica_statement_strips: horizontal rules, not clustered chrome.
+        if span < 0.45:
+            continue
+        red_rows += 1
+        if red_rows >= 2:
+            return True
     return False
 
 
@@ -71000,6 +71081,35 @@ def _medica_result_looks_usable(result: Optional[Dict[str, Any]]) -> bool:
             len(rows),
         )
         return False
+    # Portal Year|Month dumps: Month (1..12) parked as closing_qty on every
+    # row while SALE qty stays 0 — not a Medica OPSTK|SALE|SALE VAL sheet.
+    sales_qty_hits = 0
+    monthish_close: Dict[int, int] = {}
+    for item in rows:
+        try:
+            if abs(float(item.get("sales_qty") or 0)) > 0.05:
+                sales_qty_hits += 1
+        except (TypeError, ValueError):
+            pass
+        try:
+            close = float(item.get("closing_qty") or 0)
+        except (TypeError, ValueError):
+            continue
+        if abs(close - round(close)) > 0.01:
+            continue
+        close_i = int(round(close))
+        if 1 <= close_i <= 12:
+            monthish_close[close_i] = monthish_close.get(close_i, 0) + 1
+    if sales_qty_hits == 0 and monthish_close:
+        dominant = max(monthish_close.values())
+        if dominant >= max(5, int(len(rows) * 0.6)):
+            logger.info(
+                "MEDICA_RESULT_UNUSABLE reason=month_bleed_closing "
+                "dominant_close_rows=%s rows=%s",
+                dominant,
+                len(rows),
+            )
+            return False
     return closing_hits >= 3 or (sales_hits >= 3 and closing_hits >= 2)
 
 
