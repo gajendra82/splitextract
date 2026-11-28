@@ -1117,6 +1117,20 @@ def _pick_group(norm: str) -> Tuple[Optional[str], float, str]:
     if not norm:
         return None, 0.0, "empty"
 
+    # "Last P.Bill Date" is a purchase-bill date, not last-month sales.
+    # The bare alias "last" must not claim it. "Last" / "Last Month Sales" stay LMS.
+    bill_date_tokens = set(_tokens(norm))
+    if (
+        "last" in bill_date_tokens
+        and "date" in bill_date_tokens
+        and "bill" in bill_date_tokens
+    ):
+        logger.info(
+            "STOCK_HEADER_LAST_PURCHASE_BILL_DATE header=%r",
+            norm,
+        )
+        return "non_stock_qty", 0.99, "last_purchase_bill_date"
+
     compact_early = re.sub(r"\s+", "", norm)
     # Customer / party name is never the product column (alias "name" alone).
     if compact_early in {
