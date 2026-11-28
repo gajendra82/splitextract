@@ -11616,6 +11616,10 @@ def _repair_missing_pair_null_shift(item: Dict[str, Any]) -> bool:
     """
     if not _cell_layout_repair_enabled():
         return False
+    # Opening|Primary|Closing with Year|Month has no value pair. A closing
+    # qty of 500 or more is still a qty.
+    if _row_is_zl_year_month_qty(item):
+        return False
     extra = item.setdefault("extra", {})
     sq = item.get("sales_qty")
     sv = item.get("sales_value")

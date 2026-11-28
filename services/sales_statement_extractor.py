@@ -10123,7 +10123,8 @@ def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
         return result
 
     # Customer / Material / Opening_bal_qty / Primary_qty / Closing_bal_qty.
-    # There is no sales column. Opening + primary must not replace closing.
+    # No printed sales column. Opening + primary must not replace closing.
+    # Xlsx path may attach derived sales_qty/value (Mrp × qty); keep those.
     zl_opening_methods = {
         "zl_secondary_xlsx",
         "zl_opening_bal_pdf",
@@ -10140,6 +10141,9 @@ def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
         receipt_sum = sum(
             _to_float(i.get("receipts_qty")) for i in items if isinstance(i, dict)
         )
+        sales_sum = sum(
+            _to_float(i.get("sales_qty")) for i in items if isinstance(i, dict)
+        )
         closing_sum = sum(
             _to_float(i.get("closing_qty")) for i in items if isinstance(i, dict)
         )
@@ -10147,28 +10151,50 @@ def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
             sum(_to_float(i.get("closing_value")) for i in items if isinstance(i, dict)),
             2,
         )
+        sales_value_sum = round(
+            sum(
+                _to_float(i.get("sales_value"))
+                for i in items
+                if isinstance(i, dict) and i.get("sales_value") is not None
+            ),
+            2,
+        )
         totals["extra"]["opening_qty"] = opening_sum
         totals["extra"]["receipts_qty"] = receipt_sum
+        totals["extra"]["sales_qty"] = sales_sum
         totals["extra"]["closing_qty"] = closing_sum
         totals["extra"]["closing_value"] = closing_value_sum
         totals["closing_value"] = closing_value_sum or None
+        if totals["extra"].get("derived_sales") and sales_value_sum:
+            totals["sales_value"] = sales_value_sum
+            totals["extra"]["sales_value"] = sales_value_sum
         method_name = str(totals["extra"].get("extraction_method") or "zl_opening_primary_closing")
         totals["extra"]["stock_identity_kind"] = (
             "zl_secondary_xlsx"
             if method_name == "zl_secondary_xlsx"
             else "zl_opening_primary_closing"
         )
-        totals["extra"]["stock_identity_formula"] = (
-            "opening=Opening_bal_qty; receipts=Primary_qty; "
-            "closing=Closing_bal_qty; no sales column"
-        )
+        if totals["extra"].get("derived_sales"):
+            totals["extra"]["stock_identity_formula"] = (
+                "opening=Opening_bal_qty; receipts=Primary_qty; "
+                "closing=Closing_bal_qty; "
+                "sales_qty=opening+primary-closing (derived); "
+                "sales_value=Mrp*sales_qty (derived)"
+            )
+        else:
+            totals["extra"]["stock_identity_formula"] = (
+                "opening=Opening_bal_qty; receipts=Primary_qty; "
+                "closing=Closing_bal_qty; no sales column"
+            )
         if _allow_force_zero_fail:
             totals["extra"]["stock_identity_fail_count"] = 0
         totals["extra"]["stock_validation"] = {
             "extracted_opening": opening_sum,
             "extracted_purchase": receipt_sum,
+            "extracted_sales_qty": sales_sum,
             "extracted_closing": closing_sum,
             "extracted_closing_value": closing_value_sum,
+            "extracted_sales_value": sales_value_sum if totals["extra"].get("derived_sales") else None,
             "calculated_closing": closing_sum,
             "is_valid": True,
         }
@@ -10409,8 +10435,9 @@ def _ensure_stock_qty_value_fields(result: Dict[str, Any]) -> Dict[str, Any]:
             for key in ("opening_qty", "receipts_qty", "closing_qty"):
                 if item.get(key) in (None, ""):
                     item[key] = 0.0
-            # No sales-amount column on these layouts. A ZL secondary row may
-            # already hold closing qty × Secondaryrate; do not clear that.
+            # No printed sales-amount column on these layouts. A ZL secondary
+            # row may already hold closing qty × Secondaryrate, or derived
+            # Mrp × sales_qty; do not clear those.
             for key in (
                 "sales_value",
                 "closing_value",
@@ -10421,6 +10448,13 @@ def _ensure_stock_qty_value_fields(result: Dict[str, Any]) -> Dict[str, Any]:
                     method == "zl_secondary_xlsx"
                     and key == "closing_value"
                     and item.get("closing_value") not in (None, "")
+                ):
+                    continue
+                if (
+                    method == "zl_secondary_xlsx"
+                    and key == "sales_value"
+                    and item.get("sales_value") not in (None, "")
+                    and fs.get("sales_value") == "derived"
                 ):
                     continue
                 item[key] = None
@@ -18514,6 +18548,16 @@ def _norm_tabular_col_key(value: Any) -> str:
     return re.sub(r"[^a-z0-9]", "", str(value or "").lower())
 
 
+def _zl_secondary_derive_sales_enabled() -> bool:
+    """Record a sales candidate on Opening_bal|Primary|Closing sheets.
+
+    These exports print no Sale qty/value column. The identity
+    Opening + Primary − Closing is stored on the row candidate list only.
+    sales_qty and sales_value stay missing. Default ON.
+    """
+    return True
+
+
 def _find_zl_secondary_xlsx_header(
     rows: List[List[Any]],
 ) -> Optional[Tuple[int, Dict[str, int]]]:
@@ -18553,15 +18597,18 @@ def _parse_zl_secondary_xlsx(
     ext: str,
     header_info: Tuple[int, Dict[str, int]],
 ) -> Dict[str, Any]:
-    """Parse ZL Customer/Material secondary stock .xlsx export.
+    """Parse Customer/Material Opening_bal|Primary|Closing .xlsx export.
 
-    Format-specific path — does not alter Marg ERP or legacy Item/Op./Bal. parsers.
-    This layout has no sales qty/value or stock value columns; those fields stay null.
+    No printed sales qty/value column, so those fields stay missing.
+    Opening + Primary − Closing is recorded as a candidate only.
+    Closing value remains Closing_bal_qty × Secondaryrate.
+    Does not alter Marg ERP or legacy Item/Op./Bal. parsers.
     """
     header_idx, keys = header_info
     result = empty_result(filename, ext.lstrip("."))
     result["totals"]["extra"]["extraction_method"] = "zl_secondary_xlsx"
     result["report_title"] = "ZL Secondary Stock Statement"
+    derive_sales = _zl_secondary_derive_sales_enabled()
 
     def _col(*names: str) -> Optional[int]:
         for n in names:
@@ -18584,6 +18631,7 @@ def _parse_zl_secondary_xlsx(
     col_cust_code = _col("Customer_code")
 
     items: List[Dict[str, Any]] = []
+    derived_sales_rows = 0
     for row in rows[header_idx + 1 :]:
         if not row or all(c is None or str(c).strip() == "" for c in row):
             continue
@@ -18631,11 +18679,16 @@ def _parse_zl_secondary_xlsx(
         item["opening_qty"] = _to_float(_row_cell_at(row, col_open), 0.0)
         item["receipts_qty"] = _to_float(_row_cell_at(row, col_primary), 0.0)
         item["closing_qty"] = _to_float(_row_cell_at(row, col_close), 0.0)
-        # No sales column. Do not invent sales qty. Closing value is
-        # Closing_bal_qty × Secondaryrate when both are printed.
+        # No printed sales column. Closing value is Closing_bal_qty × Secondaryrate.
         item["sales_qty"] = None
         item["sales_value"] = None
         item["closing_value"] = None
+        fs = item["extra"].setdefault("field_source", {})
+        if not isinstance(fs, dict):
+            fs = {}
+            item["extra"]["field_source"] = fs
+        fs["sales_qty"] = "missing"
+        fs["sales_value"] = "missing"
 
         mrp = _to_nullable_float(_row_cell_at(row, col_mrp))
         rate = _to_nullable_float(_row_cell_at(row, col_rate))
@@ -18648,6 +18701,32 @@ def _parse_zl_secondary_xlsx(
             if item["closing_qty"]:
                 item["closing_value"] = round(item["closing_qty"] * rate, 2)
 
+        if derive_sales:
+            derived_sale = _xls_sale_identity_from_op_pur_close(
+                item.get("opening_qty"),
+                item.get("receipts_qty"),
+                item.get("closing_qty"),
+            )
+            # Identity may classify the row. It must not become a printed sales qty.
+            if derived_sale is not None and derived_sale >= -1e-9:
+                sales_qty = round(max(0.0, float(derived_sale)), 2)
+                proposed = {"sales_qty": sales_qty}
+                if mrp is not None:
+                    proposed["sales_value"] = round(float(mrp) * sales_qty, 2)
+                from services.stock_row_classifier import record_candidate
+
+                record_candidate(
+                    item,
+                    proposed,
+                    "zl_opening_primary_missing_sales",
+                    "opening_plus_primary_minus_closing",
+                )
+                item["sales_qty"] = None
+                item["sales_value"] = None
+                fs["sales_qty"] = "missing"
+                fs["sales_value"] = "missing"
+                derived_sales_rows += 1
+
         items.append(item)
 
     result["line_items"] = items
@@ -18658,6 +18737,13 @@ def _parse_zl_secondary_xlsx(
     result["totals"]["sales_value"] = None
     result["totals"]["closing_value"] = closing_sum or None
     result["totals"]["extra"]["layout"] = "zl_opening_primary_closing"
+    if derive_sales and derived_sales_rows:
+        result["totals"]["extra"]["sales_candidate_rows"] = derived_sales_rows
+        logger.info(
+            "STOCK_ZL_OPENING_PRIMARY_SALES_CANDIDATE rows=%s file=%s",
+            derived_sales_rows,
+            filename,
+        )
     return result
 
 _XLS_HEADER_ALIASES = {
@@ -31456,9 +31542,8 @@ def _finalize_zl_opening_bal_sheet(
     """Match the Excel ZL layout: rate and MRP live in extra.
 
     The printed columns are Opening_bal_qty, Primary_qty, Closing_bal_qty.
-    Screenshots of that grid with Year|Month|Div have no sales column; secondary
-    sales is Opening + Primary − Closing, and sales value is that qty times
-    Secondaryrate. Only the year-month vision path asks for that fill.
+    Screenshots of that grid with Year|Month|Div have no sales column.
+    Opening + Primary − Closing is recorded as a candidate only.
     """
     items: List[Dict[str, Any]] = []
     for item in result.get("line_items") or []:
@@ -31488,21 +31573,30 @@ def _finalize_zl_opening_bal_sheet(
             if not isinstance(fs, dict):
                 fs = {}
                 extra["field_source"] = fs
+            item["sales_qty"] = None
+            item["sales_value"] = None
+            fs["sales_qty"] = "missing"
+            fs["sales_value"] = "missing"
             if opening is not None and primary is not None and closing is not None:
                 sales_qty = round(opening + primary - closing, 2)
-                item["sales_qty"] = sales_qty
-                fs["sales_qty"] = "derived"
-                if rate not in (None, "", 0, 0.0):
-                    item["sales_value"] = round(sales_qty * rate, 2)
-                    fs["sales_value"] = "derived"
-                else:
+                if sales_qty >= -1e-9:
+                    proposed = {"sales_qty": round(max(0.0, sales_qty), 2)}
+                    if rate not in (None, "", 0, 0.0):
+                        proposed["sales_value"] = round(
+                            proposed["sales_qty"] * rate, 2
+                        )
+                    from services.stock_row_classifier import record_candidate
+
+                    record_candidate(
+                        item,
+                        proposed,
+                        "zl_year_month_missing_sales",
+                        "opening_plus_primary_minus_closing",
+                    )
+                    item["sales_qty"] = None
                     item["sales_value"] = None
+                    fs["sales_qty"] = "missing"
                     fs["sales_value"] = "missing"
-            else:
-                item["sales_qty"] = None
-                item["sales_value"] = None
-                fs["sales_qty"] = "missing"
-                fs["sales_value"] = "missing"
         else:
             item["sales_qty"] = 0.0
             item["sales_value"] = 0.0
@@ -31515,26 +31609,20 @@ def _finalize_zl_opening_bal_sheet(
     result["totals"]["extra"]["extraction_method"] = extraction_method
     result["totals"]["extra"]["layout"] = "zl_opening_primary_closing"
     if derive_secondary_sales:
-        sales_qty_sum = round(
-            sum(_to_float(i.get("sales_qty")) for i in items),
-            2,
-        )
-        sales_value_sum = round(
-            sum(_to_float(i.get("sales_value")) for i in items),
-            2,
-        )
-        result["totals"]["sales_qty"] = sales_qty_sum
-        result["totals"]["sales_value"] = sales_value_sum or None
-        result["totals"]["extra"]["sales_qty"] = sales_qty_sum
-        result["totals"]["extra"]["sales_value"] = sales_value_sum or None
-        result["totals"]["extra"]["sales_qty_source"] = (
-            "derived_opening_plus_primary_minus_closing"
-        )
+        candidate_rows = 0
+        for it in items:
+            extra = it.get("extra") if isinstance(it.get("extra"), dict) else {}
+            for cand in extra.get("candidates") or []:
+                if (
+                    isinstance(cand, dict)
+                    and cand.get("source") == "zl_year_month_missing_sales"
+                ):
+                    candidate_rows += 1
+                    break
+        result["totals"]["extra"]["sales_candidate_rows"] = candidate_rows
         logger.info(
-            "ZL_YEAR_MONTH_SECONDARY_SALES rows=%s sales_qty=%s sales_value=%s",
-            len(items),
-            sales_qty_sum,
-            sales_value_sum,
+            "ZL_YEAR_MONTH_SALES_CANDIDATE rows=%s",
+            candidate_rows,
         )
     return result
 

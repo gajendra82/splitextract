@@ -208,10 +208,17 @@ class TestZlOpeningBalYearMonthHeader(unittest.TestCase):
         self.assertEqual(liv.get("opening_qty"), 1000.0)
         self.assertEqual(liv.get("receipts_qty"), 1994.0)
         self.assertEqual(liv.get("closing_qty"), 1000.0)
-        self.assertEqual(liv.get("sales_qty"), 1994.0)
-        self.assertEqual(liv.get("sales_value"), round(1994 * 237.07, 2))
-        self.assertEqual(liv["extra"]["field_source"]["sales_qty"], "derived")
-        self.assertEqual(liv["extra"]["field_source"]["sales_value"], "derived")
+        self.assertIsNone(liv.get("sales_qty"))
+        self.assertIsNone(liv.get("sales_value"))
+        self.assertEqual(liv["extra"]["field_source"]["sales_qty"], "missing")
+        self.assertEqual(liv["extra"]["field_source"]["sales_value"], "missing")
+        liv_cand = next(
+            c
+            for c in liv["extra"]["candidates"]
+            if c.get("source") == "zl_year_month_missing_sales"
+        )
+        self.assertEqual(liv_cand["fields"]["sales_qty"], 1994.0)
+        self.assertEqual(liv_cand["fields"]["sales_value"], round(1994 * 237.07, 2))
         self.assertEqual(liv["extra"]["unit_rate"], 237.07)
         mentat = next(
             i
@@ -221,15 +228,29 @@ class TestZlOpeningBalYearMonthHeader(unittest.TestCase):
         self.assertEqual(mentat.get("opening_qty"), 5.0)
         self.assertEqual(mentat.get("receipts_qty"), -1.0)
         self.assertEqual(mentat.get("closing_qty"), 3.0)
-        self.assertEqual(mentat.get("sales_qty"), 1.0)
-        self.assertEqual(mentat.get("sales_value"), round(1 * 173.58, 2))
+        self.assertIsNone(mentat.get("sales_qty"))
+        self.assertIsNone(mentat.get("sales_value"))
+        mentat_cand = next(
+            c
+            for c in mentat["extra"]["candidates"]
+            if c.get("source") == "zl_year_month_missing_sales"
+        )
+        self.assertEqual(mentat_cand["fields"]["sales_qty"], 1.0)
+        self.assertEqual(mentat_cand["fields"]["sales_value"], round(1 * 173.58, 2))
         karela = next(
             i
             for i in done["line_items"]
             if "KARELA" in str(i.get("product_name") or "").upper()
         )
-        self.assertEqual(karela.get("sales_qty"), 5.0)
-        self.assertEqual(karela.get("sales_value"), round(5 * 203.66, 2))
+        self.assertIsNone(karela.get("sales_qty"))
+        self.assertIsNone(karela.get("sales_value"))
+        karela_cand = next(
+            c
+            for c in karela["extra"]["candidates"]
+            if c.get("source") == "zl_year_month_missing_sales"
+        )
+        self.assertEqual(karela_cand["fields"]["sales_qty"], 5.0)
+        self.assertEqual(karela_cand["fields"]["sales_value"], round(5 * 203.66, 2))
 
 
 if __name__ == "__main__":
