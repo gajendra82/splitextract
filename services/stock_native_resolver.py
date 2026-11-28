@@ -6153,6 +6153,25 @@ def apply_sales_total_value_recovery_fallback(
         "reason": None,
     }
 
+    # Never invent footer money onto an empty extract — that looks like a
+    # successful but corrupted reprocess (CL AMT → sales_value, PROFIT → closing).
+    product_n = sum(
+        1
+        for it in (result.get("line_items") or [])
+        if isinstance(it, dict) and str(it.get("product_name") or "").strip()
+    )
+    if product_n == 0:
+        log_base["status"] = "skipped"
+        log_base["reason"] = "empty_line_items"
+        log_base["validation_result"] = "skipped_empty_extract"
+        extra["sales_total_value_recovery"] = log_base
+        logger.info(
+            "STOCK_SALES_TOTAL_VALUE_RECOVERY status=skipped format=%s "
+            "reason=empty_line_items",
+            source_format,
+        )
+        return result
+
     if not need.get("need_sales") and not need.get("need_closing"):
         log_base["status"] = "not_needed"
         log_base["validation_result"] = "ok_primary"

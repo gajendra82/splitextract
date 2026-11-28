@@ -18928,6 +18928,24 @@ _XLS_HEADER_ALIASES = {
     # Saleable Stock Report: Opn Amt(Q+F).
     "opnamtqf": "opval",
     "opnamt": "opval",
+    # Company [Summary] Sales && Stock: OP AMT / IN AMT / OUT AMT / CL AMT.
+    "opamt": "opval",
+    "inqty": "pur",
+    "inamt": "purval",
+    "outqty": "sale",
+    "outamt": "sval",
+    "clamt": "bval",
+    # OP+IN QTY/AMT and PROFIT on Company [Summary] grids.
+    "opinqty": "opinqty",
+    "op+inqty": "opinqty",
+    "opinamt": "opinamt",
+    "op+inamt": "opinamt",
+    "profit": "profit",
+    "nod": "ignore",
+    "expdate": "ignore",
+    "productcompany": "item",
+    "product/company": "item",
+    "no": "ignore",
     "receivevalue": "purval",
     "receiveval": "purval",
     # Semantic export headers: rec_value / recvalue (paired with rec_qty).
@@ -23289,6 +23307,385 @@ def _parse_html_excel_opstock_rcpts_clstk(
     return result
 
 
+def _is_company_summary_op_in_out_xls_header(row: List[Any]) -> bool:
+    """Sales && Stock Company [Summary]: OP/IN/OUT/CL qty + amt headers."""
+    labels = [
+        re.sub(r"[\s_]+", "", str(cell or "").strip().upper())
+        for cell in (row or [])
+        if cell not in (None, "")
+    ]
+    blob = " ".join(labels)
+    return bool(
+        "OPQTY" in blob
+        and "OPAMT" in blob
+        and "INQTY" in blob
+        and "INAMT" in blob
+        and "OUTQTY" in blob
+        and "OUTAMT" in blob
+        and "CLQTY" in blob
+        and "CLAMT" in blob
+    )
+
+
+def _company_summary_op_in_out_role_map(header: List[Any]) -> Dict[str, int]:
+    """Map printed Company [Summary] headers to field roles by label text."""
+    roles: Dict[str, int] = {}
+    for idx, cell in enumerate(header or []):
+        compact = re.sub(r"[\s_]+", "", str(cell or "").strip().upper())
+        if not compact:
+            continue
+        if compact in {"PRODUCT/COMPANY", "PRODUCTCOMPANY", "PRODUCT", "ITEM", "ITEMNAME"}:
+            roles.setdefault("product_name", idx)
+        elif compact in {"PACKING", "PACK", "PACKSIZE"}:
+            roles.setdefault("packing", idx)
+        elif compact in {"NO", "SR", "SRNO", "SNO"}:
+            roles.setdefault("product_code", idx)
+        elif compact == "OPQTY":
+            roles.setdefault("opening_qty", idx)
+        elif compact == "OPAMT":
+            roles.setdefault("opening_value", idx)
+        elif compact == "INQTY":
+            roles.setdefault("receipts_qty", idx)
+        elif compact == "INAMT":
+            roles.setdefault("purchase_value", idx)
+        elif compact in {"OP+INQTY", "OPINQTY"}:
+            roles.setdefault("total_qty", idx)
+        elif compact in {"OP+INAMT", "OPINAMT"}:
+            roles.setdefault("total_value", idx)
+        elif compact == "OUTQTY":
+            roles.setdefault("sales_qty", idx)
+        elif compact == "OUTAMT":
+            roles.setdefault("sales_value", idx)
+        elif compact == "CLQTY":
+            roles.setdefault("closing_qty", idx)
+        elif compact == "CLAMT":
+            roles.setdefault("closing_value", idx)
+        elif compact == "PROFIT":
+            roles.setdefault("profit", idx)
+        elif compact == "NOD":
+            roles.setdefault("nod", idx)
+        elif compact in {"EXPDATE", "EXPIRY", "EXPIRYDATE"}:
+            roles.setdefault("exp_date", idx)
+    return roles
+
+
+def _parse_company_summary_op_in_out_xls(
+    rows: List[List[Any]],
+    filename: str,
+    ext: str,
+    sheet_name: str,
+) -> Optional[Dict[str, Any]]:
+    """Native openpyxl/xlrd parse for Sales && Stock Company [Summary] grids.
+
+    Columns are bound by printed headers (OP AMT, IN AMT, OUT AMT, CL AMT,
+    PROFIT, …), never by fixed positions. Qty and amount zeros stay 0; blank
+    cells stay None (field_source=missing).
+    """
+    header_idx = None
+    roles: Dict[str, int] = {}
+    for idx, row in enumerate(rows[:30]):
+        if _is_company_summary_op_in_out_xls_header(row):
+            header_idx = idx
+            roles = _company_summary_op_in_out_role_map(row)
+            break
+    if header_idx is None or "product_name" not in roles:
+        return None
+    required = (
+        "opening_qty",
+        "opening_value",
+        "receipts_qty",
+        "purchase_value",
+        "sales_qty",
+        "sales_value",
+        "closing_qty",
+        "closing_value",
+    )
+    if any(key not in roles for key in required):
+        return None
+
+    def cell(row: List[Any], role: str) -> Any:
+        ci = roles.get(role)
+        if ci is None or ci < 0 or ci >= len(row):
+            return None
+        return row[ci]
+
+    def qty_or_missing(row: List[Any], role: str) -> Tuple[Optional[float], str]:
+        raw = cell(row, role)
+        if raw in (None, ""):
+            return None, "missing"
+        return _to_float(raw), "printed"
+
+    result = empty_result(filename, ext.lstrip(".") or "xlsx")
+    result["report_title"] = "Sales & Stock Statement Company [Summary]"
+    result["source_format"] = ext.lstrip(".") or "xlsx"
+
+    # Title / period / company from header band above the table.
+    for row in rows[: header_idx + 1]:
+        text = " ".join(str(c).strip() for c in row if c not in (None, ""))
+        if not text:
+            continue
+        if re.search(r"Sales\s*&{1,2}\s*Stock\s*Statement", text, re.I):
+            result["report_title"] = _clean_name(
+                re.split(r"From\s*:", text, maxsplit=1, flags=re.I)[0]
+            ).strip(" -|") or result["report_title"]
+            period = re.search(
+                r"From\s*:?\s*(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s+To\s*:?\s*"
+                r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
+                text,
+                re.I,
+            )
+            if period:
+                result["period_from"] = _normalize_date(period.group(1))
+                result["period_to"] = _normalize_date(period.group(2))
+
+    items: List[Dict[str, Any]] = []
+    printed_totals: Optional[Dict[str, Any]] = None
+    printed_total_label: Optional[str] = None
+    company_banner: Optional[str] = None
+
+    for row in rows[header_idx + 1 :]:
+        if not isinstance(row, list) or not any(
+            c not in (None, "") for c in row
+        ):
+            continue
+        name_raw = cell(row, "product_name")
+        name = _clean_name(str(name_raw or ""))
+        code_raw = cell(row, "product_code")
+        code = _xls_cell_code(code_raw)
+
+        # Company banner rows: "HIMALAYA WELLNESS COMPANY [20]"
+        if name and re.search(r"\bCOMPANY\b|\bHIMALAYA\b", name, re.I) and not any(
+            qty_or_missing(row, role)[0] not in (None, 0.0)
+            for role in (
+                "opening_qty",
+                "receipts_qty",
+                "sales_qty",
+                "closing_qty",
+            )
+        ):
+            company_banner = name
+            if not result.get("company_name"):
+                result["company_name"] = re.sub(
+                    r"\s*\[\s*\d+\s*\]\s*$", "", name
+                ).strip() or name
+            continue
+
+        upper_name = name.upper()
+        is_total = bool(
+            re.match(r"^(?:GRAND\s*)?TOTAL\b", upper_name)
+            or re.search(r"\bGRAND\s*TOTAL\b", upper_name)
+        )
+        if is_total:
+            tot: Dict[str, Any] = {"label": name or "TOTAL"}
+            for role, dest in (
+                ("opening_value", "opening_value"),
+                ("purchase_value", "purchase_value"),
+                ("total_value", "total_value"),
+                ("sales_value", "sales_value"),
+                ("closing_value", "closing_value"),
+                ("profit", "profit"),
+                ("opening_qty", "opening_qty"),
+                ("receipts_qty", "receipts_qty"),
+                ("total_qty", "total_qty"),
+                ("sales_qty", "sales_qty"),
+                ("closing_qty", "closing_qty"),
+            ):
+                val, src = qty_or_missing(row, role)
+                if src == "printed":
+                    tot[dest] = val
+            # Prefer GRAND TOTAL over TOTAL when both print.
+            if printed_totals is None or re.search(r"GRAND", upper_name):
+                printed_totals = tot
+                printed_total_label = name
+            continue
+
+        if not name or len(name) < 2:
+            continue
+        if not code and all(
+            qty_or_missing(row, role)[0] in (None, 0.0)
+            for role in (
+                "opening_qty",
+                "receipts_qty",
+                "sales_qty",
+                "closing_qty",
+                "opening_value",
+                "sales_value",
+                "closing_value",
+            )
+        ):
+            continue
+
+        item = empty_line_item()
+        item["product_name"] = name
+        item["product_code"] = code
+        pack_raw = cell(row, "packing")
+        item["packing"] = (
+            str(pack_raw).strip() if pack_raw not in (None, "") else None
+        )
+        fs: Dict[str, str] = {}
+        for role, field in (
+            ("opening_qty", "opening_qty"),
+            ("receipts_qty", "receipts_qty"),
+            ("sales_qty", "sales_qty"),
+            ("closing_qty", "closing_qty"),
+            ("opening_value", "opening_value"),
+            ("sales_value", "sales_value"),
+            ("closing_value", "closing_value"),
+        ):
+            val, src = qty_or_missing(row, role)
+            item[field] = val
+            fs[field] = src
+
+        purchase_value, purchase_src = qty_or_missing(row, "purchase_value")
+        total_qty, total_qty_src = qty_or_missing(row, "total_qty")
+        total_value, total_value_src = qty_or_missing(row, "total_value")
+        profit, profit_src = qty_or_missing(row, "profit")
+        nod_raw = cell(row, "nod")
+        exp_raw = cell(row, "exp_date")
+
+        item["receipts_value"] = purchase_value
+        fs["receipts_value"] = purchase_src
+        extra_item = item.setdefault("extra", {})
+        extra_item["layout"] = "company_summary_op_in_out"
+        extra_item["values_source"] = "printed"
+        extra_item["opening_value"] = item["opening_value"]
+        extra_item["purchase_value"] = purchase_value
+        extra_item["receipts_value"] = purchase_value
+        if total_qty_src == "printed":
+            extra_item["total_stock_qty"] = total_qty
+            fs["total_stock_qty"] = "printed"
+        if total_value_src == "printed":
+            extra_item["total_value"] = total_value
+            fs["total_value"] = "printed"
+        if profit_src == "printed":
+            extra_item["profit"] = profit
+            fs["profit"] = "printed"
+        if nod_raw not in (None, ""):
+            extra_item["nod"] = str(nod_raw).strip()
+        if exp_raw not in (None, ""):
+            extra_item["exp_date"] = str(exp_raw).strip()
+        if company_banner:
+            extra_item["company_banner"] = company_banner
+        extra_item["field_source"] = fs
+        items.append(item)
+
+    if len(items) < 3:
+        return None
+
+    result["line_items"] = items
+    totals = result.setdefault("totals", {})
+    extra = totals.setdefault("extra", {})
+    extra["extraction_method"] = "company_summary_op_in_out_xls"
+    extra["layout"] = "company_summary_op_in_out"
+    extra["sheet"] = sheet_name
+    extra["parser_engine"] = (
+        "openpyxl"
+        if str(ext).lower() in {".xlsx", ".xlsm", "xlsx", "xlsm"}
+        else "xlrd"
+    )
+    extra["ocr_used"] = False
+    extra["llm_used"] = False
+    extra["source_columns_detected"] = sorted(roles.keys())
+    extra["qty_value_pairs"] = True
+
+    # Qty totals: sum printed product cells (footer qty cells are often blank).
+    for field, dest in (
+        ("opening_qty", "opening_qty"),
+        ("receipts_qty", "receipts_qty"),
+        ("sales_qty", "sales_qty"),
+        ("closing_qty", "closing_qty"),
+    ):
+        total_sum = round(
+            sum(_to_float(it.get(field)) or 0.0 for it in items), 2
+        )
+        extra[dest] = total_sum
+    extra["total_stock_qty"] = round(
+        sum(
+            _to_float((it.get("extra") or {}).get("total_stock_qty"))
+            or (
+                (_to_float(it.get("opening_qty")) or 0.0)
+                + (_to_float(it.get("receipts_qty")) or 0.0)
+            )
+            for it in items
+        ),
+        2,
+    )
+
+    if printed_totals:
+        if printed_totals.get("sales_value") is not None:
+            totals["sales_value"] = printed_totals["sales_value"]
+            extra["has_printed_sales_value"] = True
+            extra["sales_value_source"] = "footer_total"
+        if printed_totals.get("closing_value") is not None:
+            totals["closing_value"] = printed_totals["closing_value"]
+            extra["closing_value_source"] = "footer_total"
+        for key in (
+            "opening_value",
+            "purchase_value",
+            "total_value",
+            "profit",
+        ):
+            if printed_totals.get(key) is not None:
+                extra[key] = printed_totals[key]
+        for key in (
+            "opening_qty",
+            "receipts_qty",
+            "total_qty",
+            "sales_qty",
+            "closing_qty",
+        ):
+            if printed_totals.get(key) is not None:
+                extra[key] = printed_totals[key]
+                if key == "total_qty":
+                    extra["total_stock_qty"] = printed_totals[key]
+        extra["total_row_source"] = "xls_grand_total"
+        extra["total_row_label"] = printed_total_label
+        extra["printed_total_row"] = printed_totals
+        extra["printed_values_authoritative"] = True
+    else:
+        totals["sales_value"] = round(
+            sum(_to_float(it.get("sales_value")) or 0.0 for it in items), 2
+        )
+        totals["closing_value"] = round(
+            sum(_to_float(it.get("closing_value")) or 0.0 for it in items), 2
+        )
+        extra["opening_value"] = round(
+            sum(_to_float(it.get("opening_value")) or 0.0 for it in items), 2
+        )
+        extra["purchase_value"] = round(
+            sum(
+                _to_float((it.get("extra") or {}).get("purchase_value")) or 0.0
+                for it in items
+            ),
+            2,
+        )
+        extra["total_value"] = round(
+            sum(
+                _to_float((it.get("extra") or {}).get("total_value")) or 0.0
+                for it in items
+            ),
+            2,
+        )
+        extra["profit"] = round(
+            sum(
+                _to_float((it.get("extra") or {}).get("profit")) or 0.0
+                for it in items
+            ),
+            2,
+        )
+        extra["total_row_source"] = "line_item_sum"
+
+    logger.info(
+        "SECONDARY_SALES_READER file=%s engine=%s method=company_summary_op_in_out_xls "
+        "items=%s sheet=%s",
+        filename,
+        extra["parser_engine"],
+        len(items),
+        sheet_name,
+    )
+    return result
+
+
 def _parse_xls(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
     # Excel "Save as HTML" / Angular exports often keep a .xls name.
     # Real BIFF workbooks never start with <html — leave those on xlrd.
@@ -23376,6 +23773,14 @@ def _parse_xls(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
         prompt_xls = _parse_prompt_datewise_xls(rows, filename, ext)
         if prompt_xls and prompt_xls.get("line_items"):
             return _xls_finalize_result(prompt_xls)
+        # Sales && Stock Company [Summary] OP/IN/OUT/CL qty+amt (Himalaya XLSX).
+        # Must run before generic semantic_xls — PRODUCT / COMPANY is not "item"
+        # and footer recovery otherwise parks CL AMT / PROFIT as sales/closing.
+        company_summary = _parse_company_summary_op_in_out_xls(
+            rows, filename, ext, sheet_name
+        )
+        if company_summary and company_summary.get("line_items"):
+            return _xls_finalize_result(company_summary)
         # OP / PI / Sale / SI Value / CLQty (+ OPVal/PIVal/CLValue) — Dhruvi /
         # short Stock & Sales grids. Must beat generic semantic_xls which
         # parks PI/CLQty incorrectly and drops SI Value.
@@ -25975,6 +26380,15 @@ def _xls_fill_from_rows(
     filename = str(result.get("source_file") or "upload")
     ext = "." + str(result.get("source_format") or "xls").lstrip(".")
 
+    # Company [Summary] OP/IN/OUT/CL qty+amt — must not fall through to
+    # _xls_best_header (PRODUCT/COMPANY is not a generic "item" header and
+    # otherwise yields semantic_xls items=0 + STVR mis-map of CL AMT/PROFIT).
+    company_summary = _parse_company_summary_op_in_out_xls(
+        rows, filename, ext, sheet_name
+    )
+    if company_summary and company_summary.get("line_items"):
+        return company_summary
+
     # ZL secondary tabular export (Customer_name / Material_* / *_bal_qty)
     zl_header = _find_zl_secondary_xlsx_header(rows)
     if zl_header is not None:
@@ -26688,6 +27102,24 @@ def _xls_fill_from_rows(
                 )
         _assign_number("opening_value", _col("opval"), into_extra=True)
         _assign_number("receipts_value", _col("purval"), into_extra=True)
+        # Promote printed OP AMT / IN AMT onto item + purchase_value (Company
+        # [Summary] and other qty|amt grids). into_extra alone left opening_value
+        # null on the item and purchase_value unset.
+        opval_i = _col("opval")
+        if opval_i is not None and item["extra"].get("opening_value") is not None:
+            item["opening_value"] = item["extra"]["opening_value"]
+            fs = item["extra"].setdefault("field_source", {})
+            if isinstance(fs, dict):
+                fs["opening_value"] = "printed"
+        if item["extra"].get("receipts_value") is not None:
+            item["extra"]["purchase_value"] = item["extra"]["receipts_value"]
+            fs = item["extra"].setdefault("field_source", {})
+            if isinstance(fs, dict):
+                fs["receipts_value"] = "printed"
+                fs["purchase_value"] = "printed"
+        _assign_number("total_stock_qty", _col("opinqty"), into_extra=True)
+        _assign_number("total_value", _col("opinamt"), into_extra=True)
+        _assign_number("profit", _col("profit"), into_extra=True)
         # Saleable Opn/Rec/Issue/Bal: blank Excel cells stay null (not 0).
         # Printed 0.0 Issue/Bal cells remain 0.0. Run after all assigns.
         if _xls_saleable_opn_rec:
