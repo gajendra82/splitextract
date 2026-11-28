@@ -23,3 +23,16 @@ Goal: extract opening, purchase, sales, sales return, expiry/damage, closing qty
 10. **Every task ends with:** tests added, full existing test suite run, and a short summary of files changed, in-code toggles flipped, and anything you could not do.
 11. **NO PER-FORMAT ROUTES.** Never add a parser, OCR route, regex, prompt or branch for a specific stockist, distributor, software, filename code (ZA, ZL, ...) or layout. When a statement extracts wrongly, the fix goes in ONE of: (a) stock_header_resolver ALIASES / rules, (b) the generic Vision table prompt or schema, (c) stock_row_classifier identity rules, (d) the generic native table builders. If none of these can fix it, stop and report why instead of adding a route.
 12. **Never assign a value to a column that is not printed on the document.** A field whose column is absent is None with field_source "missing", or "derived" only under an explicit derived-closing rule when closing is not printed, never guessed.
+
+## Locked on dilip
+
+This file, `prd-rule.mdc`, and `stockist-layout-extraction.mdc` are the rule set for branch `dilip`. A merge from another branch must not delete, weaken, or replace them. Do not add a new `.env` key, a stockist-named route, or a calculated qty/value to get a pull to land.
+
+Leave these decisions in place:
+
+- `TOTAL:` and `Total Value` are money footers. A bare `TOTAL` is not. The later cumulative total still wins.
+- A missing Issue, or Opening + Primary − Closing when no sales column is printed, is a candidate only. It is not written into `sales_qty` or `sales_value`.
+- `FREE` and `OTHERS` stay separate columns. Pack size stays in packing, not in the product name.
+- `Total Quantity`, `Value in Rs.`, `Company Total`, and `Amt=>` are statement totals, not product rows. Qty and value footers both stay.
+- `Last P.Bill Date` is not last-month sales. `Last` and `Last Month Sales` stay LMS.
+- A printed dash, including a run of dashes, is a printed zero. It is not a missing column.
