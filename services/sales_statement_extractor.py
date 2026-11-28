@@ -18549,16 +18549,13 @@ def _norm_tabular_col_key(value: Any) -> str:
 
 
 def _zl_secondary_derive_sales_enabled() -> bool:
-    """Do not invent sales on Opening_bal_qty|Primary_qty|Closing_bal_qty sheets.
+    """Record a sales candidate on Opening_bal|Primary|Closing sheets.
 
     These exports print no Sale qty/value column. Sales stay null with
-    field_source=missing. Default OFF — never fabricate unavailable fields.
-
-    When enabled, record a sales candidate on Opening_bal|Primary|Closing sheets.
-    The identity Opening + Primary − Closing is stored on the row candidate list
-    only; sales_qty and sales_value stay missing.
+    field_source=missing. Opening + Primary − Closing is stored on the row
+    candidate list only. Default ON.
     """
-    return False
+    return True
 
 
 def _find_zl_secondary_xlsx_header(
@@ -18740,7 +18737,7 @@ def _parse_zl_secondary_xlsx(
             # Secondaryrate → rate only. Never opening_value / receipts_value.
             item["extra"]["secondary_rate"] = rate
             item["extra"]["unit_rate"] = rate
-            if item["closing_qty"] is not None:
+            if item["closing_qty"]:
                 item["closing_value"] = round(
                     float(item["closing_qty"]) * float(rate), 2
                 )
@@ -18795,9 +18792,6 @@ def _parse_zl_secondary_xlsx(
         filename,
     )
     if derive_sales and derived_sales_rows:
-        result["totals"]["extra"]["derived_sales"] = True
-        result["totals"]["extra"]["derived_sales_rows"] = derived_sales_rows
-        result["totals"]["extra"]["no_sales_value"] = False
         result["totals"]["extra"]["sales_candidate_rows"] = derived_sales_rows
         logger.info(
             "STOCK_ZL_OPENING_PRIMARY_SALES_CANDIDATE rows=%s file=%s",
@@ -22470,16 +22464,13 @@ def _marg_qty_value_dump_name_col(header_row: List[Any]) -> int:
 
 
 def _marg_qty_value_dump_single_column_enabled() -> bool:
-    """Expand single-column Marg ORIC×qty|value text dumps inside .xls cells.
+    """Expand single-column ORIC×qty|value text dumps inside .xls cells.
 
-    Default ON. Some Marg STOCK & SALES ANALYSIS exports write the whole fixed-
-    width report into column A (real BIFF, one cell per line). Without expansion
-    the multi-column dump header never matches and extraction returns 0 rows.
-    Kill switch: STOCK_XLS_MARG_QTY_VALUE_DUMP_SINGLE_COLUMN=false.
+    Default ON. Some STOCK & SALES ANALYSIS exports write the whole fixed-width
+    report into column A (one cell per line). Detection is the printed
+    ITEM DESCRIPTION / OPENING / RECEIPT / ISSUE / CLOSING header.
     """
-    return os.getenv(
-        "STOCK_XLS_MARG_QTY_VALUE_DUMP_SINGLE_COLUMN", "true"
-    ).strip().lower() in {"1", "true", "yes", "on"}
+    return True
 
 
 _MARG_QTY_VALUE_DUMP_MONTH_TOKENS = {
@@ -27619,10 +27610,12 @@ def _xls_fill_from_rows(
                 rate_v = _to_float(row[rate_i])
                 item["extra"]["secondary_rate"] = rate_v
                 item["extra"]["unit_rate"] = rate_v
-                if item.get("closing_qty") is not None:
+                if item.get("closing_qty"):
                     item["closing_value"] = round(
                         float(item["closing_qty"]) * float(rate_v), 2
                     )
+                    if isinstance(fs_zl, dict):
+                        fs_zl["closing_value"] = "derived"
             logger.info(
                 "STOCK_XLS_ZL_BAL_LAYOUT open=%s primary=%s close=%s rate=%s name=%r",
                 item.get("opening_qty"),
@@ -31992,15 +31985,11 @@ def _finalize_zl_opening_bal_sheet(
                     fs["sales_qty"] = "missing"
                     fs["sales_value"] = "missing"
         else:
-            # Incoming: zero when not deriving candidates.
-            item["sales_qty"] = 0.0
-            item["sales_value"] = 0.0
-            # HEAD: sales stay missing with field_source (no invent).
             item["sales_qty"] = None
             item["sales_value"] = None
             fs["sales_qty"] = "missing"
             fs["sales_value"] = "missing"
-        if rate not in (None, "", 0, 0.0) and item.get("closing_qty") is not None:
+        if rate not in (None, "", 0, 0.0) and item.get("closing_qty"):
             item["closing_value"] = round(_to_float(item.get("closing_qty")) * rate, 2)
             if isinstance(fs, dict):
                 fs["closing_value"] = "derived"
